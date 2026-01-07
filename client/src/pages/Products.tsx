@@ -1,60 +1,75 @@
-import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { trpc } from "@/lib/trpc";
+import { Package, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Products() {
-  const [search, setSearch] = useState("");
-  const { data: products, isLoading } = trpc.products.list.useQuery({ search });
+  const { data: products, isLoading } = trpc.products.list.useQuery();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
-          <p className="text-muted-foreground">Cadastro de produtos</p>
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Produto
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader
+        icon={<Package className="h-8 w-8" />}
+        title="Produtos"
+        description="Gestão de produtos cadastrados"
+        actions={
+          <Button className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
+            <Plus className="h-4 w-4" />
+            Novo Produto
+          </Button>
+        }
+      />
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar produtos..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      <main className="container mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Produtos Cadastrados</h3>
+              <p className="text-sm text-gray-600">Total de {products?.length || 0} produto(s) cadastrado(s)</p>
+            </div>
 
-      {isLoading ? (
-        <div>Carregando...</div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {products?.map((product: any) => (
-            <Card key={product.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{product.description}</CardTitle>
-                <CardDescription>SKU: {product.sku}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1 text-sm">
-                  {product.gtin && <div>EAN: {product.gtin}</div>}
-                  {product.unitsPerBox && <div>Unidades/Caixa: {product.unitsPerBox}</div>}
-                  <div className="text-muted-foreground">Status: {product.status}</div>
+            {isLoading ? (
+              <div className="text-center py-12 text-gray-500">Carregando...</div>
+            ) : products && products.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código Interno</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>EAN</TableHead>
+                    <TableHead>Registro ANVISA</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product: any) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.internalCode}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.ean || "-"}</TableCell>
+                      <TableCell>{product.anvisaRegistration || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                  <Package className="h-8 w-8 text-gray-400" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum produto cadastrado</h3>
+                <p className="text-sm text-gray-600 mb-6">Comece adicionando um novo produto ao sistema</p>
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Produto
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

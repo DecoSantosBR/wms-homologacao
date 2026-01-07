@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import DashboardLayout from "./components/DashboardLayout";
 import Home from "./pages/Home";
 import Tenants from "./pages/Tenants";
 import Products from "./pages/Products";
@@ -16,14 +15,14 @@ import Inventory from "./pages/Inventory";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/tenants" component={Tenants} />
-      <Route path="/products" component={Products} />
-      <Route path="/locations" component={Locations} />
-      <Route path="/receiving" component={Receiving} />
-      <Route path="/picking" component={Picking} />
-      <Route path="/inventory" component={Inventory} />
-      <Route path="/404" component={NotFound} />
+      <Route path={"/"} component={Home} />
+      <Route path={"/tenants"} component={Tenants} />
+      <Route path={"/products"} component={Products} />
+      <Route path={"/locations"} component={Locations} />
+      <Route path={"/receiving"} component={Receiving} />
+      <Route path={"/picking"} component={Picking} />
+      <Route path={"/inventory"} component={Inventory} />
+      <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -35,9 +34,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <DashboardLayout>
-            <Router />
-          </DashboardLayout>
+          <Router />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

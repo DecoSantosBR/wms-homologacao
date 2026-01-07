@@ -141,3 +141,17 @@
 - [ ] Testes unitários (vitest) para módulos críticos
 - [ ] Documentação de API
 - [ ] Conformidade com ANVISA (RDC 430/2020)
+
+
+## Fase 4: Redesign do Sistema (Baseado em Referência)
+- [x] Analisar design do sistema de referência (pharmwms)
+- [x] Remover sidebar e implementar layout centralizado
+- [x] Criar novo dashboard com grid de cards de módulos
+- [x] Atualizar cores (azul vibrante #0066FF)
+- [x] Implementar header simples (logo + início + perfil)
+- [ ] Recriar páginas de Recebimento com novo design
+- [ ] Recriar página de Importação NF-e
+- [ ] Recriar página de Conferência Cega
+- [x] Atualizar componentes (botões, cards, tabelas)
+- [ ] Adicionar empty states com ilustrações
+- [ ] Validar consistência visual em todas as páginas
