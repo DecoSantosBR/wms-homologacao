@@ -1,0 +1,143 @@
+# WMS Med@x - Lista de Funcionalidades
+
+## Fase 1: Configuração e Estrutura Base
+- [x] Definir schema completo do banco de dados (todas as entidades)
+- [x] Integrar arquivos corrigidos do backend (db.ts, routers.ts, modules)
+- [x] Configurar estrutura de pastas do projeto
+
+## Fase 2: Módulos de Backend
+
+### Gestão de Clientes (Tenants)
+- [ ] CRUD de clientes/tenants
+- [ ] Gestão de contratos com threshold de validade
+
+### Gestão de Produtos
+- [ ] CRUD de produtos
+- [ ] Campos: código interno, descrição, EAN, quantidade por caixa
+- [ ] Controle de status (active/discontinued)
+
+### Gestão de Endereços (Warehouse Locations)
+- [ ] CRUD de endereços de armazém
+- [ ] Tipos: receiving, storage, shipping, quarantine
+- [ ] Regras de armazenagem: single/multi item, whole/fraction
+- [ ] Atualização automática de status (available/occupied)
+
+### Recebimento (Receiving)
+- [ ] Criar ordem de recebimento (manual ou importação NF-e)
+- [ ] Listar ordens de recebimento com filtros
+- [ ] Visualizar detalhes da ordem
+- [ ] Mover item para quarentena
+- [ ] Soft delete de ordens
+
+### Conferência Cega (Conference)
+- [ ] Registrar conferência cega por item
+- [ ] Registrar divergências (quantidade, validade, danos)
+- [ ] Endereçamento automático após conferência
+- [ ] Criação de estoque em quarentena
+- [ ] Atualização automática de status de endereço
+
+### Gestão de Estoque (Inventory)
+- [ ] Visualizar saldo de estoque por produto/lote/endereço
+- [ ] Filtros por tenant, produto, status, endereço
+- [ ] Sincronização automática de saldos
+- [ ] Recálculo de inventário
+
+### Movimentações (Inventory Movements)
+- [ ] Registrar movimentações de estoque
+- [ ] Tipos: receiving, picking, transfer, adjustment
+- [ ] Rastreabilidade completa com logs
+- [ ] Filtros por tipo, período, produto
+
+### Picking (Separação)
+- [ ] Criar ordem de picking
+- [ ] Listar ordens com filtros por status
+- [ ] Executar picking de item
+- [ ] Finalizar ordem de picking
+- [ ] Soft delete de ordens
+- [ ] Atualização automática de status de endereço
+
+### Aprovação de Qualidade
+- [ ] Aprovar lote em quarentena
+- [ ] Rejeitar lote em quarentena
+- [ ] Alterar status de estoque (quarantine → available)
+- [ ] Alterar status de ordem (in_quarantine → completed)
+
+## Fase 3: Interface de Usuário
+
+### Layout e Navegação
+- [ ] Implementar DashboardLayout com sidebar
+- [ ] Menu de navegação principal
+- [ ] Header com informações do usuário
+- [ ] Sistema de autenticação (login/logout)
+
+### Dashboard Principal
+- [ ] Visão geral de indicadores (KPIs)
+- [ ] Ordens pendentes de recebimento
+- [ ] Itens em quarentena aguardando aprovação
+- [ ] Alertas de validade próxima ao vencimento
+
+### Tela de Clientes
+- [ ] Listagem de clientes
+- [ ] Formulário de cadastro/edição
+- [ ] Visualização de detalhes do contrato
+
+### Tela de Produtos
+- [ ] Listagem de produtos com busca
+- [ ] Formulário de cadastro/edição
+- [ ] Importação em lote (CSV/Excel)
+
+### Tela de Endereços
+- [ ] Mapa visual do armazém
+- [ ] Listagem de endereços com filtros
+- [ ] Formulário de cadastro/edição
+- [ ] Indicador visual de status (disponível/ocupado)
+
+### Tela de Recebimento
+- [ ] Listagem de ordens de recebimento
+- [ ] Formulário de criação de ordem
+- [ ] Importação de NF-e (XML)
+- [ ] Detalhes da ordem com itens
+- [ ] Ações: iniciar conferência, cancelar
+
+### Tela de Conferência Cega
+- [ ] Interface de conferência por scanner/digitação
+- [ ] Registro de divergências
+- [ ] Sugestão de endereçamento
+- [ ] Confirmação de endereçamento
+
+### Tela de Estoque
+- [ ] Visualização de saldo consolidado
+- [ ] Filtros avançados (produto, lote, validade, endereço)
+- [ ] Exportação de relatórios
+- [ ] Alertas de validade
+
+### Tela de Movimentações
+- [ ] Histórico de movimentações
+- [ ] Filtros por tipo, período, produto
+- [ ] Rastreabilidade completa
+
+### Tela de Picking
+- [ ] Listagem de ordens de picking
+- [ ] Criação de ordem de picking
+- [ ] Interface de execução de picking
+- [ ] Sugestão de endereço de origem (FEFO)
+
+### Tela de Aprovação de Qualidade
+- [ ] Listagem de lotes em quarentena
+- [ ] Detalhes do lote (produto, quantidade, validade)
+- [ ] Ações: aprovar, rejeitar
+- [ ] Histórico de aprovações
+
+## Fase 4: Funcionalidades Avançadas
+- [ ] Relatórios e dashboards analíticos
+- [ ] Auditoria e logs de sistema
+- [ ] Notificações e alertas
+- [ ] Integração com APIs externas (NF-e, SEFAZ)
+- [ ] Impressão de etiquetas e documentos
+- [ ] Gestão de usuários e permissões (RBAC)
+
+## Conformidade e Qualidade
+- [ ] Validação de regras de negócio em todos os endpoints
+- [ ] Testes unitários (vitest) para módulos críticos
+- [ ] Documentação de API
+- [ ] Conformidade com ANVISA (RDC 430/2020)
