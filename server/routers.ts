@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { warehouseZones } from "../drizzle/schema";
@@ -173,12 +173,15 @@ export const appRouter = router({
         tenantId: z.number(),
         sku: z.string().min(1, "SKU é obrigatório"),
         description: z.string().min(1, "Descrição é obrigatória"),
+        category: z.string().optional(),
         gtin: z.string().optional(),
         anvisaRegistry: z.string().optional(),
         therapeuticClass: z.string().optional(),
         manufacturer: z.string().optional(),
         unitOfMeasure: z.string().default("UN"),
         unitsPerBox: z.number().optional(),
+        minQuantity: z.number().min(0).default(0),
+        dispensingQuantity: z.number().min(1).default(1),
         requiresBatchControl: z.boolean().default(true),
         requiresExpiryControl: z.boolean().default(true),
         storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled"]).default("ambient"),
@@ -197,12 +200,15 @@ export const appRouter = router({
         tenantId: z.number(),
         sku: z.string().min(1, "SKU é obrigatório"),
         description: z.string().min(1, "Descrição é obrigatória"),
+        category: z.string().optional(),
         gtin: z.string().optional(),
         anvisaRegistry: z.string().optional(),
         therapeuticClass: z.string().optional(),
         manufacturer: z.string().optional(),
         unitOfMeasure: z.string().default("UN"),
         unitsPerBox: z.number().optional(),
+        minQuantity: z.number().min(0).default(0),
+        dispensingQuantity: z.number().min(1).default(1),
         requiresBatchControl: z.boolean().default(true),
         requiresExpiryControl: z.boolean().default(true),
         storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled"]).default("ambient"),
@@ -230,6 +236,57 @@ export const appRouter = router({
           .where(eq(products.id, input.id));
         
         return { success: true };
+      }),
+
+    deleteMany: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Verificar se há inventário nos produtos
+        const inventoryCheck = await db
+          .select({ productId: inventory.productId })
+          .from(inventory)
+          .where(inArray(inventory.productId, input.ids))
+          .limit(1);
+
+        if (inventoryCheck.length > 0) {
+          throw new Error(
+            "Não é possível excluir produtos que possuem inventário. Remova o estoque antes de excluir."
+          );
+        }
+
+        // Verificar se há pedidos de recebimento
+        const receivingCheck = await db
+          .select({ productId: receivingOrderItems.productId })
+          .from(receivingOrderItems)
+          .where(inArray(receivingOrderItems.productId, input.ids))
+          .limit(1);
+
+        if (receivingCheck.length > 0) {
+          throw new Error(
+            "Não é possível excluir produtos que possuem pedidos de recebimento associados."
+          );
+        }
+
+        // Verificar se há pedidos de separação
+        const pickingCheck = await db
+          .select({ productId: pickingOrderItems.productId })
+          .from(pickingOrderItems)
+          .where(inArray(pickingOrderItems.productId, input.ids))
+          .limit(1);
+
+        if (pickingCheck.length > 0) {
+          throw new Error(
+            "Não é possível excluir produtos que possuem pedidos de separação associados."
+          );
+        }
+
+        // Se passou todas as validações, excluir permanentemente
+        await db.delete(products).where(inArray(products.id, input.ids));
+        
+        return { success: true, deletedCount: input.ids.length };
       }),
   }),
 

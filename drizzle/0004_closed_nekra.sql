@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `dispensingQuantity` int DEFAULT 1;

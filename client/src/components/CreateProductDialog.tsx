@@ -22,11 +22,15 @@ export function CreateProductDialog() {
     tenantId: "",
     sku: "",
     description: "",
+    category: "",
     gtin: "",
     anvisaRegistry: "",
     therapeuticClass: "",
     manufacturer: "",
+    unitOfMeasure: "UN",
     unitsPerBox: "",
+    minQuantity: "0",
+    dispensingQuantity: "1",
     storageCondition: "ambient" as "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled",
   });
 
@@ -42,11 +46,15 @@ export function CreateProductDialog() {
         tenantId: "",
         sku: "",
         description: "",
+        category: "",
         gtin: "",
         anvisaRegistry: "",
         therapeuticClass: "",
         manufacturer: "",
+        unitOfMeasure: "UN",
         unitsPerBox: "",
+        minQuantity: "0",
+        dispensingQuantity: "1",
         storageCondition: "ambient",
       });
     },
@@ -77,15 +85,18 @@ export function CreateProductDialog() {
       tenantId: parseInt(formData.tenantId),
       sku: formData.sku,
       description: formData.description,
+      category: formData.category || undefined,
       gtin: formData.gtin || undefined,
       anvisaRegistry: formData.anvisaRegistry || undefined,
       therapeuticClass: formData.therapeuticClass || undefined,
       manufacturer: formData.manufacturer || undefined,
+      unitOfMeasure: formData.unitOfMeasure,
       unitsPerBox: formData.unitsPerBox ? parseInt(formData.unitsPerBox) : undefined,
+      minQuantity: parseInt(formData.minQuantity),
+      dispensingQuantity: parseInt(formData.dispensingQuantity),
       storageCondition: formData.storageCondition,
       requiresBatchControl: true,
       requiresExpiryControl: true,
-      unitOfMeasure: "UN",
     });
   };
 
@@ -164,6 +175,38 @@ export function CreateProductDialog() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Input
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="Ex: Medicamentos, Insumos, etc."
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="unitOfMeasure">Unidade de Medida</Label>
+                <Select
+                  value={formData.unitOfMeasure}
+                  onValueChange={(value) => setFormData({ ...formData, unitOfMeasure: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UN">Unidade (UN)</SelectItem>
+                    <SelectItem value="CX">Caixa (CX)</SelectItem>
+                    <SelectItem value="KG">Quilograma (KG)</SelectItem>
+                    <SelectItem value="L">Litro (L)</SelectItem>
+                    <SelectItem value="ML">Mililitro (ML)</SelectItem>
+                    <SelectItem value="G">Grama (G)</SelectItem>
+                    <SelectItem value="MG">Miligrama (MG)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
                 <Label htmlFor="anvisaRegistry">Registro ANVISA</Label>
                 <Input
                   id="anvisaRegistry"
@@ -180,6 +223,31 @@ export function CreateProductDialog() {
                   value={formData.unitsPerBox}
                   onChange={(e) => setFormData({ ...formData, unitsPerBox: e.target.value })}
                   placeholder="Ex: 50"
+                  min="1"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="minQuantity">Quantidade Mínima (Estoque de Segurança)</Label>
+                <Input
+                  id="minQuantity"
+                  type="number"
+                  value={formData.minQuantity}
+                  onChange={(e) => setFormData({ ...formData, minQuantity: e.target.value })}
+                  placeholder="Ex: 100"
+                  min="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dispensingQuantity">Quantidade de Dispensação (Múltiplos)</Label>
+                <Input
+                  id="dispensingQuantity"
+                  type="number"
+                  value={formData.dispensingQuantity}
+                  onChange={(e) => setFormData({ ...formData, dispensingQuantity: e.target.value })}
+                  placeholder="Ex: 10"
                   min="1"
                 />
               </div>

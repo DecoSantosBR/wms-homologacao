@@ -175,6 +175,11 @@ export const products = mysqlTable("products", {
   manufacturer: varchar("manufacturer", { length: 255 }),
   unitOfMeasure: varchar("unitOfMeasure", { length: 20 }).default("UN").notNull(),
   unitsPerBox: int("unitsPerBox"), // Quantidade de unidades por caixa/volume
+  category: varchar("category", { length: 100 }), // Categoria do produto
+  costPrice: decimal("costPrice", { precision: 10, scale: 2 }), // Preço de custo
+  salePrice: decimal("salePrice", { precision: 10, scale: 2 }), // Preço de venda
+  minQuantity: int("minQuantity").default(0), // Quantidade mínima em estoque
+  dispensingQuantity: int("dispensingQuantity").default(1), // Quantidade mínima de dispensação/separação
   requiresBatchControl: boolean("requiresBatchControl").default(true).notNull(),
   requiresExpiryControl: boolean("requiresExpiryControl").default(true).notNull(),
   requiresSerialControl: boolean("requiresSerialControl").default(false).notNull(),

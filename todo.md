@@ -286,3 +286,14 @@
 - [x] Implementar botão "Excluir Selecionados" com contador
 - [x] Adicionar modal de confirmação com avisos de segurança
 - [x] Exibir resultado da exclusão (quantidade removida)
+
+
+## Fase 21: Reestruturação do Módulo de Produtos
+- [x] Verificar e atualizar schema de products (SKU, categoria, dispensingQuantity, unidade de medida)
+- [x] Reestruturar Products.tsx com todos os campos conforme documentação
+- [x] Adicionar validações (SKU único, quantidade mínima >= 0, dispensação >= 1)
+- [x] Atualizar endpoints backend (create, update com novos campos: category, minQuantity, dispensingQuantity)
+- [x] Implementar exclusão em massa de produtos (já no frontend)
+- [x] Adicionar endpoint deleteMany no backend com validações (inventário, recebimento, picking)
+- [x] Adicionar campos ao CreateProductDialog (category, unitOfMeasure, minQuantity, dispensingQuantity)
+- [x] Testar modal de cadastro visualmente
