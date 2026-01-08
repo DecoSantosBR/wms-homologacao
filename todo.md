@@ -420,3 +420,18 @@
 - [ ] Sugestão de endereço pré-alocado já existe em receiving.getSuggestedLocation
 - [ ] Criar interface de transferência com origem (REC) e destino (pré-alocação ou livre)
 - [ ] Testar fluxo: Conferir → Criar inventário em REC → Transferir para destino
+
+
+## Fase 29: Interface de Conferência Cega
+- [x] Criar componente BlindCheckModal.tsx
+- [x] Adicionar input com foco automático para scanner de código de barras
+- [x] Implementar lógica de busca de produto por GTIN/EAN e SKU
+- [x] Implementar campos de lote, data de validade e quantidade
+- [x] Adicionar feedback visual de sucesso/erro com toasts
+- [x] Implementar detecção automática de divergências (sobra/falta)
+- [x] Adicionar tabela de itens já conferidos nesta sessão
+- [x] Adicionar tabela de resumo com progresso de cada item
+- [x] Integrar botão "Conferir" na página de Recebimento
+- [x] Adicionar query separada para buscar itens da ordem a conferir
+- [x] Corrigir tipos para aceitar string | null nos campos opcionais
+- [ ] Testar fluxo completo com scanner real
