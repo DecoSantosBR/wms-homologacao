@@ -186,6 +186,19 @@ export default function NFEImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Ordem de Recebimento Criada */}
+              <Alert className="border-blue-200 bg-blue-50">
+                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <AlertDescription>
+                  <p className="font-medium text-blue-900 mb-1">
+                    Ordem de Recebimento Criada
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Número: <span className="font-mono font-medium">{importResult.orderNumber}</span>
+                  </p>
+                </AlertDescription>
+              </Alert>
+
               {/* Informações Gerais */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
@@ -249,26 +262,34 @@ export default function NFEImport() {
                 </Alert>
               )}
 
-              {/* Ações */}
+              {/* Botões de Ação */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
+                    setImportResult(null);
                     setXmlFile(null);
                     setXmlContent("");
-                    setImportResult(null);
                     setTenantId("");
                   }}
+                  className="flex-1"
                 >
                   Importar Outra NF-e
                 </Button>
                 <Button
-                  onClick={() => setLocation("/cadastros/produtos")}
+                  onClick={() => setLocation("/recebimento")}
+                  className="flex-1"
                 >
-                  Ver Produtos Cadastrados
+                  Ver Ordem de Recebimento
                 </Button>
-              </div>
-            </CardContent>
+                <Button
+                  variant="secondary"
+                  onClick={() => setLocation("/cadastros/produtos")}
+                  className="flex-1"
+                >
+                  Ver Produtos
+                </Button>
+              </div>          </CardContent>
           </Card>
         )}
       </div>

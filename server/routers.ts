@@ -928,7 +928,7 @@ export const appRouter = router({
         tenantId: z.number(),
         xmlContent: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
@@ -940,8 +940,35 @@ export const appRouter = router({
         // Parse do XML
         const nfeData = await parseNFE(input.xmlContent);
 
+        // Gerar número da ordem de recebimento
+        const today = new Date();
+        const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+        const orderNumber = `REC-${dateStr}-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
+
+        // Criar ordem de recebimento
+        await db.insert(receivingOrders).values({
+          tenantId: input.tenantId,
+          orderNumber,
+          supplierName: nfeData.fornecedor.razaoSocial,
+          supplierCnpj: nfeData.fornecedor.cnpj,
+          nfeKey: nfeData.chaveAcesso,
+          nfeNumber: nfeData.numero,
+          scheduledDate: new Date(nfeData.dataEmissao),
+          status: "scheduled" as const,
+          createdBy: ctx.user.id,
+        });
+
+        // Buscar ordem criada
+        const [receivingOrder] = await db
+          .select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.orderNumber, orderNumber))
+          .limit(1);
+
         // Resultados da importação
         const result = {
+          receivingOrderId: receivingOrder.id,
+          orderNumber: receivingOrder.orderNumber,
           nfeNumero: nfeData.numero,
           nfeSerie: nfeData.serie,
           fornecedor: nfeData.fornecedor.razaoSocial,
@@ -975,6 +1002,15 @@ export const appRouter = router({
               result.produtosExistentes.push(
                 `${produtoNFE.codigo} - ${produtoNFE.descricao}`
               );
+
+              // Criar item da ordem de recebimento
+              await db.insert(receivingOrderItems).values({
+                receivingOrderId: receivingOrder.id,
+                productId: produtoExistente[0].id,
+                expectedQuantity: produtoNFE.quantidade,
+                expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
+                expectedSupplierCode: produtoNFE.codigo,
+              });
             } else {
               // Criar produto automaticamente
               const novoProduto = {
@@ -990,9 +1026,25 @@ export const appRouter = router({
               };
 
               await db.insert(products).values(novoProduto);
+              
+              // Buscar produto criado
+              const [produtoCriado] = await db
+                .select()
+                .from(products)
+                .where(eq(products.sku, novoProduto.sku))
+                .limit(1);
               result.produtosNovos.push(
                 `${produtoNFE.codigo} - ${produtoNFE.descricao}`
               );
+
+              // Criar item da ordem de recebimento
+              await db.insert(receivingOrderItems).values({
+                receivingOrderId: receivingOrder.id,
+                productId: produtoCriado.id,
+                expectedQuantity: produtoNFE.quantidade,
+                expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
+                expectedSupplierCode: produtoNFE.codigo,
+              });
             }
           } catch (error: any) {
             result.erros.push(

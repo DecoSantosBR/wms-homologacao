@@ -366,7 +366,11 @@
 - [ ] Adicionar ações (visualizar, deletar, deletar em lote)
 - [ ] Adicionar rota /recebimento no App.tsx
 - [ ] Testar listagem e ações
-- [ ] Implementar importação de NF-e para criar ordem de recebimento
+- [x] Atualizar endpoint nfe.importReceiving para criar receivingOrder
+- [x] Criar receivingOrderItems com dados do XML (expectedQuantity, expectedGtin, expectedSupplierCode)
+- [x] Atualizar frontend NFEImport.tsx para exibir ordem criada
+- [x] Adicionar botão de redirecionamento para página de Recebimento
+- [ ] Testar fluxo completo: importar XML → criar ordem → visualizar
 - [ ] Implementar página de Conferência Cega
 - [ ] Implementar leitura de etiquetas (código de barras)
 - [ ] Implementar gestão de divergências
