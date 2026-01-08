@@ -220,3 +220,7 @@
 - [x] Implementar botão de download do template modelo
 - [x] Validar dados antes de importar (zona existe, campos obrigatórios)
 - [x] Exibir resultado da importação (sucessos e erros)
+
+
+## Fase 11: Correções de Bugs
+- [x] Corrigir erro de elementos <a> aninhados na página Locations

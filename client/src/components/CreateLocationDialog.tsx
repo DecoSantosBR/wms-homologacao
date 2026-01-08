@@ -85,10 +85,10 @@ export function CreateLocationDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+        <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 py-2">
           <Plus className="h-4 w-4" />
           Novo Endereço
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
