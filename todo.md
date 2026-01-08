@@ -250,3 +250,8 @@
 - [x] Implementar botão "Excluir Selecionados" com contador
 - [x] Adicionar modal de confirmação com dupla verificação
 - [x] Exibir resultado da exclusão (quantidade removida)
+
+
+## Fase 16: Correções de Erros Críticos
+- [x] Corrigir query SQL malformada no endpoint locations.deleteMany (usar inArray)
+- [x] Corrigir estrutura HTML do modal (usar asChild e div em vez de p aninhados)

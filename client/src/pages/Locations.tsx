@@ -1074,23 +1074,23 @@ export default function Locations() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão em Massa</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>
+                <div>
                   Você está prestes a <strong className="text-red-600">excluir permanentemente {selectedIds.length} endereço(s)</strong> do sistema.
-                </p>
+                </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm font-semibold text-red-900 mb-1">
+                  <div className="text-sm font-semibold text-red-900 mb-1">
                     ⚠️ Atenção: Esta ação é IRREVERSÍVEL!
-                  </p>
-                  <p className="text-xs text-red-700">
+                  </div>
+                  <div className="text-xs text-red-700">
                     Os endereços serão removidos permanentemente do banco de dados (hard delete).
                     Não será possível recuperá-los após a exclusão.
-                  </p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600">
                   Tem certeza que deseja continuar?
-                </p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory } from "../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { warehouseZones } from "../drizzle/schema";
 
@@ -306,9 +306,9 @@ export const appRouter = router({
         if (!db) throw new Error("Database not available");
         
         // Hard delete (remover permanentemente do banco)
-        const { sql } = await import('drizzle-orm');
         await db.delete(warehouseLocations)
-          .where(sql`${warehouseLocations.id} IN (${input.ids.join(',')})`);        
+          .where(inArray(warehouseLocations.id, input.ids));
+        
         return { success: true, count: input.ids.length };
       }),
 
