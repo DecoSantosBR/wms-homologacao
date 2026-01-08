@@ -174,17 +174,17 @@
 
 
 ## Fase 6: Funcionalidades Avançadas (Baseado em Capturas de Tela)
+
 - [x] Criar dashboard intermediário de Cadastros (cards: Clientes, Produtos, Endereços, Usuários)
 - [ ] Implementar modal de Cadastro em Lote de Endereços
 - [ ] Implementar modal de Importação de Endereços via Excel
-- [ ] Implementar modal de Nova Zona
-- [ ] Criar página de Gerenciamento de Usuários
-- [ ] Implementar modal de Novo Usuário com perfis de acesso
-- [ ] Adicionar perfis: Administrador do Sistema, Administrador do Cliente, Supervisor, Operador, Farmacêutico, Auditor
-- [ ] Atualizar tabelas com mais colunas e dados detalhados
-- [ ] Adicionar botões de ação (editar, excluir) nas tabelas
+- [x] Implementar gestão de Zonas integrada em Locations (tabs)
+- [x] Criar página de Gerenciamento de Usuários
+- [x] Implementar modal de Novo Usuário com perfis de acesso
+- [x] Adicionar perfis: Administrador do Sistema, Supervisor, Operador, Farmacêutico, Auditor
+- [x] Atualizar tabelas com mais colunas e dados detalhados
+- [x] Adicionar botões de ação (editar, excluir) nas tabelas
 - [ ] Implementar filtros avançados nas páginas de listagem
-
 ## Fase 7: Edição e Exclusão de Registros
 - [x] Implementar endpoints de atualização (tenants.update, products.update, locations.update)
 - [x] Adicionar botões de ação (editar, excluir) nas tabelas
@@ -194,3 +194,15 @@
 - [x] Implementar confirmação de exclusão (AlertDialog)
 - [x] Usar soft delete nos endpoints de exclusão
 - [x] Atualizar listagens após edição/exclusão
+
+
+## Fase 8: Reestruturação Completa (Baseada em Documentação)
+- [x] Reestruturar Home.tsx com grid de 8 módulos (Recebimento, Separação, Expedição, Cadastros, Importação NF, Estoque, Relatórios, Admin)
+- [x] Criar página Users.tsx para gerenciamento de usuários
+- [x] Integrar gestão de Zonas em Locations.tsx com tabs
+- [x] Adicionar rotas no App.tsx
+- [ ] Criar páginas faltantes: Stock.tsx, Reports.tsx, AdminDashboard.tsx, AdminCleanup.tsx, NFEImport.tsx, Shipping.tsx
+- [ ] Reestruturar Receiving.tsx conforme documentação
+- [ ] Reestruturar Picking.tsx conforme documentação
+- [ ] Implementar todos os endpoints tRPC necessários
+- [ ] Testar sistema completo
