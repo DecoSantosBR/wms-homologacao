@@ -263,3 +263,8 @@
 - [x] Implementar validação no endpoint deleteMany (verificar inventário antes de excluir)
 - [x] Retornar erro informativo se houver inventário nos endereços
 - [ ] Testar exclusão com e sem inventário
+
+
+## Fase 18: Correção de Limitação de Listagem
+- [x] Identificar limitação de 100 registros no endpoint locations.list
+- [x] Remover limite para exibir todos os 1405 endereços

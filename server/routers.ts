@@ -238,7 +238,7 @@ export const appRouter = router({
     list: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      return db.select().from(warehouseLocations).orderBy(desc(warehouseLocations.createdAt)).limit(100);
+      return db.select().from(warehouseLocations).orderBy(desc(warehouseLocations.createdAt));
     }),
 
     create: protectedProcedure
