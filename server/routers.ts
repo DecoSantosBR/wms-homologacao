@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, receivingConferences, receivingDivergences } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, receivingConferences, receivingDivergences, inventoryMovements } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -14,6 +14,7 @@ import {
   type PreallocationValidation,
 } from "./preallocationProcessor";
 import { warehouseZones } from "../drizzle/schema";
+import { registerMovement } from "./movements";
 
 export const appRouter = router({
   system: systemRouter,
@@ -760,20 +761,21 @@ export const appRouter = router({
       }),
 
     /**
-     * Confere um item de recebimento
+     * Confere um item de recebimento e cria inventário em endereço REC
      */
     checkItem: protectedProcedure
       .input(z.object({
         itemId: z.number(),
         quantityReceived: z.number(),
         batch: z.string().optional(),
+        expiryDate: z.string().optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Buscar item
+        // Buscar item e ordem
         const [item] = await db
           .select()
           .from(receivingOrderItems)
@@ -782,6 +784,47 @@ export const appRouter = router({
 
         if (!item) {
           throw new Error("Item não encontrado");
+        }
+
+        const [order] = await db
+          .select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.id, item.receivingOrderId))
+          .limit(1);
+
+        if (!order) {
+          throw new Error("Ordem de recebimento não encontrada");
+        }
+
+        // Buscar produto para pegar tenantId
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(eq(products.id, item.productId))
+          .limit(1);
+
+        // Buscar ou criar endereço REC
+        let recLocation = await db
+          .select()
+          .from(warehouseLocations)
+          .where(and(
+            eq(warehouseLocations.code, "REC"),
+            eq(warehouseLocations.status, "available")
+          ))
+          .limit(1);
+
+        if (!recLocation || recLocation.length === 0) {
+          throw new Error("Endereço REC não encontrado. Configure um endereço com código 'REC' no sistema.");
+        }
+
+        const recLocationId = recLocation[0].id;
+
+        // Atualizar receivingLocationId na ordem (se ainda não foi definido)
+        if (!order.receivingLocationId) {
+          await db
+            .update(receivingOrders)
+            .set({ receivingLocationId: recLocationId })
+            .where(eq(receivingOrders.id, order.id));
         }
 
         // Atualizar quantidade recebida
@@ -797,6 +840,30 @@ export const appRouter = router({
           quantityConferenced: input.quantityReceived,
           conferencedBy: ctx.user.id,
           notes: input.notes || null,
+        });
+
+        // Criar inventário em endereço REC
+        await db.insert(inventory).values({
+          tenantId: product?.tenantId || null,
+          productId: item.productId,
+          locationId: recLocationId,
+          batch: input.batch || null,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+          quantity: input.quantityReceived,
+          status: "available",
+        });
+
+        // Registrar movimentação tipo "receiving"
+        await db.insert(inventoryMovements).values({
+          tenantId: product?.tenantId || null,
+          productId: item.productId,
+          batch: input.batch || null,
+          toLocationId: recLocationId,
+          quantity: input.quantityReceived,
+          movementType: "receiving",
+          referenceType: "receiving_order",
+          referenceId: order.id,
+          performedBy: ctx.user.id,
         });
 
         // Detectar divergência
@@ -816,7 +883,12 @@ export const appRouter = router({
           });
         }
 
-        return { success: true, hasDivergence: input.quantityReceived !== item.expectedQuantity };
+        return { 
+          success: true, 
+          hasDivergence: input.quantityReceived !== item.expectedQuantity,
+          recLocationCode: "REC",
+          message: `Item conferido e alocado em endereço REC. Quantidade: ${input.quantityReceived}`
+        };
       }),
 
     /**
@@ -1350,6 +1422,73 @@ export const appRouter = router({
         }
 
         return result;
+      }),
+  }),
+
+  /**
+   * Router de Estoque (Stock)
+   */
+  stock: router({
+    /**
+     * Registra movimentação de estoque (transferência)
+     */
+    registerMovement: protectedProcedure
+      .input(z.object({
+        productId: z.number(),
+        fromLocationId: z.number(),
+        toLocationId: z.number(),
+        quantity: z.number(),
+        batch: z.string().optional(),
+        expiryDate: z.string().optional(),
+        movementType: z.enum(["transfer", "adjustment", "return", "disposal", "put_away"]),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Buscar produto para pegar tenantId
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(eq(products.id, input.productId))
+          .limit(1);
+
+        return await registerMovement({
+          ...input,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+          tenantId: product?.tenantId || null,
+          performedBy: ctx.user.id,
+        });
+      }),
+
+    /**
+     * Lista produtos disponíveis em um endereço
+     */
+    getAvailableStock: protectedProcedure
+      .input(z.object({
+        locationId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const stock = await db
+          .select({
+            id: inventory.id,
+            productId: inventory.productId,
+            productSku: products.sku,
+            productDescription: products.description,
+            batch: inventory.batch,
+            expiryDate: inventory.expiryDate,
+            quantity: inventory.quantity,
+            status: inventory.status,
+          })
+          .from(inventory)
+          .innerJoin(products, eq(inventory.productId, products.id))
+          .where(eq(inventory.locationId, input.locationId));
+
+        return stock;
       }),
   }),
 });

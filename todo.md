@@ -402,3 +402,21 @@
 - [ ] Implementar tabela de validações com status (válido/inválido)
 - [ ] Adicionar botão "Pré-Alocar" na página de Recebimento
 - [ ] Testar upload de planilha e validações
+
+
+## Fase 28: Correção do Fluxo de Recebimento - Alocação em REC + Transferência
+- [x] Revisar DOCUMENTACAO_07_ESTOQUE.md sobre movimentações
+- [x] Entender fluxo de Transferência (origem → destino)
+- [x] Identificar que conferência deve criar inventário em REC, não em endereço final
+- [x] Corrigir endpoint receiving.checkItem para criar inventário em endereço REC (não em endereço final)
+- [x] Adicionar campo expiryDate ao input de checkItem
+- [x] Criar movimentação tipo "receiving" automaticamente
+- [x] Criar arquivo movements.ts com função registerMovement
+- [x] Criar router stock com endpoint registerMovement
+- [x] Criar endpoint stock.getAvailableStock para listar produtos em endereço
+- [x] Implementar validações (saldo, regra de armazenagem)
+- [x] Implementar atualização automática de status de endereços
+- [ ] addressItem pode ser mantido para compatibilidade (opcional)
+- [ ] Sugestão de endereço pré-alocado já existe em receiving.getSuggestedLocation
+- [ ] Criar interface de transferência com origem (REC) e destino (pré-alocação ou livre)
+- [ ] Testar fluxo: Conferir → Criar inventário em REC → Transferir para destino
