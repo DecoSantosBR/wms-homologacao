@@ -63,7 +63,7 @@ export default function Home() {
         "Configurar endereços",
         "Gerenciar usuários"
       ],
-      path: "/tenants",
+      path: "/cadastros",
       color: "text-purple-600"
     },
     {

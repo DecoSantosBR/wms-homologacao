@@ -11,6 +11,7 @@ import Locations from "./pages/Locations";
 import Receiving from "./pages/Receiving";
 import Picking from "./pages/Picking";
 import Inventory from "./pages/Inventory";
+import Cadastros from "./pages/Cadastros";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/receiving"} component={Receiving} />
       <Route path={"/picking"} component={Picking} />
       <Route path={"/inventory"} component={Inventory} />
+      <Route path={"/cadastros"} component={Cadastros} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
