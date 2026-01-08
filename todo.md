@@ -171,3 +171,16 @@
 - [ ] Testar criação de clientes
 - [ ] Testar criação de produtos
 - [ ] Testar criação de endereços
+
+
+## Fase 6: Funcionalidades Avançadas (Baseado em Capturas de Tela)
+- [ ] Criar dashboard intermediário de Cadastros (cards: Clientes, Produtos, Endereços, Usuários)
+- [ ] Implementar modal de Cadastro em Lote de Endereços
+- [ ] Implementar modal de Importação de Endereços via Excel
+- [ ] Implementar modal de Nova Zona
+- [ ] Criar página de Gerenciamento de Usuários
+- [ ] Implementar modal de Novo Usuário com perfis de acesso
+- [ ] Adicionar perfis: Administrador do Sistema, Administrador do Cliente, Supervisor, Operador, Farmacêutico, Auditor
+- [ ] Atualizar tabelas com mais colunas e dados detalhados
+- [ ] Adicionar botões de ação (editar, excluir) nas tabelas
+- [ ] Implementar filtros avançados nas páginas de listagem
