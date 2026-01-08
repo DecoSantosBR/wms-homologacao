@@ -383,3 +383,22 @@
 - [ ] Implementar endereçamento de produtos
 - [ ] Implementar finalização de recebimento
 - [ ] Testar fluxo completo: Agendar → Conferir → Aprovar → Endereçar → Finalizar
+
+
+## Fase 27: Implementação de Pré-Alocação de Endereços
+- [x] Revisar PREALLOCACAO_DETALHADA.md completa
+- [x] Verificar schema de receivingPreallocations existente
+- [x] Instalar biblioteca xlsx para processar Excel
+- [x] Criar função processPreallocationExcel() para ler arquivo
+- [x] Criar função validatePreallocations() para validar contra banco
+- [x] Criar função generatePreallocationTemplate() para gerar modelo
+- [x] Criar endpoint receiving.downloadPreallocationTemplate
+- [x] Criar endpoint receiving.uploadPreallocationFile
+- [x] Criar endpoint receiving.savePreallocations
+- [x] Criar endpoint receiving.getPreallocations
+- [x] Criar endpoint receiving.getSuggestedLocation
+- [x] Criar endpoint receiving.generateLabels
+- [ ] Criar modal PreallocationDialog.tsx com upload de Excel
+- [ ] Implementar tabela de validações com status (válido/inválido)
+- [ ] Adicionar botão "Pré-Alocar" na página de Recebimento
+- [ ] Testar upload de planilha e validações

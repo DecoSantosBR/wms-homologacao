@@ -7,6 +7,12 @@ import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, 
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
+import {
+  processPreallocationExcel,
+  validatePreallocations,
+  generatePreallocationTemplate,
+  type PreallocationValidation,
+} from "./preallocationProcessor";
 import { warehouseZones } from "../drizzle/schema";
 
 export const appRouter = router({
@@ -922,6 +928,273 @@ export const appRouter = router({
           .where(eq(receivingOrders.id, input.id));
 
         return { success: true };
+      }),
+
+    /**
+     * Download de modelo Excel para pré-alocação
+     */
+    downloadPreallocationTemplate: protectedProcedure.query(async () => {
+      const buffer = generatePreallocationTemplate();
+      const fileBase64 = buffer.toString("base64");
+      return {
+        fileBase64,
+        filename: "modelo-preallocacao.xlsx",
+      };
+    }),
+
+    /**
+     * Upload e validação de arquivo de pré-alocação
+     */
+    uploadPreallocationFile: protectedProcedure
+      .input(
+        z.object({
+          receivingOrderId: z.number(),
+          tenantId: z.number(),
+          fileBase64: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        try {
+          // Decodificar base64 para Buffer
+          const fileBuffer = Buffer.from(input.fileBase64, "base64");
+
+          // Processar arquivo Excel
+          const { success, rows, errors } = await processPreallocationExcel(fileBuffer);
+
+          if (!success || rows.length === 0) {
+            return { success: false, validations: [], errors };
+          }
+
+          // Validar contra banco de dados
+          const validations = await validatePreallocations(rows, input.tenantId);
+
+          return { success: true, validations, errors: [] };
+        } catch (error: any) {
+          return {
+            success: false,
+            validations: [],
+            errors: [error.message],
+          };
+        }
+      }),
+
+    /**
+     * Salvar pré-alocações válidas no banco
+     */
+    savePreallocations: protectedProcedure
+      .input(
+        z.object({
+          receivingOrderId: z.number(),
+          validations: z.array(
+            z.object({
+              isValid: z.boolean(),
+              productId: z.number().optional(),
+              locationId: z.number().optional(),
+              lote: z.string(),
+              quantidade: z.number(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Filtrar apenas validações válidas
+        const validOnes = input.validations.filter(
+          (v) => v.isValid && v.productId && v.locationId
+        );
+
+        if (validOnes.length === 0) {
+          return { success: false, count: 0 };
+        }
+
+        // Importar receivingPreallocations do schema
+        const { receivingPreallocations } = await import("../drizzle/schema");
+
+        // Inserir pré-alocações
+        for (const validation of validOnes) {
+          await db.insert(receivingPreallocations).values({
+            receivingOrderId: input.receivingOrderId,
+            productId: validation.productId!,
+            locationId: validation.locationId!,
+            batch: validation.lote,
+            quantity: validation.quantidade,
+            status: "pending",
+            createdBy: ctx.user.id,
+            createdAt: new Date(),
+          });
+        }
+
+        return { success: true, count: validOnes.length };
+      }),
+
+    /**
+     * Obter pré-alocações de uma ordem
+     */
+    getPreallocations: protectedProcedure
+      .input(z.object({ receivingOrderId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        const { receivingPreallocations } = await import("../drizzle/schema");
+
+        const preallocations = await db
+          .select({
+            id: receivingPreallocations.id,
+            productId: receivingPreallocations.productId,
+            locationId: receivingPreallocations.locationId,
+            batch: receivingPreallocations.batch,
+            quantity: receivingPreallocations.quantity,
+            status: receivingPreallocations.status,
+            productSku: products.sku,
+            productDescription: products.description,
+            locationCode: warehouseLocations.code,
+          })
+          .from(receivingPreallocations)
+          .leftJoin(products, eq(receivingPreallocations.productId, products.id))
+          .leftJoin(
+            warehouseLocations,
+            eq(receivingPreallocations.locationId, warehouseLocations.id)
+          )
+          .where(eq(receivingPreallocations.receivingOrderId, input.receivingOrderId));
+
+        return preallocations;
+      }),
+
+    /**
+     * Sugerir endereço para movimentação (prioriza pré-alocação)
+     */
+    getSuggestedLocation: protectedProcedure
+      .input(
+        z.object({
+          productId: z.number(),
+          batch: z.string(),
+          quantity: z.number(),
+          tenantId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+
+        const { receivingPreallocations } = await import("../drizzle/schema");
+
+        // 1. Buscar pré-alocação pendente
+        const [preallocation] = await db
+          .select({
+            locationId: receivingPreallocations.locationId,
+            locationCode: warehouseLocations.code,
+          })
+          .from(receivingPreallocations)
+          .leftJoin(
+            warehouseLocations,
+            eq(receivingPreallocations.locationId, warehouseLocations.id)
+          )
+          .where(
+            and(
+              eq(receivingPreallocations.productId, input.productId),
+              eq(receivingPreallocations.batch, input.batch),
+              eq(receivingPreallocations.status, "pending")
+            )
+          )
+          .limit(1);
+
+        if (preallocation && preallocation.locationCode) {
+          return {
+            locationId: preallocation.locationId,
+            locationCode: preallocation.locationCode,
+            source: "preallocation" as const,
+          };
+        }
+
+        // 2. Buscar endereço livre
+        const [freeLocation] = await db
+          .select()
+          .from(warehouseLocations)
+          .where(
+            and(
+              eq(warehouseLocations.tenantId, input.tenantId),
+              eq(warehouseLocations.status, "available")
+            )
+          )
+          .limit(1);
+
+        if (freeLocation) {
+          return {
+            locationId: freeLocation.id,
+            locationCode: freeLocation.code,
+            source: "free_location" as const,
+          };
+        }
+
+        return null;
+      }),
+
+    /**
+     * Gerar etiquetas para impressão (usa pré-alocações se existirem)
+     */
+    generateLabels: protectedProcedure
+      .input(z.object({ receivingOrderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const { receivingPreallocations } = await import("../drizzle/schema");
+
+        // Buscar pré-alocações
+        const preallocations = await db
+          .select({
+            locationCode: warehouseLocations.code,
+            zone: warehouseZones.name,
+            locationType: warehouseLocations.locationType,
+          })
+          .from(receivingPreallocations)
+          .leftJoin(
+            warehouseLocations,
+            eq(receivingPreallocations.locationId, warehouseLocations.id)
+          )
+          .leftJoin(
+            warehouseZones,
+            eq(warehouseLocations.zoneId, warehouseZones.id)
+          )
+          .where(eq(receivingPreallocations.receivingOrderId, input.receivingOrderId));
+
+        // Se não houver pré-alocações, usar endereços de recebimento
+        let labels = preallocations;
+        if (labels.length === 0) {
+          // Buscar endereços da zona REC
+          const recZone = await db
+            .select()
+            .from(warehouseZones)
+            .where(eq(warehouseZones.code, "REC"))
+            .limit(1);
+
+          if (recZone.length > 0) {
+            labels = await db
+              .select({
+                locationCode: warehouseLocations.code,
+                zone: warehouseZones.name,
+                locationType: warehouseLocations.locationType,
+              })
+              .from(warehouseLocations)
+              .leftJoin(
+                warehouseZones,
+                eq(warehouseLocations.zoneId, warehouseZones.id)
+              )
+              .where(eq(warehouseLocations.zoneId, recZone[0].id))
+              .limit(10);
+          }
+        }
+
+        // TODO: Gerar PDF com etiquetas usando biblioteca de PDF
+        // Por enquanto, retornar dados das etiquetas
+        return {
+          pdfBase64: "", // Implementar geração de PDF
+          labelCount: labels.length,
+          labels,
+        };
       }),
   }),
 
