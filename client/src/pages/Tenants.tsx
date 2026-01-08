@@ -189,7 +189,7 @@ export default function Tenants() {
     <div className="min-h-screen bg-gray-50">
       <PageHeader
         icon={<FileText className="h-8 w-8" />}
-        title="Cadastros"
+        title="Clientes"
         description="Gestão de clientes e contratos"
       />
 

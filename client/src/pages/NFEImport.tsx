@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, CheckCircle2, XCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 export default function NFEImport() {
@@ -71,23 +72,14 @@ export default function NFEImport() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/")}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao Início
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Importação de NF-e</h1>
-          <p className="text-gray-600 mt-2">
-            Importe notas fiscais eletrônicas de entrada para cadastrar produtos automaticamente
-          </p>
-        </div>
+    <>
+      <PageHeader
+        icon={<Upload className="w-8 h-8" />}
+        title="Importação de NF-e"
+        description="Importe notas fiscais eletrônicas de entrada para cadastrar produtos automaticamente"
+      />
+      <div className="container mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto">
 
         {/* Formulário de Upload */}
         <Card className="mb-6">
@@ -186,19 +178,6 @@ export default function NFEImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Ordem de Recebimento Criada */}
-              <Alert className="border-blue-200 bg-blue-50">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                <AlertDescription>
-                  <p className="font-medium text-blue-900 mb-1">
-                    Ordem de Recebimento Criada
-                  </p>
-                  <p className="text-sm text-blue-800">
-                    Número: <span className="font-mono font-medium">{importResult.orderNumber}</span>
-                  </p>
-                </AlertDescription>
-              </Alert>
-
               {/* Informações Gerais */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
@@ -262,37 +241,30 @@ export default function NFEImport() {
                 </Alert>
               )}
 
-              {/* Botões de Ação */}
+              {/* Ações */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setImportResult(null);
                     setXmlFile(null);
                     setXmlContent("");
+                    setImportResult(null);
                     setTenantId("");
                   }}
-                  className="flex-1"
                 >
                   Importar Outra NF-e
                 </Button>
                 <Button
-                  onClick={() => setLocation("/recebimento")}
-                  className="flex-1"
-                >
-                  Ver Ordem de Recebimento
-                </Button>
-                <Button
-                  variant="secondary"
                   onClick={() => setLocation("/cadastros/produtos")}
-                  className="flex-1"
                 >
-                  Ver Produtos
+                  Ver Produtos Cadastrados
                 </Button>
-              </div>          </CardContent>
+              </div>
+            </CardContent>
           </Card>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -2,9 +2,6 @@ import { getDb } from "../db";
 import { divergenceApprovals } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-/**
- * Aprovar uma divergência
- */
 export async function approveDivergence(
   receivingOrderItemId: number,
   userId: number,
@@ -31,9 +28,6 @@ export async function approveDivergence(
   return result;
 }
 
-/**
- * Rejeitar uma divergência
- */
 export async function rejectDivergence(
   receivingOrderItemId: number,
   userId: number,

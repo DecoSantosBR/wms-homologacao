@@ -218,6 +218,7 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
+        icon={<Package className="w-8 h-8" />}
         title="Produtos"
         description="Gestão de produtos e medicamentos"
       />
