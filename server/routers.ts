@@ -328,6 +328,9 @@ export const appRouter = router({
         const clients = await db.select().from(tenants);
         const clientMap = new Map(clients.map(c => [c.name, c.id]));
 
+        // Preparar lote de inserções
+        const locationsToInsert: any[] = [];
+
         for (let i = 0; i < data.length; i++) {
           const row: any = data[i];
           const rowNum = i + 2; // +2 porque começa na linha 2 (1 é cabeçalho)
@@ -375,8 +378,8 @@ export const appRouter = router({
             const codeParts = [row.zona, row.rua, row.predio, row.andar, row.quadrante].filter(Boolean);
             const code = codeParts.join('-');
 
-            // Inserir endereço
-            await db.insert(warehouseLocations).values({
+            // Adicionar ao lote
+            locationsToInsert.push({
               zoneId,
               tenantId,
               code,
@@ -395,6 +398,32 @@ export const appRouter = router({
               row: rowNum,
               error: error.message || 'Erro desconhecido'
             });
+          }
+        }
+
+        // Inserir todos os endereços em lotes de 500 para evitar timeout
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < locationsToInsert.length; i += BATCH_SIZE) {
+          const batch = locationsToInsert.slice(i, i + BATCH_SIZE);
+          try {
+            await db.insert(warehouseLocations).values(batch);
+          } catch (error: any) {
+            // Se falhar o lote inteiro, tentar inserir um por um
+            for (const location of batch) {
+              try {
+                await db.insert(warehouseLocations).values(location);
+              } catch (err: any) {
+                const failedCode = location.code;
+                const failedIndex = results.success.indexOf(failedCode);
+                if (failedIndex > -1) {
+                  results.success.splice(failedIndex, 1);
+                  results.errors.push({
+                    row: failedIndex + 2,
+                    error: err.message || 'Erro ao inserir'
+                  });
+                }
+              }
+            }
           }
         }
 

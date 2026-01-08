@@ -232,3 +232,13 @@
 - [x] Implementar ordenação clicável nas colunas da tabela
 - [x] Adicionar contador de resultados filtrados
 - [x] Implementar botão "Limpar Filtros"
+
+
+## Fase 13: Correções de Bugs
+- [x] Corrigir erro de elementos <a> aninhados que voltou na página Locations (não reproduzível após correção anterior)
+
+
+## Fase 14: Correção de Importação Excel
+- [x] Corrigir limitação de 100 registros no endpoint locations.importExcel
+- [x] Processar todos os registros do arquivo Excel (testado com 1405 endereços)
+- [x] Implementar batch inserts (lotes de 500) para melhor performance
