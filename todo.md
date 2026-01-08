@@ -297,3 +297,30 @@
 - [x] Adicionar endpoint deleteMany no backend com validações (inventário, recebimento, picking)
 - [x] Adicionar campos ao CreateProductDialog (category, unitOfMeasure, minQuantity, dispensingQuantity)
 - [x] Testar modal de cadastro visualmente
+
+
+## Fase 22: Cadastro Automático de Produtos via NF-e
+- [x] Atualizar schema de products com campos supplierCode e customerCode
+- [x] Adicionar status "pending_completion" ao enum de status
+- [x] Aplicar migração no banco de dados (pnpm db:push)
+- [x] Implementar parser de XML de NF-e (extrair dados de <det>, <xProd>, <cEAN>, etc.)
+- [x] Criar endpoint nfe.importReceiving para importação de NF-e de entrada
+- [x] Implementar lógica de cadastro automático de produtos não existentes
+- [x] Criar página NFEImport.tsx com upload de XML
+- [x] Implementar resultado detalhado da importação (produtos novos, existentes, erros)
+- [x] Adicionar feedback visual (produtos novos vs existentes)
+- [x] Adicionar rota /nfe-import no App.tsx
+
+## Fase 23: Vinculação Inteligente de Produtos (NF-e de Saída)
+- [ ] Implementar algoritmo de similaridade de strings (Levenshtein)
+- [ ] Criar endpoint nfe.importShipping para NF-e de saída
+- [ ] Implementar modal de vinculação com sugestões
+- [ ] Exibir top 5 produtos mais similares
+- [ ] Salvar customerCode após vinculação
+- [ ] Testar fluxo de vinculação
+
+## Fase 24: Complementação de Dados Durante Conferência
+- [ ] Adicionar modal de edição rápida na conferência cega
+- [ ] Campos: Quantidade por Caixa, Categoria, Fabricante
+- [ ] Atualizar status de "pending_completion" para "active"
+- [ ] Testar complementação durante conferência

@@ -4,8 +4,9 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
+import { parseNFE, isValidNFE } from "./nfeParser";
 import { warehouseZones } from "../drizzle/schema";
 
 export const appRouter = router({
@@ -592,6 +593,93 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(inventory).orderBy(desc(inventory.createdAt)).limit(100);
     }),
+  }),
+
+  nfe: router({
+    /**
+     * Importação de NF-e de entrada (recebimento)
+     * Cria produtos automaticamente se não existirem
+     */
+    importReceiving: protectedProcedure
+      .input(z.object({
+        tenantId: z.number(),
+        xmlContent: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Validar XML
+        if (!isValidNFE(input.xmlContent)) {
+          throw new Error("XML inválido. O arquivo não é uma NF-e válida.");
+        }
+
+        // Parse do XML
+        const nfeData = await parseNFE(input.xmlContent);
+
+        // Resultados da importação
+        const result = {
+          nfeNumero: nfeData.numero,
+          nfeSerie: nfeData.serie,
+          fornecedor: nfeData.fornecedor.razaoSocial,
+          totalProdutos: nfeData.produtos.length,
+          produtosNovos: [] as string[],
+          produtosExistentes: [] as string[],
+          erros: [] as string[],
+        };
+
+        // Processar cada produto da NF-e
+        for (const produtoNFE of nfeData.produtos) {
+          try {
+            // Buscar produto existente por supplierCode, GTIN ou SKU
+            const produtoExistente = await db
+              .select()
+              .from(products)
+              .where(
+                and(
+                  eq(products.tenantId, input.tenantId),
+                  or(
+                    eq(products.supplierCode, produtoNFE.codigo),
+                    produtoNFE.ean ? eq(products.gtin, produtoNFE.ean) : sql`false`,
+                    eq(products.sku, produtoNFE.codigo)
+                  )
+                )
+              )
+              .limit(1);
+
+            if (produtoExistente.length > 0) {
+              // Produto já existe
+              result.produtosExistentes.push(
+                `${produtoNFE.codigo} - ${produtoNFE.descricao}`
+              );
+            } else {
+              // Criar produto automaticamente
+              const novoProduto = {
+                tenantId: input.tenantId,
+                sku: produtoNFE.codigo, // Usar código do fornecedor como SKU inicial
+                supplierCode: produtoNFE.codigo,
+                description: produtoNFE.descricao,
+                gtin: produtoNFE.ean || produtoNFE.eanTributavel || undefined,
+                unitOfMeasure: produtoNFE.unidade || "UN",
+                status: "pending_completion" as const,
+                requiresBatchControl: true,
+                requiresExpiryControl: true,
+              };
+
+              await db.insert(products).values(novoProduto);
+              result.produtosNovos.push(
+                `${produtoNFE.codigo} - ${produtoNFE.descricao}`
+              );
+            }
+          } catch (error: any) {
+            result.erros.push(
+              `Erro ao processar ${produtoNFE.codigo}: ${error.message}`
+            );
+          }
+        }
+
+        return result;
+      }),
   }),
 });
 

@@ -13,6 +13,7 @@ import Picking from "./pages/Picking";
 import Inventory from "./pages/Inventory";
 import Cadastros from "./pages/Cadastros";
 import Users from "./pages/Users";
+import NFEImport from "./pages/NFEImport";
 
 function Router() {
   return (
@@ -25,7 +26,9 @@ function Router() {
       <Route path={"/picking"} component={Picking} />
       <Route path={"/inventory"} component={Inventory} />
       <Route path={"/cadastros"} component={Cadastros} />
+      <Route path={"/cadastros/produtos"} component={Products} />
       <Route path={"/users"} component={Users} />
+      <Route path={"/nfe-import"} component={NFEImport} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

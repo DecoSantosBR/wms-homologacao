@@ -167,7 +167,9 @@ export const contracts = mysqlTable("contracts", {
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(), // Multi-tenant: produto pertence a um cliente
-  sku: varchar("sku", { length: 100 }).notNull(),
+  sku: varchar("sku", { length: 100 }).notNull(), // Código interno único
+  supplierCode: varchar("supplierCode", { length: 100 }), // Código do fornecedor (usado em NF-e de entrada)
+  customerCode: varchar("customerCode", { length: 100 }), // Código do cliente (usado em NF-e de saída)
   description: text("description").notNull(),
   gtin: varchar("gtin", { length: 14 }), // EAN/DUN (código de barras)
   anvisaRegistry: varchar("anvisaRegistry", { length: 100 }), // Registro ANVISA
@@ -189,7 +191,7 @@ export const products = mysqlTable("products", {
   requiresHumidityControl: boolean("requiresHumidityControl").default(false).notNull(),
   isControlledSubstance: boolean("isControlledSubstance").default(false).notNull(), // Medicamento controlado
   isPsychotropic: boolean("isPsychotropic").default(false).notNull(), // Psicotrópico
-  status: mysqlEnum("status", ["active", "inactive", "discontinued"]).default("active").notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "discontinued", "pending_completion"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
