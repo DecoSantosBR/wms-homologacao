@@ -76,6 +76,14 @@ export const appRouter = router({
         id: z.number(),
         name: z.string(),
         cnpj: z.string(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        pickingRule: z.enum(["FIFO", "FEFO", "Direcionado"]).optional(),
+        status: z.enum(["active", "inactive", "suspended"]).optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -85,6 +93,14 @@ export const appRouter = router({
           .set({ 
             name: input.name,
             cnpj: input.cnpj,
+            email: input.email,
+            phone: input.phone,
+            address: input.address,
+            city: input.city,
+            state: input.state,
+            zipCode: input.zipCode,
+            pickingRule: input.pickingRule,
+            status: input.status,
           })
           .where(eq(tenants.id, input.id));
         

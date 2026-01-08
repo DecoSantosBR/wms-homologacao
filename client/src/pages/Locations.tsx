@@ -1,5 +1,5 @@
 import React from "react";
-import PageHeader from "@/components/PageHeader";
+import { PageHeader } from "@/components/PageHeader";
 import { CreateLocationDialog } from "@/components/CreateLocationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

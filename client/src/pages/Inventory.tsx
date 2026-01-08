@@ -1,4 +1,4 @@
-import PageHeader from "@/components/PageHeader";
+import { PageHeader } from "@/components/PageHeader";
 import { Warehouse } from "lucide-react";
 
 export default function Inventory() {

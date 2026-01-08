@@ -9,7 +9,7 @@ interface PageHeaderProps {
   actions?: React.ReactNode;
 }
 
-export default function PageHeader({ icon, title, description, actions }: PageHeaderProps) {
+export function PageHeader({ icon, title, description, actions }: PageHeaderProps) {
   const [, setLocation] = useLocation();
 
   return (

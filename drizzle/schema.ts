@@ -138,6 +138,7 @@ export const tenants = mysqlTable("tenants", {
   zipCode: varchar("zipCode", { length: 10 }),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 320 }),
+  pickingRule: mysqlEnum("pickingRule", ["FIFO", "FEFO", "Direcionado"]).default("FIFO").notNull(),
   status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

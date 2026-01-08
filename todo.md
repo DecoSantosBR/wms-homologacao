@@ -268,3 +268,12 @@
 ## Fase 18: Correção de Limitação de Listagem
 - [x] Identificar limitação de 100 registros no endpoint locations.list
 - [x] Remover limite para exibir todos os 1405 endereços
+
+
+## Fase 19: Reestruturação do Módulo de Clientes (Tenants)
+- [x] Adicionar campo "Regra de Picking" (FIFO | FEFO | Direcionado)
+- [x] Adicionar campos de endereço completo (Endereço, Cidade, Estado, CEP)
+- [x] Atualizar validações (CNPJ único, email válido)
+- [x] Atualizar schema do banco (pickingRule adicionado)
+- [x] Atualizar endpoint backend com todos os campos
+- [ ] Testar CRUD completo com novos campos
