@@ -206,3 +206,7 @@
 - [ ] Reestruturar Picking.tsx conforme documentação
 - [ ] Implementar todos os endpoints tRPC necessários
 - [ ] Testar sistema completo
+
+
+## Fase 9: Correções de Bugs
+- [x] Implementar endpoints zones.create, zones.update, zones.delete no backend

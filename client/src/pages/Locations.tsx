@@ -68,8 +68,8 @@ export default function Locations() {
   const [zoneForm, setZoneForm] = useState({
     name: "",
     code: "",
-    description: "",
-    zoneType: "storage" as "receiving" | "storage" | "shipping" | "quarantine",
+    storageCondition: "ambient" as "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled" | "quarantine",
+    hasTemperatureControl: false,
   });
 
   // Location mutations
@@ -101,7 +101,7 @@ export default function Locations() {
       toast.success("Zona criada com sucesso!");
       utils.zones.list.invalidate();
       setZoneDialogOpen(false);
-      setZoneForm({ name: "", code: "", description: "", zoneType: "storage" });
+      setZoneForm({ name: "", code: "", storageCondition: "ambient", hasTemperatureControl: false });
     },
     onError: (error) => {
       toast.error("Erro ao criar zona: " + error.message);
@@ -168,7 +168,7 @@ export default function Locations() {
 
   // Zone handlers
   const handleCreateZone = () => {
-    setZoneForm({ name: "", code: "", description: "", zoneType: "storage" });
+    setZoneForm({ name: "", code: "", storageCondition: "ambient", hasTemperatureControl: false });
     setZoneDialogOpen(true);
   };
 
@@ -177,8 +177,8 @@ export default function Locations() {
     setZoneForm({
       name: zone.name,
       code: zone.code,
-      description: zone.description || "",
-      zoneType: zone.zoneType,
+      storageCondition: zone.storageCondition,
+      hasTemperatureControl: zone.hasTemperatureControl || false,
     });
     setEditZoneDialogOpen(true);
   };
@@ -205,14 +205,15 @@ export default function Locations() {
     deleteZoneMutation.mutate({ id: selectedZone.id });
   };
 
-  const getZoneTypeBadge = (type: string) => {
-    const types: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      receiving: { label: "Recebimento", variant: "default" },
-      storage: { label: "Armazenagem", variant: "secondary" },
-      shipping: { label: "Expedição", variant: "outline" },
+  const getStorageConditionBadge = (condition: string) => {
+    const conditions: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      ambient: { label: "Ambiente", variant: "default" },
+      refrigerated_2_8: { label: "Refrigerado 2-8°C", variant: "secondary" },
+      frozen_minus_20: { label: "Congelado -20°C", variant: "outline" },
+      controlled: { label: "Controlado", variant: "secondary" },
       quarantine: { label: "Quarentena", variant: "destructive" },
     };
-    return types[type] || { label: type, variant: "outline" };
+    return conditions[condition] || { label: condition, variant: "outline" };
   };
 
   return (
@@ -356,20 +357,22 @@ export default function Locations() {
                     </TableHeader>
                     <TableBody>
                       {zones.map((zone: any) => {
-                        const typeBadge = getZoneTypeBadge(zone.zoneType);
+                        const conditionBadge = getStorageConditionBadge(zone.storageCondition);
                         return (
                           <TableRow key={zone.id}>
                             <TableCell className="font-medium">{zone.code}</TableCell>
                             <TableCell>{zone.name}</TableCell>
                             <TableCell>
-                              <Badge variant={typeBadge.variant}>
-                                {typeBadge.label}
+                              <Badge variant={conditionBadge.variant}>
+                                {conditionBadge.label}
                               </Badge>
                             </TableCell>
-                            <TableCell className="max-w-xs truncate">{zone.description || "-"}</TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {zone.hasTemperatureControl ? "Controle de Temperatura" : "Sem Controle"}
+                            </TableCell>
                             <TableCell>
-                              <Badge variant={zone.active ? "default" : "secondary"}>
-                                {zone.active ? "Ativo" : "Inativo"}
+                              <Badge variant={zone.status === "active" ? "default" : "secondary"}>
+                                {zone.status === "active" ? "Ativo" : "Inativo"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
@@ -616,32 +619,35 @@ export default function Locations() {
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="zone-type">Tipo *</Label>
+              <Label htmlFor="zone-storage-condition">Condição de Armazenagem *</Label>
               <Select
-                value={zoneForm.zoneType}
-                onValueChange={(value: any) => setZoneForm({ ...zoneForm, zoneType: value })}
+                value={zoneForm.storageCondition}
+                onValueChange={(value: any) => setZoneForm({ ...zoneForm, storageCondition: value })}
               >
-                <SelectTrigger id="zone-type">
+                <SelectTrigger id="zone-storage-condition">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="receiving">Recebimento</SelectItem>
-                  <SelectItem value="storage">Armazenagem</SelectItem>
-                  <SelectItem value="shipping">Expedição</SelectItem>
+                  <SelectItem value="ambient">Ambiente</SelectItem>
+                  <SelectItem value="refrigerated_2_8">Refrigerado 2-8°C</SelectItem>
+                  <SelectItem value="frozen_minus_20">Congelado -20°C</SelectItem>
+                  <SelectItem value="controlled">Controlado</SelectItem>
                   <SelectItem value="quarantine">Quarentena</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="zone-description">Descrição</Label>
-              <Textarea
-                id="zone-description"
-                value={zoneForm.description}
-                onChange={(e) => setZoneForm({ ...zoneForm, description: e.target.value })}
-                placeholder="Descrição detalhada da zona"
-                rows={3}
-              />
+              <Label htmlFor="zone-temp-control" className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="zone-temp-control"
+                  checked={zoneForm.hasTemperatureControl}
+                  onChange={(e) => setZoneForm({ ...zoneForm, hasTemperatureControl: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                Possui Controle de Temperatura
+              </Label>
             </div>
           </div>
           <DialogFooter>
@@ -684,31 +690,35 @@ export default function Locations() {
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="edit-zone-type">Tipo *</Label>
+              <Label htmlFor="edit-zone-storage-condition">Condição de Armazenagem *</Label>
               <Select
-                value={zoneForm.zoneType}
-                onValueChange={(value: any) => setZoneForm({ ...zoneForm, zoneType: value })}
+                value={zoneForm.storageCondition}
+                onValueChange={(value: any) => setZoneForm({ ...zoneForm, storageCondition: value })}
               >
-                <SelectTrigger id="edit-zone-type">
+                <SelectTrigger id="edit-zone-storage-condition">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="receiving">Recebimento</SelectItem>
-                  <SelectItem value="storage">Armazenagem</SelectItem>
-                  <SelectItem value="shipping">Expedição</SelectItem>
+                  <SelectItem value="ambient">Ambiente</SelectItem>
+                  <SelectItem value="refrigerated_2_8">Refrigerado 2-8°C</SelectItem>
+                  <SelectItem value="frozen_minus_20">Congelado -20°C</SelectItem>
+                  <SelectItem value="controlled">Controlado</SelectItem>
                   <SelectItem value="quarantine">Quarentena</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="edit-zone-description">Descrição</Label>
-              <Textarea
-                id="edit-zone-description"
-                value={zoneForm.description}
-                onChange={(e) => setZoneForm({ ...zoneForm, description: e.target.value })}
-                rows={3}
-              />
+              <Label htmlFor="edit-zone-temp-control" className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit-zone-temp-control"
+                  checked={zoneForm.hasTemperatureControl}
+                  onChange={(e) => setZoneForm({ ...zoneForm, hasTemperatureControl: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                Possui Controle de Temperatura
+              </Label>
             </div>
           </div>
           <DialogFooter>
