@@ -242,3 +242,11 @@
 - [x] Corrigir limitação de 100 registros no endpoint locations.importExcel
 - [x] Processar todos os registros do arquivo Excel (testado com 1405 endereços)
 - [x] Implementar batch inserts (lotes de 500) para melhor performance
+
+
+## Fase 15: Exclusão em Massa de Endereços
+- [x] Criar endpoint backend locations.deleteMany com hard delete
+- [x] Adicionar checkboxes para seleção múltipla na tabela
+- [x] Implementar botão "Excluir Selecionados" com contador
+- [x] Adicionar modal de confirmação com dupla verificação
+- [x] Exibir resultado da exclusão (quantidade removida)

@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X } from "lucide-react";
 import { toast } from "sonner";
@@ -86,6 +87,10 @@ export default function Locations() {
   const [sortField, setSortField] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
+  // Bulk delete states
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
   // Location mutations
   const updateMutation = trpc.locations.update.useMutation({
     onSuccess: () => {
@@ -106,6 +111,18 @@ export default function Locations() {
     },
     onError: (error) => {
       toast.error("Erro ao excluir endereço: " + error.message);
+    },
+  });
+
+  const deleteManyMutation = trpc.locations.deleteMany.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.count} endereço(s) excluído(s) com sucesso!`);
+      utils.locations.list.invalidate();
+      setBulkDeleteDialogOpen(false);
+      setSelectedIds([]);
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir endereços: " + error.message);
     },
   });
 
@@ -264,6 +281,35 @@ export default function Locations() {
     link.click();
   };
 
+  // Bulk delete handlers
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === filteredAndSortedLocations.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredAndSortedLocations.map((loc: any) => loc.id));
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) {
+      toast.error("Selecione pelo menos um endereço para excluir");
+      return;
+    }
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    deleteManyMutation.mutate({ ids: selectedIds });
+  };
+
   // Filter and sort logic
   const filteredAndSortedLocations = React.useMemo(() => {
     if (!locations) return [];
@@ -373,6 +419,12 @@ export default function Locations() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    {selectedIds.length > 0 && (
+                      <Button variant="destructive" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Selecionados ({selectedIds.length})
+                      </Button>
+                    )}
                     <Button variant="outline" onClick={handleImportClick}>
                       Importar Excel
                     </Button>
@@ -456,6 +508,12 @@ export default function Locations() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedIds.length === filteredAndSortedLocations.length && filteredAndSortedLocations.length > 0}
+                            onCheckedChange={handleToggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead>
                           <button
                             onClick={() => handleSort('code')}
@@ -519,6 +577,12 @@ export default function Locations() {
                     <TableBody>
                       {filteredAndSortedLocations.map((location: any) => (
                         <TableRow key={location.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.includes(location.id)}
+                              onCheckedChange={() => handleToggleSelect(location.id)}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{location.code}</TableCell>
                           <TableCell>{location.aisle || "-"}</TableCell>
                           <TableCell>{location.rack || "-"}</TableCell>
@@ -1000,6 +1064,44 @@ export default function Locations() {
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão em Massa</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a <strong className="text-red-600">excluir permanentemente {selectedIds.length} endereço(s)</strong> do sistema.
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm font-semibold text-red-900 mb-1">
+                    ⚠️ Atenção: Esta ação é IRREVERSÍVEL!
+                  </p>
+                  <p className="text-xs text-red-700">
+                    Os endereços serão removidos permanentemente do banco de dados (hard delete).
+                    Não será possível recuperá-los após a exclusão.
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Tem certeza que deseja continuar?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteManyMutation.isPending}
+            >
+              {deleteManyMutation.isPending ? 'Excluindo...' : `Excluir ${selectedIds.length} Endereço(s)`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

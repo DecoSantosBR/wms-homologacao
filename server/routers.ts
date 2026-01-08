@@ -299,6 +299,19 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    deleteMany: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Hard delete (remover permanentemente do banco)
+        const { sql } = await import('drizzle-orm');
+        await db.delete(warehouseLocations)
+          .where(sql`${warehouseLocations.id} IN (${input.ids.join(',')})`);        
+        return { success: true, count: input.ids.length };
+      }),
+
     importExcel: protectedProcedure
       .input(z.object({
         fileBase64: z.string(),
