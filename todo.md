@@ -184,3 +184,13 @@
 - [ ] Atualizar tabelas com mais colunas e dados detalhados
 - [ ] Adicionar botões de ação (editar, excluir) nas tabelas
 - [ ] Implementar filtros avançados nas páginas de listagem
+
+## Fase 7: Edição e Exclusão de Registros
+- [x] Implementar endpoints de atualização (tenants.update, products.update, locations.update)
+- [x] Adicionar botões de ação (editar, excluir) nas tabelas
+- [x] Criar modal de edição de clientes com dados pré-preenchidos
+- [x] Criar modal de edição de produtos com dados pré-preenchidos
+- [x] Criar modal de edição de endereços com dados pré-preenchidos
+- [x] Implementar confirmação de exclusão (AlertDialog)
+- [x] Usar soft delete nos endpoints de exclusão
+- [x] Atualizar listagens após edição/exclusão

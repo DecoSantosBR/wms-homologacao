@@ -71,6 +71,26 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string(),
+        cnpj: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(tenants)
+          .set({ 
+            name: input.name,
+            cnpj: input.cnpj,
+          })
+          .where(eq(tenants.id, input.id));
+        
+        return { success: true };
+      }),
+
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
@@ -114,6 +134,47 @@ export const appRouter = router({
         await db.insert(products).values(input);
         return { success: true };
       }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        tenantId: z.number(),
+        sku: z.string().min(1, "SKU é obrigatório"),
+        description: z.string().min(1, "Descrição é obrigatória"),
+        gtin: z.string().optional(),
+        anvisaRegistry: z.string().optional(),
+        therapeuticClass: z.string().optional(),
+        manufacturer: z.string().optional(),
+        unitOfMeasure: z.string().default("UN"),
+        unitsPerBox: z.number().optional(),
+        requiresBatchControl: z.boolean().default(true),
+        requiresExpiryControl: z.boolean().default(true),
+        storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled"]).default("ambient"),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const { id, ...updateData } = input;
+        await db.update(products)
+          .set(updateData)
+          .where(eq(products.id, id));
+        
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(products)
+          .set({ status: 'discontinued' })
+          .where(eq(products.id, input.id));
+        
+        return { success: true };
+      }),
   }),
 
   zones: router({
@@ -148,6 +209,44 @@ export const appRouter = router({
         if (!db) throw new Error("Database not available");
         
         await db.insert(warehouseLocations).values(input);
+        return { success: true };
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        zoneId: z.number(),
+        tenantId: z.number().optional(),
+        code: z.string().min(1, "Código é obrigatório"),
+        aisle: z.string().optional(),
+        rack: z.string().optional(),
+        level: z.string().optional(),
+        position: z.string().optional(),
+        locationType: z.enum(["whole", "fraction"]).default("whole"),
+        storageRule: z.enum(["single", "multi"]).default("single"),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const { id, ...updateData } = input;
+        await db.update(warehouseLocations)
+          .set(updateData)
+          .where(eq(warehouseLocations.id, id));
+        
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(warehouseLocations)
+          .set({ status: 'blocked' })
+          .where(eq(warehouseLocations.id, input.id));
+        
         return { success: true };
       }),
   }),
