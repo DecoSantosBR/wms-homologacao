@@ -298,6 +298,108 @@ export const appRouter = router({
         
         return { success: true };
       }),
+
+    importExcel: protectedProcedure
+      .input(z.object({
+        fileBase64: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const XLSX = await import('xlsx');
+        
+        // Decodificar base64 para buffer
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        const results = {
+          success: [] as string[],
+          errors: [] as { row: number; error: string }[],
+        };
+
+        // Buscar todas as zonas para mapear código -> ID
+        const zones = await db.select().from(warehouseZones);
+        const zoneMap = new Map(zones.map(z => [z.code, z.id]));
+
+        // Buscar todos os clientes para mapear nome -> ID
+        const clients = await db.select().from(tenants);
+        const clientMap = new Map(clients.map(c => [c.name, c.id]));
+
+        for (let i = 0; i < data.length; i++) {
+          const row: any = data[i];
+          const rowNum = i + 2; // +2 porque começa na linha 2 (1 é cabeçalho)
+
+          try {
+            // Validar campos obrigatórios
+            if (!row.zona || !row.rua || !row.tipo || !row.regra) {
+              results.errors.push({
+                row: rowNum,
+                error: 'Campos obrigatórios faltando (zona, rua, tipo, regra)'
+              });
+              continue;
+            }
+
+            // Buscar ID da zona
+            const zoneId = zoneMap.get(String(row.zona).padStart(3, '0'));
+            if (!zoneId) {
+              results.errors.push({
+                row: rowNum,
+                error: `Zona "${row.zona}" não encontrada`
+              });
+              continue;
+            }
+
+            // Buscar ID do cliente (opcional)
+            let tenantId = null;
+            if (row.cliente) {
+              tenantId = clientMap.get(row.cliente);
+              if (!tenantId) {
+                results.errors.push({
+                  row: rowNum,
+                  error: `Cliente "${row.cliente}" não encontrado`
+                });
+                continue;
+              }
+            }
+
+            // Mapear tipo: "Fração" -> "fraction", "Inteira" -> "whole"
+            const locationType = row.tipo.toLowerCase().includes('fra') ? 'fraction' : 'whole';
+            
+            // Mapear regra: "single" ou "multi"
+            const storageRule = row.regra.toLowerCase() === 'single' ? 'single' : 'multi';
+
+            // Gerar código do endereço
+            const codeParts = [row.zona, row.rua, row.predio, row.andar, row.quadrante].filter(Boolean);
+            const code = codeParts.join('-');
+
+            // Inserir endereço
+            await db.insert(warehouseLocations).values({
+              zoneId,
+              tenantId,
+              code,
+              aisle: row.rua || null,
+              rack: row.predio || null,
+              level: row.andar || null,
+              position: row.quadrante || null,
+              locationType,
+              storageRule,
+              status: 'available',
+            });
+
+            results.success.push(code);
+          } catch (error: any) {
+            results.errors.push({
+              row: rowNum,
+              error: error.message || 'Erro desconhecido'
+            });
+          }
+        }
+
+        return results;
+      }),
   }),
 
   receiving: router({

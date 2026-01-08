@@ -72,6 +72,11 @@ export default function Locations() {
     hasTemperatureControl: false,
   });
 
+  // Import Excel states
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResults, setImportResults] = useState<any>(null);
+
   // Location mutations
   const updateMutation = trpc.locations.update.useMutation({
     onSuccess: () => {
@@ -127,6 +132,17 @@ export default function Locations() {
     },
     onError: (error) => {
       toast.error("Erro ao excluir zona: " + error.message);
+    },
+  });
+
+  const importExcelMutation = trpc.locations.importExcel.useMutation({
+    onSuccess: (results) => {
+      setImportResults(results);
+      utils.locations.list.invalidate();
+      toast.success(`Importação concluída! ${results.success.length} endereços criados, ${results.errors.length} erros.`);
+    },
+    onError: (error) => {
+      toast.error("Erro ao importar arquivo: " + error.message);
     },
   });
 
@@ -205,6 +221,40 @@ export default function Locations() {
     deleteZoneMutation.mutate({ id: selectedZone.id });
   };
 
+  // Import Excel handlers
+  const handleImportClick = () => {
+    setImportFile(null);
+    setImportResults(null);
+    setImportDialogOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      setImportResults(null);
+    }
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importFile) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      const fileBase64 = base64.split(',')[1]; // Remove data:application/...;base64,
+      importExcelMutation.mutate({ fileBase64 });
+    };
+    reader.readAsDataURL(importFile);
+  };
+
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/templates/modelo_importacao_enderecos.xlsx';
+    link.download = 'modelo_importacao_enderecos.xlsx';
+    link.click();
+  };
+
   const getStorageConditionBadge = (condition: string) => {
     const conditions: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       ambient: { label: "Ambiente", variant: "default" },
@@ -246,7 +296,12 @@ export default function Locations() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Endereços Cadastrados</h3>
                     <p className="text-sm text-gray-600">Total de {locations?.length || 0} endereço(s) cadastrado(s)</p>
                   </div>
-                  <CreateLocationDialog />
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleImportClick}>
+                      Importar Excel
+                    </Button>
+                    <CreateLocationDialog />
+                  </div>
                 </div>
 
                 {isLoading ? (
@@ -753,6 +808,91 @@ export default function Locations() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Excel Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Importar Endereços via Excel</DialogTitle>
+            <DialogDescription>
+              Faça upload de um arquivo Excel (.xlsx) com os endereços a serem cadastrados.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Arquivo Excel *</Label>
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+              />
+              {importFile && (
+                <p className="text-sm text-gray-600">
+                  Arquivo selecionado: <strong>{importFile.name}</strong>
+                </p>
+              )}
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 mb-2">
+                <strong>Não possui o modelo?</strong>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                className="text-blue-700 border-blue-300 hover:bg-blue-100"
+              >
+                Baixar Modelo Excel
+              </Button>
+            </div>
+
+            {importResults && (
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-green-900 mb-1">
+                    ✓ {importResults.success.length} endereços importados com sucesso
+                  </p>
+                  {importResults.success.length > 0 && (
+                    <p className="text-xs text-green-700">
+                      {importResults.success.slice(0, 5).join(', ')}
+                      {importResults.success.length > 5 && ` e mais ${importResults.success.length - 5}...`}
+                    </p>
+                  )}
+                </div>
+
+                {importResults.errors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-red-900 mb-2">
+                      ✗ {importResults.errors.length} erros encontrados
+                    </p>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {importResults.errors.map((err: any, idx: number) => (
+                        <p key={idx} className="text-xs text-red-700">
+                          Linha {err.row}: {err.error}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+              {importResults ? 'Fechar' : 'Cancelar'}
+            </Button>
+            {!importResults && (
+              <Button
+                onClick={handleImportSubmit}
+                disabled={!importFile || importExcelMutation.isPending}
+              >
+                {importExcelMutation.isPending ? 'Importando...' : 'Importar'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

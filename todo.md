@@ -210,3 +210,13 @@
 
 ## Fase 9: Correções de Bugs
 - [x] Implementar endpoints zones.create, zones.update, zones.delete no backend
+
+
+## Fase 10: Importação de Endereços via Excel
+- [x] Criar endpoint backend locations.importExcel para processar arquivo .xlsx
+- [x] Copiar arquivo modelo para client/public/templates/
+- [x] Adicionar botão "Importar Excel" na página Locations
+- [x] Criar modal de upload com preview dos dados
+- [x] Implementar botão de download do template modelo
+- [x] Validar dados antes de importar (zona existe, campos obrigatórios)
+- [x] Exibir resultado da importação (sucessos e erros)
