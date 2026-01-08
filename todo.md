@@ -381,3 +381,16 @@
 - [x] Todos os erros de TypeScript corrigidos (0 errors)
 - [ ] Testar importação completa
 - [ ] Salvar checkpoint
+
+
+## Fase 37: Corrigir Keys Duplicadas e Códigos de Produtos
+- [x] Investigar keys duplicadas (problema: NF-e importada múltiplas vezes)
+- [x] Adicionar validação de duplicidade de NF-e (verificar nfeKey)
+- [x] Investigar por que códigos aparecem como "0" (problema: endpoint getItems)
+- [x] Parser de XML funcionando corretamente (log: "834207")
+- [x] Corrigir endpoint receiving.getItems para retornar productSku e productDescription
+- [x] Corrigir Receiving.tsx para usar novos campos
+- [x] Adicionar logs de debug no parser
+- [ ] Limpar registros duplicados do banco de dados
+- [ ] Testar importação completa
+- [ ] Salvar checkpoint

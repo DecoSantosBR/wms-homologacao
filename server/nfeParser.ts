@@ -95,11 +95,19 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
 
     // Extrair produtos (detalhes da nota)
     const detalhes = Array.isArray(infNFe.det) ? infNFe.det : (infNFe.det ? [infNFe.det] : []);
-    const produtos: NFEProduct[] = detalhes.map((det: any) => {
+    console.log('[NFE Parser] Total de produtos encontrados:', detalhes.length);
+    const produtos: NFEProduct[] = detalhes.map((det: any, index: number) => {
       const prod = Array.isArray(det.prod) ? det.prod[0] : det.prod;
+      console.log(`[NFE Parser] Produto ${index + 1}:`, {
+        cProd: prod?.cProd,
+        xProd: prod?.xProd,
+        estrutura: Object.keys(prod || {})
+      });
       
+      const codigo = extractValue(prod?.cProd, "");
+      console.log(`[NFE Parser] Código extraído: "${codigo}"`);
       return {
-        codigo: extractValue(prod?.cProd, ""),
+        codigo,
         descricao: extractValue(prod?.xProd, ""),
         ean: extractValue(prod?.cEAN, null) || null,
         eanTributavel: extractValue(prod?.cEANTrib, null) || null,

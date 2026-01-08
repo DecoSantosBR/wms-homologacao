@@ -650,7 +650,9 @@ export const appRouter = router({
               .limit(1);
             return {
               ...item,
-              product: product[0] || null,
+              productSku: product[0]?.sku || null,
+              productDescription: product[0]?.description || null,
+              expectedGtin: product[0]?.gtin || null,
             };
           })
         );
@@ -696,6 +698,16 @@ export const appRouter = router({
 
         // Parse do XML
         const nfeData = await parseNFE(input.xmlContent);
+
+        // Verificar se NF-e já foi importada
+        const existingOrder = await db.select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.nfeKey, nfeData.chaveAcesso))
+          .limit(1);
+
+        if (existingOrder.length > 0) {
+          throw new Error(`NF-e já importada. Ordem de recebimento: ${existingOrder[0].orderNumber}`);
+        }
 
         // Criar ordem de recebimento
         const orderNumber = `REC-${nfeData.numero}-${Date.now()}`;

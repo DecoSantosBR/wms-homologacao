@@ -346,10 +346,10 @@ export default function Receiving() {
                     orderItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {item.product?.description || "-"}
+                          {item.productDescription || "-"}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {item.product?.sku || "-"}
+                          {item.productSku || "-"}
                         </TableCell>
                         <TableCell className="text-right">{item.expectedQuantity}</TableCell>
                         <TableCell className="text-right">{item.receivedQuantity}</TableCell>
