@@ -210,11 +210,6 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       return;
     }
 
-    if (!batch.trim()) {
-      toast.error("Lote é obrigatório para rastreabilidade");
-      return;
-    }
-
     if (unitsPerPackage < 1) {
       toast.error("Unidades por embalagem deve ser maior que zero");
       return;
@@ -472,12 +467,11 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Lote *</Label>
+                <Label className="text-sm font-medium mb-2 block">Lote</Label>
                 <Input
                   value={batch}
                   onChange={(e) => setBatch(e.target.value)}
-                  placeholder="Ex: 25H04LB356"
-                  required
+                  placeholder="Ex: 25H04LB356 (opcional)"
                 />
               </div>
 
@@ -508,7 +502,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
               </Button>
               <Button
                 onClick={handleAssociate}
-                disabled={!selectedProductId || !batch.trim() || associateLabelMutation.isPending}
+                disabled={!selectedProductId || associateLabelMutation.isPending}
               >
                 {associateLabelMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />

@@ -460,3 +460,13 @@
 - [x] Campo "Lote" tornado obrigatório no diálogo de associação
 - [x] Validação de lote obrigatório no handleAssociate
 - [ ] Testar cenário: 1 produto com 2 lotes diferentes e 2 etiquetas
+
+
+## Fase 32: Correção de Lógica de Etiquetas - Lote Opcional
+- [x] Lógica readLabel mantida correta: busca por sessionId+labelCode (etiqueta trava no produto+lote)
+- [x] Etiqueta fica "travada" na primeira associação (produto+lote ou produto sem lote)
+- [x] Campo "Lote" tornado opcional no frontend
+- [x] Validação de lote obrigatório removida do handleAssociate
+- [x] getSummary já funciona corretamente (soma por produto, rastreia lotes separadamente)
+- [ ] Testar cenário: SKU 123 com lote ABC (etiqueta VOL-001) e lote DEF (etiqueta VOL-002)
+- [ ] Testar cenário: SKU 123 SEM informar lote (etiqueta VOL-001, 100 leituras)

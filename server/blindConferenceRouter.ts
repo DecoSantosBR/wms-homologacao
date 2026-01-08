@@ -82,6 +82,8 @@ export const blindConferenceRouter = router({
 
   /**
    * 2. Ler Etiqueta
+   * Regra: 1 etiqueta = 1 produto + 1 lote específico (ou sem lote)
+   * Busca por sessionId + labelCode
    */
   readLabel: protectedProcedure
     .input(z.object({
