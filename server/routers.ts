@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, receivingConferences, receivingDivergences } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -592,11 +592,314 @@ export const appRouter = router({
   }),
 
   receiving: router({
+    /**
+     * Lista todas as ordens de recebimento
+     */
     list: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
       return db.select().from(receivingOrders).orderBy(desc(receivingOrders.createdAt)).limit(50);
     }),
+
+    /**
+     * Busca itens de uma ordem de recebimento
+     */
+    getItems: protectedProcedure
+      .input(z.object({ receivingOrderId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        
+        return db
+          .select({
+            id: receivingOrderItems.id,
+            receivingOrderId: receivingOrderItems.receivingOrderId,
+            productId: receivingOrderItems.productId,
+            expectedQuantity: receivingOrderItems.expectedQuantity,
+            receivedQuantity: receivingOrderItems.receivedQuantity,
+            addressedQuantity: receivingOrderItems.addressedQuantity,
+            expectedGtin: receivingOrderItems.expectedGtin,
+            expectedSupplierCode: receivingOrderItems.expectedSupplierCode,
+            // Join com produtos para pegar informações
+            productSku: products.sku,
+            productDescription: products.description,
+            productGtin: products.gtin,
+          })
+          .from(receivingOrderItems)
+          .leftJoin(products, eq(receivingOrderItems.productId, products.id))
+          .where(eq(receivingOrderItems.receivingOrderId, input.receivingOrderId));
+      }),
+
+    /**
+     * Cria uma ordem de recebimento manual
+     */
+    create: protectedProcedure
+      .input(z.object({
+        tenantId: z.number(),
+        description: z.string().optional(),
+        scheduledDate: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Gerar número da ordem (REC-YYYYMMDD-XXXX)
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+        const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+        const orderNumber = `REC-${dateStr}-${randomNum}`;
+
+        const [result] = await db.insert(receivingOrders).values({
+          tenantId: input.tenantId,
+          orderNumber,
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : now,
+          status: "scheduled",
+          createdBy: ctx.user.id,
+        });
+
+        return { id: result.insertId, orderNumber };
+      }),
+
+    /**
+     * Deleta uma ordem de recebimento
+     */
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Verificar se a ordem existe
+        const [order] = await db
+          .select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.id, input.id))
+          .limit(1);
+
+        if (!order) {
+          throw new Error("Ordem de recebimento não encontrada");
+        }
+
+        // Verificar se a ordem pode ser deletada (não pode estar finalizada)
+        if (order.status === "completed") {
+          throw new Error("Não é possível deletar uma ordem finalizada");
+        }
+
+        // Deletar itens da ordem primeiro
+        await db.delete(receivingOrderItems).where(eq(receivingOrderItems.receivingOrderId, input.id));
+
+        // Deletar conferências
+        await db.delete(receivingConferences).where(
+          inArray(
+            receivingConferences.receivingOrderItemId,
+            db.select({ id: receivingOrderItems.id }).from(receivingOrderItems).where(eq(receivingOrderItems.receivingOrderId, input.id))
+          )
+        );
+
+        // Deletar divergências
+        await db.delete(receivingDivergences).where(
+          inArray(
+            receivingDivergences.receivingOrderItemId,
+            db.select({ id: receivingOrderItems.id }).from(receivingOrderItems).where(eq(receivingOrderItems.receivingOrderId, input.id))
+          )
+        );
+
+        // Deletar a ordem
+        await db.delete(receivingOrders).where(eq(receivingOrders.id, input.id));
+
+        return { success: true };
+      }),
+
+    /**
+     * Deleta múltiplas ordens de recebimento
+     */
+    deleteBatch: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        let deletedCount = 0;
+        const errors: string[] = [];
+
+        for (const id of input.ids) {
+          try {
+            // Verificar se a ordem existe e pode ser deletada
+            const [order] = await db
+              .select()
+              .from(receivingOrders)
+              .where(eq(receivingOrders.id, id))
+              .limit(1);
+
+            if (!order) {
+              errors.push(`Ordem ${id}: não encontrada`);
+              continue;
+            }
+
+            if (order.status === "completed") {
+              errors.push(`Ordem ${id}: não pode deletar ordem finalizada`);
+              continue;
+            }
+
+            // Deletar itens e dependências
+            await db.delete(receivingOrderItems).where(eq(receivingOrderItems.receivingOrderId, id));
+            await db.delete(receivingOrders).where(eq(receivingOrders.id, id));
+            deletedCount++;
+          } catch (error: any) {
+            errors.push(`Ordem ${id}: ${error.message}`);
+          }
+        }
+
+        return { count: deletedCount, errors };
+      }),
+
+    /**
+     * Confere um item de recebimento
+     */
+    checkItem: protectedProcedure
+      .input(z.object({
+        itemId: z.number(),
+        quantityReceived: z.number(),
+        batch: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Buscar item
+        const [item] = await db
+          .select()
+          .from(receivingOrderItems)
+          .where(eq(receivingOrderItems.id, input.itemId))
+          .limit(1);
+
+        if (!item) {
+          throw new Error("Item não encontrado");
+        }
+
+        // Atualizar quantidade recebida
+        await db
+          .update(receivingOrderItems)
+          .set({ receivedQuantity: input.quantityReceived })
+          .where(eq(receivingOrderItems.id, input.itemId));
+
+        // Registrar conferência
+        await db.insert(receivingConferences).values({
+          receivingOrderItemId: input.itemId,
+          batch: input.batch || null,
+          quantityConferenced: input.quantityReceived,
+          conferencedBy: ctx.user.id,
+          notes: input.notes || null,
+        });
+
+        // Detectar divergência
+        if (input.quantityReceived !== item.expectedQuantity) {
+          const divergenceType = input.quantityReceived < item.expectedQuantity ? "shortage" : "surplus";
+          const differenceQuantity = input.quantityReceived - item.expectedQuantity;
+
+          await db.insert(receivingDivergences).values({
+            receivingOrderItemId: input.itemId,
+            divergenceType,
+            expectedQuantity: item.expectedQuantity,
+            receivedQuantity: input.quantityReceived,
+            differenceQuantity,
+            batch: input.batch || null,
+            status: "pending",
+            reportedBy: ctx.user.id,
+          });
+        }
+
+        return { success: true, hasDivergence: input.quantityReceived !== item.expectedQuantity };
+      }),
+
+    /**
+     * Endereça um item de recebimento
+     */
+    addressItem: protectedProcedure
+      .input(z.object({
+        itemId: z.number(),
+        locationId: z.number(),
+        quantity: z.number(),
+        batch: z.string().optional(),
+        expiryDate: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Buscar item
+        const [item] = await db
+          .select()
+          .from(receivingOrderItems)
+          .where(eq(receivingOrderItems.id, input.itemId))
+          .limit(1);
+
+        if (!item) {
+          throw new Error("Item não encontrado");
+        }
+
+        // Verificar se quantidade endereçada não excede recebida
+        const newAddressedQuantity = item.addressedQuantity + input.quantity;
+        if (newAddressedQuantity > item.receivedQuantity) {
+          throw new Error("Quantidade endereçada excede quantidade recebida");
+        }
+
+        // Atualizar quantidade endereçada
+        await db
+          .update(receivingOrderItems)
+          .set({ addressedQuantity: newAddressedQuantity })
+          .where(eq(receivingOrderItems.id, input.itemId));
+
+        // Buscar tenant do produto para criar inventário
+        const [product] = await db
+          .select({ tenantId: products.tenantId })
+          .from(products)
+          .where(eq(products.id, item.productId))
+          .limit(1);
+
+        // Criar registro de inventário
+        await db.insert(inventory).values({
+          tenantId: product?.tenantId || null,
+          productId: item.productId,
+          locationId: input.locationId,
+          batch: input.batch || null,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+          quantity: input.quantity,
+          status: "available",
+        });
+
+        return { success: true, fullyAddressed: newAddressedQuantity === item.receivedQuantity };
+      }),
+
+    /**
+     * Retorna saldo pendente de endereçamento de um item
+     */
+    getPendingAddressingBalance: protectedProcedure
+      .input(z.object({ receivingOrderItemId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { pending: 0, received: 0, addressed: 0 };
+
+        const [item] = await db
+          .select({
+            receivedQuantity: receivingOrderItems.receivedQuantity,
+            addressedQuantity: receivingOrderItems.addressedQuantity,
+          })
+          .from(receivingOrderItems)
+          .where(eq(receivingOrderItems.id, input.receivingOrderItemId))
+          .limit(1);
+
+        if (!item) {
+          return { pending: 0, received: 0, addressed: 0 };
+        }
+
+        return {
+          pending: item.receivedQuantity - item.addressedQuantity,
+          received: item.receivedQuantity,
+          addressed: item.addressedQuantity,
+        };
+      }),
   }),
 
   picking: router({

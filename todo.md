@@ -351,6 +351,14 @@
 - [x] Verificar schema de receivingOrderItems (já existe)
 - [x] Verificar schema de receivingConferences (já existe)
 - [x] Verificar schema of receivingDivergences (já existe)
+- [x] Implementar endpoint receiving.getItems
+- [x] Implementar endpoint receiving.create
+- [x] Implementar endpoint receiving.delete
+- [x] Implementar endpoint receiving.deleteBatch
+- [x] Implementar endpoint receiving.checkItem
+- [x] Implementar endpoint receiving.addressItem
+- [x] Implementar endpoint receiving.getPendingAddressingBalance
+- [x] Todos os 7 endpoints implementados com sucesso
 - [ ] Implementar página de Agendamento de Recebimentos
 - [ ] Implementar importação de NF-e para criar ordem de recebimento
 - [ ] Implementar página de Conferência Cega

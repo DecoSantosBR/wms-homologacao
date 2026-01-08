@@ -2,31 +2,59 @@ import { getDb } from "../db";
 import { divergenceApprovals } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-export async function approveDivergence(divergenceId: number, userId: number, comments?: string) {
+/**
+ * Aprovar uma divergência
+ */
+export async function approveDivergence(
+  receivingOrderItemId: number,
+  userId: number,
+  divergenceType: "quantity" | "code_mismatch" | "expiry_date" | "multiple",
+  divergenceDetails: string,
+  justification: string,
+  approvalJustification?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(divergenceApprovals).values({
-    divergenceId,
+    receivingOrderItemId,
+    requestedBy: userId,
+    divergenceType,
+    divergenceDetails,
+    justification,
+    status: "approved",
     approvedBy: userId,
-    approvalDate: new Date(),
-    decision: "approved",
-    comments,
+    approvalJustification: approvalJustification || null,
+    approvedAt: new Date(),
   });
   
   return result;
 }
 
-export async function rejectDivergence(divergenceId: number, userId: number, comments?: string) {
+/**
+ * Rejeitar uma divergência
+ */
+export async function rejectDivergence(
+  receivingOrderItemId: number,
+  userId: number,
+  divergenceType: "quantity" | "code_mismatch" | "expiry_date" | "multiple",
+  divergenceDetails: string,
+  justification: string,
+  approvalJustification?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(divergenceApprovals).values({
-    divergenceId,
+    receivingOrderItemId,
+    requestedBy: userId,
+    divergenceType,
+    divergenceDetails,
+    justification,
+    status: "rejected",
     approvedBy: userId,
-    approvalDate: new Date(),
-    decision: "rejected",
-    comments,
+    approvalJustification: approvalJustification || null,
+    approvedAt: new Date(),
   });
   
   return result;
