@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { Package, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { CreateProductDialog } from "@/components/CreateProductDialog";
 
 export default function Products() {
   const { data: products, isLoading } = trpc.products.list.useQuery();
@@ -16,10 +17,7 @@ export default function Products() {
         title="Produtos"
         description="Gestão de produtos cadastrados"
         actions={
-          <Button className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
-            <Plus className="h-4 w-4" />
-            Novo Produto
-          </Button>
+          <CreateProductDialog />
         }
       />
 
@@ -61,10 +59,7 @@ export default function Products() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum produto cadastrado</h3>
                 <p className="text-sm text-gray-600 mb-6">Comece adicionando um novo produto ao sistema</p>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Produto
-                </Button>
+                <CreateProductDialog />
               </div>
             )}
           </CardContent>

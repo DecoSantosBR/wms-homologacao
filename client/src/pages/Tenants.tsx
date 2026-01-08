@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { FileText, Plus, Eye, Trash2 } from "lucide-react";
+import { CreateTenantDialog } from "@/components/CreateTenantDialog";
 import { toast } from "sonner";
 
 export default function Tenants() {
@@ -24,10 +25,7 @@ export default function Tenants() {
         title="Cadastros"
         description="Gestão de dados mestre do sistema"
         actions={
-          <Button className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
-            <Plus className="h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <CreateTenantDialog />
         }
       />
 
@@ -89,10 +87,7 @@ export default function Tenants() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum cliente cadastrado</h3>
                 <p className="text-sm text-gray-600 mb-6">Comece adicionando um novo cliente ao sistema</p>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Cliente
-                </Button>
+                <CreateTenantDialog />
               </div>
             )}
           </CardContent>

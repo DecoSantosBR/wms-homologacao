@@ -6,6 +6,7 @@ import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
+import { warehouseZones } from "../drizzle/schema";
 
 export const appRouter = router({
   system: systemRouter,
@@ -90,6 +91,37 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(products).orderBy(desc(products.createdAt)).limit(100);
     }),
+
+    create: protectedProcedure
+      .input(z.object({
+        tenantId: z.number(),
+        sku: z.string().min(1, "SKU é obrigatório"),
+        description: z.string().min(1, "Descrição é obrigatória"),
+        gtin: z.string().optional(),
+        anvisaRegistry: z.string().optional(),
+        therapeuticClass: z.string().optional(),
+        manufacturer: z.string().optional(),
+        unitOfMeasure: z.string().default("UN"),
+        unitsPerBox: z.number().optional(),
+        requiresBatchControl: z.boolean().default(true),
+        requiresExpiryControl: z.boolean().default(true),
+        storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled"]).default("ambient"),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.insert(products).values(input);
+        return { success: true };
+      }),
+  }),
+
+  zones: router({
+    list: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(warehouseZones).orderBy(desc(warehouseZones.createdAt));
+    }),
   }),
 
   locations: router({
@@ -98,6 +130,26 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(warehouseLocations).orderBy(desc(warehouseLocations.createdAt)).limit(100);
     }),
+
+    create: protectedProcedure
+      .input(z.object({
+        zoneId: z.number(),
+        tenantId: z.number().optional(),
+        code: z.string().min(1, "Código é obrigatório"),
+        aisle: z.string().optional(),
+        rack: z.string().optional(),
+        level: z.string().optional(),
+        position: z.string().optional(),
+        locationType: z.enum(["whole", "fraction"]).default("whole"),
+        storageRule: z.enum(["single", "multi"]).default("single"),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.insert(warehouseLocations).values(input);
+        return { success: true };
+      }),
   }),
 
   receiving: router({

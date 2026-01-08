@@ -155,3 +155,19 @@
 - [x] Atualizar componentes (botões, cards, tabelas)
 - [ ] Adicionar empty states com ilustrações
 - [ ] Validar consistência visual em todas as páginas
+
+
+## Fase 5: Formulários de Cadastro
+- [x] Criar endpoint de criação de clientes (tenants.create)
+- [x] Criar endpoint de criação de produtos (products.create)
+- [x] Criar endpoint de criação de endereços (locations.create)
+- [x] Implementar validações no backend (CNPJ, ANVISA, etc.)
+- [x] Criar componente Dialog para formulário de cliente
+- [x] Criar componente Dialog para formulário de produto
+- [x] Criar componente Dialog para formulário de endereço
+- [x] Adicionar validações de formulário com react-hook-form + zod
+- [ ] Integrar formulários com mutations tRPC
+- [ ] Implementar feedback visual (loading, success, error)
+- [ ] Testar criação de clientes
+- [ ] Testar criação de produtos
+- [ ] Testar criação de endereços
