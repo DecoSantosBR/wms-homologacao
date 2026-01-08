@@ -8,9 +8,11 @@ import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
 import { warehouseZones } from "../drizzle/schema";
+import { blindConferenceRouter } from "./blindConferenceRouter";
 
 export const appRouter = router({
   system: systemRouter,
+  blindConference: blindConferenceRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -597,6 +599,64 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(receivingOrders).orderBy(desc(receivingOrders.createdAt)).limit(50);
     }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(receivingOrders).where(eq(receivingOrders.id, input.id));
+        return { success: true };
+      }),
+
+    deleteBatch: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(receivingOrders).where(inArray(receivingOrders.id, input.ids));
+        return { success: true };
+      }),
+
+    schedule: protectedProcedure
+      .input(z.object({ 
+        id: z.number(),
+        scheduledDate: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.update(receivingOrders)
+          .set({ scheduledDate: new Date(input.scheduledDate) })
+          .where(eq(receivingOrders.id, input.id));
+        return { success: true };
+      }),
+
+    getItems: protectedProcedure
+      .input(z.object({ receivingOrderId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const items = await db.select()
+          .from(receivingOrderItems)
+          .where(eq(receivingOrderItems.receivingOrderId, input.receivingOrderId));
+        
+        // Join com produtos para pegar informações
+        const itemsWithProducts = await Promise.all(
+          items.map(async (item) => {
+            const product = await db.select()
+              .from(products)
+              .where(eq(products.id, item.productId))
+              .limit(1);
+            return {
+              ...item,
+              product: product[0] || null,
+            };
+          })
+        );
+        
+        return itemsWithProducts;
+      }),
   }),
 
   picking: router({

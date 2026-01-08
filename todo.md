@@ -355,3 +355,16 @@
 - [x] Corrigido divergenceApprovals.ts (campo divergenceId não existe)
 - [x] Todos os erros de TypeScript resolvidos
 - [ ] Testar navegação em todas as páginas
+
+
+## Fase 35: Restaurar Módulo de Recebimento Perdido
+- [x] Verificar histórico git e recuperar código do commit 56b41c72
+- [x] Restaurar Receiving.tsx com funcionalidade completa
+- [x] Recuperar BlindCheckModal.tsx e BarcodeScanner.tsx
+- [x] Adicionar endpoints faltantes (delete, deleteBatch, schedule, getItems)
+- [x] Recuperar blindConferenceRouter.ts do histórico
+- [x] Registrar blindConferenceRouter no appRouter
+- [x] Instalar html5-qrcode
+- [x] Corrigir todos os erros de TypeScript (0 errors)
+- [ ] Testar fluxo completo de recebimento
+- [ ] Salvar checkpoint
