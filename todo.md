@@ -359,7 +359,13 @@
 - [x] Implementar endpoint receiving.addressItem
 - [x] Implementar endpoint receiving.getPendingAddressingBalance
 - [x] Todos os 7 endpoints implementados com sucesso
-- [ ] Implementar página de Agendamento de Recebimentos
+- [ ] Criar componente Receiving.tsx com listagem de ordens
+- [ ] Criar modal de visualização de itens (ViewReceivingItemsModal.tsx)
+- [ ] Criar modal de criação de ordem manual (CreateReceivingOrderModal.tsx)
+- [ ] Adicionar badges de status (scheduled, in_progress, addressing, completed, etc.)
+- [ ] Adicionar ações (visualizar, deletar, deletar em lote)
+- [ ] Adicionar rota /recebimento no App.tsx
+- [ ] Testar listagem e ações
 - [ ] Implementar importação de NF-e para criar ordem de recebimento
 - [ ] Implementar página de Conferência Cega
 - [ ] Implementar leitura de etiquetas (código de barras)
