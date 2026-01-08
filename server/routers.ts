@@ -305,6 +305,19 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
+        // Verificar se há inventário nos endereços antes de excluir
+        const inventoryCheck = await db.select({ locationId: inventory.locationId })
+          .from(inventory)
+          .where(inArray(inventory.locationId, input.ids))
+          .limit(1);
+        
+        if (inventoryCheck.length > 0) {
+          throw new Error(
+            "Não é possível excluir os endereços selecionados porque há inventário (produtos armazenados) neles. " +
+            "Por favor, mova ou remova o inventário antes de excluir os endereços."
+          );
+        }
+        
         // Hard delete (remover permanentemente do banco)
         await db.delete(warehouseLocations)
           .where(inArray(warehouseLocations.id, input.ids));

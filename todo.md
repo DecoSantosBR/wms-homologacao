@@ -255,3 +255,11 @@
 ## Fase 16: Correções de Erros Críticos
 - [x] Corrigir query SQL malformada no endpoint locations.deleteMany (usar inArray)
 - [x] Corrigir estrutura HTML do modal (usar asChild e div em vez de p aninhados)
+
+
+## Fase 17: Investigação de Exclusão em Massa
+- [x] Verificar restrições de foreign key em warehouseLocations no schema
+- [x] Verificar se inventory ou outras tabelas referenciam warehouseLocations
+- [x] Implementar validação no endpoint deleteMany (verificar inventário antes de excluir)
+- [x] Retornar erro informativo se houver inventário nos endereços
+- [ ] Testar exclusão com e sem inventário
