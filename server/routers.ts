@@ -900,6 +900,29 @@ export const appRouter = router({
           addressed: item.addressedQuantity,
         };
       }),
+
+    /**
+     * Agenda previsão de chegada do veículo
+     */
+    schedule: protectedProcedure
+      .input(z.object({ 
+        id: z.number(),
+        scheduledDate: z.string(), // ISO date string
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        await db
+          .update(receivingOrders)
+          .set({ 
+            scheduledDate: new Date(input.scheduledDate),
+            updatedAt: new Date(),
+          })
+          .where(eq(receivingOrders.id, input.id));
+
+        return { success: true };
+      }),
   }),
 
   picking: router({

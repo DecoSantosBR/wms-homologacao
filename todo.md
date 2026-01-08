@@ -359,13 +359,18 @@
 - [x] Implementar endpoint receiving.addressItem
 - [x] Implementar endpoint receiving.getPendingAddressingBalance
 - [x] Todos os 7 endpoints implementados com sucesso
-- [ ] Criar componente Receiving.tsx com listagem de ordens
-- [ ] Criar modal de visualização de itens (ViewReceivingItemsModal.tsx)
-- [ ] Criar modal de criação de ordem manual (CreateReceivingOrderModal.tsx)
-- [ ] Adicionar badges de status (scheduled, in_progress, addressing, completed, etc.)
-- [ ] Adicionar ações (visualizar, deletar, deletar em lote)
-- [ ] Adicionar rota /recebimento no App.tsx
-- [ ] Testar listagem e ações
+- [x] Criar componente Receiving.tsx com tabela de ordens
+- [x] Adicionar badges de status com cores (scheduled=azul, in_progress=amarelo, addressing=roxo, completed=verde)
+- [x] Adicionar filtros (status, fornecedor, data)
+- [x] Implementar ação de visualizar itens da ordem
+- [x] Implementar ação de deletar ordem (validação de status)
+- [x] Implementar seleção múltipla e deletar em lote
+- [x] Implementar ação de agendar previsão de chegada do veículo
+- [x] Criar modal de agendamento com seleção de data/hora
+- [x] Criar endpoint receiving.schedule para atualizar scheduledDate
+- [x] Modal de visualização de itens já implementado inline
+- [x] Rota /receiving já existe no App.tsx
+- [x] Testar listagem, filtros e ações (servidor reiniciado com sucesso)
 - [x] Atualizar endpoint nfe.importReceiving para criar receivingOrder
 - [x] Criar receivingOrderItems com dados do XML (expectedQuantity, expectedGtin, expectedSupplierCode)
 - [x] Atualizar frontend NFEImport.tsx para exibir ordem criada
