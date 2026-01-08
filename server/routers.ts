@@ -685,7 +685,7 @@ export const appRouter = router({
         tenantId: z.number(),
         xmlContent: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
@@ -697,8 +697,30 @@ export const appRouter = router({
         // Parse do XML
         const nfeData = await parseNFE(input.xmlContent);
 
+        // Criar ordem de recebimento
+        const orderNumber = `REC-${nfeData.numero}-${Date.now()}`;
+        await db.insert(receivingOrders).values({
+          tenantId: input.tenantId,
+          orderNumber,
+          supplierName: nfeData.fornecedor.razaoSocial,
+          supplierCnpj: nfeData.fornecedor.cnpj,
+          nfeNumber: nfeData.numero,
+          nfeKey: nfeData.chaveAcesso,
+          status: 'scheduled',
+          scheduledDate: null,
+          createdBy: ctx.user?.id || 1,
+        });
+
+        // Buscar ordem criada
+        const [receivingOrder] = await db.select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.orderNumber, orderNumber))
+          .limit(1);
+
         // Resultados da importação
         const result = {
+          receivingOrderId: receivingOrder.id,
+          orderNumber: receivingOrder.orderNumber,
           nfeNumero: nfeData.numero,
           nfeSerie: nfeData.serie,
           fornecedor: nfeData.fornecedor.razaoSocial,
@@ -727,8 +749,11 @@ export const appRouter = router({
               )
               .limit(1);
 
+            let productId: number;
+
             if (produtoExistente.length > 0) {
               // Produto já existe
+              productId = produtoExistente[0].id;
               result.produtosExistentes.push(
                 `${produtoNFE.codigo} - ${produtoNFE.descricao}`
               );
@@ -747,10 +772,34 @@ export const appRouter = router({
               };
 
               await db.insert(products).values(novoProduto);
+              
+              // Buscar produto criado
+              const [createdProduct] = await db.select()
+                .from(products)
+                .where(
+                  and(
+                    eq(products.tenantId, input.tenantId),
+                    eq(products.supplierCode, produtoNFE.codigo)
+                  )
+                )
+                .limit(1);
+              productId = createdProduct.id;
               result.produtosNovos.push(
                 `${produtoNFE.codigo} - ${produtoNFE.descricao}`
               );
             }
+
+            // Criar item da ordem de recebimento
+            await db.insert(receivingOrderItems).values({
+              receivingOrderId: receivingOrder.id,
+              productId: productId,
+              expectedQuantity: produtoNFE.quantidade,
+              receivedQuantity: 0,
+              addressedQuantity: 0,
+              batch: null,
+              expiryDate: null,
+              expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
+            });
           } catch (error: any) {
             result.erros.push(
               `Erro ao processar ${produtoNFE.codigo}: ${error.message}`

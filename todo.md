@@ -368,3 +368,16 @@
 - [x] Corrigir todos os erros de TypeScript (0 errors)
 - [ ] Testar fluxo completo de recebimento
 - [ ] Salvar checkpoint
+
+
+## Fase 36: Corrigir Importação de XML - Ordem de Recebimento Não Criada
+- [x] Investigar endpoint nfe.importReceiving
+- [x] Identificado: endpoint só criava produtos, não criava ordem
+- [x] Adicionar criação de receivingOrder com dados da NF-e
+- [x] Adicionar criação de receivingOrderItems para cada produto
+- [x] Corrigir uso de .returning() para MySQL (buscar após insert)
+- [x] Corrigir status "pending" para "scheduled" (enum correto)
+- [x] Adicionar campo createdBy obrigatório
+- [x] Todos os erros de TypeScript corrigidos (0 errors)
+- [ ] Testar importação completa
+- [ ] Salvar checkpoint
