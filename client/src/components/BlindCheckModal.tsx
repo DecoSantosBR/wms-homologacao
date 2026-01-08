@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Loader2, CheckCircle2, AlertCircle, Scan, Camera, Package, Undo } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Camera, Undo, Edit, Home } from "lucide-react";
 import { toast } from "sonner";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { useLocation } from "wouter";
 
 interface BlindCheckModalProps {
   open: boolean;
@@ -24,23 +27,12 @@ interface BlindCheckModalProps {
   }>;
 }
 
-interface LabelAssociation {
-  id: number;
-  labelCode: string;
-  productId: number;
-  productName: string;
-  productSku: string;
-  batch: string | null;
-  unitsPerPackage: number;
-  packagesRead: number;
-  totalUnits: number;
-}
-
 export function BlindCheckModal({ open, onClose, receivingOrderId, items }: BlindCheckModalProps) {
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [labelCode, setLabelCode] = useState("");
   const [showAssociationDialog, setShowAssociationDialog] = useState(false);
+  const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [pendingLabelCode, setPendingLabelCode] = useState("");
   
   // Campos de associação
@@ -51,6 +43,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
 
   // Iniciar sessão ao abrir modal
   const startSessionMutation = trpc.blindConference.start.useMutation({
@@ -73,15 +66,14 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
         setPendingLabelCode(labelCode);
         setShowAssociationDialog(true);
         
-        // Pré-preencher unitsPerPackage se houver produto com unitsPerBox
-        const firstProduct = items[0];
-        if (firstProduct) {
-          setSelectedProductId(firstProduct.productId);
+        // Pré-selecionar primeiro produto se houver apenas um
+        if (items.length === 1) {
+          setSelectedProductId(items[0].productId);
         }
       } else {
         // Etiqueta já associada - incrementou automaticamente
         toast.success("Etiqueta lida com sucesso!", {
-          description: `${data.association?.productName} - ${data.association?.packagesRead} embalagens (${data.association?.totalUnits} unidades)`,
+          description: `${data.association?.productName} - ${data.association?.packagesRead} volumes (${data.association?.totalUnits} unidades)`,
         });
         setLabelCode("");
         labelInputRef.current?.focus();
@@ -152,6 +144,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       utils.receiving.list.invalidate();
       utils.receiving.getItems.invalidate({ receivingOrderId: receivingOrderId });
       onClose();
+      setLocation("/recebimento");
     },
     onError: (error) => {
       toast.error("Erro ao finalizar conferência", {
@@ -230,29 +223,47 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     undoLastReadingMutation.mutate({ sessionId });
   };
 
-  const handleFinish = () => {
-    if (!sessionId) return;
-    
-    if (summary && summary.hasDivergences) {
-      const confirmed = window.confirm(
-        "Foram detectadas divergências. Deseja finalizar mesmo assim?"
-      );
-      if (!confirmed) return;
+  const handleFinishClick = () => {
+    if (!summary?.associations.length) {
+      toast.error("Nenhuma etiqueta foi lida ainda");
+      return;
     }
-    
+    setShowFinishDialog(true);
+  };
+
+  const handleConfirmFinish = () => {
+    if (!sessionId) return;
     finishMutation.mutate({ sessionId });
   };
 
-  const totalConferenced = summary?.associations.reduce((sum, a) => sum + a.totalUnits, 0) || 0;
-  const totalExpected = items.reduce((sum, i) => sum + i.expectedQuantity, 0);
-  const progress = totalExpected > 0 ? Math.round((totalConferenced / totalExpected) * 100) : 0;
+  // Calcular métricas
+  const totalVolumes = summary?.associations.reduce((sum, a) => sum + a.packagesRead, 0) || 0;
+  const totalUnits = summary?.associations.reduce((sum, a) => sum + a.totalUnits, 0) || 0;
+  const distinctProducts = new Set(summary?.associations.map(a => a.productId)).size || 0;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Conferência Cega - Ordem #{receivingOrderId}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-8 bg-blue-600 rounded"></div>
+                <div>
+                  <DialogTitle className="text-2xl">Conferência Cega - Ordem #{receivingOrderId}</DialogTitle>
+                  <p className="text-sm text-gray-600">Leia as etiquetas para conferir os volumes recebidos</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/")}
+                className="gap-2"
+              >
+                <Home className="w-4 h-4" />
+                Voltar
+              </Button>
+            </div>
           </DialogHeader>
 
           {!sessionId ? (
@@ -262,169 +273,138 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Scanner de Etiquetas */}
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <Label className="text-sm font-medium mb-2 block">Código da Etiqueta</Label>
-                <div className="flex gap-2">
-                  <Input
-                    ref={labelInputRef}
-                    value={labelCode}
-                    onChange={(e) => setLabelCode(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleLabelSubmit();
-                      }
-                    }}
-                    placeholder="Digite ou escaneie o código da etiqueta"
-                    className="flex-1"
-                    disabled={readLabelMutation.isPending}
-                  />
-                  <Button
+              {/* Métricas */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-sm text-gray-600 mb-1">Volumes Lidos</div>
+                    <div className="text-3xl font-bold">{totalVolumes}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-sm text-gray-600 mb-1">Unidades Totais</div>
+                    <div className="text-3xl font-bold">{totalUnits}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-sm text-gray-600 mb-1">Produtos Distintos</div>
+                    <div className="text-3xl font-bold">{distinctProducts}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Leitura de Etiquetas */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="mb-2">
+                    <Label className="text-base font-semibold">Leitura de Etiquetas</Label>
+                    <p className="text-sm text-gray-600">Escaneie ou digite o código da etiqueta</p>
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      ref={labelInputRef}
+                      value={labelCode}
+                      onChange={(e) => setLabelCode(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleLabelSubmit();
+                        }
+                      }}
+                      placeholder="Código da etiqueta..."
+                      className="flex-1 text-lg"
+                      disabled={readLabelMutation.isPending}
+                    />
+                    <Button
+                      onClick={handleLabelSubmit}
+                      disabled={readLabelMutation.isPending || !labelCode.trim()}
+                      size="lg"
+                    >
+                      {readLabelMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        "Ler"
+                      )}
+                    </Button>
+                  </div>
+                  <button
                     onClick={() => setShowScanner(true)}
-                    variant="outline"
-                    size="icon"
-                    title="Usar câmera"
+                    className="text-sm text-blue-600 hover:underline flex items-center gap-1"
                   >
                     <Camera className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={handleLabelSubmit}
-                    disabled={readLabelMutation.isPending || !labelCode.trim()}
-                  >
-                    {readLabelMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Scan className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+                    Escanear com Câmera
+                  </button>
+                </CardContent>
+              </Card>
 
-              {/* Progresso */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Progresso</span>
-                  <span className="text-sm text-gray-600">
-                    {totalConferenced} / {totalExpected} unidades ({progress}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Associações */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Etiquetas Lidas</h3>
-                  <Button
-                    onClick={handleUndo}
-                    variant="outline"
-                    size="sm"
-                    disabled={!summary?.associations.length || undoLastReadingMutation.isPending}
-                  >
-                    <Undo className="w-4 h-4 mr-2" />
-                    Desfazer Última
-                  </Button>
-                </div>
-
-                {isLoadingSummary ? (
-                  <div className="text-center py-4 text-gray-500">Carregando...</div>
-                ) : !summary?.associations.length ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Package className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p>Nenhuma etiqueta lida ainda</p>
-                    <p className="text-sm">Escaneie ou digite o código da primeira etiqueta</p>
+              {/* Produtos Conferidos */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="mb-4">
+                    <h3 className="text-base font-semibold">Produtos Conferidos</h3>
+                    <p className="text-sm text-gray-600">Resumo das associações e quantidades lidas</p>
                   </div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {summary.associations.map((assoc) => (
-                      <div
-                        key={assoc.id}
-                        className="flex items-center justify-between p-3 bg-white border rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{assoc.productName}</div>
-                          <div className="text-sm text-gray-600">
-                            SKU: {assoc.productSku} | Etiqueta: {assoc.labelCode}
-                            {assoc.batch && ` | Lote: ${assoc.batch}`}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-blue-600">
-                            {assoc.packagesRead}x {assoc.unitsPerPackage}un
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            = {assoc.totalUnits} unidades
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Resumo com Divergências */}
-              {summary && summary.summary.length > 0 && (
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-4">Resumo por Produto</h3>
-                  <div className="space-y-2">
-                    {summary.summary.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          item.divergence !== 0 ? "bg-yellow-50 border border-yellow-200" : "bg-green-50 border border-green-200"
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{item.productName}</div>
-                          {item.batch && (
-                            <div className="text-sm text-gray-600">Lote: {item.batch}</div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2">
-                            {item.divergence === 0 ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-yellow-600" />
-                            )}
-                            <div>
-                              <div className="font-semibold">
-                                {item.quantityConferenced} / {item.quantityExpected}
-                              </div>
-                              {item.divergence !== 0 && (
-                                <div className="text-sm text-yellow-700">
-                                  {item.divergence > 0 ? "+" : ""}{item.divergence} unidades
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                  {isLoadingSummary ? (
+                    <div className="text-center py-8 text-gray-500">Carregando...</div>
+                  ) : !summary?.associations.length ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <p className="text-lg mb-2">Nenhum produto conferido ainda</p>
+                      <p className="text-sm">Escaneie ou digite o código da primeira etiqueta para começar</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Lote</TableHead>
+                          <TableHead className="text-right">Un/Volume</TableHead>
+                          <TableHead className="text-right">Volumes</TableHead>
+                          <TableHead className="text-right">Unidades</TableHead>
+                          <TableHead className="text-center">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {summary.associations.map((assoc) => (
+                          <TableRow key={assoc.id}>
+                            <TableCell>
+                              <div className="font-medium">{assoc.productName}</div>
+                              <div className="text-sm text-gray-600">{assoc.productSku}</div>
+                            </TableCell>
+                            <TableCell>{assoc.batch || "-"}</TableCell>
+                            <TableCell className="text-right">{assoc.unitsPerPackage}</TableCell>
+                            <TableCell className="text-right font-semibold">{assoc.packagesRead}</TableCell>
+                            <TableCell className="text-right font-semibold">{assoc.totalUnits}</TableCell>
+                            <TableCell className="text-center">
+                              <Button variant="ghost" size="icon">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Ações */}
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={onClose}>
-                  Cancelar
+                <Button
+                  variant="outline"
+                  onClick={handleUndo}
+                  disabled={!summary?.associations.length || undoLastReadingMutation.isPending}
+                >
+                  <Undo className="w-4 h-4 mr-2" />
+                  Desfazer Última
                 </Button>
                 <Button
-                  onClick={handleFinish}
-                  disabled={!summary?.associations.length || finishMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
+                  onClick={handleFinishClick}
+                  disabled={!summary?.associations.length}
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
-                  {finishMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                  )}
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
                   Finalizar Conferência
                 </Button>
               </div>
@@ -467,16 +447,16 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Lote</Label>
+                <Label className="text-sm font-medium mb-2 block">Lote (opcional)</Label>
                 <Input
                   value={batch}
                   onChange={(e) => setBatch(e.target.value)}
-                  placeholder="Ex: 25H04LB356 (opcional)"
+                  placeholder="Ex: 25H04LB356"
                 />
               </div>
 
               <div>
-                <Label className="text-sm font-medium mb-2 block">Validade</Label>
+                <Label className="text-sm font-medium mb-2 block">Validade (opcional)</Label>
                 <Input
                   type="date"
                   value={expiryDate}
@@ -508,6 +488,96 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : null}
                 Associar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Finalização */}
+      <Dialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Finalizar Conferência</DialogTitle>
+            <p className="text-sm text-gray-600">Revise o resumo antes de finalizar</p>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Métricas do resumo */}
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-3xl font-bold">{totalVolumes}</div>
+                <div className="text-sm text-gray-600">Volumes</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">{totalUnits}</div>
+                <div className="text-sm text-gray-600">Unidades</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">{distinctProducts}</div>
+                <div className="text-sm text-gray-600">Produtos</div>
+              </div>
+            </div>
+
+            {/* Tabela de resumo com divergências */}
+            {summary && summary.summary.length > 0 && (
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-right">Conferido</TableHead>
+                      <TableHead className="text-right">Esperado</TableHead>
+                      <TableHead className="text-right">Divergência</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {summary.summary.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <div className="font-medium">{item.productName}</div>
+                          {item.batch && (
+                            <div className="text-sm text-gray-600">Lote: {item.batch}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{item.quantityConferenced}</TableCell>
+                        <TableCell className="text-right">{item.quantityExpected}</TableCell>
+                        <TableCell className="text-right">
+                          {item.divergence === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-green-600">
+                              <CheckCircle2 className="w-4 h-4" />
+                              OK
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-yellow-600">
+                              <AlertCircle className="w-4 h-4" />
+                              {item.divergence > 0 ? "+" : ""}{item.divergence}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Ações */}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowFinishDialog(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmFinish}
+                disabled={finishMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {finishMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                )}
+                Confirmar Finalização
               </Button>
             </div>
           </div>

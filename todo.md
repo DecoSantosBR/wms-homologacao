@@ -470,3 +470,15 @@
 - [x] getSummary já funciona corretamente (soma por produto, rastreia lotes separadamente)
 - [ ] Testar cenário: SKU 123 com lote ABC (etiqueta VOL-001) e lote DEF (etiqueta VOL-002)
 - [ ] Testar cenário: SKU 123 SEM informar lote (etiqueta VOL-001, 100 leituras)
+
+
+## Fase 33: Reescrever BlindCheckModal com Layout Correto
+- [x] Adicionar header com 3 métricas: Volumes Lidos, Unidades Totais, Produtos Distintos
+- [x] Manter input de etiqueta + botão "Ler" + link "Escanear com Câmera"
+- [x] Criar tabela "Produtos Conferidos" com colunas: Produto, Lote, Un/Volume, Volumes, Unidades, Ações
+- [x] Remover barra de progresso (conferência cega não mostra progresso)
+- [x] Remover seção "Resumo por Produto" da tela principal
+- [x] Tela principal NÃO mostra comparação com quantidade esperada
+- [x] Modal de finalização SIM mostra resumo com divergências
+- [x] Adicionar botão "Desfazer Última" no rodapé
+- [ ] Testar com dados reais: 401460P lote 22D08LB108 (1600) + lote 22D10LB111 (560)
