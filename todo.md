@@ -324,3 +324,13 @@
 - [ ] Campos: Quantidade por Caixa, Categoria, Fabricante
 - [ ] Atualizar status de "pending_completion" para "active"
 - [ ] Testar complementação durante conferência
+
+
+## Fase 24: Correções na Lógica de Produtos e Códigos
+- [x] Remover status "pending_completion" do schema de products
+- [x] Aplicar migração no banco de dados (pnpm db:push)
+- [x] Atualizar endpoint nfe.importReceiving para criar produtos com status "active"
+- [x] Implementar lógica de atualização de SKU quando customerCode for vinculado
+- [x] Criar endpoint products.updateCustomerCode para vinculação de código de saída
+- [x] Testar fluxo: NF-e entrada (cria com supplierCode) → NF-e saída (vincula customerCode e atualiza SKU)
+- [x] Documentar regras de códigos (implementado no código)

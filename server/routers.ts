@@ -289,6 +289,26 @@ export const appRouter = router({
         
         return { success: true, deletedCount: input.ids.length };
       }),
+
+    updateCustomerCode: protectedProcedure
+      .input(z.object({
+        productId: z.number(),
+        customerCode: z.string().min(1, "Código do cliente é obrigatório"),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Atualizar customerCode e SKU (SKU passa a ser o código do cliente)
+        await db.update(products)
+          .set({
+            customerCode: input.customerCode,
+            sku: input.customerCode, // SKU passa a ser o código do cliente
+          })
+          .where(eq(products.id, input.productId));
+
+        return { success: true };
+      }),
   }),
 
   zones: router({
@@ -661,7 +681,7 @@ export const appRouter = router({
                 description: produtoNFE.descricao,
                 gtin: produtoNFE.ean || produtoNFE.eanTributavel || undefined,
                 unitOfMeasure: produtoNFE.unidade || "UN",
-                status: "pending_completion" as const,
+                status: "active" as const,
                 requiresBatchControl: true,
                 requiresExpiryControl: true,
               };

@@ -191,7 +191,7 @@ export const products = mysqlTable("products", {
   requiresHumidityControl: boolean("requiresHumidityControl").default(false).notNull(),
   isControlledSubstance: boolean("isControlledSubstance").default(false).notNull(), // Medicamento controlado
   isPsychotropic: boolean("isPsychotropic").default(false).notNull(), // Psicotrópico
-  status: mysqlEnum("status", ["active", "inactive", "discontinued", "pending_completion"]).default("active").notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "discontinued"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

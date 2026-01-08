@@ -43,6 +43,13 @@
       "when": 1767886406434,
       "tag": "0005_volatile_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1767888094144,
+      "tag": "0006_lonely_siren",
+      "breakpoints": true
     }
   ]
 }
