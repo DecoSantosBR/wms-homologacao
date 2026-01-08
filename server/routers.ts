@@ -3,8 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory } from "../drizzle/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers } from "../drizzle/schema";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { warehouseZones } from "../drizzle/schema";
 
@@ -118,6 +118,46 @@ export const appRouter = router({
           .where(eq(tenants.id, input.id));
         
         return { success: true };
+      }),
+
+    deleteMany: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Verificar se há produtos associados aos clientes
+        const productsCount = await db.select({ count: sql<number>`count(*)` })
+          .from(products)
+          .where(inArray(products.tenantId, input.ids));
+        
+        if (productsCount[0]?.count > 0) {
+          throw new Error(`Não é possível excluir. Existem ${productsCount[0].count} produto(s) associado(s) aos clientes selecionados. Remova os produtos primeiro.`);
+        }
+        
+        // Verificar se há contratos associados
+        const contractsCount = await db.select({ count: sql<number>`count(*)` })
+          .from(contracts)
+          .where(inArray(contracts.tenantId, input.ids));
+        
+        if (contractsCount[0]?.count > 0) {
+          throw new Error(`Não é possível excluir. Existem ${contractsCount[0].count} contrato(s) associado(s) aos clientes selecionados.`);
+        }
+        
+        // Verificar se há usuários associados
+        const usersCount = await db.select({ count: sql<number>`count(*)` })
+          .from(systemUsers)
+          .where(inArray(systemUsers.tenantId, input.ids));
+        
+        if (usersCount[0]?.count > 0) {
+          throw new Error(`Não é possível excluir. Existem ${usersCount[0].count} usuário(s) associado(s) aos clientes selecionados.`);
+        }
+        
+        // Se passou em todas as validações, executar hard delete
+        await db.delete(tenants)
+          .where(inArray(tenants.id, input.ids));
+        
+        return { success: true, deletedCount: input.ids.length };
       }),
   }),
 

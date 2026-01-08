@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import { CreateTenantDialog } from "@/components/CreateTenantDialog";
@@ -46,6 +47,10 @@ import { useState } from "react";
 export default function Tenants() {
   const { data: tenants, isLoading } = trpc.tenants.list.useQuery();
   const utils = trpc.useUtils();
+  
+  // Estados de seleção múltipla
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -82,6 +87,18 @@ export default function Tenants() {
     },
     onError: (error) => {
       toast.error("Erro ao excluir cliente: " + error.message);
+    },
+  });
+
+  const deleteManyMutation = trpc.tenants.deleteMany.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deletedCount} cliente(s) excluído(s) com sucesso!`);
+      utils.tenants.list.invalidate();
+      setSelectedIds([]);
+      setBulkDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
 
@@ -135,6 +152,30 @@ export default function Tenants() {
     deleteMutation.mutate({ id: selectedTenant.id });
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && tenants) {
+      setSelectedIds(tenants.map(t => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    deleteManyMutation.mutate({ ids: selectedIds });
+  };
+
   const getPickingRuleBadge = (rule: string) => {
     const colors = {
       FIFO: "bg-blue-100 text-blue-800",
@@ -163,7 +204,19 @@ export default function Tenants() {
                   {tenants?.length || 0} cliente(s)
                 </p>
               </div>
-              <CreateTenantDialog />
+              <div className="flex items-center gap-2">
+                {selectedIds.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Selecionados ({selectedIds.length})
+                  </Button>
+                )}
+                <CreateTenantDialog />
+              </div>
             </div>
 
             {isLoading ? (
@@ -184,6 +237,12 @@ export default function Tenants() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedIds.length === tenants?.length && tenants.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>CNPJ</TableHead>
                       <TableHead>Email</TableHead>
@@ -197,6 +256,12 @@ export default function Tenants() {
                   <TableBody>
                     {tenants.map((tenant) => (
                       <TableRow key={tenant.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.includes(tenant.id)}
+                            onCheckedChange={(checked) => handleSelectOne(tenant.id, checked as boolean)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{tenant.name}</TableCell>
                         <TableCell>{tenant.cnpj || "-"}</TableCell>
                         <TableCell>{tenant.email || "-"}</TableCell>
@@ -450,6 +515,42 @@ export default function Tenants() {
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Confirmação de Exclusão em Massa */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão em Massa</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a excluir <strong>{selectedIds.length} cliente(s)</strong> permanentemente.
+                </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                  <p className="text-sm text-amber-800 font-medium">
+                    ⚠️ Atenção: Esta é uma exclusão PERMANENTE (hard delete)
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Os registros serão removidos completamente do banco de dados e não poderão ser recuperados.
+                  </p>
+                </div>
+                <p className="text-sm">
+                  A exclusão só será permitida se os clientes não tiverem produtos, contratos ou usuários associados.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteManyMutation.isPending ? "Excluindo..." : `Excluir ${selectedIds.length} Cliente(s)`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

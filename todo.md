@@ -277,3 +277,12 @@
 - [x] Atualizar schema do banco (pickingRule adicionado)
 - [x] Atualizar endpoint backend com todos os campos
 - [ ] Testar CRUD completo com novos campos
+
+
+## Fase 20: Exclusão em Massa de Clientes
+- [x] Criar endpoint backend tenants.deleteMany com hard delete
+- [x] Adicionar validação de dependências (produtos, contratos, usuários)
+- [x] Adicionar checkboxes para seleção múltipla na tabela
+- [x] Implementar botão "Excluir Selecionados" com contador
+- [x] Adicionar modal de confirmação com avisos de segurança
+- [x] Exibir resultado da exclusão (quantidade removida)
