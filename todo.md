@@ -224,3 +224,11 @@
 
 ## Fase 11: Correções de Bugs
 - [x] Corrigir erro de elementos <a> aninhados na página Locations
+
+
+## Fase 12: Filtros e Ordenação
+- [x] Adicionar campo de busca por texto (código, rua, prédio) na tabela de endereços
+- [x] Adicionar filtros dropdown por zona, status e tipo
+- [x] Implementar ordenação clicável nas colunas da tabela
+- [x] Adicionar contador de resultados filtrados
+- [x] Implementar botão "Limpar Filtros"

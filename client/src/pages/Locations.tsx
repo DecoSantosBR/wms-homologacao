@@ -1,3 +1,4 @@
+import React from "react";
 import PageHeader from "@/components/PageHeader";
 import { CreateLocationDialog } from "@/components/CreateLocationDialog";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { MapPin, Pencil, Trash2, Plus, Layers } from "lucide-react";
+import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -76,6 +77,14 @@ export default function Locations() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResults, setImportResults] = useState<any>(null);
+
+  // Filter and sort states
+  const [searchText, setSearchText] = useState("");
+  const [filterZone, setFilterZone] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [sortField, setSortField] = useState<string>("createdAt");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Location mutations
   const updateMutation = trpc.locations.update.useMutation({
@@ -255,6 +264,70 @@ export default function Locations() {
     link.click();
   };
 
+  // Filter and sort logic
+  const filteredAndSortedLocations = React.useMemo(() => {
+    if (!locations) return [];
+
+    let filtered = [...locations];
+
+    // Apply search filter
+    if (searchText) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(loc => 
+        loc.code?.toLowerCase().includes(search) ||
+        loc.aisle?.toLowerCase().includes(search) ||
+        loc.rack?.toLowerCase().includes(search) ||
+        loc.level?.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply zone filter
+    if (filterZone !== "all") {
+      filtered = filtered.filter(loc => loc.zoneId === parseInt(filterZone));
+    }
+
+    // Apply status filter
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(loc => loc.status === filterStatus);
+    }
+
+    // Apply type filter
+    if (filterType !== "all") {
+      filtered = filtered.filter(loc => loc.locationType === filterType);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal = a[sortField as keyof typeof a];
+      let bVal = b[sortField as keyof typeof b];
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [locations, searchText, filterZone, filterStatus, filterType, sortField, sortDirection]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSearchText("");
+    setFilterZone("all");
+    setFilterStatus("all");
+    setFilterType("all");
+  };
+
   const getStorageConditionBadge = (condition: string) => {
     const conditions: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       ambient: { label: "Ambiente", variant: "default" },
@@ -294,7 +367,10 @@ export default function Locations() {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Endereços Cadastrados</h3>
-                    <p className="text-sm text-gray-600">Total de {locations?.length || 0} endereço(s) cadastrado(s)</p>
+                    <p className="text-sm text-gray-600">
+                      {filteredAndSortedLocations.length} de {locations?.length || 0} endereço(s)
+                      {(searchText || filterZone !== "all" || filterStatus !== "all" || filterType !== "all") && " (filtrado)"}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={handleImportClick}>
@@ -304,24 +380,144 @@ export default function Locations() {
                   </div>
                 </div>
 
+                {/* Filters Section */}
+                <div className="mb-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    {/* Search */}
+                    <div className="md:col-span-2 relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar por código, rua, prédio..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+
+                    {/* Zone Filter */}
+                    <Select value={filterZone} onValueChange={setFilterZone}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas as zonas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as zonas</SelectItem>
+                        {zones?.map((zone) => (
+                          <SelectItem key={zone.id} value={zone.id.toString()}>
+                            {zone.code} - {zone.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Status Filter */}
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos os status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os status</SelectItem>
+                        <SelectItem value="available">Disponível</SelectItem>
+                        <SelectItem value="occupied">Ocupado</SelectItem>
+                        <SelectItem value="blocked">Bloqueado</SelectItem>
+                        <SelectItem value="counting">Em Contagem</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Type Filter */}
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos os tipos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        <SelectItem value="whole">Inteira</SelectItem>
+                        <SelectItem value="fraction">Fração</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear Filters Button */}
+                  {(searchText || filterZone !== "all" || filterStatus !== "all" || filterType !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearFilters}
+                      className="text-gray-600 hover:text-gray-900"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Limpar Filtros
+                    </Button>
+                  )}
+                </div>
+
                 {isLoading ? (
                   <div className="text-center py-12 text-gray-500">Carregando...</div>
-                ) : locations && locations.length > 0 ? (
+                ) : filteredAndSortedLocations && filteredAndSortedLocations.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Rua</TableHead>
-                        <TableHead>Prédio</TableHead>
-                        <TableHead>Andar</TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('code')}
+                            className="flex items-center gap-1 hover:text-blue-600 font-semibold"
+                          >
+                            Código
+                            {sortField === 'code' && (
+                              <ArrowUpDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('aisle')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Rua
+                            {sortField === 'aisle' && (
+                              <ArrowUpDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('rack')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Prédio
+                            {sortField === 'rack' && (
+                              <ArrowUpDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('level')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Andar
+                            {sortField === 'level' && (
+                              <ArrowUpDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Regra</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('status')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Status
+                            {sortField === 'status' && (
+                              <ArrowUpDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">Ções</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {locations.map((location: any) => (
+                      {filteredAndSortedLocations.map((location: any) => (
                         <TableRow key={location.id}>
                           <TableCell className="font-medium">{location.code}</TableCell>
                           <TableCell>{location.aisle || "-"}</TableCell>
