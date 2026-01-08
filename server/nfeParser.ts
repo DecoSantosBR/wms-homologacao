@@ -3,7 +3,7 @@
  * Extrai dados de produtos e informações da nota fiscal
  */
 
-import { parseStringPromise } from "xml2js";
+import { parseStringPromise, processors } from "xml2js";
 
 export interface NFEProduct {
   codigo: string; // cProd - Código do produto do fornecedor
@@ -45,33 +45,48 @@ function extractValue(obj: any, defaultValue: any = null): any {
 export async function parseNFE(xmlContent: string): Promise<NFEData> {
   try {
     const parsed = await parseStringPromise(xmlContent, {
-      explicitArray: true,
+      explicitArray: false, // Não forçar arrays para tags únicas
       mergeAttrs: true,
       trim: true,
+      tagNameProcessors: [processors.stripPrefix], // Remove namespace prefixes
+      ignoreAttrs: false,
     });
 
     // Navegar na estrutura do XML da NF-e
-    const nfe = parsed.nfeProc?.NFe?.[0] || parsed.NFe?.[0];
-    if (!nfe) {
-      throw new Error("Estrutura de NF-e inválida: tag NFe não encontrada");
+    // Suporta diferentes estruturas:
+    // 1. <nfeProc><NFe>... (NF-e processada com protocolo)
+    // 2. <NFe>... (NF-e sem envelope)
+    // 3. Com namespace: <nfe:nfeProc><nfe:NFe>...
+    let nfe = null;
+    
+    // Tentar encontrar a tag NFe em diferentes caminhos
+    if (parsed.nfeProc?.NFe) {
+      nfe = parsed.nfeProc.NFe;
+    } else if (parsed.NFe) {
+      nfe = parsed.NFe;
+    } else {
+      // Log da estrutura para debug
+      console.error('[NFE Parser] Estrutura do XML:', JSON.stringify(Object.keys(parsed), null, 2));
+      throw new Error("Estrutura de NF-e inválida: tag NFe não encontrada. Verifique se o arquivo é um XML de NF-e válido.");
     }
 
-    const infNFe = nfe.infNFe?.[0];
+    const infNFe = Array.isArray(nfe.infNFe) ? nfe.infNFe[0] : nfe.infNFe;
     if (!infNFe) {
       throw new Error("Estrutura de NF-e inválida: tag infNFe não encontrada");
     }
 
     // Extrair chave de acesso
-    const chaveAcesso = infNFe.Id?.[0]?.replace("NFe", "") || "";
+    const chaveAcessoRaw = Array.isArray(infNFe.Id) ? infNFe.Id[0] : infNFe.Id;
+    const chaveAcesso = chaveAcessoRaw?.replace("NFe", "") || "";
 
     // Extrair dados da identificação da nota
-    const ide = infNFe.ide?.[0];
+    const ide = Array.isArray(infNFe.ide) ? infNFe.ide[0] : infNFe.ide;
     const numero = extractValue(ide?.nNF, "");
     const serie = extractValue(ide?.serie, "");
     const dataEmissao = extractValue(ide?.dhEmi, "");
 
     // Extrair dados do fornecedor (emitente)
-    const emit = infNFe.emit?.[0];
+    const emit = Array.isArray(infNFe.emit) ? infNFe.emit[0] : infNFe.emit;
     const fornecedor = {
       cnpj: extractValue(emit?.CNPJ, ""),
       razaoSocial: extractValue(emit?.xNome, ""),
@@ -79,9 +94,9 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
     };
 
     // Extrair produtos (detalhes da nota)
-    const detalhes = infNFe.det || [];
+    const detalhes = Array.isArray(infNFe.det) ? infNFe.det : (infNFe.det ? [infNFe.det] : []);
     const produtos: NFEProduct[] = detalhes.map((det: any) => {
-      const prod = det.prod?.[0];
+      const prod = Array.isArray(det.prod) ? det.prod[0] : det.prod;
       
       return {
         codigo: extractValue(prod?.cProd, ""),

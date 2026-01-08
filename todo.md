@@ -334,3 +334,11 @@
 - [x] Criar endpoint products.updateCustomerCode para vinculação de código de saída
 - [x] Testar fluxo: NF-e entrada (cria com supplierCode) → NF-e saída (vincula customerCode e atualiza SKU)
 - [x] Documentar regras de códigos (implementado no código)
+
+
+## Fase 25: Correção do Parser de XML da NF-e
+- [x] Analisar estrutura do XML que está falhando
+- [x] Corrigir parser para suportar diferentes estruturas (com/sem namespace, nfeProc, etc.)
+- [x] Adicionar logs de debug para identificar estrutura do XML
+- [x] Testar com XML real fornecido pelo usuário (4 produtos extraídos com sucesso)
+- [ ] Salvar checkpoint com correção
