@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, receivingConferences, receivingDivergences, inventoryMovements } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, receivingConferences, receivingDivergences, inventoryMovements, blindConferenceSessions, labelAssociations, labelReadings, blindConferenceAdjustments } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -15,6 +15,7 @@ import {
 } from "./preallocationProcessor";
 import { warehouseZones } from "../drizzle/schema";
 import { registerMovement } from "./movements";
+import { blindConferenceRouter } from "./blindConferenceRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1491,6 +1492,8 @@ export const appRouter = router({
         return stock;
       }),
   }),
+
+  blindConference: blindConferenceRouter,
 });
 
 export type AppRouter = typeof appRouter;

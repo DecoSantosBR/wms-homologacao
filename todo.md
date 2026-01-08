@@ -435,3 +435,28 @@
 - [x] Adicionar query separada para buscar itens da ordem a conferir
 - [x] Corrigir tipos para aceitar string | null nos campos opcionais
 - [ ] Testar fluxo completo com scanner real
+
+
+## Fase 30: Associação de Etiquetas e Scanner via Câmera
+- [x] Revisar ASSOCIACAO_PRODUTOS_ETIQUETAS.md completamente
+- [x] Identificar mudanças necessárias no fluxo de conferência
+- [x] Criar router blindConference com 7 endpoints (start, readLabel, associateLabel, undoLastReading, adjustQuantity, getSummary, finish)
+- [x] Tabelas já existem no schema (blindConferenceSessions, labelAssociations, labelReadings, blindConferenceAdjustments)
+- [x] Instalar biblioteca html5-qrcode para scanner de código de barras
+- [x] Criar componente BarcodeScanner com suporte webcam/mobile
+- [x] Reescrever BlindCheckModal completo com sistema de sessões
+- [x] Adicionar botão de scanner via câmera no BlindCheckModal
+- [x] Implementar diálogo de associação de etiquetas
+- [x] Adicionar funcionalidade de desfazer última leitura
+- [ ] Testar scanner em desktop (webcam) e mobile
+- [ ] Testar associação de etiquetas conforme documentação
+
+
+## Fase 31: Correção de Associação Produto+Lote
+- [x] Lógica já correta: busca por sessionId+labelCode (etiqueta única)
+- [x] Múltiplas etiquetas para o mesmo produto funcionam (cada etiqueta = produto+lote específico)
+- [x] Mesma etiqueta só pode ser associada uma vez (incrementa contagem ao reler)
+- [x] Resumo agrupa por produto+lote (cada associação tem batch)
+- [x] Campo "Lote" tornado obrigatório no diálogo de associação
+- [x] Validação de lote obrigatório no handleAssociate
+- [ ] Testar cenário: 1 produto com 2 lotes diferentes e 2 etiquetas

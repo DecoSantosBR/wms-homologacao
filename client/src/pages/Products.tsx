@@ -218,12 +218,8 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
-        title="Cadastros"
-        breadcrumbs={[
-          { label: "Início", href: "/" },
-          { label: "Cadastros", href: "/cadastros" },
-          { label: "Produtos" },
-        ]}
+        title="Produtos"
+        description="Gestão de produtos e medicamentos"
       />
 
       <div className="container mx-auto py-8">

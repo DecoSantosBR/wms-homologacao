@@ -190,8 +190,7 @@ export default function Tenants() {
       <PageHeader
         icon={<FileText className="h-8 w-8" />}
         title="Cadastros"
-        description="Gestão de dados mestre do sistema"
-        breadcrumb="Cadastros"
+        description="Gestão de clientes e contratos"
       />
 
       <div className="container mx-auto py-8">
