@@ -476,3 +476,12 @@
 - [x] Criar testes unitários para módulo de estoque (não necessário para entrega inicial - requer dados de teste complexos)
 - [ ] Testar funcionalidades completas via interface
 - [ ] Salvar checkpoint
+
+
+## BUG - Alocação de Estoque Após Conferência Cega
+- [x] Investigar endpoint blindConference.finish (encontrado problema: recLocationId = 1 hardcoded)
+- [x] Verificar se estoque está sendo criado na tabela inventory (estava criando com locationId NULL)
+- [x] Verificar se endereço REC está sendo usado corretamente (não estava)
+- [x] Corrigir lógica de alocação automática (busca dinâmica por código contendo 'REC')
+- [x] Alterar status de 'quarantine' para 'available'
+- [ ] Testar fluxo completo de recebimento até alocação

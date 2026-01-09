@@ -8,7 +8,8 @@ import {
   receivingOrders,
   receivingOrderItems,
   products,
-  inventory
+  inventory,
+  warehouseLocations
 } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -484,10 +485,19 @@ export const blindConferenceRouter = router({
         .from(labelAssociations)
         .where(eq(labelAssociations.sessionId, input.sessionId));
 
-      // Criar inventário em endereço REC para cada associação
-      // TODO: Buscar endereço REC dinamicamente
-      const recLocationId = 1; // Temporário - deve buscar endereço com código "REC"
+      // Buscar endereço REC dinamicamente (primeiro endereço com código contendo 'REC')
+      const recLocations = await db.select()
+        .from(warehouseLocations)
+        .where(sql`${warehouseLocations.code} LIKE '%REC%'`)
+        .limit(1);
 
+      if (recLocations.length === 0) {
+        throw new Error("Nenhum endereço de recebimento (REC) encontrado. Cadastre um endereço com código contendo 'REC'.");
+      }
+
+      const recLocationId = recLocations[0].id;
+
+      // Criar inventário em endereço REC para cada associação
       for (const assoc of associations) {
         await db.insert(inventory).values({
           tenantId: session[0].tenantId || null,
@@ -496,7 +506,7 @@ export const blindConferenceRouter = router({
           batch: assoc.batch,
           expiryDate: assoc.expiryDate,
           quantity: assoc.totalUnits,
-          status: "quarantine", // Sempre em quarentena inicialmente
+          status: "available", // Disponível após conferência
         });
       }
 

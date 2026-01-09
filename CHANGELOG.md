@@ -1,5 +1,74 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Correção: Alocação de Estoque Após Conferência Cega
+
+### 🐛 Problema Identificado
+
+Após finalizar a conferência cega, os itens não estavam sendo alocados nos endereços de recebimento (REC). O estoque estava sendo criado na tabela `inventory`, mas com `locationId = NULL`.
+
+### ✅ Causa Raiz
+
+O endpoint `blindConference.finish` tinha dois problemas:
+
+1. **Endereço REC hardcoded**: Usava `recLocationId = 1` fixo, que não existia no banco
+2. **Status incorreto**: Criava estoque com status "quarantine" em vez de "available"
+
+### ✅ Correção Implementada
+
+#### 1. Busca Dinâmica de Endereço REC
+
+Substituído ID fixo por busca dinâmica do primeiro endereço com código contendo "REC":
+
+```typescript
+const recLocations = await db.select()
+  .from(warehouseLocations)
+  .where(sql`${warehouseLocations.code} LIKE '%REC%'`)
+  .limit(1);
+
+if (recLocations.length === 0) {
+  throw new Error("Nenhum endereço de recebimento (REC) encontrado.");
+}
+
+const recLocationId = recLocations[0].id;
+```
+
+#### 2. Status Correto
+
+Alterado status de "quarantine" para "available":
+
+```typescript
+status: "available", // Disponível após conferência
+```
+
+#### 3. Import Adicionado
+
+Adicionado `warehouseLocations` aos imports do `blindConferenceRouter.ts`
+
+### 📝 Impacto
+
+- ✅ Estoque agora é alocado corretamente no endereço REC
+- ✅ Status "available" permite consultas e movimentações imediatas
+- ✅ Rastreabilidade completa: produto + lote + endereço + quantidade
+- ✅ Integração com módulo de Estoque funciona corretamente
+
+### ⚠️ Pré-requisitos
+
+É necessário ter pelo menos um endereço cadastrado com código contendo "REC". Exemplo:
+- Código: `REC-01`
+- Tipo: `whole` ou `fraction`
+- Regra: `single` ou `multi`
+- Status: `available`
+
+Se nenhum endereço REC existir, o sistema retorna erro claro.
+
+### 📝 Arquivos Modificados
+
+- `server/blindConferenceRouter.ts` - Endpoint `finish`
+- `todo.md` - Rastreamento de bugs
+- `CORRECAO_ALOCACAO_ESTOQUE.md` - Documentação completa
+
+---
+
 ## [2026-01-09] - Módulo de Estoque Implementado
 
 ### ✨ Funcionalidade Implementada
