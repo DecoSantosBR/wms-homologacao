@@ -588,3 +588,10 @@
 - [x] Atualizar CreateLocationDialog.tsx
 - [x] Atualizar locationCodeValidator.ts se necessário
 - [ ] Testar com exemplos: BI-A201-1-D (Fração) e A10-01-73 (Inteira)
+
+
+## BUG - Importação Excel Gerando Códigos com ZONA
+- [x] Investigar endpoint locations.importExcel
+- [x] Corrigir geração de código durante importação (remover ZONA)
+- [x] Aplicar mesma lógica do CreateLocationDialog
+- [ ] Testar importação com planilha contendo códigos com ZONA

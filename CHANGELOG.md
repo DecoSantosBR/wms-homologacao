@@ -1,5 +1,54 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Correção: Importação Excel Gerando Códigos com ZONA
+
+### 🐛 Problema Identificado
+
+A importação Excel de endereços estava gerando códigos com ZONA incluída:
+- **Antes**: `002-BI-A305-1-B` (incluindo ZONA no início)
+- **Esperado**: `BI-A305-1B` (apenas RUA-PRÉDIO-ANDAR+QUADRANTE)
+
+### ✅ Correção Implementada
+
+**Arquivo Corrigido: `server/routers.ts` (endpoint `locations.importExcel`)**
+
+**Antes (linhas 552-554):**
+```typescript
+const codeParts = [row.zona, row.rua, row.predio, row.andar, row.quadrante].filter(Boolean);
+const code = codeParts.join('-');
+```
+
+**Depois (linhas 552-565):**
+```typescript
+// Gerar código do endereço (SEM ZONA, formato: RUA-PRÉDIO-ANDAR[QUADRANTE])
+let code = '';
+if (locationType === 'whole') {
+  // Formato: A10-01-73 (RUA-PRÉDIO-ANDAR)
+  const codeParts = [row.rua, row.predio, row.andar].filter(Boolean);
+  code = codeParts.join('-');
+} else {
+  // Formato: BI-A201-1D (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
+  const codeParts = [row.rua, row.predio, row.andar].filter(Boolean);
+  code = codeParts.join('-');
+  if (row.quadrante) {
+    code += row.quadrante; // Concatenar quadrante SEM hífen
+  }
+}
+```
+
+**Resultado:**
+- ✅ Importação agora gera códigos no formato correto
+- ✅ Whole: `A10-01-73` (RUA-PRÉDIO-ANDAR)
+- ✅ Fraction: `BI-A305-1B` (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen)
+- ✅ Lógica consistente com cadastro manual (CreateLocationDialog)
+
+**Impacto:**
+- Planilhas Excel antigas com ZONA na coluna serão importadas corretamente (ZONA é ignorada na geração do código)
+- Código gerado automaticamente durante importação
+- Validação de formato aplicada
+
+---
+
 ## [2026-01-09] - Correção: Formato de Código de Endereços
 
 ### 🐛 Problema Identificado

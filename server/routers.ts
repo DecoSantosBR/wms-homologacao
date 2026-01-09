@@ -549,9 +549,20 @@ export const appRouter = router({
             // Mapear regra: "single" ou "multi"
             const storageRule = row.regra.toLowerCase() === 'single' ? 'single' : 'multi';
 
-            // Gerar código do endereço
-            const codeParts = [row.zona, row.rua, row.predio, row.andar, row.quadrante].filter(Boolean);
-            const code = codeParts.join('-');
+            // Gerar código do endereço (SEM ZONA, formato: RUA-PRÉDIO-ANDAR[QUADRANTE])
+            let code = '';
+            if (locationType === 'whole') {
+              // Formato: A10-01-73 (RUA-PRÉDIO-ANDAR)
+              const codeParts = [row.rua, row.predio, row.andar].filter(Boolean);
+              code = codeParts.join('-');
+            } else {
+              // Formato: BI-A201-1D (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
+              const codeParts = [row.rua, row.predio, row.andar].filter(Boolean);
+              code = codeParts.join('-');
+              if (row.quadrante) {
+                code += row.quadrante; // Concatenar quadrante SEM hífen
+              }
+            }
 
             // Adicionar ao lote
             locationsToInsert.push({
