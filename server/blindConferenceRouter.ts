@@ -416,6 +416,7 @@ export const blindConferenceRouter = router({
         productId: receivingOrderItems.productId,
         productName: products.description,
         productSku: products.sku,
+        batch: receivingOrderItems.batch,
         expectedQuantity: receivingOrderItems.expectedQuantity,
         unitsPerBox: products.unitsPerBox,
         expiryDate: receivingOrderItems.expiryDate,
@@ -425,15 +426,19 @@ export const blindConferenceRouter = router({
         .where(eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId));
 
       // Calcular resumo com divergências
+      // IMPORTANTE: Comparar por productId + batch para tratar lotes diferentes separadamente
       const summary = expectedItems.map(expected => {
         const conferenced = associations
-          .filter(a => a.productId === expected.productId)
+          .filter(a => 
+            a.productId === expected.productId && 
+            (a.batch === expected.batch || (a.batch === null && expected.batch === null))
+          )
           .reduce((sum, a) => sum + a.totalUnits, 0);
 
         return {
           productId: expected.productId,
           productName: expected.productName,
-          batch: associations.find(a => a.productId === expected.productId)?.batch || null,
+          batch: expected.batch,
           quantityConferenced: conferenced,
           quantityExpected: expected.expectedQuantity,
           divergence: conferenced - expected.expectedQuantity,

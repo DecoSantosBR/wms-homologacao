@@ -394,3 +394,11 @@
 - [ ] Limpar registros duplicados do banco de dados
 - [ ] Testar importação completa
 - [ ] Salvar checkpoint
+
+
+## BUG CRÍTICO - Conferência Cega
+- [x] Corrigir lógica de associação de etiquetas: mesma etiqueta está incrementando múltiplos itens distintos
+- [x] Corrigir tratamento de lotes: lotes diferentes do mesmo produto devem ser tratados separadamente
+- [x] Garantir que 1 etiqueta = 1 produto + 1 lote específico (não pode incrementar múltiplos itens)
+- [x] Adicionar extração de lote e validade do XML (tag <rastro>)
+- [x] Corrigir import React faltante no BlindCheckModal (49 erros no console)

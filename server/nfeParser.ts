@@ -15,6 +15,8 @@ export interface NFEProduct {
   valorUnitario: number; // vUnCom - Valor unitário comercial
   valorTotal: number; // vProd - Valor total bruto
   ncm: string | null; // NCM - Nomenclatura Comum do Mercosul
+  lote: string | null; // Número do lote (tag rastro/nLote)
+  validade: string | null; // Data de validade (tag rastro/dVal)
 }
 
 export interface NFEData {
@@ -106,6 +108,22 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
       
       const codigo = extractValue(prod?.cProd, "");
       console.log(`[NFE Parser] Código extraído: "${codigo}"`);
+      
+      // Extrair dados de rastreabilidade (lote e validade)
+      // A tag <rastro> pode ser um array ou objeto único
+      const rastro = prod?.rastro;
+      let lote = null;
+      let validade = null;
+      
+      if (rastro) {
+        const rastroArray = Array.isArray(rastro) ? rastro : [rastro];
+        // Pegar o primeiro registro de rastreabilidade
+        if (rastroArray.length > 0) {
+          lote = extractValue(rastroArray[0]?.nLote, null);
+          validade = extractValue(rastroArray[0]?.dVal, null);
+        }
+      }
+      
       return {
         codigo,
         descricao: extractValue(prod?.xProd, ""),
@@ -116,6 +134,8 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
         valorUnitario: parseFloat(extractValue(prod?.vUnCom, "0")),
         valorTotal: parseFloat(extractValue(prod?.vProd, "0")),
         ncm: extractValue(prod?.NCM, null),
+        lote,
+        validade,
       };
     });
 

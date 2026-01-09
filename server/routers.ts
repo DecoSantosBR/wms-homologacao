@@ -808,8 +808,8 @@ export const appRouter = router({
               expectedQuantity: produtoNFE.quantidade,
               receivedQuantity: 0,
               addressedQuantity: 0,
-              batch: null,
-              expiryDate: null,
+              batch: produtoNFE.lote || null,
+              expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
               expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
             });
           } catch (error: any) {
