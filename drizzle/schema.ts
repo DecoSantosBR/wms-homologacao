@@ -416,13 +416,24 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
+  customerId: int("customerId"), // Relacionamento com cliente (tenant)
   customerName: varchar("customerName", { length: 255 }),
   deliveryAddress: text("deliveryAddress"),
   priority: mysqlEnum("priority", ["emergency", "urgent", "normal", "low"]).default("normal").notNull(),
-  status: mysqlEnum("status", ["pending", "in_progress", "picked", "checked", "shipped", "cancelled"]).default("pending").notNull(),
-  assignedTo: int("assignedTo"),
-  pickedBy: int("pickedBy"),
+  status: mysqlEnum("status", ["pending", "validated", "in_wave", "picking", "picked", "checking", "packed", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
+  totalItems: int("totalItems").default(0).notNull(), // Total de linhas de itens
+  totalQuantity: int("totalQuantity").default(0).notNull(), // Quantidade total de unidades
+  scheduledDate: timestamp("scheduledDate"), // Data agendada para separação
+  assignedTo: int("assignedTo"), // Separador atribuído
+  pickedBy: int("pickedBy"), // Quem realmente separou
   pickedAt: timestamp("pickedAt"),
+  checkedBy: int("checkedBy"), // Conferente (DEVE ser diferente de pickedBy)
+  checkedAt: timestamp("checkedAt"),
+  packedBy: int("packedBy"),
+  packedAt: timestamp("packedAt"),
+  shippedAt: timestamp("shippedAt"),
+  waveId: int("waveId"), // Onda de separação (futuro)
+  notes: text("notes"), // Observações gerais
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -433,12 +444,18 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   pickingOrderId: int("pickingOrderId").notNull(),
   productId: int("productId").notNull(),
   requestedQuantity: int("requestedQuantity").notNull(),
+  requestedUM: mysqlEnum("requestedUM", ["unit", "box", "pallet"]).default("unit").notNull(), // Unidade de Medida solicitada
   pickedQuantity: int("pickedQuantity").default(0).notNull(),
-  batch: varchar("batch", { length: 50 }),
-  expiryDate: timestamp("expiryDate"),
+  pickedUM: mysqlEnum("pickedUM", ["unit", "box", "pallet"]).default("unit").notNull(),
+  batch: varchar("batch", { length: 50 }), // Lote separado (FEFO)
+  expiryDate: timestamp("expiryDate"), // Validade do lote
   serialNumber: varchar("serialNumber", { length: 100 }),
-  fromLocationId: int("fromLocationId"),
-  status: mysqlEnum("status", ["pending", "picked", "short_picked", "cancelled"]).default("pending").notNull(),
+  fromLocationId: int("fromLocationId"), // Endereço de origem
+  inventoryId: int("inventoryId"), // Referência ao registro de estoque usado
+  status: mysqlEnum("status", ["pending", "picking", "picked", "short_picked", "exception", "cancelled"]).default("pending").notNull(),
+  pickedBy: int("pickedBy"),
+  pickedAt: timestamp("pickedAt"),
+  exceptionReason: text("exceptionReason"), // Motivo de exceção (falta, avaria, etc)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

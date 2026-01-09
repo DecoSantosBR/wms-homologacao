@@ -653,3 +653,48 @@
 - [x] Adicionar preview de dados antes de confirmar
 - [x] Exibir resultado detalhado (sucessos e erros)
 - [x] Criar arquivo template para download
+
+
+## Feature - Módulo de Separação (Picking)
+
+### Backend
+- [ ] Criar schema de tabelas (pickingOrders, pickingOrderItems, pickingWaves, pickingTasks, packingStations, shippingVolumes)
+- [ ] Implementar validação de FEFO (ordenação por validade)
+- [ ] Implementar validação de UM (CAIXA vs UNIDADE)
+- [ ] Implementar validação de fracionamento (ajuste automático)
+- [ ] Implementar reserva de estoque ao criar pedido
+- [ ] Criar endpoints tRPC para CRUD de pedidos
+- [ ] Criar endpoints para geração de ondas
+- [ ] Criar endpoints para picking tasks
+- [ ] Criar endpoints para conferência
+
+### Frontend
+- [ ] Criar página de gestão de pedidos de separação
+- [ ] Criar interface de criação de pedido (validação em tempo real)
+- [ ] Criar interface de geração de ondas (wave planning)
+- [ ] Criar interface mobile de separação (coletor)
+- [ ] Criar interface de conferência e embalagem
+- [ ] Criar dashboard de produtividade (KPIs)
+- [ ] Adicionar link no menu principal
+
+### Validações Críticas
+- [ ] Validar FEFO obrigatório
+- [ ] Validar proibição de fracionamento
+- [ ] Validar segregação de função (separador ≠ conferente)
+- [ ] Validar rastreabilidade total (OS, endereço, item, lote)
+
+## Fase ATUAL: Módulo de Separação (Picking) - EM PROGRESSO
+- [x] Analisar POPs operacionais (POP_Operacoes_Logisticas_CD_Medax.docx)
+- [x] Identificar requisitos críticos e riscos (8 riscos mapeados)
+- [x] Expandir schema pickingOrders e pickingOrderItems com campos de UM, FEFO
+- [x] Aplicar migração no banco de dados (pnpm db:push)
+- [x] Criar documentação técnica (MODULO_SEPARACAO_ANALISE.md)
+- [ ] Implementar endpoints backend com validações (FEFO, UM, fracionamento, segregação)
+- [ ] Criar interface de listagem de pedidos de separação
+- [ ] Criar formulário de novo pedido de separação
+- [ ] Criar interface de execução de separação (mobile-friendly)
+- [ ] Implementar conferência com segregação de função obrigatória
+- [ ] Testar fluxo completo end-to-end
+
+**Status**: Schema preparado. Backend e frontend pendentes para próxima sessão.
+**Prioridade**: Alta - Módulo crítico para operação
