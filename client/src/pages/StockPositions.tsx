@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Package, Boxes, MapPin, AlertCircle, Download, RefreshCw } from "lucide-react";
+import { Package, Boxes, MapPin, AlertCircle, Download, RefreshCw, ArrowRightLeft, BarChart3, Tag } from "lucide-react";
+import { Link } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { format } from "date-fns";
 
@@ -76,9 +77,24 @@ export default function StockPositions() {
         title="Posições de Estoque"
         description="Consulte o estoque disponível em tempo real"
         actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/stock/occupancy">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="w-4 h-4 mr-2" /> Dashboard de Ocupação
+              </Button>
+            </Link>
+            <Button variant="outline" size="sm" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
+              <Tag className="w-4 h-4 mr-2" /> Histórico de Etiquetas
+            </Button>
+            <Link href="/stock/movements">
+              <Button variant="outline" size="sm">
+                <ArrowRightLeft className="w-4 h-4 mr-2" /> Movimentações
+              </Button>
+            </Link>
+            <Button variant="default" size="sm" onClick={handleExportExcel}>
+              <Download className="w-4 h-4 mr-2" /> Exportar Excel
+            </Button>
+          </div>
         }
       />
 

@@ -595,3 +595,19 @@
 - [x] Corrigir geração de código durante importação (remover ZONA)
 - [x] Aplicar mesma lógica do CreateLocationDialog
 - [ ] Testar importação com planilha contendo códigos com ZONA
+
+
+## Feature - Submódulo de Movimentação de Estoque
+- [ ] Verificar backend existente (movements.ts, stockRouter.ts)
+- [ ] Criar página StockMovements.tsx com formulário de movimentação
+- [ ] Implementar validações (saldo, regras de armazenagem)
+- [ ] Adicionar histórico de movimentações com filtros
+- [ ] Integrar com rotas do App.tsx
+- [ ] Testar fluxo completo de movimentação
+
+
+## Feature - Botões de Navegação em Posições de Estoque
+- [x] Adicionar botão 'Movimentações' com link para /stock/movements
+- [x] Adicionar botão 'Dashboard de Ocupação' com link para /stock/occupancy
+- [x] Adicionar botão 'Histórico de Etiquetas' (placeholder)
+- [x] Testar navegação entre páginas
