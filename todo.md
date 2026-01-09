@@ -485,3 +485,56 @@
 - [x] Corrigir lógica de alocação automática (busca dinâmica por código contendo 'REC')
 - [x] Alterar status de 'quarantine' para 'available'
 - [ ] Testar fluxo completo de recebimento até alocação
+
+
+## ANÁLISE - Conformidade do Módulo de Estoque com Documentação
+### Tabelas (4 necessárias)
+- [x] inventory (existe)
+- [x] inventoryMovements (existe)
+- [ ] inventoryCounts (NÃO EXISTE - necessária para contagens de inventário)
+- [ ] inventoryCountItems (NÃO EXISTE - necessária para itens de contagem)
+
+### Endpoints tRPC (7 necessários)
+- [x] stock.getPositions (implementado)
+- [ ] stock.getProductStock (NÃO IMPLEMENTADO - saldo total por produto)
+- [ ] stock.getExpiring (NÃO IMPLEMENTADO - produtos vencendo)
+- [ ] stock.getLowStock (NÃO IMPLEMENTADO - estoque baixo)
+- [x] stockMovements.register (implementado como stock.registerMovement)
+- [ ] stockCount.start (NÃO IMPLEMENTADO - iniciar contagem)
+- [ ] stockCount.registerCount (NÃO IMPLEMENTADO - registrar contagem)
+
+### Páginas Frontend (3 necessárias)
+- [x] StockPositions.tsx (implementada)
+- [x] StockMovements.tsx (implementada)
+- [ ] Dashboard.tsx (NÃO IMPLEMENTADA - dashboard de alertas)
+
+### Fluxos Principais (6 necessários)
+- [x] Fluxo 1: Consulta de Posições de Estoque (implementado)
+- [x] Fluxo 2: Registrar Movimentação de Estoque (implementado)
+- [ ] Fluxo 3: Contagem de Inventário (NÃO IMPLEMENTADO)
+- [ ] Fluxo 4: Consulta de Saldo Total de Produto (NÃO IMPLEMENTADO)
+- [ ] Fluxo 5: Alertas de Estoque Baixo (NÃO IMPLEMENTADO)
+- [ ] Fluxo 6: Alertas de Produtos Vencendo (NÃO IMPLEMENTADO)
+
+### DIVERGÊNCIAS CRÍTICAS IDENTIFICADAS:
+1. **Faltam 2 tabelas**: inventoryCounts e inventoryCountItems
+2. **Faltam 5 endpoints**: getProductStock, getExpiring, getLowStock, stockCount.start, stockCount.registerCount
+3. **Falta 1 página**: Dashboard de alertas
+4. **Faltam 4 fluxos**: Contagem de inventário, saldo total, alertas de estoque baixo e vencendo
+
+### AÇÕES NECESSÁRIAS:
+- [ ] Adicionar tabelas inventoryCounts e inventoryCountItems ao schema
+- [ ] Implementar endpoints de alertas (getExpiring, getLowStock)
+- [ ] Implementar endpoint getProductStock (saldo consolidado)
+- [ ] Implementar módulo completo de contagem de inventário
+- [ ] Criar Dashboard de alertas
+
+
+## BUG - Chaves Duplicadas na Página /stock
+- [x] Investigar por que key `60002` está duplicada na tabela (múltiplos registros com mesmo ID)
+- [x] Corrigir usando identificador composto (id + batch + locationId)
+- [x] Testar renderização sem avisos
+
+## BUG - Tags <a> Aninhadas
+- [x] Encontrar onde há <a> dentro de <a> (Home.tsx linha 235)
+- [x] Remover aninhamento (Button asChild com Link dentro)

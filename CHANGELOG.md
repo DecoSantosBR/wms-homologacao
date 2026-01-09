@@ -1,5 +1,57 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Correção: Chaves Duplicadas e Tags Aninhadas
+
+### 🐛 Problemas Identificados
+
+1. **Chaves duplicadas na página /stock**: Erro `Encountered two children with the same key, 60002` ao renderizar tabela de posições de estoque
+2. **Tags <a> aninhadas na Home**: Erro `<a> cannot contain a nested <a>` nos cards de módulos
+
+### ✅ Correções Implementadas
+
+#### 1. Chaves Únicas na Tabela de Estoque
+
+**Problema**: Usava `key={pos.id}` para renderizar linhas, mas múltiplos registros do mesmo produto podem ter IDs repetidos.
+
+**Solução**: Alterado para identificador composto único:
+```tsx
+// ANTES
+<TableRow key={pos.id}>
+
+// DEPOIS
+<TableRow key={`${pos.id}-${pos.batch}-${pos.locationId}`}>
+```
+
+**Arquivo**: `client/src/pages/StockPositions.tsx` (linha 269)
+
+#### 2. Remoção de Tags Aninhadas
+
+**Problema**: `<Button asChild>` com `<Link>` dentro causava aninhamento de `<a>` tags.
+
+**Solução**: Invertida estrutura - Link por fora, Button por dentro:
+```tsx
+// ANTES (INVÁLIDO)
+<Button asChild className="w-full">
+  <Link href={module.href}>Acessar Módulo</Link>
+</Button>
+
+// DEPOIS (VÁLIDO)
+<Link href={module.href}>
+  <Button className="w-full">Acessar Módulo</Button>
+</Link>
+```
+
+**Arquivo**: `client/src/pages/Home.tsx` (linha 234-236)
+
+### 📝 Arquivos Modificados
+
+- `client/src/pages/StockPositions.tsx` - Corrigida key duplicada
+- `client/src/pages/Home.tsx` - Removido aninhamento de tags
+- `CORRECAO_BUGS_STOCK.md` - Documentação completa
+- `todo.md` - Rastreamento de bugs
+
+---
+
 ## [2026-01-09] - Correção: Alocação de Estoque Após Conferência Cega
 
 ### 🐛 Problema Identificado

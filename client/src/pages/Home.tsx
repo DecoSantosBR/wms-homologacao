@@ -231,9 +231,9 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <Button asChild className="w-full">
-                    <Link href={module.href}>Acessar Módulo</Link>
-                  </Button>
+                  <Link href={module.href}>
+                    <Button className="w-full">Acessar Módulo</Button>
+                  </Link>
                 </CardContent>
               </Card>
             );

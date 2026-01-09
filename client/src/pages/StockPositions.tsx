@@ -266,7 +266,7 @@ export default function StockPositions() {
                   </TableHeader>
                   <TableBody>
                     {positions.map((pos) => (
-                      <TableRow key={pos.id}>
+                      <TableRow key={`${pos.id}-${pos.batch}-${pos.locationId}`}>
                         <TableCell>{pos.tenantName || "Compartilhado"}</TableCell>
                         <TableCell>{pos.zoneName}</TableCell>
                         <TableCell className="font-mono">{pos.locationCode}</TableCell>
