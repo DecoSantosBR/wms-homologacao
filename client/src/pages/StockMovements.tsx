@@ -99,8 +99,14 @@ export default function StockMovements() {
   };
 
   const handleSubmit = () => {
-    if (!fromLocationId || !selectedProduct || !toLocationId || !quantity) {
+    // Validação: endereço destino é opcional apenas para descarte
+    if (!fromLocationId || !selectedProduct || !quantity) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    
+    if (movementType !== "disposal" && !toLocationId) {
+      toast.error("Endereço destino é obrigatório para este tipo de movimentação");
       return;
     }
 
@@ -113,7 +119,7 @@ export default function StockMovements() {
     registerMovement.mutate({
       productId: product.productId,
       fromLocationId: Number(fromLocationId),
-      toLocationId: Number(toLocationId),
+      toLocationId: toLocationId ? Number(toLocationId) : undefined,
       quantity: Number(quantity),
       batch: product.batch || undefined,
       movementType,
@@ -303,9 +309,10 @@ export default function StockMovements() {
               />
             </div>
 
-            {/* Endereço Destino */}
-            <div className="grid gap-2">
-              <Label htmlFor="toLocation">Endereço Destino *</Label>
+            {/* Endereço Destino (oculto para descarte) */}
+            {movementType !== "disposal" && (
+              <div className="grid gap-2">
+                <Label htmlFor="toLocation">Endereço Destino *</Label>
               <Select value={toLocationId} onValueChange={setToLocationId}>
                 <SelectTrigger id="toLocation">
                   <SelectValue placeholder="Selecione o endereço destino" />
@@ -330,7 +337,8 @@ export default function StockMovements() {
                   </AlertDescription>
                 </Alert>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Tipo de Movimentação */}
             <div className="grid gap-2">
@@ -368,7 +376,13 @@ export default function StockMovements() {
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={registerMovement.isPending || !fromLocationId || !selectedProduct || !toLocationId || !quantity}
+              disabled={
+                registerMovement.isPending || 
+                !fromLocationId || 
+                !selectedProduct || 
+                (movementType !== "disposal" && !toLocationId) || 
+                !quantity
+              }
             >
               {registerMovement.isPending ? "Registrando..." : "Registrar Movimentação"}
             </Button>

@@ -12,7 +12,7 @@ import {
 export interface RegisterMovementInput {
   productId: number;
   fromLocationId: number;
-  toLocationId: number;
+  toLocationId?: number; // Opcional para descarte
   quantity: number;
   batch?: string;
   movementType: "transfer" | "adjustment" | "return" | "disposal" | "quality";
@@ -49,34 +49,40 @@ export async function registerMovement(input: RegisterMovementInput) {
     );
   }
 
-  // Validar regra de armazenagem do endereço destino
-  const toLocation = await dbConn
-    .select()
-    .from(warehouseLocations)
-    .where(eq(warehouseLocations.id, input.toLocationId))
-    .limit(1);
+  // Validar regra de armazenagem do endereço destino (exceto para descarte)
+  if (input.movementType !== "disposal") {
+    if (!input.toLocationId) {
+      throw new Error("Endereço destino é obrigatório para este tipo de movimentação");
+    }
 
-  if (!toLocation[0]) {
-    throw new Error("Endereço destino não encontrado");
-  }
-
-  // Se endereço é "single" (único item/lote), validar se já contém outro produto/lote
-  if (toLocation[0].storageRule === "single") {
-    const existingStock = await dbConn
+    const toLocation = await dbConn
       .select()
-      .from(inventory)
-      .where(eq(inventory.locationId, input.toLocationId))
+      .from(warehouseLocations)
+      .where(eq(warehouseLocations.id, input.toLocationId))
       .limit(1);
 
-    if (existingStock.length > 0) {
-      const existing = existingStock[0];
-      if (
-        existing.productId !== input.productId ||
-        existing.batch !== input.batch
-      ) {
-        throw new Error(
-          `Endereço ${toLocation[0].code} é de único item/lote e já contém outro produto/lote`
-        );
+    if (!toLocation[0]) {
+      throw new Error("Endereço destino não encontrado");
+    }
+
+    // Se endereço é "single" (único item/lote), validar se já contém outro produto/lote
+    if (toLocation[0].storageRule === "single") {
+      const existingStock = await dbConn
+        .select()
+        .from(inventory)
+        .where(eq(inventory.locationId, input.toLocationId))
+        .limit(1);
+
+      if (existingStock.length > 0) {
+        const existing = existingStock[0];
+        if (
+          existing.productId !== input.productId ||
+          existing.batch !== input.batch
+        ) {
+          throw new Error(
+            `Endereço ${toLocation[0].code} é de único item/lote e já contém outro produto/lote`
+          );
+        }
       }
     }
   }
@@ -112,46 +118,48 @@ export async function registerMovement(input: RegisterMovementInput) {
     }
   }
 
-  // Adicionar estoque ao destino
-  const toInventory = await dbConn
-    .select()
-    .from(inventory)
-    .where(
-      and(
-        eq(inventory.locationId, input.toLocationId),
-        eq(inventory.productId, input.productId),
-        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
+  // Adicionar estoque ao destino (exceto para descarte)
+  if (input.movementType !== "disposal" && input.toLocationId) {
+    const toInventory = await dbConn
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.locationId, input.toLocationId),
+          eq(inventory.productId, input.productId),
+          input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (toInventory[0]) {
-    // Atualizar quantidade existente
-    await dbConn
-      .update(inventory)
-      .set({
-        quantity: toInventory[0].quantity + input.quantity,
-        expiryDate: fromInventory[0]?.expiryDate || toInventory[0].expiryDate,
-      })
-      .where(eq(inventory.id, toInventory[0].id));
-  } else {
-    // Criar novo registro
-    await dbConn.insert(inventory).values({
-      productId: input.productId,
-      locationId: input.toLocationId,
-      batch: input.batch || null,
-      quantity: input.quantity,
-      expiryDate: fromInventory[0]?.expiryDate || null,
-      status: "available",
-      tenantId: input.tenantId || null,
-    });
+    if (toInventory[0]) {
+      // Atualizar quantidade existente
+      await dbConn
+        .update(inventory)
+        .set({
+          quantity: toInventory[0].quantity + input.quantity,
+          expiryDate: fromInventory[0]?.expiryDate || toInventory[0].expiryDate,
+        })
+        .where(eq(inventory.id, toInventory[0].id));
+    } else {
+      // Criar novo registro
+      await dbConn.insert(inventory).values({
+        productId: input.productId,
+        locationId: input.toLocationId,
+        batch: input.batch || null,
+        quantity: input.quantity,
+        expiryDate: fromInventory[0]?.expiryDate || null,
+        status: "available",
+        tenantId: input.tenantId || null,
+      });
+    }
   }
 
   // Registrar movimentação no histórico
   await dbConn.insert(inventoryMovements).values({
     productId: input.productId,
     fromLocationId: input.fromLocationId,
-    toLocationId: input.toLocationId,
+    toLocationId: input.toLocationId || null,
     quantity: input.quantity,
     batch: input.batch || null,
     movementType: input.movementType,
@@ -163,24 +171,27 @@ export async function registerMovement(input: RegisterMovementInput) {
 
   // Atualizar status dos endereços
   await updateLocationStatus(input.fromLocationId);
-  await updateLocationStatus(input.toLocationId);
+  if (input.toLocationId) {
+    await updateLocationStatus(input.toLocationId);
+  }
 
-  // Atualizar status da pré-alocação (se houver)
-  // Busca por produto + lote + destino, marca como allocated
-  await dbConn
-    .update(receivingPreallocations)
-    .set({ status: "allocated" })
-    .where(
-      and(
-        eq(receivingPreallocations.productId, input.productId),
-        eq(receivingPreallocations.locationId, input.toLocationId),
-        input.batch 
-          ? eq(receivingPreallocations.batch, input.batch)
-          : sql`${receivingPreallocations.batch} IS NULL`,
-        eq(receivingPreallocations.status, "pending")
+  // Atualizar status da pré-alocação (se houver e se não for descarte)
+  if (input.toLocationId) {
+    await dbConn
+      .update(receivingPreallocations)
+      .set({ status: "allocated" })
+      .where(
+        and(
+          eq(receivingPreallocations.productId, input.productId),
+          eq(receivingPreallocations.locationId, input.toLocationId),
+          input.batch 
+            ? eq(receivingPreallocations.batch, input.batch)
+            : sql`${receivingPreallocations.batch} IS NULL`,
+          eq(receivingPreallocations.status, "pending")
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
+  }
 
   return { success: true, message: "Movimentação registrada com sucesso" };
 }

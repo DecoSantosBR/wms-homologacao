@@ -802,3 +802,11 @@
 - [x] Ajustar formatação de dados (data/hora, badges de tipo)
 - [x] Adicionar fromLocationCode e toLocationCode no backend
 - [x] Testar nova tabela na interface
+
+
+## Fase: Ajuste de Movimentação Tipo Descarte
+- [x] Permitir toLocationId opcional quando movementType = "disposal"
+- [x] Ajustar validação para não exigir endereço destino em Descarte
+- [x] Excluir produto do estoque (não transferir) quando for Descarte
+- [x] Ocultar campo "Endereço Destino" na interface quando tipo = Descarte
+- [x] Testar fluxo completo de Descarte

@@ -38,7 +38,7 @@ const inventoryFiltersSchema = z.object({
 const registerMovementSchema = z.object({
   productId: z.number(),
   fromLocationId: z.number(),
-  toLocationId: z.number(),
+  toLocationId: z.number().optional(), // Opcional para descarte
   quantity: z.number().positive(),
   batch: z.string().optional(),
   movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
