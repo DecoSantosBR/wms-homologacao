@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { PreallocationDialog } from "@/components/PreallocationDialog";
 import { toast } from "sonner";
 
 export default function NFEImport() {
@@ -17,6 +18,7 @@ export default function NFEImport() {
   const [xmlContent, setXmlContent] = useState("");
   const [importResult, setImportResult] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPreallocation, setShowPreallocation] = useState(false);
 
   const { data: tenants } = trpc.tenants.list.useQuery();
 
@@ -255,6 +257,12 @@ export default function NFEImport() {
                   Importar Outra NF-e
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => setShowPreallocation(true)}
+                >
+                  Pré-definir Endereços
+                </Button>
+                <Button
                   onClick={() => setLocation("/cadastros/produtos")}
                 >
                   Ver Produtos Cadastrados
@@ -265,6 +273,18 @@ export default function NFEImport() {
         )}
         </div>
       </div>
+
+      {/* Dialog de Pré-Alocação */}
+      {importResult && (
+        <PreallocationDialog
+          open={showPreallocation}
+          onOpenChange={setShowPreallocation}
+          receivingOrderId={importResult.receivingOrderId}
+          onSuccess={() => {
+            toast.success("Pré-alocações salvas! Agora você pode iniciar a conferência.");
+          }}
+        />
+      )}
     </>
   );
 }

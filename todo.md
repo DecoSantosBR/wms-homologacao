@@ -538,3 +538,33 @@
 ## BUG - Tags <a> Aninhadas
 - [x] Encontrar onde há <a> dentro de <a> (Home.tsx linha 235)
 - [x] Remover aninhamento (Button asChild com Link dentro)
+
+
+## MÓDULO - Pré-Alocação
+- [ ] Ler e analisar DOCUMENTACAO_10_PREALOCATION.md
+- [ ] Ler e analisar DOCUMENTACAO_14_PREALLOCACAO_DETALHADA.md
+- [ ] Criar tabela preAllocations no schema
+- [ ] Implementar parser de Excel (.xlsx)
+- [ ] Implementar validações (SKU, lote, endereço, quantidade)
+- [ ] Criar endpoints tRPC (upload, list, delete, apply)
+- [ ] Criar página PreAllocation.tsx
+- [ ] Implementar upload de planilha
+- [ ] Implementar visualização de pré-alocações
+- [ ] Implementar edição manual
+- [ ] Integrar com conferência cega
+- [ ] Testar fluxo completo
+
+
+## Fase 42: Módulo de Pré-Alocação
+- [x] Ler e analisar documentação completa (DOCUMENTACAO_10_PREALOCATION.md e DOCUMENTACAO_14_PREALLOCACAO_DETALHADA.md)
+- [x] Verificar tabela receivingPreallocations no schema (já existia)
+- [x] Instalar biblioteca xlsx para parser de Excel
+- [x] Implementar parser de Excel (processPreallocationExcel)
+- [x] Implementar validações (validatePreallocations)
+- [x] Implementar funções de salvamento e consulta (savePreallocations, getPreallocations, deletePreallocations)
+- [x] Criar endpoints tRPC (processFile, save, list, delete)
+- [x] Criar componente PreallocationDialog com upload e visualização
+- [x] Integrar com página de Importação de NF-e (botão "Pré-definir Endereços")
+- [ ] Testar fluxo completo (upload Excel, validação, salvamento)
+- [ ] Integrar pré-alocações com conferência cega (usar endereços pré-definidos)
+- [ ] Salvar checkpoint

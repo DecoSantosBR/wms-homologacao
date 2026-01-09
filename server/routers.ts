@@ -10,11 +10,13 @@ import { parseNFE, isValidNFE } from "./nfeParser";
 import { warehouseZones } from "../drizzle/schema";
 import { blindConferenceRouter } from "./blindConferenceRouter";
 import { stockRouter } from "./stockRouter";
+import { preallocationRouter } from "./preallocationRouter";
 
 export const appRouter = router({
   system: systemRouter,
   blindConference: blindConferenceRouter,
   stock: stockRouter,
+  preallocation: preallocationRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

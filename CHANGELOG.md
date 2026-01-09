@@ -1,5 +1,99 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Módulo de Pré-Alocação Implementado
+
+### ✨ Funcionalidade Implementada
+
+Módulo completo de Pré-Alocação que permite pré-definir endereços de armazenagem antes da conferência cega, otimizando o fluxo operacional.
+
+### ✅ Backend Implementado
+
+**server/preallocation.ts** - Funções de pré-alocação
+- `processPreallocationExcel()` - Parser de arquivo Excel (.xlsx)
+- `validatePreallocations()` - Validações contra banco de dados
+- `savePreallocations()` - Salvamento de pré-alocações válidas
+- `getPreallocations()` - Consulta de pré-alocações
+- `deletePreallocations()` - Exclusão de pré-alocações
+
+**server/preallocationRouter.ts** - Endpoints tRPC
+- `preallocation.processFile` - Processa Excel e retorna validações
+- `preallocation.save` - Salva pré-alocações válidas
+- `preallocation.list` - Lista pré-alocações de uma ordem
+- `preallocation.delete` - Remove pré-alocações
+
+### ✅ Frontend Implementado
+
+**PreallocationDialog.tsx** - Componente de upload e validação
+- Upload de arquivo Excel (.xlsx)
+- Processamento e validação em tempo real
+- Visualização de resultados em tabela
+- Resumo: total, válidas, inválidas
+- Botões: Salvar, Pular, Baixar Modelo
+
+**NFEImport.tsx** - Integração
+- Botão "Pré-definir Endereços" após importação de NF-e
+- Dialog modal com PreallocationDialog
+
+### 📝 Validações Implementadas
+
+1. **Endereço existe** e está disponível (status: available)
+2. **Produto existe** no cadastro (por código interno/SKU)
+3. **Lote corresponde** ao esperado na NF-e
+4. **Quantidade não excede** o esperado na ordem
+5. **Regra de armazenagem** do endereço permite o produto
+
+### 📊 Formato da Planilha Excel
+
+```
+| Endereço    | Cód. Interno | Descrição        | Lote     | Quantidade |
+|-------------|--------------|------------------|----------|------------|
+| M01-01-02A  | 123456       | Produto Exemplo  | L001     | 100        |
+| M01-01-03A  | 234567       | Outro Produto    | L002     | 50         |
+```
+
+### 🔄 Fluxo de Uso
+
+1. Importar NF-e (XML)
+2. Clicar em "Pré-definir Endereços"
+3. Upload de planilha Excel
+4. Sistema valida automaticamente
+5. Revisar resultados (válidas/inválidas)
+6. Salvar pré-alocações válidas
+7. Iniciar conferência cega (endereços pré-definidos)
+
+### 📚 Documentação
+
+- Criado `MODULO_PREALLOCACAO.md` com documentação completa
+- Arquitetura backend/frontend
+- Regras de negócio
+- Formato de planilha
+- Próximos passos
+
+### 📝 Arquivos Criados/Modificados
+
+**Backend:**
+- `server/preallocation.ts` (novo)
+- `server/preallocationRouter.ts` (novo)
+- `server/routers.ts` (modificado - registrado preallocationRouter)
+- `package.json` (modificado - adicionado xlsx)
+
+**Frontend:**
+- `client/src/components/PreallocationDialog.tsx` (novo)
+- `client/src/pages/NFEImport.tsx` (modificado - integração)
+
+**Documentação:**
+- `MODULO_PREALLOCACAO.md` (novo)
+- `todo.md` (atualizado)
+
+### ⚠️ Próximos Passos (Não Implementados)
+
+- [ ] Integrar pré-alocações com conferência cega (usar endereços automaticamente)
+- [ ] Permitir edição de pré-alocações após salvamento
+- [ ] Exportar pré-alocações para Excel
+- [ ] Validar capacidade do endereço
+
+---
+
 ## [2026-01-09] - Correção: Chaves Duplicadas e Tags Aninhadas
 
 ### 🐛 Problemas Identificados
