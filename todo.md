@@ -402,3 +402,13 @@
 - [x] Garantir que 1 etiqueta = 1 produto + 1 lote específico (não pode incrementar múltiplos itens)
 - [x] Adicionar extração de lote e validade do XML (tag <rastro>)
 - [x] Corrigir import React faltante no BlindCheckModal (49 erros no console)
+
+
+### BUG - Chaves Duplicadas na Lista de Recebimento
+- [x] Corrigir erro "Encountered two children with the same key" na página /recebimento (resolvido após limpeza de cache)
+- [x] Investigar se receivingOrderItems com múltiplos lotes está causando duplicação (não causa)
+- [x] Garantir chaves únicas na renderização da lista (keys usando item.id estão corretas)
+
+## BUG - Rota /recebimento retorna 404
+- [x] Corrigir configuração de rota /recebimento no App.tsx (adicionado alias)
+- [x] Verificar se o componente Receiving está sendo importado corretamente (correto)

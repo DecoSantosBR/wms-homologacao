@@ -97,12 +97,13 @@ const conferenced = associations
 5. Verificar no modal de finalização que lotes diferentes aparecem como linhas separadas
 6. Confirmar que divergências são calculadas corretamente por produto+lote
 
-### 📁 Arquivos Modificados
+### 📝 Arquivos Modificados
 
 - `server/nfeParser.ts` - Parser de XML
 - `server/routers.ts` - Importação de NF-e
 - `server/blindConferenceRouter.ts` - Lógica de conferência cega
 - `client/src/components/BlindCheckModal.tsx` - Correção de imports
+- `client/src/App.tsx` - Adição de alias de rota
 - `scripts/reset-receiving-order.mjs` - Script de limpeza (novo)
 - `todo.md` - Rastreamento de bugs
 
@@ -110,3 +111,29 @@ const conferenced = associations
 
 - Documentação NF-e: Tag `<rastro>` para rastreabilidade de medicamentos
 - ANVISA: Resolução RDC nº 157/2017 - Rastreabilidade de medicamentos
+
+---
+
+## [2026-01-08] - Correção de Rota 404
+
+### 🐛 Problema Identificado
+
+Rota `/recebimento` retornava erro 404 porque apenas `/receiving` estava configurada no roteador.
+
+### ✅ Correção Implementada
+
+#### App.tsx
+- **Adicionado**: Alias `/recebimento` para o componente `Receiving`
+- **Motivo**: O `BlindCheckModal` navega para `/recebimento` após finalizar conferência (linha 147)
+- **Consistência**: Interface em português deve ter rotas em português
+
+```typescript
+<Route path={"/receiving"} component={Receiving} />
+<Route path={"/recebimento"} component={Receiving} /> // ← Novo alias
+```
+
+### 📝 Observações
+
+- Ambas as rotas (`/receiving` e `/recebimento`) funcionam corretamente
+- Erro de "chaves duplicadas" reportado anteriormente foi resolvido após limpeza de cache do navegador
+- Keys na renderização estão corretas (usando `item.id` único)
