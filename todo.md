@@ -412,3 +412,13 @@
 ## BUG - Rota /recebimento retorna 404
 - [x] Corrigir configuração de rota /recebimento no App.tsx (adicionado alias)
 - [x] Verificar se o componente Receiving está sendo importado corretamente (correto)
+
+
+## FEATURE - Aprendizado Automático de Quantidade por Caixa
+- [x] Adicionar campo unitsPerBox no schema de produtos (já existia)
+- [x] Modificar endpoint associateLabel para salvar unitsPerBox no produto na primeira associação (já implementado linhas 228-234)
+- [x] Criar endpoint products.getById para buscar dados do produto
+- [x] Criar endpoint receiving.getItemByProductAndBatch para buscar validade
+- [x] Atualizar BlindCheckModal para preencher automaticamente unitsPerBox de produtos já cadastrados
+- [x] Implementar preenchimento automático de validade ao selecionar lote (buscar do receivingOrderItem)
+- [x] Testar fluxo: primeira associação salva, próximas associações preenchem automaticamente

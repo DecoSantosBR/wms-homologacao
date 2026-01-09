@@ -45,6 +45,49 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
+  // Buscar dados do produto selecionado
+  const { data: selectedProduct } = trpc.products.getById.useQuery(
+    { id: selectedProductId! },
+    { enabled: !!selectedProductId }
+  );
+
+  // Preencher unitsPerPackage automaticamente quando produto for selecionado
+  useEffect(() => {
+    if (selectedProduct?.unitsPerBox) {
+      setUnitsPerPackage(selectedProduct.unitsPerBox);
+    } else {
+      setUnitsPerPackage(1); // Valor padrão se não houver cadastrado
+    }
+  }, [selectedProduct]);
+
+  // Preencher validade automaticamente quando lote for informado
+  useEffect(() => {
+    if (selectedProductId && batch) {
+      // Buscar item da ordem com mesmo produto e lote
+      const matchingItem = items.find(item => 
+        item.productId === selectedProductId
+      );
+      
+      if (matchingItem) {
+        // Buscar validade do receivingOrderItem via query
+        utils.receiving.getItemByProductAndBatch.fetch({
+          receivingOrderId,
+          productId: selectedProductId,
+          batch
+        }).then(itemData => {
+          if (itemData?.expiryDate) {
+            // Converter timestamp para formato YYYY-MM-DD
+            const date = new Date(itemData.expiryDate);
+            const formattedDate = date.toISOString().split('T')[0];
+            setExpiryDate(formattedDate);
+          }
+        }).catch(() => {
+          // Ignorar erro se não encontrar
+        });
+      }
+    }
+  }, [selectedProductId, batch, items, receivingOrderId, utils]);
+
   // Iniciar sessão ao abrir modal
   const startSessionMutation = trpc.blindConference.start.useMutation({
     onSuccess: (data) => {

@@ -171,6 +171,15 @@ export const appRouter = router({
       return db.select().from(products).orderBy(desc(products.createdAt)).limit(100);
     }),
 
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const result = await db.select().from(products).where(eq(products.id, input.id)).limit(1);
+        return result.length > 0 ? result[0] : null;
+      }),
+
     create: protectedProcedure
       .input(z.object({
         tenantId: z.number(),
@@ -630,6 +639,28 @@ export const appRouter = router({
           .set({ scheduledDate: new Date(input.scheduledDate) })
           .where(eq(receivingOrders.id, input.id));
         return { success: true };
+      }),
+
+    getItemByProductAndBatch: protectedProcedure
+      .input(z.object({ 
+        receivingOrderId: z.number(),
+        productId: z.number(),
+        batch: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const result = await db.select()
+          .from(receivingOrderItems)
+          .where(
+            and(
+              eq(receivingOrderItems.receivingOrderId, input.receivingOrderId),
+              eq(receivingOrderItems.productId, input.productId),
+              eq(receivingOrderItems.batch, input.batch)
+            )
+          )
+          .limit(1);
+        return result.length > 0 ? result[0] : null;
       }),
 
     getItems: protectedProcedure
