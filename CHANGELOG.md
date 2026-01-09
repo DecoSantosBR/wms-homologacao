@@ -1,5 +1,63 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Validação de Código de Endereços
+
+### ✨ Funcionalidade Implementada
+
+Padrão de código de endereços seguindo formato RUA-PRÉDIO-ANDAR[QUADRANTE] com regras específicas para tipos Whole e Fraction.
+
+### ✅ Formato do Código
+
+**Whole (Inteira)**: `T01-01-01` (RUA-PRÉDIO-ANDAR com 2 dígitos)
+**Fraction (Fração)**: `T01-01-1A` (RUA-PRÉDIO-ANDAR+QUADRANTE)
+
+### ✅ Implementação
+
+**Backend - Validação**
+- `server/locationCodeValidator.ts` - Funções de validação e geração
+- `validateLocationCode()` - Valida formato conforme tipo
+- `generateLocationCode()` - Gera código a partir das partes
+- `parseLocationCode()` - Extrai partes do código
+- `validateQuadrantRequirement()` - Valida obrigatoriedade do quadrante
+
+**Frontend - Formulário**
+- `CreateLocationDialog.tsx` - Geração automática de código
+- Campo código somente leitura (gerado automaticamente)
+- Campo Quadrante desabilitado para tipo Whole
+- Placeholders dinâmicos conforme tipo selecionado
+- Validação em tempo real com mensagens específicas
+
+**Pré-Alocação**
+- `preallocation.ts` - Validação de códigos na planilha Excel
+- Verifica formato conforme tipo de endereço cadastrado
+- Mensagens de erro detalhadas por linha
+
+### 📝 Regras de Validação
+
+**Whole (Inteira)**
+- Formato: `[A-Z]\d{2}-\d{2}-\d{2}`
+- Rua: Letra maiúscula + 2 dígitos (ex: T01)
+- Prédio: 2 dígitos (ex: 01)
+- Andar: 2 dígitos (ex: 01)
+- Quadrante: NÃO APLICÁVEL (campo desabilitado)
+
+**Fraction (Fração)**
+- Formato: `[A-Z]\d{2}-\d{2}-\d[A-Z]`
+- Rua: Letra maiúscula + 2 dígitos (ex: T01)
+- Prédio: 2 dígitos (ex: 01)
+- Andar: 1 dígito (ex: 1)
+- Quadrante: OBRIGATÓRIO - Letra maiúscula (A, B, C, D)
+
+### 📚 Documentação
+
+- Criado `VALIDACAO_CODIGO_ENDERECOS.md` com documentação completa
+- Formato do código
+- Regras de validação
+- Fluxo de uso
+- Exemplos de mensagens de erro
+
+---
+
 ## [2026-01-09] - Módulo de Pré-Alocação Implementado
 
 ### ✨ Funcionalidade Implementada

@@ -151,7 +151,15 @@ export async function validatePreallocations(
     let locationId: number | undefined;
     let productId: number | undefined;
 
-    // 1. Validar endereço
+    // 1. Validar formato do código de endereço
+    const wholeRegex = /^[A-Z]\d{2}-\d{2}-\d{2}$/; // Ex: T01-01-01
+    const fractionRegex = /^[A-Z]\d{2}-\d{2}-\d[A-Z]$/; // Ex: T01-01-1A
+    
+    if (!wholeRegex.test(row.endereco) && !fractionRegex.test(row.endereco)) {
+      errors.push(`Endereço "${row.endereco}" com formato inválido. Use: T01-01-01 (Inteira) ou T01-01-1A (Fração)`);
+    }
+    
+    // 2. Validar se endereço existe no banco
     const locations = await dbConn
       .select()
       .from(warehouseLocations)
@@ -159,12 +167,20 @@ export async function validatePreallocations(
       .limit(1);
 
     if (locations.length === 0) {
-      errors.push(`Endereço "${row.endereco}" não encontrado`);
+      errors.push(`Endereço "${row.endereco}" não encontrado no cadastro`);
     } else {
       locationId = locations[0].id;
+      
+      // Validar se o formato do código corresponde ao tipo de endereço
+      const location = locations[0];
+      if (location.locationType === "whole" && !wholeRegex.test(row.endereco)) {
+        errors.push(`Endereço "${row.endereco}" é do tipo Inteira, mas o código está em formato de Fração`);
+      } else if (location.locationType === "fraction" && !fractionRegex.test(row.endereco)) {
+        errors.push(`Endereço "${row.endereco}" é do tipo Fração, mas o código está em formato de Inteira`);
+      }
     }
 
-    // 2. Validar produto
+    // 3. Validar produto
     const productsResult = await dbConn
       .select()
       .from(products)

@@ -568,3 +568,15 @@
 - [ ] Testar fluxo completo (upload Excel, validação, salvamento)
 - [ ] Integrar pré-alocações com conferência cega (usar endereços pré-definidos)
 - [ ] Salvar checkpoint
+
+
+## FEATURE - Validação de Código de Endereços
+- [ ] Analisar schema de warehouseLocations
+- [ ] Criar função validateLocationCode(code, locationType)
+- [ ] Implementar regex para validação:
+  - Whole: `^[A-Z]\d{2}-\d{2}-\d{2}$` (ex: T01-01-01)
+  - Fraction: `^[A-Z]\d{2}-\d{2}-\d[A-Z]$` (ex: T01-01-1A)
+- [ ] Atualizar formulário de cadastro de endereços (Locations.tsx)
+- [ ] Atualizar validações em pré-alocação (preallocation.ts)
+- [ ] Adicionar mensagens de erro específicas
+- [ ] Testar ambos os tipos de endereço

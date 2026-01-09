@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { MapPin, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export function CreateLocationDialog() {
   const [open, setOpen] = useState(false);
@@ -56,6 +57,61 @@ export function CreateLocationDialog() {
     },
   });
 
+  // Gerar código automaticamente quando preencher rua, prédio, andar e quadrante
+  useEffect(() => {
+    const { aisle, rack, level, position, locationType } = formData;
+    
+    if (aisle && rack && level) {
+      let generatedCode = "";
+      
+      if (locationType === "whole") {
+        // Formato: T01-01-01 (andar com 2 dígitos)
+        generatedCode = `${aisle}-${rack}-${level}`;
+      } else if (locationType === "fraction" && position) {
+        // Formato: T01-01-1A (andar com 1 dígito + letra do quadrante)
+        generatedCode = `${aisle}-${rack}-${level}${position}`;
+      }
+      
+      if (generatedCode && generatedCode !== formData.code) {
+        setFormData(prev => ({ ...prev, code: generatedCode }));
+      }
+    }
+  }, [formData.aisle, formData.rack, formData.level, formData.position, formData.locationType]);
+
+  const validateLocationCode = () => {
+    const { code, locationType, position } = formData;
+    
+    if (!code.trim()) {
+      return "Código do endereço é obrigatório";
+    }
+    
+    // Regex para validação
+    const wholeRegex = /^[A-Z]\d{2}-\d{2}-\d{2}$/; // Ex: T01-01-01
+    const fractionRegex = /^[A-Z]\d{2}-\d{2}-\d[A-Z]$/; // Ex: T01-01-1A
+    
+    if (locationType === "whole") {
+      if (!wholeRegex.test(code)) {
+        return "Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: T01-01-01)";
+      }
+    } else if (locationType === "fraction") {
+      if (!fractionRegex.test(code)) {
+        return "Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: T01-01-1A)";
+      }
+      
+      // Validar quadrante (A, B, C, D)
+      const quadrant = code.slice(-1);
+      if (!["A", "B", "C", "D"].includes(quadrant)) {
+        return "Quadrante inválido. Valores permitidos: A, B, C, D";
+      }
+      
+      if (!position) {
+        return "Quadrante é obrigatório para endereços do tipo Fração";
+      }
+    }
+    
+    return null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -64,8 +120,9 @@ export function CreateLocationDialog() {
       return;
     }
     
-    if (!formData.code.trim()) {
-      toast.error("Código do endereço é obrigatório");
+    const codeError = validateLocationCode();
+    if (codeError) {
+      toast.error(codeError);
       return;
     }
 
@@ -146,10 +203,11 @@ export function CreateLocationDialog() {
                 id="code"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="Ex: A01-P01-N01"
+                placeholder="Ex: T01-01-01 (Inteira) ou T01-01-1A (Fração)"
                 required
+                readOnly
               />
-              <p className="text-xs text-gray-500">Formato sugerido: RUA-PRÉDIO-ANDAR-QUADRANTE</p>
+              <p className="text-xs text-gray-500">Código gerado automaticamente ao preencher Rua, Prédio, Andar e Quadrante</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -159,8 +217,9 @@ export function CreateLocationDialog() {
                   id="aisle"
                   value={formData.aisle}
                   onChange={(e) => setFormData({ ...formData, aisle: e.target.value.toUpperCase() })}
-                  placeholder="Ex: A01"
+                  placeholder="Ex: T01"
                 />
+                <p className="text-xs text-gray-500">Formato: Letra + 2 dígitos (ex: T01)</p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="rack">Prédio</Label>
@@ -168,8 +227,9 @@ export function CreateLocationDialog() {
                   id="rack"
                   value={formData.rack}
                   onChange={(e) => setFormData({ ...formData, rack: e.target.value.toUpperCase() })}
-                  placeholder="Ex: P01"
+                  placeholder="Ex: 01"
                 />
+                <p className="text-xs text-gray-500">Formato: 2 dígitos (ex: 01)</p>
               </div>
             </div>
 
@@ -180,8 +240,11 @@ export function CreateLocationDialog() {
                   id="level"
                   value={formData.level}
                   onChange={(e) => setFormData({ ...formData, level: e.target.value.toUpperCase() })}
-                  placeholder="Ex: N01"
+                  placeholder={formData.locationType === "whole" ? "Ex: 01" : "Ex: 1"}
                 />
+                <p className="text-xs text-gray-500">
+                  {formData.locationType === "whole" ? "Formato: 2 dígitos (ex: 01)" : "Formato: 1 dígito (ex: 1)"}
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="position">Quadrante</Label>
@@ -189,8 +252,14 @@ export function CreateLocationDialog() {
                   id="position"
                   value={formData.position}
                   onChange={(e) => setFormData({ ...formData, position: e.target.value.toUpperCase() })}
-                  placeholder="Ex: Q01"
+                  placeholder="Ex: A"
+                  disabled={formData.locationType === "whole"}
                 />
+                <p className="text-xs text-gray-500">
+                  {formData.locationType === "fraction" 
+                    ? "Obrigatório para Fração. Valores: A, B, C, D" 
+                    : "Não aplicável para Inteira"}
+                </p>
               </div>
             </div>
 
