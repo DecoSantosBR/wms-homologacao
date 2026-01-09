@@ -65,10 +65,10 @@ export function CreateLocationDialog() {
       let generatedCode = "";
       
       if (locationType === "whole") {
-        // Formato: T01-01-01 (andar com 2 dígitos)
+        // Formato: A10-01-73 (RUA-PRÉDIO-ANDAR)
         generatedCode = `${aisle}-${rack}-${level}`;
       } else if (locationType === "fraction" && position) {
-        // Formato: T01-01-1A (andar com 1 dígito + letra do quadrante)
+        // Formato: BI-A201-1D (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
         generatedCode = `${aisle}-${rack}-${level}${position}`;
       }
       
@@ -86,16 +86,16 @@ export function CreateLocationDialog() {
     }
     
     // Regex para validação
-    const wholeRegex = /^[A-Z]\d{2}-\d{2}-\d{2}$/; // Ex: T01-01-01
-    const fractionRegex = /^[A-Z]\d{2}-\d{2}-\d[A-Z]$/; // Ex: T01-01-1A
+    const wholeRegex = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/; // Ex: A10-01-73
+    const fractionRegex = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+[A-Z]$/; // Ex: BI-A201-1D
     
     if (locationType === "whole") {
       if (!wholeRegex.test(code)) {
-        return "Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: T01-01-01)";
+        return "Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: A10-01-73)";
       }
     } else if (locationType === "fraction") {
       if (!fractionRegex.test(code)) {
-        return "Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: T01-01-1A)";
+        return "Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: BI-A201-1D)";
       }
       
       // Validar quadrante (A, B, C, D)
@@ -203,7 +203,7 @@ export function CreateLocationDialog() {
                 id="code"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="Ex: T01-01-01 (Inteira) ou T01-01-1A (Fração)"
+                placeholder="Ex: A10-01-73 (Inteira) ou BI-A201-1D (Fração)"
                 required
                 readOnly
               />
@@ -217,9 +217,9 @@ export function CreateLocationDialog() {
                   id="aisle"
                   value={formData.aisle}
                   onChange={(e) => setFormData({ ...formData, aisle: e.target.value.toUpperCase() })}
-                  placeholder="Ex: T01"
+                  placeholder="Ex: A10 ou BI"
                 />
-                <p className="text-xs text-gray-500">Formato: Letra + 2 dígitos (ex: T01)</p>
+                <p className="text-xs text-gray-500">Formato: Alfanumérico (ex: A10, BI, T01)</p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="rack">Prédio</Label>
@@ -227,9 +227,9 @@ export function CreateLocationDialog() {
                   id="rack"
                   value={formData.rack}
                   onChange={(e) => setFormData({ ...formData, rack: e.target.value.toUpperCase() })}
-                  placeholder="Ex: 01"
+                  placeholder="Ex: 01 ou A201"
                 />
-                <p className="text-xs text-gray-500">Formato: 2 dígitos (ex: 01)</p>
+                <p className="text-xs text-gray-500">Formato: Alfanumérico (ex: 01, A201)</p>
               </div>
             </div>
 
@@ -240,10 +240,10 @@ export function CreateLocationDialog() {
                   id="level"
                   value={formData.level}
                   onChange={(e) => setFormData({ ...formData, level: e.target.value.toUpperCase() })}
-                  placeholder={formData.locationType === "whole" ? "Ex: 01" : "Ex: 1"}
+                  placeholder={formData.locationType === "whole" ? "Ex: 73" : "Ex: 1"}
                 />
                 <p className="text-xs text-gray-500">
-                  {formData.locationType === "whole" ? "Formato: 2 dígitos (ex: 01)" : "Formato: 1 dígito (ex: 1)"}
+                  {formData.locationType === "whole" ? "Formato: Alfanumérico (ex: 73, 01)" : "Formato: Alfanumérico (ex: 1, 2)"}
                 </p>
               </div>
               <div className="grid gap-2">
@@ -252,7 +252,7 @@ export function CreateLocationDialog() {
                   id="position"
                   value={formData.position}
                   onChange={(e) => setFormData({ ...formData, position: e.target.value.toUpperCase() })}
-                  placeholder="Ex: A"
+                  placeholder="Ex: D"
                   disabled={formData.locationType === "whole"}
                 />
                 <p className="text-xs text-gray-500">

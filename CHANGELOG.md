@@ -1,5 +1,51 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Correção: Formato de Código de Endereços
+
+### 🐛 Problema Identificado
+
+Códigos de endereços estavam sendo gerados com formato incorreto:
+- **Antes**: `002-BI-A201-1-D` (incluindo ZONA no início)
+- **Esperado**: `BI-A201-1D` (apenas RUA-PRÉDIO-ANDAR+QUADRANTE)
+
+### ✅ Correções Implementadas
+
+**Formato Correto:**
+- **Inteira (Whole)**: `A10-01-73` (RUA-PRÉDIO-ANDAR)
+- **Fração (Fraction)**: `BI-A201-1D` (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
+
+**Arquivos Corrigidos:**
+
+1. **CreateLocationDialog.tsx**
+   - Geração automática de código corrigida
+   - Regex de validação atualizada para formato alfanumérico flexível
+   - Placeholders atualizados com exemplos corretos
+   - Mensagens de erro atualizadas
+
+2. **locationCodeValidator.ts**
+   - Regex de validação: `[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+` (Whole)
+   - Regex de validação: `[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+[A-Z]` (Fraction)
+   - Exemplos atualizados na documentação do código
+
+3. **VALIDACAO_CODIGO_ENDERECOS.md**
+   - Documentação atualizada com formato correto
+   - Exemplos de uso atualizados
+   - Observações sobre endereços antigos
+
+**Características do Novo Formato:**
+- ✅ Formato alfanumérico flexível (aceita letras e números)
+- ✅ Sem hífen antes do quadrante (ex: `1D` não `1-D`)
+- ✅ Validação em tempo real
+- ✅ Geração automática ao preencher campos
+
+**Impacto:**
+- Novos endereços serão criados com formato correto
+- Endereços antigos permanecem com formato anterior no banco
+- Validação aplicada em cadastro manual e importação Excel
+
+---
+
+
 ## [2026-01-09] - Validação de Código de Endereços
 
 ### ✨ Funcionalidade Implementada

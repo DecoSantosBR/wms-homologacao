@@ -9,26 +9,26 @@ Implementamos a validação e formatação correta do código de endereços segu
 **Estrutura:** `RUA-PRÉDIO-ANDAR[QUADRANTE]`
 
 **Exemplos:**
-- **Whole (Inteira)**: `T01-01-01` (RUA-PRÉDIO-ANDAR com 2 dígitos)
-- **Fraction (Fração)**: `T01-01-1A` (RUA-PRÉDIO-ANDAR+QUADRANTE)
+- **Whole (Inteira)**: `A10-01-73` (RUA-PRÉDIO-ANDAR)
+- **Fraction (Fração)**: `BI-A201-1D` (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
 
 ### Regras de Validação
 
 #### Endereço Tipo "Whole" (Inteira)
-- **Formato**: `[A-Z]\d{2}-\d{2}-\d{2}`
-- **Exemplo**: `T01-01-01`
-- **Rua**: Letra maiúscula + 2 dígitos (ex: T01)
-- **Prédio**: 2 dígitos (ex: 01)
-- **Andar**: 2 dígitos (ex: 01)
+- **Formato**: `[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+`
+- **Exemplo**: `A10-01-73`
+- **Rua**: Alfanumérico (ex: A10, BI, T01)
+- **Prédio**: Alfanumérico (ex: 01, A201)
+- **Andar**: Alfanumérico (ex: 73, 01)
 - **Quadrante**: NÃO APLICÁVEL (campo desabilitado)
 
 #### Endereço Tipo "Fraction" (Fração)
-- **Formato**: `[A-Z]\d{2}-\d{2}-\d[A-Z]`
-- **Exemplo**: `T01-01-1A`
-- **Rua**: Letra maiúscula + 2 dígitos (ex: T01)
-- **Prédio**: 2 dígitos (ex: 01)
-- **Andar**: 1 dígito (ex: 1)
-- **Quadrante**: OBRIGATÓRIO - Letra maiúscula (A, B, C, D)
+- **Formato**: `[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+[A-Z]`
+- **Exemplo**: `BI-A201-1D`
+- **Rua**: Alfanumérico (ex: A10, BI, T01)
+- **Prédio**: Alfanumérico (ex: 01, A201)
+- **Andar**: Alfanumérico (ex: 1, 2)
+- **Quadrante**: OBRIGATÓRIO - Letra maiúscula (A, B, C, D) - SEM HÍFEN antes
 
 ### Arquivos Implementados
 
@@ -63,19 +63,19 @@ Validações adicionadas:
 
 #### Cadastro de Endereço Whole (Inteira)
 1. Selecionar tipo "Inteira (Whole)"
-2. Preencher Rua: `T01`
+2. Preencher Rua: `A10`
 3. Preencher Prédio: `01`
-4. Preencher Andar: `01`
+4. Preencher Andar: `73`
 5. Campo Quadrante fica desabilitado
-6. Código gerado automaticamente: `T01-01-01`
+6. Código gerado automaticamente: `A10-01-73`
 
 #### Cadastro de Endereço Fraction (Fração)
 1. Selecionar tipo "Fração (Fraction)"
-2. Preencher Rua: `T01`
-3. Preencher Prédio: `01`
+2. Preencher Rua: `BI`
+3. Preencher Prédio: `A201`
 4. Preencher Andar: `1`
-5. Preencher Quadrante: `A`
-6. Código gerado automaticamente: `T01-01-1A`
+5. Preencher Quadrante: `D`
+6. Código gerado automaticamente: `BI-A201-1D`
 
 ### Validações Implementadas
 
@@ -95,12 +95,12 @@ Validações adicionadas:
 
 **Formato inválido (Whole)**:
 ```
-Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: T01-01-01)
+Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: A10-01-73)
 ```
 
 **Formato inválido (Fraction)**:
 ```
-Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: T01-01-1A)
+Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: BI-A201-1D)
 ```
 
 **Quadrante inválido**:
@@ -120,12 +120,20 @@ Quadrante é obrigatório para endereços do tipo Fração
 3. **Usabilidade**: Geração automática facilita o cadastro
 4. **Rastreabilidade**: Códigos padronizados facilitam busca e organização
 5. **Integração**: Validação funciona em cadastro manual e importação Excel
+6. **Flexibilidade**: Formato alfanumérico aceita diferentes padrões de nomenclatura
 
 ### Testes Recomendados
 
-- [ ] Cadastrar endereço Whole com código válido
-- [ ] Cadastrar endereço Fraction com código válido
+- [ ] Cadastrar endereço Whole: `A10-01-73`
+- [ ] Cadastrar endereço Fraction: `BI-A201-1D`
 - [ ] Tentar cadastrar Whole com formato de Fraction (deve falhar)
 - [ ] Tentar cadastrar Fraction sem quadrante (deve falhar)
 - [ ] Importar planilha Excel com códigos válidos e inválidos
 - [ ] Verificar mensagens de erro específicas
+
+### Observações Importantes
+
+1. **Formato Alfanumérico Flexível**: O sistema aceita qualquer combinação de letras e números em cada parte do código (Rua, Prédio, Andar)
+2. **Sem Hífen Antes do Quadrante**: Para endereços Fraction, o quadrante é concatenado diretamente após o andar (ex: `1D` não `1-D`)
+3. **Endereços Antigos**: Endereços cadastrados antes desta correção podem ter formato incorreto no banco de dados
+4. **Novos Cadastros**: A partir desta versão, todos os novos endereços seguirão o formato correto automaticamente

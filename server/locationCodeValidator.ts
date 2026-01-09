@@ -4,16 +4,16 @@
  * Formato: RUA-PRÉDIO-ANDAR[QUADRANTE]
  * 
  * Exemplos:
- * - Whole (Inteira): T01-01-01 (andar com 2 dígitos)
- * - Fraction (Fração): T01-01-1A (andar com 1 dígito + letra do quadrante)
+ * - Whole (Inteira): A10-01-73 (RUA-PRÉDIO-ANDAR)
+ * - Fraction (Fração): BI-A201-1D (RUA-PRÉDIO-ANDAR+QUADRANTE, sem hífen antes do quadrante)
  */
 
 export type LocationType = "whole" | "fraction";
 
 export interface LocationCodeParts {
-  aisle: string;      // Rua (ex: T01)
-  rack: string;       // Prédio (ex: 01)
-  level: string;      // Andar (ex: 01 para whole, 1 para fraction)
+  aisle: string;      // Rua (ex: A10, BI, T01)
+  rack: string;       // Prédio (ex: 01, A201)
+  level: string;      // Andar (ex: 73, 01, 1)
   position?: string;  // Quadrante (ex: A, B, C, D - apenas para fraction)
 }
 
@@ -27,7 +27,7 @@ export interface LocationCodeValidation {
 /**
  * Valida e formata código de endereço
  * 
- * @param code - Código do endereço (ex: T01-01-01 ou T01-01-1A)
+ * @param code - Código do endereço (ex: A10-01-73 ou BI-A201-1D)
  * @param locationType - Tipo do endereço (whole ou fraction)
  * @returns Resultado da validação com código formatado e partes
  */
@@ -45,9 +45,9 @@ export function validateLocationCode(
   // Remove espaços e converte para maiúsculas
   const cleanCode = code.trim().toUpperCase();
 
-  // Regex para validação
-  const wholeRegex = /^([A-Z]\d{2})-(\d{2})-(\d{2})$/; // Ex: T01-01-01
-  const fractionRegex = /^([A-Z]\d{2})-(\d{2})-(\d)([A-Z])$/; // Ex: T01-01-1A
+  // Regex para validação (alfanumérico flexível)
+  const wholeRegex = /^([A-Z0-9]+)-([A-Z0-9]+)-([A-Z0-9]+)$/; // Ex: A10-01-73
+  const fractionRegex = /^([A-Z0-9]+)-([A-Z0-9]+)-([A-Z0-9]+)([A-Z])$/; // Ex: BI-A201-1D
 
   if (locationType === "whole") {
     const match = cleanCode.match(wholeRegex);
@@ -55,7 +55,7 @@ export function validateLocationCode(
     if (!match) {
       return {
         isValid: false,
-        error: "Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: T01-01-01)",
+        error: "Código inválido para endereço Inteiro. Formato esperado: RUA-PRÉDIO-ANDAR (ex: A10-01-73)",
       };
     }
 
@@ -76,7 +76,7 @@ export function validateLocationCode(
     if (!match) {
       return {
         isValid: false,
-        error: "Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: T01-01-1A)",
+        error: "Código inválido para endereço Fração. Formato esperado: RUA-PRÉDIO-ANDAR+QUADRANTE (ex: BI-A201-1D)",
       };
     }
 
@@ -126,13 +126,13 @@ export function generateLocationCode(
   }
 
   if (locationType === "whole") {
-    // Formato: T01-01-01
+    // Formato: A10-01-73
     return `${aisle}-${rack}-${level}`;
   } else if (locationType === "fraction") {
     if (!position) {
       return null;
     }
-    // Formato: T01-01-1A
+    // Formato: BI-A201-1D (sem hífen antes do quadrante)
     return `${aisle}-${rack}-${level}${position}`;
   }
 

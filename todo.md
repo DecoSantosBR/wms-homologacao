@@ -580,3 +580,11 @@
 - [ ] Atualizar validações em pré-alocação (preallocation.ts)
 - [ ] Adicionar mensagens de erro específicas
 - [ ] Testar ambos os tipos de endereço
+
+
+## BUG - Código de Endereço Incluindo ZONA Incorretamente
+- [x] Corrigir geração de código para remover ZONA do início
+- [x] Código deve ser apenas RUA-PRÉDIO-ANDAR[QUADRANTE]
+- [x] Atualizar CreateLocationDialog.tsx
+- [x] Atualizar locationCodeValidator.ts se necessário
+- [ ] Testar com exemplos: BI-A201-1-D (Fração) e A10-01-73 (Inteira)
