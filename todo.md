@@ -603,7 +603,7 @@
 - [ ] Implementar validações (saldo, regras de armazenagem)
 - [ ] Adicionar histórico de movimentações com filtros
 - [ ] Integrar com rotas do App.tsx
-- [ ] Testar fluxo completo de movimentação
+- [x] Testar fluxo completo de movimentação
 
 
 ## Feature - Botões de Navegação em Posições de Estoque
@@ -611,3 +611,10 @@
 - [x] Adicionar botão 'Dashboard de Ocupação' com link para /stock/occupancy
 - [x] Adicionar botão 'Histórico de Etiquetas' (placeholder)
 - [x] Testar navegação entre páginas
+
+
+## Correção - Formulário de Nova Movimentação
+- [x] Criar endpoint para listar apenas endereços com estoque
+- [x] Atualizar dropdown de Endereço Origem para usar novo endpoint
+- [x] Melhorar exibição de Produto/Lote (formato: SKU - Descrição | Lote: XXX | Saldo: YY)
+- [x] Testar fluxo completo de movimentação

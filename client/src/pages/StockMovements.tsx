@@ -28,7 +28,7 @@ export default function StockMovements() {
 
   // Queries
   const { data: movements = [], isLoading } = trpc.stock.getMovements.useQuery({});
-  const { data: locations = [] } = trpc.locations.list.useQuery();
+  const { data: locationsWithStock = [] } = trpc.stock.getLocationsWithStock.useQuery();
   
   // Query de produtos do endereço origem (só busca quando fromLocationId está definido)
   const { data: locationProducts = [] } = trpc.stock.getLocationProducts.useQuery(
@@ -191,9 +191,9 @@ export default function StockMovements() {
                   <SelectValue placeholder="Selecione o endereço origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations.map((loc) => (
+                  {locationsWithStock.map((loc) => (
                     <SelectItem key={loc.id} value={String(loc.id)}>
-                      {loc.code}
+                      {loc.code} ({loc.zoneName})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -217,9 +217,7 @@ export default function StockMovements() {
                           key={`${prod.productId}-${prod.batch || ""}`} 
                           value={`${prod.productId}-${prod.batch || ""}`}
                         >
-                          {prod.productSku} - {prod.productDescription} 
-                          {prod.batch && ` (Lote: ${prod.batch})`} 
-                          - Disponível: {prod.quantity}
+                          {prod.productSku} - {prod.productDescription} | Lote: {prod.batch || "SEM LOTE"} | Saldo: {prod.quantity}
                         </SelectItem>
                       ))
                     )}
@@ -255,11 +253,11 @@ export default function StockMovements() {
                   <SelectValue placeholder="Selecione o endereço destino" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations
-                    .filter(loc => String(loc.id) !== fromLocationId)
+                  {locationsWithStock
+                    .filter((loc) => String(loc.id) !== fromLocationId)
                     .map((loc) => (
                       <SelectItem key={loc.id} value={String(loc.id)}>
-                        {loc.code}
+                        {loc.code} ({loc.zoneName})
                       </SelectItem>
                     ))}
                 </SelectContent>

@@ -222,3 +222,26 @@ export async function getExpiringProducts(
 
   return results;
 }
+
+/**
+ * Lista endereços que possuem estoque alocado
+ */
+export async function getLocationsWithStock() {
+  const dbConn = await getDb();
+  if (!dbConn) throw new Error("Database connection failed");
+
+  const results = await dbConn
+    .selectDistinct({
+      id: warehouseLocations.id,
+      code: warehouseLocations.code,
+      zoneName: warehouseZones.name,
+      zoneCode: warehouseZones.code,
+    })
+    .from(inventory)
+    .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+    .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(gt(inventory.quantity, 0))
+    .orderBy(warehouseLocations.code);
+
+  return results;
+}

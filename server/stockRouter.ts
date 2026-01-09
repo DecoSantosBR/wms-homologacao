@@ -6,6 +6,7 @@ import {
   getLocationStock,
   getLowStockProducts,
   getExpiringProducts,
+  getLocationsWithStock,
 } from "./inventory";
 import {
   registerMovement,
@@ -145,6 +146,14 @@ export const stockRouter = router({
     .input(z.object({ locationId: z.number() }))
     .query(async ({ input }) => {
       return await getLocationProducts(input.locationId);
+    }),
+
+  /**
+   * Lista endereços que possuem estoque alocado
+   */
+  getLocationsWithStock: protectedProcedure
+    .query(async () => {
+      return await getLocationsWithStock();
     }),
 
   // ============================================================================
