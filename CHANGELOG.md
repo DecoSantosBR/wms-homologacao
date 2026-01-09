@@ -1,5 +1,57 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Botões de Navegação em Todas as Páginas
+
+### ✨ Funcionalidade Implementada
+
+Adicionado botões "Início" e "Voltar" em todas as páginas do sistema para melhorar a usabilidade e facilitar a navegação.
+
+### ✅ Implementação
+
+#### Componente PageHeader (já existente)
+- **Localização**: `client/src/components/PageHeader.tsx`
+- **Funcionalidades**:
+  - Botão "Voltar": Usa `window.history.back()` para voltar à página anterior
+  - Botão "Início": Navega para a página principal (`/`)
+  - Barra de navegação sticky no topo com logo Med@x
+  - Título e descrição da página
+  - Suporte para ações customizadas (botões adicionais)
+
+#### Páginas Atualizadas
+
+**Novas implementações:**
+- `client/src/pages/Receiving.tsx` - Adicionado PageHeader com ícone de recebimento
+- `client/src/pages/ComponentShowcase.tsx` - Adicionado PageHeader com botão de tema
+
+**Páginas que já tinham PageHeader:**
+- Products.tsx
+- Locations.tsx
+- Picking.tsx
+- Inventory.tsx
+- Cadastros.tsx
+- Users.tsx
+- Tenants.tsx
+- NFEImport.tsx
+
+**Páginas que não precisam:**
+- Home.tsx - É a página inicial, não faz sentido ter botão "Início"
+- NotFound.tsx - Página de erro com navegação própria
+
+### 📝 Benefícios
+
+1. **Navegação Intuitiva**: Usuários sempre sabem como voltar ou ir para o início
+2. **Consistência**: Design uniforme em todas as páginas do sistema
+3. **Acessibilidade**: Botões visíveis e de fácil acesso no topo da página
+4. **Produtividade**: Menos cliques para navegar entre módulos
+
+### 📝 Arquivos Modificados
+
+- `client/src/pages/Receiving.tsx` - Adicionado PageHeader
+- `client/src/pages/ComponentShowcase.tsx` - Adicionado PageHeader
+- `todo.md` - Rastreamento de features
+
+---
+
 ## [2026-01-08] - Correção Crítica: Conferência Cega com Múltiplos Lotes
 
 ### 🐛 Problemas Identificados

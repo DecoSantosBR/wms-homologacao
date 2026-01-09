@@ -422,3 +422,13 @@
 - [x] Atualizar BlindCheckModal para preencher automaticamente unitsPerBox de produtos já cadastrados
 - [x] Implementar preenchimento automático de validade ao selecionar lote (buscar do receivingOrderItem)
 - [x] Testar fluxo: primeira associação salva, próximas associações preenchem automaticamente
+
+
+## FEATURE - Botões de Navegação em Todas as Páginas
+- [x] Criar componente PageHeader reutilizável com botões "Início" e "Voltar" (já existia)
+- [x] Adicionar PageHeader na página Home (não aplicável - é a página inicial)
+- [x] Adicionar PageHeader na página Receiving
+- [x] Adicionar PageHeader na página NFEImport (já tinha)
+- [x] Adicionar PageHeader na página ComponentShowcase
+- [x] Adicionar PageHeader em todas as outras páginas (já tinham)
+- [x] Testar navegação em todas as páginas

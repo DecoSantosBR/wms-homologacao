@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BlindCheckModal } from "@/components/BlindCheckModal";
+import { PageHeader } from "@/components/PageHeader";
 import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -135,19 +136,13 @@ export default function Receiving() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="h-8 w-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Recebimento</h1>
-          </div>
-          <p className="text-gray-600">
-            Gerencie ordens de recebimento, confira mercadorias e realize endereçamento
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader
+        icon={<ClipboardCheck className="h-8 w-8" />}
+        title="Recebimento"
+        description="Gerencie ordens de recebimento, confira mercadorias e realize endereçamento"
+      />
+      <div className="container py-6">
         {/* Filtros e Ações */}
         <Card className="mb-6">
           <CardContent className="pt-6">
