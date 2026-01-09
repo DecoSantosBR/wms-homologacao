@@ -794,3 +794,11 @@
 - [x] Identificar componente com Links aninhados na página Tenants
 - [x] Remover aninhamento de elementos <a>
 - [x] Testar página sem erros no console
+
+
+## Fase: Redesign da Tabela de Movimentações
+- [x] Analisar diferenças entre layout atual e layout desejado
+- [x] Reorganizar ordem das colunas (Data, Tipo, Produto, Lote, Origem, Destino, Quantidade, Operador)
+- [x] Ajustar formatação de dados (data/hora, badges de tipo)
+- [x] Adicionar fromLocationCode e toLocationCode no backend
+- [x] Testar nova tabela na interface

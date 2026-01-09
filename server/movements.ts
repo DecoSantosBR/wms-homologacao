@@ -233,9 +233,6 @@ export async function getMovementHistory(filters?: {
     );
   }
 
-  const fromLocation = warehouseLocations;
-  const toLocation = warehouseLocations;
-
   const results = await dbConn
     .select({
       id: inventoryMovements.id,
@@ -243,7 +240,9 @@ export async function getMovementHistory(filters?: {
       productSku: products.sku,
       productDescription: products.description,
       fromLocationId: inventoryMovements.fromLocationId,
+      fromLocationCode: sql<string>`fromLoc.code`,
       toLocationId: inventoryMovements.toLocationId,
+      toLocationCode: sql<string>`toLoc.code`,
       quantity: inventoryMovements.quantity,
       batch: inventoryMovements.batch,
       movementType: inventoryMovements.movementType,
@@ -254,6 +253,8 @@ export async function getMovementHistory(filters?: {
     .from(inventoryMovements)
     .innerJoin(products, eq(inventoryMovements.productId, products.id))
     .leftJoin(systemUsers, eq(inventoryMovements.performedBy, systemUsers.id))
+    .leftJoin(sql`${warehouseLocations} as fromLoc`, sql`fromLoc.id = ${inventoryMovements.fromLocationId}`)
+    .leftJoin(sql`${warehouseLocations} as toLoc`, sql`toLoc.id = ${inventoryMovements.toLocationId}`)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(inventoryMovements.createdAt))
     .limit(filters?.limit || 500);

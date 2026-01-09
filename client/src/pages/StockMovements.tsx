@@ -180,29 +180,46 @@ export default function StockMovements() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data/Hora</TableHead>
+                      <TableHead>Data</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>SKU</TableHead>
                       <TableHead>Produto</TableHead>
                       <TableHead>Lote</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Destino</TableHead>
                       <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead>Realizado Por</TableHead>
-                      <TableHead>Observações</TableHead>
+                      <TableHead>Operador</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {movements.map((mov) => (
                       <TableRow key={mov.id}>
-                        <TableCell>{format(new Date(mov.createdAt), "dd/MM/yyyy HH:mm")}</TableCell>
-                        <TableCell>{getMovementTypeBadge(mov.movementType)}</TableCell>
-                        <TableCell className="font-mono">{mov.productSku}</TableCell>
-                        <TableCell>{mov.productDescription}</TableCell>
-                        <TableCell className="font-mono">{mov.batch || "-"}</TableCell>
-                        <TableCell className="text-right font-bold">
-                          {mov.quantity.toLocaleString("pt-BR")}
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm">{format(new Date(mov.createdAt), "dd-MM-yyyy, HH:mm")}</span>
+                          </div>
                         </TableCell>
-                        <TableCell>{mov.performedByName || "-"}</TableCell>
-                        <TableCell className="max-w-xs truncate">{mov.notes || "-"}</TableCell>
+                        <TableCell>{getMovementTypeBadge(mov.movementType)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{mov.productDescription}</span>
+                            <span className="text-xs text-gray-500">{mov.productSku}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{mov.batch || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">{mov.fromLocationCode || "-"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">{mov.toLocationCode || "-"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold">{mov.quantity.toLocaleString("pt-BR")}</span>
+                        </TableCell>
+                        <TableCell className="text-sm">{mov.performedByName || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
