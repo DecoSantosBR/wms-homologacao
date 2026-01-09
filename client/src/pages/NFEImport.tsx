@@ -14,6 +14,7 @@ import { toast } from "sonner";
 export default function NFEImport() {
   const [, setLocation] = useLocation();
   const [tenantId, setTenantId] = useState("");
+  const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [xmlContent, setXmlContent] = useState("");
   const [importResult, setImportResult] = useState<any>(null);
@@ -22,7 +23,7 @@ export default function NFEImport() {
 
   const { data: tenants } = trpc.tenants.list.useQuery();
 
-  const importMutation = trpc.nfe.importReceiving.useMutation({
+  const importMutation = trpc.nfe.import.useMutation({
     onSuccess: (result) => {
       setImportResult(result);
       toast.success("NF-e importada com sucesso!");
@@ -70,6 +71,7 @@ export default function NFEImport() {
     importMutation.mutate({
       tenantId: parseInt(tenantId),
       xmlContent,
+      tipo,
     });
   };
 
@@ -78,7 +80,7 @@ export default function NFEImport() {
       <PageHeader
         icon={<Upload className="w-8 h-8" />}
         title="Importação de NF-e"
-        description="Importe notas fiscais eletrônicas de entrada para cadastrar produtos automaticamente"
+        description="Importe notas fiscais eletrônicas de entrada (recebimento) ou saída (separação)"
       />
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
@@ -92,6 +94,22 @@ export default function NFEImport() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Seleção de Tipo */}
+            <div className="grid gap-2">
+              <Label htmlFor="tipo">
+                Tipo de Movimento <span className="text-red-500">*</span>
+              </Label>
+              <Select value={tipo} onValueChange={(value: "entrada" | "saida") => setTipo(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada (Recebimento)</SelectItem>
+                  <SelectItem value="saida">Saída (Separação)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Seleção de Cliente */}
             <div className="grid gap-2">
               <Label htmlFor="tenant">
@@ -256,16 +274,24 @@ export default function NFEImport() {
                 >
                   Importar Outra NF-e
                 </Button>
+                {importResult.orderType === "entrada" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPreallocation(true)}
+                  >
+                    Pré-definir Endereços
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
-                  onClick={() => setShowPreallocation(true)}
+                  onClick={() => {
+                    if (importResult.orderType === "entrada") {
+                      setLocation("/recebimento");
+                    } else {
+                      setLocation("/picking");
+                    }
+                  }}
                 >
-                  Pré-definir Endereços
-                </Button>
-                <Button
-                  onClick={() => setLocation("/cadastros/produtos")}
-                >
-                  Ver Produtos Cadastrados
+                  {importResult.orderType === "entrada" ? "Ver Recebimentos" : "Ver Separações"}
                 </Button>
               </div>
             </CardContent>
@@ -274,12 +300,12 @@ export default function NFEImport() {
         </div>
       </div>
 
-      {/* Dialog de Pré-Alocação */}
-      {importResult && (
+      {/* Dialog de Pré-Alocação (apenas para entrada) */}
+      {importResult && importResult.orderType === "entrada" && (
         <PreallocationDialog
           open={showPreallocation}
           onOpenChange={setShowPreallocation}
-          receivingOrderId={importResult.receivingOrderId}
+          receivingOrderId={importResult.orderId}
           onSuccess={() => {
             toast.success("Pré-alocações salvas! Agora você pode iniciar a conferência.");
           }}

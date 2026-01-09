@@ -777,3 +777,14 @@
 - [x] Investigar por que Select não está renderizando no formulário
 - [x] Corrigir código para exibir dropdown de seleção de clientes
 - [x] Testar criação de pedido com cliente selecionado via dropdown
+
+
+## Fase: Campo Tipo em Importação NF-e
+- [x] Analisar código atual do módulo de Importação NF-e
+- [x] Adicionar campo "tipo" (entrada/saída) no input do endpoint
+- [x] Implementar lógica de geração de Ordem de Recebimento (tipo: entrada)
+- [x] Implementar lógica de geração de Pedido de Separação (tipo: saída)
+- [x] Adicionar Select de Tipo na interface (Entrada/Saída)
+- [x] Testar importação de NF-e de Entrada
+- [x] Testar importação de NF-e de Saída
+- [x] Atualizar documentação técnica

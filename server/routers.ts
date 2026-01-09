@@ -719,13 +719,16 @@ export const appRouter = router({
 
   nfe: router({
     /**
-     * Importação de NF-e de entrada (recebimento)
+     * Importação de NF-e (entrada ou saída)
+     * - Entrada: Cria Ordem de Recebimento
+     * - Saída: Cria Pedido de Separação
      * Cria produtos automaticamente se não existirem
      */
-    importReceiving: protectedProcedure
+    import: protectedProcedure
       .input(z.object({
         tenantId: z.number(),
         xmlContent: z.string(),
+        tipo: z.enum(["entrada", "saida"]), // Tipo de movimento
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
@@ -739,40 +742,81 @@ export const appRouter = router({
         // Parse do XML
         const nfeData = await parseNFE(input.xmlContent);
 
-        // Verificar se NF-e já foi importada
-        const existingOrder = await db.select()
-          .from(receivingOrders)
-          .where(eq(receivingOrders.nfeKey, nfeData.chaveAcesso))
-          .limit(1);
+        // Verificar se NF-e já foi importada (entrada ou saída)
+        if (input.tipo === "entrada") {
+          const existingReceiving = await db.select()
+            .from(receivingOrders)
+            .where(eq(receivingOrders.nfeKey, nfeData.chaveAcesso))
+            .limit(1);
 
-        if (existingOrder.length > 0) {
-          throw new Error(`NF-e já importada. Ordem de recebimento: ${existingOrder[0].orderNumber}`);
+          if (existingReceiving.length > 0) {
+            throw new Error(`NF-e já importada. Ordem de recebimento: ${existingReceiving[0].orderNumber}`);
+          }
+        } else {
+          const existingPicking = await db.select()
+            .from(pickingOrders)
+            .where(eq(pickingOrders.nfeKey, nfeData.chaveAcesso))
+            .limit(1);
+
+          if (existingPicking.length > 0) {
+            throw new Error(`NF-e já importada. Pedido de separação: ${existingPicking[0].orderNumber}`);
+          }
         }
 
-        // Criar ordem de recebimento
-        const orderNumber = `REC-${nfeData.numero}-${Date.now()}`;
-        await db.insert(receivingOrders).values({
-          tenantId: input.tenantId,
-          orderNumber,
-          supplierName: nfeData.fornecedor.razaoSocial,
-          supplierCnpj: nfeData.fornecedor.cnpj,
-          nfeNumber: nfeData.numero,
-          nfeKey: nfeData.chaveAcesso,
-          status: 'scheduled',
-          scheduledDate: null,
-          createdBy: ctx.user?.id || 1,
-        });
+        // Criar ordem (recebimento ou picking) baseado no tipo
+        let orderId: number;
+        let orderNumber: string;
+        let orderType: "entrada" | "saida" = input.tipo;
 
-        // Buscar ordem criada
-        const [receivingOrder] = await db.select()
-          .from(receivingOrders)
-          .where(eq(receivingOrders.orderNumber, orderNumber))
-          .limit(1);
+        if (input.tipo === "entrada") {
+          // Criar ordem de recebimento
+          orderNumber = `REC-${nfeData.numero}-${Date.now()}`;
+          await db.insert(receivingOrders).values({
+            tenantId: input.tenantId,
+            orderNumber,
+            supplierName: nfeData.fornecedor.razaoSocial,
+            supplierCnpj: nfeData.fornecedor.cnpj,
+            nfeNumber: nfeData.numero,
+            nfeKey: nfeData.chaveAcesso,
+            status: 'scheduled',
+            scheduledDate: null,
+            createdBy: ctx.user?.id || 1,
+          });
+
+          const [receivingOrder] = await db.select()
+            .from(receivingOrders)
+            .where(eq(receivingOrders.orderNumber, orderNumber))
+            .limit(1);
+          orderId = receivingOrder.id;
+        } else {
+          // Criar pedido de separação
+          orderNumber = `PK-${nfeData.numero}-${Date.now()}`;
+          await db.insert(pickingOrders).values({
+            tenantId: input.tenantId,
+            orderNumber,
+            customerName: nfeData.fornecedor.razaoSocial, // Usar fornecedor como cliente por padrão
+            deliveryAddress: null,
+            nfeNumber: nfeData.numero,
+            nfeKey: nfeData.chaveAcesso,
+            priority: 'normal',
+            status: 'pending',
+            totalItems: 0, // Será atualizado após processar produtos
+            totalQuantity: 0,
+            createdBy: ctx.user?.id || 1,
+          });
+
+          const [pickingOrder] = await db.select()
+            .from(pickingOrders)
+            .where(eq(pickingOrders.orderNumber, orderNumber))
+            .limit(1);
+          orderId = pickingOrder.id;
+        }
 
         // Resultados da importação
         const result = {
-          receivingOrderId: receivingOrder.id,
-          orderNumber: receivingOrder.orderNumber,
+          orderId,
+          orderNumber,
+          orderType,
           nfeNumero: nfeData.numero,
           nfeSerie: nfeData.serie,
           fornecedor: nfeData.fornecedor.razaoSocial,
@@ -841,17 +885,30 @@ export const appRouter = router({
               );
             }
 
-            // Criar item da ordem de recebimento
-            await db.insert(receivingOrderItems).values({
-              receivingOrderId: receivingOrder.id,
-              productId: productId,
-              expectedQuantity: produtoNFE.quantidade,
-              receivedQuantity: 0,
-              addressedQuantity: 0,
-              batch: produtoNFE.lote || null,
-              expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
-              expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
-            });
+            // Criar item da ordem (recebimento ou picking)
+            if (input.tipo === "entrada") {
+              await db.insert(receivingOrderItems).values({
+                receivingOrderId: orderId,
+                productId: productId,
+                expectedQuantity: produtoNFE.quantidade,
+                receivedQuantity: 0,
+                addressedQuantity: 0,
+                batch: produtoNFE.lote || null,
+                expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
+                expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
+              });
+            } else {
+              await db.insert(pickingOrderItems).values({
+                pickingOrderId: orderId,
+                productId: productId,
+                requestedQuantity: produtoNFE.quantidade,
+                requestedUM: "unit", // Assumir unidade por padrão
+                pickedQuantity: 0,
+                batch: produtoNFE.lote || null,
+                expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
+                status: "pending",
+              });
+            }
           } catch (error: any) {
             result.erros.push(
               `Erro ao processar ${produtoNFE.codigo}: ${error.message}`

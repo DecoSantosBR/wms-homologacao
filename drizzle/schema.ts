@@ -434,6 +434,8 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   shippedAt: timestamp("shippedAt"),
   waveId: int("waveId"), // Onda de separação (futuro)
   notes: text("notes"), // Observações gerais
+  nfeNumber: varchar("nfeNumber", { length: 20 }), // Número da NF-e de saída
+  nfeKey: varchar("nfeKey", { length: 44 }), // Chave de acesso da NF-e (44 dígitos)
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
