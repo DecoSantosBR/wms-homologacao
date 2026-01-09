@@ -7,6 +7,7 @@ import {
   warehouseLocations,
   warehouseZones,
   tenants,
+  receivingPreallocations,
 } from "../drizzle/schema";
 
 export interface InventoryFilters {
@@ -396,4 +397,66 @@ export async function getDestinationLocations(params: {
     .orderBy(warehouseLocations.code);
 
   return results;
+}
+
+/**
+ * Sugere endereço de destino baseado em pré-alocação
+ * Usado quando movimentação origina da zona REC
+ */
+export async function getSuggestedDestination(params: {
+  fromLocationId: number;
+  productId: number;
+  batch: string | null;
+  quantity: number;
+}) {
+  const dbConn = await getDb();
+  if (!dbConn) throw new Error("Database connection failed");
+
+  // 1. Verificar se endereço origem é da zona REC
+  const fromLocation = await dbConn
+    .select({
+      zoneCode: warehouseZones.code,
+    })
+    .from(warehouseLocations)
+    .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(eq(warehouseLocations.id, params.fromLocationId))
+    .limit(1);
+
+  if (!fromLocation[0] || fromLocation[0].zoneCode !== "REC") {
+    return null; // Não é zona REC, não há sugestão
+  }
+
+  // 2. Buscar pré-alocação correspondente
+  const preallocation = await dbConn
+    .select({
+      locationId: receivingPreallocations.locationId,
+      locationCode: warehouseLocations.code,
+      zoneName: warehouseZones.name,
+      quantity: receivingPreallocations.quantity,
+    })
+    .from(receivingPreallocations)
+    .innerJoin(warehouseLocations, eq(receivingPreallocations.locationId, warehouseLocations.id))
+    .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(
+      and(
+        eq(receivingPreallocations.productId, params.productId),
+        params.batch 
+          ? eq(receivingPreallocations.batch, params.batch)
+          : sql`${receivingPreallocations.batch} IS NULL`,
+        eq(receivingPreallocations.quantity, params.quantity),
+        eq(receivingPreallocations.status, "pending")
+      )
+    )
+    .limit(1);
+
+  if (!preallocation[0]) {
+    return null; // Não há pré-alocação correspondente
+  }
+
+  return {
+    locationId: preallocation[0].locationId,
+    locationCode: preallocation[0].locationCode,
+    zoneName: preallocation[0].zoneName,
+    quantity: preallocation[0].quantity,
+  };
 }

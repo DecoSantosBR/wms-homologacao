@@ -8,6 +8,7 @@ import {
   getExpiringProducts,
   getLocationsWithStock,
   getDestinationLocations,
+  getSuggestedDestination,
 } from "./inventory";
 import {
   registerMovement,
@@ -169,6 +170,20 @@ export const stockRouter = router({
     }))
     .query(async ({ input }) => {
       return await getDestinationLocations(input);
+    }),
+
+  /**
+   * Sugere endereço de destino baseado em pré-alocação (zona REC)
+   */
+  getSuggestedDestination: protectedProcedure
+    .input(z.object({
+      fromLocationId: z.number(),
+      productId: z.number(),
+      batch: z.string().nullable(),
+      quantity: z.number(),
+    }))
+    .query(async ({ input }) => {
+      return await getSuggestedDestination(input);
     }),
 
   // ============================================================================

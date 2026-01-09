@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,27 @@ export default function StockMovements() {
     },
     { enabled: !!selectedProduct && movementType !== "adjustment" && movementType !== "disposal" }
   );
+
+  // Query de sugestão automática (zona REC + pré-alocação)
+  const { data: suggestedDestination } = trpc.stock.getSuggestedDestination.useQuery(
+    {
+      fromLocationId: Number(fromLocationId),
+      productId: selectedProductForFilter?.productId || 0,
+      batch: selectedProductForFilter?.batch || null,
+      quantity: Number(quantity) || 0,
+    },
+    { enabled: !!fromLocationId && !!selectedProduct && !!quantity && Number(quantity) > 0 }
+  );
+
+  // Auto-preencher endereço destino quando houver sugestão
+  useEffect(() => {
+    if (suggestedDestination?.locationId) {
+      setToLocationId(String(suggestedDestination.locationId));
+      toast.success(`Endereço sugerido: ${suggestedDestination.locationCode} (${suggestedDestination.zoneName})`, {
+        duration: 5000,
+      });
+    }
+  }, [suggestedDestination]);
 
   // Mutation
   const registerMovement = trpc.stock.registerMovement.useMutation({
@@ -284,6 +305,14 @@ export default function StockMovements() {
                   )}
                 </SelectContent>
               </Select>
+              {suggestedDestination && toLocationId === String(suggestedDestination.locationId) && (
+                <Alert className="mt-2 border-green-200 bg-green-50">
+                  <AlertCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>Sugestão automática:</strong> Este endereço foi sugerido com base na pré-alocação do recebimento.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             {/* Tipo de Movimentação */}

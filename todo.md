@@ -628,3 +628,11 @@
 - [x] Adicionar tipo 'Qualidade' ao enum de movementType
 - [x] Atualizar frontend com query condicional
 - [x] Testar todos os cenários
+
+
+## Feature - Sugestão Automática de Destino por Pré-Alocação
+- [x] Criar endpoint para consultar pré-alocação por SKU, lote e quantidade
+- [x] Detectar se endereço origem é da zona REC
+- [x] Implementar auto-preenchimento de endereço destino quando houver match
+- [x] Adicionar indicador visual de sugestão automática
+- [x] Testar fluxo completo com pré-alocação válida e inválida
