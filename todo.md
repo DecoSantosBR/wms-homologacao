@@ -698,3 +698,25 @@
 
 **Status**: Schema preparado. Backend e frontend pendentes para próxima sessão.
 **Prioridade**: Alta - Módulo crítico para operação
+
+
+## Fase NOVA: Interface do Módulo de Separação
+- [ ] Criar endpoints backend simplificados (picking.list, picking.create, picking.getById, picking.updateStatus)
+- [ ] Criar página PickingOrders.tsx para gestão de pedidos (desktop)
+- [ ] Criar interface mobile PickingExecution.tsx para execução de picking
+- [ ] Implementar scanner de código de barras mobile
+- [ ] Adicionar validações FEFO básicas
+- [ ] Adicionar rotas /picking e /picking/execute/:id
+- [ ] Integrar botão "Acessar Módulo" no card de Separação da Home
+- [ ] Testar fluxo completo: criar pedido → executar picking → finalizar
+
+## Fase NOVA: Interface do Módulo de Separação
+- [x] Criar endpoints backend simplificados (picking router)
+- [x] Criar página de gestão de pedidos (PickingOrders.tsx)
+- [x] Criar interface mobile de execução de picking (PickingExecution.tsx)
+- [x] Adicionar rotas no App.tsx (/picking, /picking/:id)
+- [ ] Testar fluxo completo (criar pedido → executar picking → finalizar)
+- [ ] Implementar validações FEFO automático
+- [ ] Adicionar controle de UM (caixa/unidade)
+- [ ] Implementar ajuste de fracionamento
+- [ ] Adicionar segregação de função (separador vs conferente)

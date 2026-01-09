@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
@@ -707,14 +708,6 @@ export const appRouter = router({
       }),
   }),
 
-  picking: router({
-    list: protectedProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) return [];
-      return db.select().from(pickingOrders).orderBy(desc(pickingOrders.createdAt)).limit(50);
-    }),
-  }),
-
   inventory: router({
     list: protectedProcedure.query(async () => {
       const db = await getDb();
@@ -866,6 +859,193 @@ export const appRouter = router({
         }
 
         return result;
+      }),
+  }),
+
+  // ========================================
+  // PICKING (SEPARAÇÃO)
+  // ========================================
+  picking: router({
+    // Listar pedidos de separação
+    list: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().default(100),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const tenantId = ctx.user.tenantId!;
+
+        const orders = await db
+          .select()
+          .from(pickingOrders)
+          .where(eq(pickingOrders.tenantId, tenantId))
+          .orderBy(desc(pickingOrders.createdAt))
+          .limit(input.limit);
+
+        return orders;
+      }),
+
+    // Criar pedido de separação
+    create: protectedProcedure
+      .input(
+        z.object({
+          customerName: z.string().min(1),
+          priority: z.enum(["low", "normal", "urgent", "emergency"]).default("normal"),
+          scheduledDate: z.string().optional(),
+          items: z.array(
+            z.object({
+              productId: z.number(),
+              requestedQuantity: z.number().positive(),
+              requestedUnit: z.enum(["box", "unit", "pallet"]),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const tenantId = ctx.user.tenantId!;
+        const userId = ctx.user.id;
+
+        // Gerar número do pedido
+        const orderNumber = `PK${Date.now()}`;
+
+        // Criar pedido
+        await db.insert(pickingOrders).values({
+          tenantId,
+          orderNumber,
+          customerName: input.customerName,
+          priority: input.priority,
+          status: "pending",
+          totalItems: input.items.length,
+          totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+          createdBy: userId,
+        });
+
+        // Buscar pedido criado
+        const [order] = await db
+          .select()
+          .from(pickingOrders)
+          .where(
+            and(
+              eq(pickingOrders.tenantId, tenantId),
+              eq(pickingOrders.orderNumber, orderNumber)
+            )
+          )
+          .limit(1);
+
+        // Criar itens
+        for (const item of input.items) {
+          await db.insert(pickingOrderItems).values({
+            pickingOrderId: order.id,
+            productId: item.productId,
+            requestedQuantity: item.requestedQuantity,
+            requestedUM: item.requestedUnit,
+            pickedQuantity: 0,
+            status: "pending",
+          });
+        }
+
+        return { success: true, orderId: order.id, orderNumber };
+      }),
+
+    // Buscar pedido por ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const tenantId = ctx.user.tenantId!;
+
+        const [order] = await db
+          .select()
+          .from(pickingOrders)
+          .where(
+            and(
+              eq(pickingOrders.id, input.id),
+              eq(pickingOrders.tenantId, tenantId)
+            )
+          )
+          .limit(1);
+
+        if (!order) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
+        }
+
+        // Buscar itens com dados do produto
+        const items = await db
+          .select({
+            id: pickingOrderItems.id,
+            productId: pickingOrderItems.productId,
+            productName: products.description,
+            productSku: products.sku,
+            requestedQuantity: pickingOrderItems.requestedQuantity,
+            requestedUM: pickingOrderItems.requestedUM,
+            pickedQuantity: pickingOrderItems.pickedQuantity,
+            status: pickingOrderItems.status,
+          })
+          .from(pickingOrderItems)
+          .leftJoin(products, eq(pickingOrderItems.productId, products.id))
+          .where(eq(pickingOrderItems.pickingOrderId, order.id));
+
+        return { ...order, items };
+      }),
+
+    // Atualizar status do pedido
+    updateStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "picking", "picked", "checking", "packed", "shipped", "cancelled"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const tenantId = ctx.user.tenantId!;
+
+        await db
+          .update(pickingOrders)
+          .set({ status: input.status })
+          .where(
+            and(
+              eq(pickingOrders.id, input.id),
+              eq(pickingOrders.tenantId, tenantId)
+            )
+          );
+
+        return { success: true };
+      }),
+
+    // Registrar picking de item
+    pickItem: protectedProcedure
+      .input(
+        z.object({
+          itemId: z.number(),
+          pickedQuantity: z.number().positive(),
+          locationId: z.number(),
+          batch: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        await db
+          .update(pickingOrderItems)
+          .set({
+            pickedQuantity: input.pickedQuantity,
+            fromLocationId: input.locationId,
+            batch: input.batch,
+            status: "picked",
+          })
+          .where(eq(pickingOrderItems.id, input.itemId));
+
+        return { success: true };
       }),
   }),
 });
