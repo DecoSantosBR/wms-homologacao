@@ -636,3 +636,10 @@
 - [x] Implementar auto-preenchimento de endereço destino quando houver match
 - [x] Adicionar indicador visual de sugestão automática
 - [x] Testar fluxo completo com pré-alocação válida e inválida
+
+
+## BUG - Sugestão Duplicada de Endereço em Lote Dividido
+- [x] Analisar arquivo de pré-alocação 5555.xlsx
+- [x] Implementar atualização de status após movimentação (pending → allocated)
+- [x] Ajustar getSuggestedDestination para excluir pré-alocações já utilizadas
+- [x] Testar cenário de lote dividido em múltiplos endereços

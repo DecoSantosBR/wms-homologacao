@@ -6,6 +6,7 @@ import {
   warehouseLocations,
   products,
   systemUsers,
+  receivingPreallocations,
 } from "../drizzle/schema";
 
 export interface RegisterMovementInput {
@@ -163,6 +164,23 @@ export async function registerMovement(input: RegisterMovementInput) {
   // Atualizar status dos endereços
   await updateLocationStatus(input.fromLocationId);
   await updateLocationStatus(input.toLocationId);
+
+  // Atualizar status da pré-alocação (se houver)
+  // Busca por produto + lote + destino, marca como allocated
+  await dbConn
+    .update(receivingPreallocations)
+    .set({ status: "allocated" })
+    .where(
+      and(
+        eq(receivingPreallocations.productId, input.productId),
+        eq(receivingPreallocations.locationId, input.toLocationId),
+        input.batch 
+          ? eq(receivingPreallocations.batch, input.batch)
+          : sql`${receivingPreallocations.batch} IS NULL`,
+        eq(receivingPreallocations.status, "pending")
+      )
+    )
+    .limit(1);
 
   return { success: true, message: "Movimentação registrada com sucesso" };
 }
