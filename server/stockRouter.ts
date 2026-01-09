@@ -7,6 +7,7 @@ import {
   getLowStockProducts,
   getExpiringProducts,
   getLocationsWithStock,
+  getDestinationLocations,
 } from "./inventory";
 import {
   registerMovement,
@@ -39,7 +40,7 @@ const registerMovementSchema = z.object({
   toLocationId: z.number(),
   quantity: z.number().positive(),
   batch: z.string().optional(),
-  movementType: z.enum(["transfer", "adjustment", "return", "disposal"]),
+  movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
   notes: z.string().optional(),
   tenantId: z.number().optional().nullable(),
 });
@@ -154,6 +155,20 @@ export const stockRouter = router({
   getLocationsWithStock: protectedProcedure
     .query(async () => {
       return await getLocationsWithStock();
+    }),
+
+  /**
+   * Lista endereços de destino válidos baseado no tipo de movimentação
+   */
+  getDestinationLocations: protectedProcedure
+    .input(z.object({
+      movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
+      productId: z.number().optional(),
+      batch: z.string().optional(),
+      tenantId: z.number().optional().nullable(),
+    }))
+    .query(async ({ input }) => {
+      return await getDestinationLocations(input);
     }),
 
   // ============================================================================

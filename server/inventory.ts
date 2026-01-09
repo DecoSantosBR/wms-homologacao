@@ -245,3 +245,155 @@ export async function getLocationsWithStock() {
 
   return results;
 }
+
+/**
+ * Lista endereços de destino válidos baseado no tipo de movimentação
+ */
+export async function getDestinationLocations(params: {
+  movementType: string;
+  productId?: number;
+  batch?: string;
+  tenantId?: number | null;
+}) {
+  const dbConn = await getDb();
+  if (!dbConn) throw new Error("Database connection failed");
+
+  const { movementType, productId, batch, tenantId } = params;
+
+  // Para TRANSFERÊNCIA: filtrar por regras de armazenagem
+  if (movementType === "transfer") {
+    // Buscar todos os endereços
+    const allLocations = await dbConn
+      .select({
+        id: warehouseLocations.id,
+        code: warehouseLocations.code,
+        storageRule: warehouseLocations.storageRule,
+        zoneName: warehouseZones.name,
+        zoneCode: warehouseZones.code,
+      })
+      .from(warehouseLocations)
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .where(eq(warehouseLocations.status, "available"))
+      .orderBy(warehouseLocations.code);
+
+    // Buscar estoque atual de cada endereço
+    const locationStocks = await dbConn
+      .select({
+        locationId: inventory.locationId,
+        productId: inventory.productId,
+        batch: inventory.batch,
+        quantity: inventory.quantity,
+      })
+      .from(inventory)
+      .where(gt(inventory.quantity, 0));
+
+    // Criar mapa de estoque por endereço
+    const stockMap = new Map<number, Array<{ productId: number; batch: string | null }>>();
+    for (const stock of locationStocks) {
+      if (!stockMap.has(stock.locationId)) {
+        stockMap.set(stock.locationId, []);
+      }
+      stockMap.get(stock.locationId)!.push({
+        productId: stock.productId,
+        batch: stock.batch,
+      });
+    }
+
+    // Filtrar endereços válidos
+    const validLocations = allLocations.filter((loc) => {
+      const stocks = stockMap.get(loc.id) || [];
+      
+      if (loc.storageRule === "single") {
+        // Regra ÚNICO: aceita vazios ou ocupados pelo mesmo item-lote
+        if (stocks.length === 0) return true; // Vazio
+        if (stocks.length === 1 && stocks[0].productId === productId && stocks[0].batch === batch) {
+          return true; // Mesmo item-lote
+        }
+        return false;
+      } else {
+        // Regra MULTI: aceita vazios ou ocupados por diferentes SKUs
+        if (stocks.length === 0) return true; // Vazio
+        // Verifica se já tem outros produtos (multi-SKU)
+        const uniqueProducts = new Set(stocks.map(s => s.productId));
+        return uniqueProducts.size >= 1; // Aceita se já tem produtos
+      }
+    });
+
+    return validLocations;
+  }
+
+  // Para DEVOLUÇÃO: filtrar por zona "DEV" do cliente
+  if (movementType === "return") {
+    const results = await dbConn
+      .select({
+        id: warehouseLocations.id,
+        code: warehouseLocations.code,
+        storageRule: warehouseLocations.storageRule,
+        zoneName: warehouseZones.name,
+        zoneCode: warehouseZones.code,
+      })
+      .from(warehouseLocations)
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .where(
+        tenantId !== undefined && tenantId !== null
+          ? and(
+              eq(warehouseLocations.status, "available"),
+              eq(warehouseZones.code, "DEV"),
+              eq(warehouseLocations.tenantId, tenantId)
+            )
+          : and(
+              eq(warehouseLocations.status, "available"),
+              eq(warehouseZones.code, "DEV")
+            )
+      )
+      .orderBy(warehouseLocations.code);
+
+    return results;
+  }
+
+  // Para QUALIDADE: filtrar por zona "NCG" do cliente
+  if (movementType === "quality") {
+    const results = await dbConn
+      .select({
+        id: warehouseLocations.id,
+        code: warehouseLocations.code,
+        storageRule: warehouseLocations.storageRule,
+        zoneName: warehouseZones.name,
+        zoneCode: warehouseZones.code,
+      })
+      .from(warehouseLocations)
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .where(
+        tenantId !== undefined && tenantId !== null
+          ? and(
+              eq(warehouseLocations.status, "available"),
+              eq(warehouseZones.code, "NCG"),
+              eq(warehouseLocations.tenantId, tenantId)
+            )
+          : and(
+              eq(warehouseLocations.status, "available"),
+              eq(warehouseZones.code, "NCG")
+            )
+      )
+      .orderBy(warehouseLocations.code);
+
+    return results;
+  }
+
+  // Para AJUSTE e DESCARTE: retornar todos os endereços com estoque
+  const results = await dbConn
+    .selectDistinct({
+      id: warehouseLocations.id,
+      code: warehouseLocations.code,
+      storageRule: warehouseLocations.storageRule,
+      zoneName: warehouseZones.name,
+      zoneCode: warehouseZones.code,
+    })
+    .from(inventory)
+    .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+    .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(gt(inventory.quantity, 0))
+    .orderBy(warehouseLocations.code);
+
+  return results;
+}

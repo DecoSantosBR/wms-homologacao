@@ -618,3 +618,13 @@
 - [x] Atualizar dropdown de Endereço Origem para usar novo endpoint
 - [x] Melhorar exibição de Produto/Lote (formato: SKU - Descrição | Lote: XXX | Saldo: YY)
 - [x] Testar fluxo completo de movimentação
+
+
+## Feature - Filtros Dinâmicos de Endereço Destino
+- [x] Criar endpoint getDestinationLocations com filtros por tipo de movimentação
+- [x] Implementar lógica para Transferência (single/multi)
+- [x] Implementar lógica para Devolução (zona DEV)
+- [x] Implementar lógica para Qualidade (zona NCG)
+- [x] Adicionar tipo 'Qualidade' ao enum de movementType
+- [x] Atualizar frontend com query condicional
+- [x] Testar todos os cenários

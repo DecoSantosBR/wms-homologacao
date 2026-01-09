@@ -397,7 +397,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   fromLocationId: int("fromLocationId"),
   toLocationId: int("toLocationId"),
   quantity: int("quantity").notNull(),
-  movementType: mysqlEnum("movementType", ["receiving", "put_away", "picking", "transfer", "adjustment", "return", "disposal"]).notNull(),
+  movementType: mysqlEnum("movementType", ["receiving", "put_away", "picking", "transfer", "adjustment", "return", "disposal", "quality"]).notNull(),
   referenceType: varchar("referenceType", { length: 50 }), // Ex: "receiving_order", "picking_order"
   referenceId: int("referenceId"),
   performedBy: int("performedBy").notNull(),

@@ -14,7 +14,7 @@ export interface RegisterMovementInput {
   toLocationId: number;
   quantity: number;
   batch?: string;
-  movementType: "transfer" | "adjustment" | "return" | "disposal";
+  movementType: "transfer" | "adjustment" | "return" | "disposal" | "quality";
   notes?: string;
   tenantId?: number | null;
   performedBy: number;
@@ -260,6 +260,7 @@ export async function getLocationProducts(locationId: number) {
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
       status: inventory.status,
+      tenantId: products.tenantId,
     })
     .from(inventory)
     .innerJoin(products, eq(inventory.productId, products.id))

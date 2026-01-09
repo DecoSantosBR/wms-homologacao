@@ -21,7 +21,7 @@ export default function StockMovements() {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [toLocationId, setToLocationId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [movementType, setMovementType] = useState<"transfer" | "adjustment" | "return" | "disposal">("transfer");
+  const [movementType, setMovementType] = useState<"transfer" | "adjustment" | "return" | "disposal" | "quality">("transfer");
   const [notes, setNotes] = useState("");
 
   const utils = trpc.useUtils();
@@ -34,6 +34,20 @@ export default function StockMovements() {
   const { data: locationProducts = [] } = trpc.stock.getLocationProducts.useQuery(
     { locationId: Number(fromLocationId) },
     { enabled: !!fromLocationId }
+  );
+
+  // Query de endereços destino (filtrados por tipo de movimentação)
+  // Obtém produto selecionado para filtrar
+  const selectedProductForFilter = locationProducts.find(p => `${p.productId}-${p.batch || ""}` === selectedProduct);
+  
+  const { data: destinationLocations = [] } = trpc.stock.getDestinationLocations.useQuery(
+    {
+      movementType,
+      productId: selectedProductForFilter?.productId,
+      batch: selectedProductForFilter?.batch || undefined,
+      tenantId: selectedProductForFilter?.tenantId,
+    },
+    { enabled: !!selectedProduct && movementType !== "adjustment" && movementType !== "disposal" }
   );
 
   // Mutation
@@ -93,6 +107,7 @@ export default function StockMovements() {
       adjustment: { label: "Ajuste", className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
       return: { label: "Devolução", className: "bg-green-100 text-green-800 border-green-300" },
       disposal: { label: "Descarte", className: "bg-red-100 text-red-800 border-red-300" },
+      quality: { label: "Qualidade", className: "bg-indigo-100 text-indigo-800 border-indigo-300" },
       receiving: { label: "Recebimento", className: "bg-purple-100 text-purple-800 border-purple-300" },
       picking: { label: "Separação", className: "bg-orange-100 text-orange-800 border-orange-300" },
     };
@@ -103,6 +118,11 @@ export default function StockMovements() {
   // Obter produto selecionado para mostrar saldo disponível
   const selectedProductData = locationProducts.find(p => `${p.productId}-${p.batch || ""}` === selectedProduct);
   const maxQuantity = selectedProductData?.quantity || 0;
+
+  // Endereços de destino: usar filtrados ou todos com estoque
+  const availableDestinations = (movementType === "transfer" || movementType === "return" || movementType === "quality") && selectedProduct
+    ? destinationLocations
+    : locationsWithStock.filter((loc) => String(loc.id) !== fromLocationId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -253,13 +273,15 @@ export default function StockMovements() {
                   <SelectValue placeholder="Selecione o endereço destino" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locationsWithStock
-                    .filter((loc) => String(loc.id) !== fromLocationId)
-                    .map((loc) => (
+                  {availableDestinations.length === 0 ? (
+                    <SelectItem value="none" disabled>Nenhum endereço disponível</SelectItem>
+                  ) : (
+                    availableDestinations.map((loc) => (
                       <SelectItem key={loc.id} value={String(loc.id)}>
                         {loc.code} ({loc.zoneName})
                       </SelectItem>
-                    ))}
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -276,6 +298,7 @@ export default function StockMovements() {
                   <SelectItem value="adjustment">Ajuste</SelectItem>
                   <SelectItem value="return">Devolução</SelectItem>
                   <SelectItem value="disposal">Descarte</SelectItem>
+                  <SelectItem value="quality">Qualidade</SelectItem>
                 </SelectContent>
               </Select>
             </div>
