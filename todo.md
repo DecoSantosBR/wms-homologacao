@@ -643,3 +643,13 @@
 - [x] Implementar atualização de status após movimentação (pending → allocated)
 - [x] Ajustar getSuggestedDestination para excluir pré-alocações já utilizadas
 - [x] Testar cenário de lote dividido em múltiplos endereços
+
+
+## Feature - Importação de Pré-Alocação via Excel
+- [x] Criar endpoint backend preallocation.importExcel
+- [x] Validar produtos (SKU/código interno) e endereços existentes
+- [x] Vincular pré-alocações a ordem de recebimento específica
+- [x] Criar interface de upload com seleção de ordem
+- [x] Adicionar preview de dados antes de confirmar
+- [x] Exibir resultado detalhado (sucessos e erros)
+- [x] Criar arquivo template para download

@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BlindCheckModal } from "@/components/BlindCheckModal";
+import { ImportPreallocationDialog } from "@/components/ImportPreallocationDialog";
 import { PageHeader } from "@/components/PageHeader";
-import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck } from "lucide-react";
+import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +42,7 @@ export default function Receiving() {
   const [scheduleOrderId, setScheduleOrderId] = useState<number | null>(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [checkOrderId, setCheckOrderId] = useState<number | null>(null);
+  const [importPreallocationOrderId, setImportPreallocationOrderId] = useState<number | null>(null);
 
   const { data: orders, refetch } = trpc.receiving.list.useQuery();
   const { data: orderItems } = trpc.receiving.getItems.useQuery(
@@ -275,6 +277,15 @@ export default function Receiving() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => setImportPreallocationOrderId(order.id)}
+                              title="Importar pré-alocação"
+                              disabled={order.status === "completed" || order.status === "cancelled"}
+                            >
+                              <FileSpreadsheet className="h-4 w-4 text-purple-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => setCheckOrderId(order.id)}
                               title="Conferir itens (Conferência Cega)"
                               disabled={order.status === "completed" || order.status === "cancelled"}
@@ -408,6 +419,20 @@ export default function Receiving() {
             }}
             receivingOrderId={checkOrderId}
             items={checkOrderItems}
+          />
+        )}
+
+        {/* Modal de Importação de Pré-Alocação */}
+        {importPreallocationOrderId && (
+          <ImportPreallocationDialog
+            receivingOrderId={importPreallocationOrderId}
+            open={!!importPreallocationOrderId}
+            onOpenChange={(open) => {
+              if (!open) setImportPreallocationOrderId(null);
+            }}
+            onSuccess={() => {
+              refetch();
+            }}
           />
         )}
       </div>
