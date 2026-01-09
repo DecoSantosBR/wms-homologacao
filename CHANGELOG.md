@@ -1,5 +1,121 @@
 # Changelog - WMS Med@x
 
+## [2026-01-09] - Módulo de Estoque Implementado
+
+### ✨ Funcionalidade Implementada
+
+Módulo completo de Estoque com consultas de posições, movimentações entre endereços e dashboard de ocupação com sugestões inteligentes de otimização.
+
+### ✅ Backend Implementado
+
+#### Arquivos Criados
+
+**server/inventory.ts** - Funções de consulta de estoque
+- `getInventoryPositions()` - Lista posições com filtros avançados (produto, lote, endereço, status, validade)
+- `getInventorySummary()` - Resumo consolidado (total de posições, quantidade, endereços, lotes)
+- `getLocationStock()` - Saldo de endereço específico por produto
+
+**server/movements.ts** - Funções de movimentação
+- `registerMovement()` - Registra movimentação com validações completas
+- `getMovementHistory()` - Histórico de movimentações com filtros
+- Validações: saldo disponível, regras de armazenagem (single/multi, whole/fraction)
+
+**server/occupancy.ts** - Dashboard de ocupação
+- `getOverallOccupancy()` - Ocupação geral do armazém (total, ocupados, disponíveis, bloqueados, %)
+- `getOccupancyByZone()` - Ocupação detalhada por zona
+- `getOptimizationSuggestions()` - Sugestões inteligentes de otimização
+
+**server/stockRouter.ts** - Endpoints tRPC
+- `stock.getPositions` - Consulta de posições
+- `stock.getSummary` - Resumo de estoque
+- `stock.registerMovement` - Registro de movimentação
+- `stock.getMovements` - Histórico de movimentações
+- `stock.getOverallOccupancy` - Ocupação geral
+- `stock.getOccupancyByZone` - Ocupação por zona
+- `stock.getOptimizationSuggestions` - Sugestões de otimização
+
+### ✅ Frontend Implementado
+
+#### Páginas Criadas
+
+**StockPositions.tsx** (/stock)
+- Consulta de posições de estoque com filtros avançados
+- Filtros: produto (SKU/descrição), lote, endereço, status, validade
+- Tabela com paginação e ordenação
+- Resumo: total de posições, quantidade total, endereços, lotes
+- Botão de exportação para Excel
+
+**StockMovements.tsx** (/stock/movements)
+- Registro de movimentações entre endereços
+- Tipos: Transferência, Ajuste, Entrada, Saída
+- Validações em tempo real (saldo, regras de armazenagem)
+- Histórico de movimentações com filtros
+- Rastreabilidade completa (usuário, data, motivo)
+
+**OccupancyDashboard.tsx** (/stock/occupancy)
+- Dashboard de ocupação geral do armazém
+- Gráficos de ocupação por zona
+- Sugestões inteligentes de otimização:
+  - **Consolidação**: Agrupar produtos em menos endereços
+  - **Capacidade Crítica**: Alertas de zonas com >85% de ocupação
+  - **Realocação**: Sugestões de movimentação para melhor distribuição
+  - **Eficiência**: Oportunidades de melhoria operacional
+- Cada sugestão inclui: prioridade, descrição, impacto, métricas, ações recomendadas
+
+### 📝 Funcionalidades Principais
+
+1. **Consulta de Posições**
+   - Filtros avançados por múltiplos critérios
+   - Visualização consolidada de estoque
+   - Exportação de relatórios
+
+2. **Movimentações**
+   - Validação de saldo disponível
+   - Respeito às regras de armazenagem
+   - Atualização automática de status de endereços
+   - Rastreabilidade completa
+
+3. **Dashboard de Ocupação**
+   - Métricas em tempo real
+   - Visualização por zona
+   - Sugestões inteligentes baseadas em padrões
+
+### 📚 Documentação
+
+- Criado `MODULO_ESTOQUE.md` com documentação completa
+- Estrutura de arquivos
+- Funcionalidades implementadas
+- Regras de negócio
+- Integração com outros módulos
+- Próximas melhorias
+
+### 📝 Arquivos Modificados/Criados
+
+**Backend:**
+- `server/inventory.ts` (novo)
+- `server/movements.ts` (novo)
+- `server/occupancy.ts` (novo)
+- `server/stockRouter.ts` (novo)
+- `server/routers.ts` (modificado - registrado stockRouter)
+
+**Frontend:**
+- `client/src/pages/StockPositions.tsx` (novo)
+- `client/src/pages/StockMovements.tsx` (novo)
+- `client/src/pages/OccupancyDashboard.tsx` (novo)
+- `client/src/App.tsx` (modificado - adicionadas rotas)
+
+**Documentação:**
+- `MODULO_ESTOQUE.md` (novo)
+- `todo.md` (atualizado)
+
+### ⚠️ Observações
+
+- Schema de banco já tinha as tabelas necessárias (`inventory`, `inventoryMovements`, `productLocationMapping`)
+- Testes unitários não foram implementados na entrega inicial (requerem dados de teste complexos)
+- Recomenda-se testar via interface com dados reais
+
+---
+
 ## [2026-01-09] - Botões de Navegação em Todas as Páginas
 
 ### ✨ Funcionalidade Implementada

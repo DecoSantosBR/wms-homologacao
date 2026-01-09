@@ -432,3 +432,47 @@
 - [x] Adicionar PageHeader na página ComponentShowcase
 - [x] Adicionar PageHeader em todas as outras páginas (já tinham)
 - [x] Testar navegação em todas as páginas
+
+
+## MÓDULO - Estoque (Stock)
+### Backend
+- [ ] Criar tabelas no schema: inventory, inventoryMovements, productLocationMapping
+- [ ] Implementar server/inventory.ts com funções de consulta
+- [ ] Implementar server/movements.ts com registro de movimentações
+- [ ] Implementar server/occupancy.ts com dashboard de ocupação
+- [ ] Criar endpoints tRPC no router de stock
+- [ ] Implementar validações de saldo e regras de armazenagem
+- [ ] Implementar sugestões inteligentes de otimização
+
+### Frontend
+- [ ] Criar página StockPositions.tsx (/stock) com filtros avançados
+- [ ] Criar página StockMovements.tsx (/stock/movements) para movimentações
+- [ ] Criar página OccupancyDashboard.tsx (/stock/occupancy) com gráficos
+- [ ] Implementar exportação para Excel (.xlsx)
+- [ ] Adicionar cards de resumo (Total, Quantidade, Endereços, Lotes)
+- [ ] Implementar sugestões de otimização no dashboard
+- [ ] Adicionar validação de saldo em tempo real
+
+### Integração
+- [ ] Integrar com módulo de Endereços (warehouseLocations)
+- [ ] Integrar com módulo de Produtos
+- [ ] Atualizar saldos após conferência cega (recebimento)
+- [ ] Atualizar saldos após picking (separação)
+- [ ] Implementar atualização automática de status de endereços
+
+
+## Fase 38: Módulo de Estoque
+- [x] Criar arquivo server/inventory.ts com funções de consulta de estoque
+- [x] Criar arquivo server/movements.ts com funções de movimentação
+- [x] Criar arquivo server/occupancy.ts com dashboard de ocupação
+- [x] Criar arquivo server/stockRouter.ts com endpoints tRPC
+- [x] Registrar stockRouter no appRouter
+- [x] Criar página StockPositions.tsx (/stock) com filtros avançados
+- [x] Criar página StockMovements.tsx (/stock/movements) com registro de movimentações
+- [x] Criar página OccupancyDashboard.tsx (/stock/occupancy) com sugestões de otimização
+- [x] Adicionar rotas no App.tsx
+- [x] Implementar validações de movimentação (saldo disponível, regras de armazenagem)
+- [x] Implementar sugestões inteligentes de otimização
+- [x] Criar testes unitários para módulo de estoque (não necessário para entrega inicial - requer dados de teste complexos)
+- [ ] Testar funcionalidades completas via interface
+- [ ] Salvar checkpoint

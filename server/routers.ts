@@ -9,10 +9,12 @@ import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
 import { warehouseZones } from "../drizzle/schema";
 import { blindConferenceRouter } from "./blindConferenceRouter";
+import { stockRouter } from "./stockRouter";
 
 export const appRouter = router({
   system: systemRouter,
   blindConference: blindConferenceRouter,
+  stock: stockRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
