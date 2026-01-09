@@ -44,7 +44,7 @@ export const appRouter = router({
       );
 
       const pickingInProgress = await db.select().from(pickingOrders).where(
-        eq(pickingOrders.status, 'in_progress')
+        eq(pickingOrders.status, 'picking')
       );
 
       return {

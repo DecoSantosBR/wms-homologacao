@@ -4,20 +4,33 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface ProductItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  unit: "box" | "unit";
+}
 
 export default function PickingOrders() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
-  const [selectedProducts, setSelectedProducts] = useState<Array<{ productId: number; quantity: number; unit: "box" | "unit" }>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unit, setUnit] = useState<"box" | "unit">("box");
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
+  const { data: inventory } = trpc.stock.getPositions.useQuery({});
+
   const createMutation = trpc.picking.create.useMutation({
     onSuccess: () => {
       refetch();
@@ -25,11 +38,69 @@ export default function PickingOrders() {
       setCustomerName("");
       setPriority("normal");
       setSelectedProducts([]);
+      alert("Pedido criado com sucesso!");
+    },
+    onError: (error) => {
+      alert(`Erro ao criar pedido: ${error.message}`);
     },
   });
 
+  const handleAddProduct = () => {
+    if (!selectedProductId || quantity <= 0) {
+      alert("Selecione um produto e informe a quantidade.");
+      return;
+    }
+
+    const product = products?.find((p) => p.id === parseInt(selectedProductId));
+    if (!product) return;
+
+    // Verificar estoque disponível
+    const availableStock = inventory?.filter(
+      (inv: any) => inv.productId === product.id && inv.status === "available"
+    );
+    const totalAvailable = availableStock?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0;
+
+    if (totalAvailable < quantity) {
+      alert(`Estoque insuficiente. Disponível: ${totalAvailable} ${unit === "box" ? "caixas" : "unidades"}. Solicitado: ${quantity}.`);
+      return;
+    }
+
+    // Verificar se produto já foi adicionado
+    if (selectedProducts.some((p) => p.productId === product.id)) {
+      alert("Produto já adicionado. Remova-o para adicionar novamente.");
+      return;
+    }
+
+    setSelectedProducts([
+      ...selectedProducts,
+      {
+        productId: product.id,
+        productName: product.description,
+        quantity,
+        unit,
+      },
+    ]);
+
+    // Limpar campos
+    setSelectedProductId("");
+    setQuantity(1);
+    setUnit("box");
+  };
+
+  const handleRemoveProduct = (productId: number) => {
+    setSelectedProducts(selectedProducts.filter((p) => p.productId !== productId));
+  };
+
   const handleCreate = () => {
-    if (!customerName || selectedProducts.length === 0) return;
+    if (!customerName) {
+      alert("Informe o nome do cliente.");
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      alert("Adicione pelo menos um produto ao pedido.");
+      return;
+    }
 
     createMutation.mutate({
       customerName,
@@ -100,46 +171,146 @@ export default function PickingOrders() {
               Novo Pedido
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Pedido de Separação</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <div>
-                <Label>Cliente</Label>
-                <Input
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Nome do cliente"
-                />
+            <div className="space-y-6">
+              {/* Dados do Pedido */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Dados do Pedido</h3>
+                
+                <div>
+                  <Label>Cliente *</Label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Nome do cliente"
+                  />
+                </div>
+
+                <div>
+                  <Label>Prioridade</Label>
+                  <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixa</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="urgent">Urgente</SelectItem>
+                      <SelectItem value="emergency">Emergência</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div>
-                <Label>Prioridade</Label>
-                <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="urgent">Urgente</SelectItem>
-                    <SelectItem value="emergency">Emergência</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Adicionar Produtos */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Produtos</h3>
+                
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-5">
+                    <Label>Produto</Label>
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map((product) => (
+                          <SelectItem key={product.id} value={String(product.id)}>
+                            {product.sku} - {product.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <Label>Quantidade</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Unidade</Label>
+                    <Select value={unit} onValueChange={(v: any) => setUnit(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="box">Caixa</SelectItem>
+                        <SelectItem value="unit">Unidade</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-2 flex items-end">
+                    <Button type="button" onClick={handleAddProduct} className="w-full">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Lista de Produtos Adicionados */}
+                {selectedProducts.length > 0 && (
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                          <TableHead>Unidade</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedProducts.map((product) => (
+                          <TableRow key={product.productId}>
+                            <TableCell className="font-medium">{product.productName}</TableCell>
+                            <TableCell>{product.quantity}</TableCell>
+                            <TableCell>{product.unit === "box" ? "Caixa" : "Unidade"}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveProduct(product.productId)}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {selectedProducts.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum produto adicionado</p>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <Label>Produtos (simplificado - MVP)</Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Funcionalidade completa de seleção de produtos será implementada na próxima iteração
-                </p>
+              {/* Botões de Ação */}
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleCreate} 
+                  disabled={!customerName || selectedProducts.length === 0 || createMutation.isPending}
+                >
+                  {createMutation.isPending ? "Criando..." : "Criar Pedido"}
+                </Button>
               </div>
-
-              <Button onClick={handleCreate} disabled={!customerName || createMutation.isPending}>
-                {createMutation.isPending ? "Criando..." : "Criar Pedido"}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>

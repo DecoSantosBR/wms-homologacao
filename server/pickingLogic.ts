@@ -41,7 +41,7 @@ export interface PickingSuggestionParams {
  * Busca a regra de picking do cliente
  */
 export async function getClientPickingRule(tenantId: number): Promise<PickingRule> {
-  const db = getDb();
+  const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const tenant = await db
@@ -64,7 +64,7 @@ export async function getClientPickingRule(tenantId: number): Promise<PickingRul
 export async function suggestPickingLocations(
   params: PickingSuggestionParams
 ): Promise<PickingSuggestion[]> {
-  const db = getDb();
+  const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   // Busca regra do cliente se não informada
@@ -78,7 +78,7 @@ export async function suggestPickingLocations(
       productId: inventory.productId,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
-      receivedDate: inventory.receivedDate,
+      receivedDate: inventory.createdAt,
       availableQuantity: inventory.quantity,
     })
     .from(inventory)
@@ -96,7 +96,7 @@ export async function suggestPickingLocations(
   let orderedStock;
   if (rule === "FIFO") {
     // FIFO: Data de entrada mais antiga primeiro
-    orderedStock = await stockQuery.orderBy(asc(inventory.receivedDate));
+    orderedStock = await stockQuery.orderBy(asc(inventory.createdAt));
   } else if (rule === "FEFO") {
     // FEFO: Data de validade mais próxima primeiro
     orderedStock = await stockQuery.orderBy(asc(inventory.expiryDate));
@@ -106,7 +106,7 @@ export async function suggestPickingLocations(
   }
 
   // Mapeia resultados com prioridade
-  const suggestions: PickingSuggestion[] = orderedStock.map((item, index) => ({
+  const suggestions: PickingSuggestion[] = orderedStock.map((item: any, index: number) => ({
     locationId: item.locationId,
     locationCode: item.locationCode,
     productId: item.productId,
@@ -195,7 +195,7 @@ export async function validateDirectedPicking(
   }
 
   // Valida se lote existe no endereço
-  const db = getDb();
+  const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const stock = await db
@@ -236,7 +236,7 @@ export interface PickingAuditLog {
 }
 
 export async function logPickingAudit(log: PickingAuditLog): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   await db.insert(pickingAuditLogs).values({

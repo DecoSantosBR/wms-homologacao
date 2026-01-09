@@ -293,10 +293,10 @@ export async function startPicking(pickingOrderId: number, userId: number) {
     }
   }
   
-  // Atualizar status da ordem para "in_progress" (se ainda estiver pending)
+  // Atualizar status da ordem para "picking" (se ainda estiver pending)
   if (order.status === 'pending') {
     await updatePickingOrder(pickingOrderId, {
-      status: "in_progress",
+      status: "picking",
       assignedTo: userId,
     });
   }
