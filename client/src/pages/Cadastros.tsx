@@ -76,44 +76,42 @@ export default function Cadastros() {
             const Icon = module.icon;
             return (
               <Link key={module.id} href={module.href}>
-                <a className="block group">
-                  <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-200 hover:border-blue-300 h-full">
-                    {/* Icon and Title */}
-                    <div className="flex items-start gap-4 mb-4">
-                      <div
-                        className={`${module.bgColor} ${module.color} p-3 rounded-lg group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
-                          {module.title}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {module.description}
-                        </p>
-                      </div>
+                <div className="block group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-200 hover:border-blue-300 h-full">
+                  {/* Icon and Title */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <div
+                      className={`${module.bgColor} ${module.color} p-3 rounded-lg group-hover:scale-110 transition-transform duration-300`}
+                    >
+                      <Icon className="w-6 h-6" />
                     </div>
-
-                    {/* Features List */}
-                    <ul className="space-y-2 mb-4">
-                      {module.features.map((feature, idx) => (
-                        <li
-                          key={idx}
-                          className="text-sm text-gray-600 flex items-center gap-2"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* Action Button */}
-                    <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg">
-                      Acessar Módulo
-                    </button>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
+                        {module.title}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {module.description}
+                      </p>
+                    </div>
                   </div>
-                </a>
+
+                  {/* Features List */}
+                  <ul className="space-y-2 mb-4">
+                    {module.features.map((feature, idx) => (
+                      <li
+                        key={idx}
+                        className="text-sm text-gray-600 flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Action Button */}
+                  <div className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg text-center">
+                    Acessar Módulo
+                  </div>
+                </div>
               </Link>
             );
           })}

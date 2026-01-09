@@ -788,3 +788,9 @@
 - [x] Testar importação de NF-e de Entrada
 - [x] Testar importação de NF-e de Saída
 - [x] Atualizar documentação técnica
+
+
+## Fase: Correção de Bug - Elementos <a> Aninhados em /tenants
+- [x] Identificar componente com Links aninhados na página Tenants
+- [x] Remover aninhamento de elementos <a>
+- [x] Testar página sem erros no console
