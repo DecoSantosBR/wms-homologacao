@@ -897,14 +897,24 @@ export const appRouter = router({
       .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const tenantId = ctx.user.tenantId!;
-
-        const orders = await db
-          .select()
-          .from(pickingOrders)
-          .where(eq(pickingOrders.tenantId, tenantId))
-          .orderBy(desc(pickingOrders.createdAt))
-          .limit(input.limit);
+        
+        // Admin vê todos os pedidos, usuário comum vê apenas do seu tenant
+        let orders;
+        if (ctx.user.role === "admin") {
+          orders = await db
+            .select()
+            .from(pickingOrders)
+            .orderBy(desc(pickingOrders.createdAt))
+            .limit(input.limit);
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          orders = await db
+            .select()
+            .from(pickingOrders)
+            .where(eq(pickingOrders.tenantId, tenantId))
+            .orderBy(desc(pickingOrders.createdAt))
+            .limit(input.limit);
+        }
 
         return orders;
       }),
@@ -913,6 +923,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(
         z.object({
+          tenantId: z.number(), // Cliente para quem o pedido está sendo criado
           customerName: z.string().min(1),
           priority: z.enum(["low", "normal", "urgent", "emergency"]).default("normal"),
           scheduledDate: z.string().optional(),
@@ -928,7 +939,18 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const tenantId = ctx.user.tenantId!;
+        
+        // Validação de permissões:
+        // - Admin pode criar pedido para qualquer cliente
+        // - Usuário comum só pode criar para seu próprio tenant
+        if (ctx.user.role !== "admin" && ctx.user.tenantId !== input.tenantId) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Você não tem permissão para criar pedidos para este cliente" 
+          });
+        }
+        
+        const tenantId = input.tenantId;
         const userId = ctx.user.id;
 
         // Gerar número do pedido

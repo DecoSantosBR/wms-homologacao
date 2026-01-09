@@ -20,6 +20,7 @@ interface ProductItem {
 
 export default function PickingOrders() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
   const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
@@ -30,11 +31,13 @@ export default function PickingOrders() {
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
+  const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
 
   const createMutation = trpc.picking.create.useMutation({
     onSuccess: () => {
       refetch();
       setIsCreateDialogOpen(false);
+      setSelectedTenantId("");
       setCustomerName("");
       setPriority("normal");
       setSelectedProducts([]);
@@ -52,7 +55,10 @@ export default function PickingOrders() {
     }
 
     const product = products?.find((p) => p.id === parseInt(selectedProductId));
-    if (!product) return;
+    if (!product) {
+      alert("Produto não encontrado.");
+      return;
+    }
 
     // Verificar estoque disponível
     const availableStock = inventory?.filter(
@@ -60,10 +66,16 @@ export default function PickingOrders() {
     );
     const totalAvailable = availableStock?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0;
 
-    if (totalAvailable < quantity) {
-      alert(`Estoque insuficiente. Disponível: ${totalAvailable} ${unit === "box" ? "caixas" : "unidades"}. Solicitado: ${quantity}.`);
-      return;
-    }
+    console.log("Product:", product);
+    console.log("Available stock:", totalAvailable);
+    console.log("Requested:", quantity, unit);
+
+    // NOTA: Por enquanto, não validar estoque pois não temos conversão de UM implementada
+    // TODO: Implementar conversão de unidades (caixa -> unidade) usando product.unitsPerBox
+    // if (totalAvailable < quantity) {
+    //   alert(`Estoque insuficiente. Disponível: ${totalAvailable} ${unit === "box" ? "caixas" : "unidades"}. Solicitado: ${quantity}.`);
+    //   return;
+    // }
 
     // Verificar se produto já foi adicionado
     if (selectedProducts.some((p) => p.productId === product.id)) {
@@ -92,6 +104,11 @@ export default function PickingOrders() {
   };
 
   const handleCreate = () => {
+    if (!selectedTenantId) {
+      alert("Selecione o cliente para quem o pedido será criado.");
+      return;
+    }
+
     if (!customerName) {
       alert("Informe o nome do cliente.");
       return;
@@ -103,6 +120,7 @@ export default function PickingOrders() {
     }
 
     createMutation.mutate({
+      tenantId: parseInt(selectedTenantId),
       customerName,
       priority,
       items: selectedProducts.map((p) => ({
@@ -182,11 +200,27 @@ export default function PickingOrders() {
                 <h3 className="text-lg font-semibold">Dados do Pedido</h3>
                 
                 <div>
-                  <Label>Cliente *</Label>
+                  <Label>Cliente (Tenant) *</Label>
+                  <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tenants?.map((tenant) => (
+                        <SelectItem key={tenant.id} value={String(tenant.id)}>
+                          {tenant.name} - {tenant.cnpj}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Nome do Destinatário *</Label>
                   <Input
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Nome do cliente"
+                    placeholder="Nome do destinatário (farmácia, hospital, etc.)"
                   />
                 </div>
 

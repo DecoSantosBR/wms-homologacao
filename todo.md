@@ -763,3 +763,17 @@
 - [x] Integrar com módulo de Estoque (consulta de disponibilidade)
 - [x] Criar testes unitários (vitest) - 4 de 10 testes passando
 - [x] Testar fluxo completo de separação via interface web
+
+
+## Fase: Correção de Bug - TenantId Null no Picking
+- [x] Investigar por que usuário admin não tem tenantId
+- [x] Implementar seleção de cliente/tenant no formulário de picking
+- [x] Validar que tenantId seja obrigatório ao criar pedido
+- [x] Testar criação de pedido com tenant selecionado
+- [x] Corrigir filtro de listagem para admins verem todos os pedidos
+
+
+## Fase: Correção de UI - Campo Cliente como Select
+- [x] Investigar por que Select não está renderizando no formulário
+- [x] Corrigir código para exibir dropdown de seleção de clientes
+- [x] Testar criação de pedido com cliente selecionado via dropdown
