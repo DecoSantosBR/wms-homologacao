@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
@@ -866,6 +867,26 @@ export const appRouter = router({
   // PICKING (SEPARAÇÃO)
   // ========================================
   picking: router({
+    // Sugerir endereços para picking (FIFO/FEFO)
+    suggestLocations: protectedProcedure
+      .input(
+        z.object({
+          productId: z.number(),
+          requestedQuantity: z.number().positive(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        const tenantId = ctx.user.tenantId!;
+        
+        const suggestions = await suggestPickingLocations({
+          tenantId,
+          productId: input.productId,
+          requestedQuantity: input.requestedQuantity,
+        });
+
+        return suggestions;
+      }),
+
     // Listar pedidos de separação
     list: protectedProcedure
       .input(

@@ -682,6 +682,23 @@ export const blindConferenceAdjustments = mysqlTable("blindConferenceAdjustments
   sessionIdx: index("blind_adj_session_idx").on(table.sessionId),
 }));
 
+// Auditoria de Picking (rastreabilidade de regras aplicadas)
+export const pickingAuditLogs = mysqlTable("pickingAuditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  pickingOrderId: int("pickingOrderId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  pickingRule: mysqlEnum("pickingRule", ["FIFO", "FEFO", "Direcionado"]).notNull(),
+  productId: int("productId").notNull(),
+  requestedQuantity: int("requestedQuantity").notNull(),
+  allocatedLocations: json("allocatedLocations").notNull(), // Array de alocações
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  orderIdx: index("picking_audit_order_idx").on(table.pickingOrderId),
+  tenantIdx: index("picking_audit_tenant_idx").on(table.tenantId),
+  ruleIdx: index("picking_audit_rule_idx").on(table.pickingRule),
+}));
+
 // ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================

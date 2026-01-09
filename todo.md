@@ -720,3 +720,15 @@
 - [ ] Adicionar controle de UM (caixa/unidade)
 - [ ] Implementar ajuste de fracionamento
 - [ ] Adicionar segregação de função (separador vs conferente)
+
+
+## Feature - Regra de Picking por Cliente (FIFO/FEFO/Dirigido)
+- [x] Adicionar campo pickingRule ao schema de tenants (enum: FIFO, FEFO, Direcionado)
+- [x] Atualizar formulário de cadastro de clientes com campo obrigatório
+- [x] Implementar lógica FIFO (First In, First Out) no backend
+- [x] Implementar lógica FEFO (First Expire, First Out) no backend
+- [x] Implementar modo Dirigido (cliente especifica endereços/lotes)
+- [x] Adicionar logs de auditoria (registrar regra aplicada em cada ordem)
+- [x] Adicionar rastreabilidade (vincular regra à movimentação)
+- [x] Implementar alertas quando não houver estoque elegível
+- [ ] Testar fluxo completo com as 3 regras

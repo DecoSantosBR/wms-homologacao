@@ -27,8 +27,20 @@ export default function PickingExecution() {
   const [pickedQuantity, setPickedQuantity] = useState("");
   const [locationId, setLocationId] = useState("");
   const [batch, setBatch] = useState("");
+  const [suggestedLocations, setSuggestedLocations] = useState<any[]>([]);
 
   const { data: order, isLoading, refetch } = trpc.picking.getById.useQuery({ id: orderId });
+  
+  // Query para sugerir endereços (FIFO/FEFO)
+  const suggestLocationsMutation = trpc.picking.suggestLocations.useQuery(
+    {
+      productId: selectedItemId || 0,
+      requestedQuantity: parseInt(pickedQuantity) || 1,
+    },
+    {
+      enabled: false, // Não executar automaticamente
+    }
+  );
   const updateStatusMutation = trpc.picking.updateStatus.useMutation({
     onSuccess: () => {
       refetch();
