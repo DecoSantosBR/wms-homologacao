@@ -1037,3 +1037,17 @@
 - [x] Documentar fluxo de trabalho completo
 - [x] Documentar API backend (funções e interfaces)
 - [x] Adicionar exemplos de uso e casos de erro
+
+
+## Fase: Implementação de Endpoints tRPC para Wave Picking
+
+- [x] Criar endpoint `picking.createWave` - consolidar pedidos em onda
+- [x] Criar endpoint `picking.listWaves` - listar ondas com filtros
+- [x] Criar endpoint `picking.getWaveById` - buscar detalhes da onda
+- [x] Criar endpoint `picking.updateWaveStatus` - atualizar status da onda
+- [x] Adicionar imports de pickingWaves e pickingWaveItems no routers.ts
+- [x] Adicionar validações de permissões (admin pode ver todos, user só do próprio tenant)
+- [x] Corrigir erro TypeScript no updateWaveStatus (select assignedTo)
+- [x] Criar arquivo wave.test.ts com suite de testes
+- [ ] Ajustar testes (muitas dependências de schema - testar via interface)
+- [ ] Testar endpoints manualmente via interface

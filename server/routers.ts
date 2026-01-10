@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -1205,6 +1205,161 @@ export const appRouter = router({
               )
             );
         }
+
+        return { success: true };
+      }),
+
+    // ========================================
+    // WAVE PICKING (SEPARAÇÃO POR ONDA)
+    // ========================================
+
+    // Criar onda de separação
+    createWave: protectedProcedure
+      .input(
+        z.object({
+          orderIds: z.array(z.number()).min(1, "Selecione pelo menos um pedido"),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { createWave } = await import("./waveLogic");
+        
+        try {
+          const result = await createWave({
+            orderIds: input.orderIds,
+            userId: ctx.user.id,
+          });
+          
+          return result;
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error.message || "Erro ao criar onda de separação",
+          });
+        }
+      }),
+
+    // Listar ondas de separação
+    listWaves: protectedProcedure
+      .input(
+        z.object({
+          status: z.enum(["pending", "picking", "picked", "staged", "completed", "cancelled"]).optional(),
+          tenantId: z.number().optional(), // Admin pode filtrar por cliente
+        }).optional()
+      )
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        const tenantId = ctx.user.role === "admin" && input?.tenantId 
+          ? input.tenantId 
+          : ctx.user.tenantId;
+
+        if (!tenantId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
+        }
+
+        let query = db
+          .select({
+            id: pickingWaves.id,
+            waveNumber: pickingWaves.waveNumber,
+            status: pickingWaves.status,
+            totalOrders: pickingWaves.totalOrders,
+            totalItems: pickingWaves.totalItems,
+            totalQuantity: pickingWaves.totalQuantity,
+            pickingRule: pickingWaves.pickingRule,
+            assignedTo: pickingWaves.assignedTo,
+            pickedBy: pickingWaves.pickedBy,
+            pickedAt: pickingWaves.pickedAt,
+            createdAt: pickingWaves.createdAt,
+          })
+          .from(pickingWaves)
+          .where(eq(pickingWaves.tenantId, tenantId));
+
+        const waves = await query;
+
+        // Filtrar por status se fornecido
+        if (input?.status) {
+          return waves.filter(w => w.status === input.status);
+        }
+
+        return waves;
+      }),
+
+    // Buscar detalhes de uma onda
+    getWaveById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const { getWaveById } = await import("./waveLogic");
+        
+        try {
+          const wave = await getWaveById(input.id);
+          
+          // Verificar permissão
+          if (ctx.user.role !== "admin" && wave.tenantId !== ctx.user.tenantId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+          }
+          
+          return wave;
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: error.message || "Onda não encontrada",
+          });
+        }
+      }),
+
+    // Atualizar status da onda
+    updateWaveStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "picking", "picked", "staged", "completed", "cancelled"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        // Buscar onda para verificar permissão
+        const [wave] = await db
+          .select({ 
+            tenantId: pickingWaves.tenantId,
+            assignedTo: pickingWaves.assignedTo 
+          })
+          .from(pickingWaves)
+          .where(eq(pickingWaves.id, input.id))
+          .limit(1);
+
+        if (!wave) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+        }
+
+        // Verificar permissão
+        if (ctx.user.role !== "admin" && wave.tenantId !== ctx.user.tenantId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+        }
+
+        // Atualizar status e campos relacionados
+        const updateData: any = { status: input.status };
+        
+        if (input.status === "picking" && !wave.assignedTo) {
+          updateData.assignedTo = ctx.user.id;
+        }
+        
+        if (input.status === "picked") {
+          updateData.pickedBy = ctx.user.id;
+          updateData.pickedAt = new Date();
+        }
+        
+        if (input.status === "staged") {
+          updateData.stagedBy = ctx.user.id;
+          updateData.stagedAt = new Date();
+        }
+
+        await db
+          .update(pickingWaves)
+          .set(updateData)
+          .where(eq(pickingWaves.id, input.id));
 
         return { success: true };
       }),
