@@ -37,16 +37,16 @@ export default function PickingExecution() {
   const [showBatchScanner, setShowBatchScanner] = useState(false);
 
   const { data: order, isLoading, refetch } = trpc.picking.getById.useQuery({ id: orderId });
+  const { data: allLocations } = trpc.locations.list.useQuery();
   
   // Query para sugerir endereços (FIFO/FEFO)
   const { data: suggestions, refetch: refetchSuggestions } = trpc.picking.suggestLocations.useQuery(
     {
       productId: selectedItemId || 0,
       requestedQuantity: parseInt(pickedQuantity) || 1,
+      tenantId: order?.tenantId, // Passar tenantId do pedido para admin
     },
-    {
-      enabled: false, // Não executar automaticamente
-    }
+    { enabled: !!selectedItemId && !!pickedQuantity && !!order?.tenantId }
   );
 
   const updateStatusMutation = trpc.picking.updateStatus.useMutation({
@@ -116,10 +116,28 @@ export default function PickingExecution() {
       return;
     }
 
+    // Se locationId é um código (string), buscar o ID numérico
+    let numericLocationId = parseInt(locationId);
+    
+    if (isNaN(numericLocationId) && allLocations) {
+      // locationId é um código como "H01-08-01", buscar o ID
+      const location = allLocations.find((loc: any) => loc.code === locationId);
+      if (!location) {
+        toast.error(`Endereço ${locationId} não encontrado`);
+        return;
+      }
+      numericLocationId = location.id;
+    }
+
+    if (isNaN(numericLocationId)) {
+      toast.error("Endereço inválido");
+      return;
+    }
+
     pickItemMutation.mutate({
       itemId: selectedItemId,
       pickedQuantity: parseInt(pickedQuantity),
-      locationId: parseInt(locationId),
+      locationId: numericLocationId,
       batch: batch || undefined,
     });
   };

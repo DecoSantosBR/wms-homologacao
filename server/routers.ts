@@ -953,10 +953,17 @@ export const appRouter = router({
         z.object({
           productId: z.number(),
           requestedQuantity: z.number().positive(),
+          tenantId: z.number().optional(), // Admin pode passar tenantId do pedido
         })
       )
       .query(async ({ input, ctx }) => {
-        const tenantId = ctx.user.tenantId!;
+        // Admin pode especificar tenantId, usuário comum usa o próprio
+        const tenantId = input.tenantId || ctx.user.tenantId;
+        
+        if (!tenantId) {
+          // Se admin não passou tenantId, retornar vazio
+          return [];
+        }
         
         const suggestions = await suggestPickingLocations({
           tenantId,

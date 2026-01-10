@@ -975,3 +975,11 @@
 - [x] Tornar container position:static e display:block durante impressão
 - [x] Aplicar correção em printLabelsDirectly e printPreallocationLabelsDirectly
 - [ ] Testar impressão com conteúdo visível
+
+
+## Fase: Corrigir Erros em Execução de Picking (/picking/:id)
+- [x] Erro 1: locationId recebendo NaN - adicionar query allLocations e buscar ID pelo código
+- [x] Erro 2: "Cliente não encontrado" - permitir admin passar tenantId do pedido em suggestLocations
+- [x] Erro 3: Scanner cleanup error - verificar state antes de chamar stop()
+- [x] Atualizar PickingExecution.tsx para passar tenantId nas sugestões
+- [ ] Testar correções na página /picking/30001

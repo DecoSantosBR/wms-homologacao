@@ -55,11 +55,18 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   const stopScanner = async () => {
     if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        // Verificar se o scanner está realmente rodando antes de parar
+        const state = await scannerRef.current.getState();
+        if (state === 2) { // 2 = SCANNING
+          await scannerRef.current.stop();
+        }
         scannerRef.current.clear();
         scannerRef.current = null;
-      } catch (err) {
-        console.error("Erro ao parar scanner:", err);
+      } catch (err: any) {
+        // Ignorar erro se scanner já estiver parado
+        if (!err.message?.includes("not running")) {
+          console.error("Erro ao parar scanner:", err);
+        }
       }
     }
     setIsScanning(false);
