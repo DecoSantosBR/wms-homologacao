@@ -623,7 +623,30 @@ export const appRouter = router({
     list: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      return db.select().from(receivingOrders).orderBy(desc(receivingOrders.createdAt)).limit(50);
+      
+      // JOIN com tenants para retornar nome do cliente
+      const orders = await db
+        .select({
+          id: receivingOrders.id,
+          tenantId: receivingOrders.tenantId,
+          orderNumber: receivingOrders.orderNumber,
+          supplierName: receivingOrders.supplierName,
+          supplierCnpj: receivingOrders.supplierCnpj,
+          nfeNumber: receivingOrders.nfeNumber,
+          nfeKey: receivingOrders.nfeKey,
+          scheduledDate: receivingOrders.scheduledDate,
+          status: receivingOrders.status,
+          createdBy: receivingOrders.createdBy,
+          createdAt: receivingOrders.createdAt,
+          updatedAt: receivingOrders.updatedAt,
+          clientName: tenants.name, // Nome do cliente (tenant)
+        })
+        .from(receivingOrders)
+        .leftJoin(tenants, eq(receivingOrders.tenantId, tenants.id))
+        .orderBy(desc(receivingOrders.createdAt))
+        .limit(50);
+      
+      return orders;
     }),
 
     delete: protectedProcedure

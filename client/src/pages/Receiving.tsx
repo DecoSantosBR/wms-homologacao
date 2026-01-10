@@ -244,7 +244,7 @@ export default function Receiving() {
                         <TableCell className="font-mono font-medium">
                           {order.orderNumber}
                         </TableCell>
-                        <TableCell>{order.supplierName || "-"}</TableCell>
+                        <TableCell>{(order as any).clientName || "-"}</TableCell>
                         <TableCell>
                           {order.nfeNumber ? (
                             <span className="font-mono text-sm">

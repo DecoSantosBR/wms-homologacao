@@ -816,3 +816,11 @@
 - [x] Localizar página de Ordens de Recebimento
 - [x] Alterar label "Fornecedor" para "Cliente" na tabela
 - [x] Verificar se há outras referências a "Fornecedor" que precisam ser alteradas
+
+
+## Fase: Correção de Bug - Cliente Incorreto na Importação NF-e
+- [x] Investigar endpoint nfe.import para identificar problema
+- [x] Corrigir lógica para usar tenantId selecionado pelo usuário
+- [x] Garantir que supplierName seja do emitente mas tenantId seja do cliente selecionado
+- [x] Adicionar JOIN com tenants na listagem para exibir nome do cliente
+- [x] Testar importação com cliente diferente do emitente
