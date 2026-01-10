@@ -702,6 +702,62 @@ export const pickingAuditLogs = mysqlTable("pickingAuditLogs", {
 }));
 
 // ============================================================================
+// MÓDULO: SEPARAÇÃO POR ONDA (WAVE PICKING)
+// ============================================================================
+
+/**
+ * Tabela de ondas de separação
+ * Agrupa múltiplos pedidos do mesmo cliente para otimizar picking
+ */
+export const pickingWaves = mysqlTable("pickingWaves", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(), // Cliente da onda
+  waveNumber: varchar("waveNumber", { length: 50 }).notNull().unique(), // Número único da OS
+  status: mysqlEnum("status", ["pending", "picking", "picked", "staged", "completed", "cancelled"]).default("pending").notNull(),
+  totalOrders: int("totalOrders").default(0).notNull(), // Quantidade de pedidos agrupados
+  totalItems: int("totalItems").default(0).notNull(), // Total de linhas consolidadas
+  totalQuantity: int("totalQuantity").default(0).notNull(), // Quantidade total de unidades
+  pickingRule: mysqlEnum("pickingRule", ["FIFO", "FEFO", "Direcionado"]).notNull(), // Regra aplicada
+  assignedTo: int("assignedTo"), // Separador atribuído
+  pickedBy: int("pickedBy"), // Quem realmente separou
+  pickedAt: timestamp("pickedAt"),
+  stagedBy: int("stagedBy"), // Quem fez a segregação em stage
+  stagedAt: timestamp("stagedAt"),
+  notes: text("notes"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  tenantIdx: index("wave_tenant_idx").on(table.tenantId),
+  statusIdx: index("wave_status_idx").on(table.status),
+}));
+
+/**
+ * Tabela de itens consolidados da onda
+ * Produtos + quantidades totais + endereços alocados
+ */
+export const pickingWaveItems = mysqlTable("pickingWaveItems", {
+  id: int("id").autoincrement().primaryKey(),
+  waveId: int("waveId").notNull(),
+  productId: int("productId").notNull(),
+  productSku: varchar("productSku", { length: 100 }).notNull(),
+  productName: varchar("productName", { length: 255 }).notNull(),
+  totalQuantity: int("totalQuantity").notNull(), // Quantidade consolidada
+  pickedQuantity: int("pickedQuantity").default(0).notNull(), // Quantidade já separada
+  locationId: int("locationId").notNull(), // Endereço alocado (FIFO/FEFO)
+  locationCode: varchar("locationCode", { length: 50 }).notNull(), // Código do endereço (ex: H01-08-02)
+  batch: varchar("batch", { length: 100 }), // Lote sugerido
+  expiryDate: date("expiryDate"), // Validade do lote
+  status: mysqlEnum("status", ["pending", "picking", "picked"]).default("pending").notNull(),
+  pickedAt: timestamp("pickedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  waveIdx: index("wave_item_wave_idx").on(table.waveId),
+  productIdx: index("wave_item_product_idx").on(table.productId),
+  locationIdx: index("wave_item_location_idx").on(table.locationId),
+}));
+
+// ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
 
@@ -735,3 +791,7 @@ export type LabelReading = typeof labelReadings.$inferSelect;
 export type InsertLabelReading = typeof labelReadings.$inferInsert;
 export type BlindConferenceAdjustment = typeof blindConferenceAdjustments.$inferSelect;
 export type InsertBlindConferenceAdjustment = typeof blindConferenceAdjustments.$inferInsert;
+export type PickingWave = typeof pickingWaves.$inferSelect;
+export type InsertPickingWave = typeof pickingWaves.$inferInsert;
+export type PickingWaveItem = typeof pickingWaveItems.$inferSelect;
+export type InsertPickingWaveItem = typeof pickingWaveItems.$inferInsert;

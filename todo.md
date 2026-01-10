@@ -983,3 +983,57 @@
 - [x] Erro 3: Scanner cleanup error - verificar state antes de chamar stop()
 - [x] Atualizar PickingExecution.tsx para passar tenantId nas sugestões
 - [ ] Testar correções na página /picking/30001
+
+
+## Fase: Implementação de Separação por Onda (Wave Picking)
+
+### 1. Schema de Banco de Dados
+- [x] Criar tabela `pickingWaves` (ondas de separação)
+- [x] Criar tabela `pickingWaveItems` (itens consolidados da onda)
+- [x] Campo `waveId` já existia em `pickingOrders`
+- [x] Status `in_wave` já existia em enum de status de `pickingOrders`
+- [x] Executar `pnpm db:push` para aplicar migrações
+
+### 2. Backend - Geração de Onda
+- [x] Criar arquivo `server/waveLogic.ts` com lógica de negócio
+- [x] Função `createWave()` - consolidar pedidos do mesmo cliente
+- [x] Função `consolidateItems()` - somar quantidades de produtos iguais
+- [x] Função `allocateLocations()` - aplicar regra FIFO/FEFO para alocar endereços
+- [x] Função `generateWaveNumber()` - gerar número único (formato: OS-YYYYMMDD-XXXX)
+- [x] Função `getWaveById()` - buscar detalhes da onda
+- [x] Criar documentação completa em `docs/WAVE_PICKING.md`
+- [ ] Criar endpoints tRPC para expor funcionalidades
+
+### 3. Frontend - Geração de Onda
+- [ ] Adicionar botão "Gerar Onda" na listagem de pedidos
+- [ ] Modal de seleção de pedidos para agrupar em onda
+- [ ] Exibir prévia da consolidação (produtos + quantidades + endereços)
+- [ ] Função de impressão dos pedidos individuais (dados + Code 128)
+- [ ] Gerar e imprimir etiqueta da OS com QR Code
+
+### 4. Frontend - Execução de OS
+- [ ] Página de listagem de ondas disponíveis para separação
+- [ ] Página de execução de OS por endereço
+- [ ] Scanner de endereço → mostrar produtos e quantidades
+- [ ] Conferência cega: scanner produto + input lote + input quantidade
+- [ ] Navegação sequencial entre endereços da OS
+- [ ] Botão "Finalizar Endereço" e "Finalizar OS"
+
+### 5. Área de Stage
+- [ ] Página de conferência pós-separação
+- [ ] Listar itens da OS com opção de segregar por pedido
+- [ ] Scanner para validar itens antes de marcar como "pronto para expedição"
+- [ ] Atualizar status dos pedidos originais após segregação
+
+### 6. Testes e Validação
+- [ ] Testar geração de onda com 3 pedidos do mesmo cliente
+- [ ] Testar consolidação de itens e alocação de endereços
+- [ ] Testar execução completa da OS
+- [ ] Testar segregação em Stage
+
+### 7. Documentação
+- [x] Criar documentação completa do módulo (`docs/WAVE_PICKING.md`)
+- [x] Documentar estrutura de banco de dados
+- [x] Documentar fluxo de trabalho completo
+- [x] Documentar API backend (funções e interfaces)
+- [x] Adicionar exemplos de uso e casos de erro

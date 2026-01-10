@@ -78,6 +78,13 @@
       "when": 1767961641885,
       "tag": "0010_lame_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1768035158574,
+      "tag": "0011_solid_stone_men",
+      "breakpoints": true
     }
   ]
 }
