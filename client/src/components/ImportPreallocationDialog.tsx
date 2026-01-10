@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 interface ImportPreallocationDialogProps {
@@ -125,6 +125,25 @@ export function ImportPreallocationDialog({
       fileInputRef.current.value = "";
     }
     onOpenChange(false);
+  };
+
+  const handlePrintLabels = () => {
+    if (!validations || !stats || stats.validRows === 0) {
+      toast.error("Nenhuma pré-alocação válida para imprimir");
+      return;
+    }
+
+    // Filtrar apenas validações válidas
+    const validPreallocations = validations.filter((v: any) => v.isValid);
+    
+    if (validPreallocations.length === 0) {
+      toast.error("Nenhuma pré-alocação válida encontrada");
+      return;
+    }
+
+    // Gerar etiquetas ZPL
+    generatePreallocationZPLLabels(validPreallocations);
+    toast.success(`${validPreallocations.length} etiqueta(s) enviada(s) para impressão`);
   };
 
   return (
@@ -252,17 +271,95 @@ export function ImportPreallocationDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!validations || stats?.validRows === 0 || saveMutation.isPending}
-          >
-            {saveMutation.isPending ? "Salvando..." : `Salvar ${stats?.validRows || 0} Pré-Alocação(ões)`}
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              {validations && stats && stats.validRows > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handlePrintLabels}
+                  disabled={!validations}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Etiquetas ({stats.validRows})
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!validations || stats?.validRows === 0 || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? "Salvando..." : `Salvar ${stats?.validRows || 0} Pré-Alocação(ões)`}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Gera etiquetas ZPL para pré-alocações (endereços)
+ * Formato: 10cm x 5cm para impressoras Zebra
+ */
+function generatePreallocationZPLLabels(preallocations: any[]) {
+  let zplCode = '';
+
+  preallocations.forEach((prealloc) => {
+    // Início da etiqueta
+    zplCode += '^XA\n';
+    
+    // Configurações da etiqueta (10cm x 5cm = 400 x 200 dots @ 203dpi)
+    zplCode += '^PW400\n';  // Largura: 400 dots (10cm)
+    zplCode += '^LL200\n';  // Altura: 200 dots (5cm)
+    
+    // Título "ENDEREÇO"
+    zplCode += '^FO50,20^A0N,25,25^FDEndereco^FS\n';
+    
+    // Código do endereço (grande e destacado)
+    zplCode += '^FO50,50^A0N,45,45^FD' + prealloc.endereco + '^FS\n';
+    
+    // Linha separadora
+    zplCode += '^FO50,105^GB300,2,2^FS\n';
+    
+    // Informações do produto
+    zplCode += '^FO50,115^A0N,18,18^FDProduto: ' + prealloc.codInterno + '^FS\n';
+    
+    // Lote e quantidade
+    const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
+    zplCode += '^FO50,138^A0N,16,16^FD' + loteText + ' | Qtd: ' + prealloc.quantidade + '^FS\n';
+    
+    // Código de barras Code 128 (código do endereço)
+    zplCode += '^FO50,165^BCN,30,N,N,N^FD' + prealloc.endereco + '^FS\n';
+    
+    // Fim da etiqueta
+    zplCode += '^XZ\n\n';
+  });
+
+  // Criar blob e abrir janela de impressão
+  const blob = new Blob([zplCode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  
+  // Abrir em nova janela para impressão
+  const printWindow = window.open(url, '_blank');
+  
+  if (printWindow) {
+    printWindow.onload = () => {
+      // Aguardar carregamento e abrir diálogo de impressão
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    };
+  } else {
+    // Fallback: download do arquivo ZPL
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `etiquetas_preallocacao_${Date.now()}.zpl`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 }

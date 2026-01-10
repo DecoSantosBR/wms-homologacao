@@ -867,3 +867,15 @@
 - [x] Implementar scanner inteligente de Lote (extrai lote da etiqueta do produto)
 - [x] Criar função extractBatchFromBarcode com padrões GS1 e comuns
 - [ ] Testar scanner em dispositivo móvel e desktop
+
+
+## Fase: Impressão de Etiquetas de Endereços
+- [x] Adicionar checkbox para seleção múltipla de endereços em /locations
+- [x] Adicionar botão "Imprimir Etiquetas" na página /locations
+- [x] Criar função generateZPLLabels para gerar código ZPL
+- [x] Implementar layout de etiqueta 10cm x 5cm (400x200 dots @ 203dpi)
+- [x] Adicionar código de barras Code 128 nas etiquetas
+- [x] Implementar botão de impressão em ImportPreallocationDialog (pré-alocação)
+- [x] Criar função generatePreallocationZPLLabels para pré-alocações
+- [x] Abrir janela de configuração de impressão do navegador
+- [ ] Testar impressão em impressora Zebra

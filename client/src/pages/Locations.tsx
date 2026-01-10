@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
-import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X } from "lucide-react";
+import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -310,6 +310,25 @@ export default function Locations() {
     deleteManyMutation.mutate({ ids: selectedIds });
   };
 
+  const handlePrintLabels = () => {
+    if (selectedIds.length === 0) {
+      toast.error("Selecione pelo menos um endereço para imprimir");
+      return;
+    }
+
+    // Buscar dados completos dos endereços selecionados
+    const selectedLocations = locations?.filter((loc: any) => selectedIds.includes(loc.id)) || [];
+    
+    if (selectedLocations.length === 0) {
+      toast.error("Nenhum endereço encontrado");
+      return;
+    }
+
+    // Gerar ZPL e abrir janela de impressão
+    generateZPLLabels(selectedLocations);
+    toast.success(`${selectedLocations.length} etiqueta(s) enviada(s) para impressão`);
+  };
+
   // Filter and sort logic
   const filteredAndSortedLocations = React.useMemo(() => {
     if (!locations) return [];
@@ -422,10 +441,16 @@ export default function Locations() {
                   </div>
                   <div className="flex gap-2">
                     {selectedIds.length > 0 && (
-                      <Button variant="destructive" onClick={handleBulkDelete}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir Selecionados ({selectedIds.length})
-                      </Button>
+                      <>
+                        <Button variant="outline" onClick={handlePrintLabels}>
+                          <Printer className="h-4 w-4 mr-2" />
+                          Imprimir Etiquetas ({selectedIds.length})
+                        </Button>
+                        <Button variant="destructive" onClick={handleBulkDelete}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Selecionados ({selectedIds.length})
+                        </Button>
+                      </>
                     )}
                     <Button variant="outline" onClick={handleImportClick}>
                       Importar Excel
@@ -1195,4 +1220,69 @@ export default function Locations() {
       </Dialog>
     </div>
   );
+}
+
+/**
+ * Gera etiquetas ZPL para impressoras Zebra
+ * Formato: 10cm x 5cm (283 x 142 dots @ 72dpi)
+ */
+function generateZPLLabels(locations: any[]) {
+  let zplCode = '';
+
+  locations.forEach((location) => {
+    // Início da etiqueta
+    zplCode += '^XA\n';
+    
+    // Configurações da etiqueta (10cm x 5cm = 400 x 200 dots @ 203dpi)
+    zplCode += '^PW400\n';  // Largura: 400 dots (10cm)
+    zplCode += '^LL200\n';  // Altura: 200 dots (5cm)
+    
+    // Título "ENDEREÇO"
+    zplCode += '^FO50,20^A0N,30,30^FDEndereco^FS\n';
+    
+    // Código do endereço (grande e destacado)
+    zplCode += '^FO50,60^A0N,50,50^FD' + location.code + '^FS\n';
+    
+    // Linha separadora
+    zplCode += '^FO50,120^GB300,2,2^FS\n';
+    
+    // Informações detalhadas
+    const details = [];
+    if (location.aisle) details.push(`Rua: ${location.aisle}`);
+    if (location.rack) details.push(`Pred: ${location.rack}`);
+    if (location.level) details.push(`Andar: ${location.level}`);
+    if (location.position) details.push(`Pos: ${location.position}`);
+    
+    const detailsText = details.join(' | ');
+    zplCode += '^FO50,135^A0N,20,20^FD' + detailsText + '^FS\n';
+    
+    // Código de barras Code 128 (código do endereço)
+    zplCode += '^FO50,165^BCN,30,N,N,N^FD' + location.code + '^FS\n';
+    
+    // Fim da etiqueta
+    zplCode += '^XZ\n\n';
+  });
+
+  // Criar blob e abrir janela de impressão
+  const blob = new Blob([zplCode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  
+  // Abrir em nova janela para impressão
+  const printWindow = window.open(url, '_blank');
+  
+  if (printWindow) {
+    printWindow.onload = () => {
+      // Aguardar carregamento e abrir diálogo de impressão
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    };
+  } else {
+    // Fallback: download do arquivo ZPL
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `etiquetas_enderecos_${Date.now()}.zpl`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 }
