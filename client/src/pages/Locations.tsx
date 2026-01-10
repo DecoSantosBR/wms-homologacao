@@ -1224,7 +1224,7 @@ export default function Locations() {
 
 /**
  * Gera etiquetas em formato Word (.doc)
- * Formato: 10cm x 5cm por etiqueta
+ * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
  */
 function generateWordLabels(locations: any[]) {
   // Gerar HTML para documento Word
@@ -1247,41 +1247,44 @@ function generateWordLabels(locations: any[]) {
         .label {
           width: 10cm;
           height: 5cm;
-          padding: 0.5cm;
+          padding: 0.3cm 0.5cm;
           box-sizing: border-box;
           page-break-after: always;
-          border: 1px solid #ddd;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
         }
         .label:last-child {
           page-break-after: auto;
         }
-        .header {
-          font-size: 10pt;
+        .title {
+          font-size: 14pt;
           font-weight: bold;
-          color: #666;
-          margin-bottom: 5px;
+          color: #000;
+          margin-bottom: 8px;
+          letter-spacing: 2px;
         }
         .code {
-          font-size: 24pt;
+          font-size: 48pt;
           font-weight: bold;
-          margin: 5px 0;
-        }
-        .details {
-          font-size: 9pt;
-          color: #333;
-          margin: 5px 0;
-          padding-top: 5px;
-          border-top: 2px solid #000;
+          color: #000;
+          margin: 10px 0;
+          line-height: 1;
         }
         .barcode {
-          text-align: center;
-          margin-top: 5px;
+          margin: 10px 0;
         }
-        .barcode svg {
-          height: 30px;
+        .info {
+          font-size: 10pt;
+          color: #000;
+          margin: 3px 0;
+        }
+        .description {
+          font-size: 9pt;
+          color: #000;
+          margin: 2px 0;
         }
       </style>
     </head>
@@ -1289,23 +1292,28 @@ function generateWordLabels(locations: any[]) {
   `;
 
   locations.forEach((location) => {
+    // Determinar zona (baseado no código ou zona do location)
+    const zoneName = location.zoneName || 'Armazenagem';
+    
+    // Determinar tipo
+    const tipoText = location.locationType === 'whole' ? 'Palete Inteiro' : 'Fração';
+    
+    // Montar informações adicionais
     const details = [];
     if (location.aisle) details.push(`Rua: ${location.aisle}`);
     if (location.rack) details.push(`Préd: ${location.rack}`);
     if (location.level) details.push(`Andar: ${location.level}`);
-    if (location.position) details.push(`Pos: ${location.position}`);
-    const detailsText = details.join(' | ');
+    const detailsText = details.length > 0 ? details.join(' | ') : 'Endereço de Armazenagem';
 
     htmlContent += `
       <div class="label">
-        <div>
-          <div class="header">ENDEREÇO</div>
-          <div class="code">${location.code}</div>
-          <div class="details">${detailsText}</div>
-        </div>
+        <div class="title">ENDEREÇO</div>
+        <div class="code">${location.code}</div>
         <div class="barcode">
           ${generateBarcodeSVG(location.code)}
         </div>
+        <div class="info">Zona: ${zoneName} | Tipo: ${tipoText}</div>
+        <div class="description">${detailsText}</div>
       </div>
     `;
   });

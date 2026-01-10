@@ -889,3 +889,13 @@
 - [x] Implementar funções generateBarcodeSVG e generatePreallocationBarcodeSVG
 - [x] Configurar download automático de arquivo .doc
 - [ ] Testar download e impressão de etiquetas .doc
+
+
+## Fase: Replicar Layout de Etiquetas do PDF
+- [x] Analisar layout do PDF: título "ENDEREÇO" centralizado, código grande (48pt), código de barras, informações adicionais
+- [x] Atualizar generateWordLabels com novo layout centralizado
+- [x] Atualizar generatePreallocationWordLabels com novo layout centralizado
+- [x] Implementar código de barras SVG inline
+- [x] Adicionar informações de zona e tipo de endereço (Zona: X | Tipo: Y)
+- [x] Adicionar linha de descrição adicional (Rua, Prédio, Andar ou informações do produto)
+- [ ] Testar geração de etiquetas com novo layout

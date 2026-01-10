@@ -304,7 +304,7 @@ export function ImportPreallocationDialog({
 
 /**
  * Gera etiquetas em formato Word (.doc) para pré-alocações
- * Formato: 10cm x 5cm por etiqueta
+ * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
  */
 function generatePreallocationWordLabels(preallocations: any[]) {
   // Gerar HTML para documento Word
@@ -327,46 +327,44 @@ function generatePreallocationWordLabels(preallocations: any[]) {
         .label {
           width: 10cm;
           height: 5cm;
-          padding: 0.5cm;
+          padding: 0.3cm 0.5cm;
           box-sizing: border-box;
           page-break-after: always;
-          border: 1px solid #ddd;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
         }
         .label:last-child {
           page-break-after: auto;
         }
-        .header {
-          font-size: 9pt;
+        .title {
+          font-size: 14pt;
           font-weight: bold;
-          color: #666;
-          margin-bottom: 3px;
+          color: #000;
+          margin-bottom: 8px;
+          letter-spacing: 2px;
         }
         .code {
-          font-size: 20pt;
+          font-size: 48pt;
           font-weight: bold;
-          margin: 3px 0;
-        }
-        .product {
-          font-size: 8pt;
-          color: #333;
-          margin: 3px 0;
-          padding-top: 3px;
-          border-top: 2px solid #000;
-        }
-        .info {
-          font-size: 7pt;
-          color: #555;
-          margin: 2px 0;
+          color: #000;
+          margin: 10px 0;
+          line-height: 1;
         }
         .barcode {
-          text-align: center;
-          margin-top: 3px;
+          margin: 10px 0;
         }
-        .barcode svg {
-          height: 25px;
+        .info {
+          font-size: 10pt;
+          color: #000;
+          margin: 3px 0;
+        }
+        .description {
+          font-size: 9pt;
+          color: #000;
+          margin: 2px 0;
         }
       </style>
     </head>
@@ -375,18 +373,17 @@ function generatePreallocationWordLabels(preallocations: any[]) {
 
   preallocations.forEach((prealloc) => {
     const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
+    const productInfo = `Produto: ${prealloc.codInterno} | ${loteText} | Qtd: ${prealloc.quantidade}`;
 
     htmlContent += `
       <div class="label">
-        <div>
-          <div class="header">ENDEREÇO</div>
-          <div class="code">${prealloc.endereco}</div>
-          <div class="product">Produto: ${prealloc.codInterno}</div>
-          <div class="info">${loteText} | Qtd: ${prealloc.quantidade}</div>
-        </div>
+        <div class="title">ENDEREÇO</div>
+        <div class="code">${prealloc.endereco}</div>
         <div class="barcode">
           ${generatePreallocationBarcodeSVG(prealloc.endereco)}
         </div>
+        <div class="info">Zona: Pré-Alocação | Tipo: Palete Inteiro</div>
+        <div class="description">${productInfo}</div>
       </div>
     `;
   });
