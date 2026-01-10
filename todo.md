@@ -920,3 +920,12 @@
 - [x] Renderizar códigos de barras Code 128 usando JsBarcode no modal
 - [x] Suportar dois tipos de etiquetas: location e preallocation
 - [ ] Testar pré-visualização com múltiplas etiquetas
+
+
+## Fase: Corrigir Bug de Seleção de Endereços
+- [x] Investigar variável selectedLocations e lógica de seleção
+- [x] Identificar conflito: checkboxes usavam selectedIds mas handlePrintLabels verificava selectedLocations
+- [x] Corrigir handlePrintLabels para usar selectedIds
+- [x] Remover declaração não utilizada de selectedLocations
+- [ ] Testar seleção múltipla de endereços
+- [ ] Testar impressão de etiquetas após seleção

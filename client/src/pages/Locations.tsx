@@ -52,7 +52,6 @@ export default function Locations() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
-  const [selectedLocations, setSelectedLocations] = useState<number[]>([]);
   const [showLabelPreview, setShowLabelPreview] = useState(false);
   const [previewLabels, setPreviewLabels] = useState<any[]>([]);
   const [editForm, setEditForm] = useState({
@@ -316,14 +315,14 @@ export default function Locations() {
   };
 
   const handlePrintLabels = () => {
-    if (selectedLocations.length === 0) {
+    if (selectedIds.length === 0) {
       toast.error("Selecione pelo menos um endereço para imprimir etiquetas");
       return;
     }
 
     // Buscar dados dos endereços selecionados
     const selectedLocs = locations?.filter((loc: any) =>
-      selectedLocations.includes(loc.id)
+      selectedIds.includes(loc.id)
     );
 
     if (!selectedLocs || selectedLocs.length === 0) {
