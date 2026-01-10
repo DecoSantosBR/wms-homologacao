@@ -335,9 +335,9 @@ export default function Locations() {
     setShowLabelPreview(true);
   };
 
-  const handleConfirmPrint = () => {
+  const handleConfirmPrint = async () => {
     // Gerar documento Word e fazer download
-    generateWordLabels(previewLabels);
+    await generateWordLabels(previewLabels);
     toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
     setShowLabelPreview(false);
     setPreviewLabels([]);
@@ -1248,7 +1248,7 @@ export default function Locations() {
  * Gera etiquetas em formato Word (.doc)
  * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
  */
-function generateWordLabels(locations: any[]) {
+async function generateWordLabels(locations: any[]) {
   // Gerar HTML para documento Word
   let htmlContent = `
     <!DOCTYPE html>
@@ -1315,11 +1315,12 @@ function generateWordLabels(locations: any[]) {
 
   // Gerar códigos de barras antes do loop
   const barcodes = new Map<string, string>();
-  locations.forEach((location) => {
+  for (const location of locations) {
     if (!barcodes.has(location.code)) {
-      barcodes.set(location.code, generateBarcodeSVG(location.code));
+      const barcode = await generateBarcodeSVG(location.code);
+      barcodes.set(location.code, barcode);
     }
-  });
+  }
 
   locations.forEach((location) => {
     // Determinar zona (baseado no código ou zona do location)
@@ -1366,9 +1367,9 @@ function generateWordLabels(locations: any[]) {
 }
 
 /**
- * Gera código de barras Code 128 usando JsBarcode
+ * Gera código de barras Code 128 como imagem Base64 PNG (compatível com Word)
  */
-function generateBarcodeSVG(text: string): string {
+function generateBarcodeSVG(text: string): Promise<string> {
   try {
     // Criar elemento SVG temporário
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1383,13 +1384,34 @@ function generateBarcodeSVG(text: string): string {
       margin: 5,
     });
     
-    // Retornar SVG como string
-    return svg.outerHTML;
+    // Converter SVG para Base64 PNG
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    // Definir tamanho do canvas baseado no SVG
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    // Retornar promise que resolve com Base64
+    return new Promise<string>((resolve) => {
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const base64 = canvas.toDataURL('image/png');
+        resolve(`<img src="${base64}" alt="${text}" />`);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(`<span style="font-family: monospace;">${text}</span>`);
+      };
+      img.src = url;
+    });
   } catch (error) {
     console.error('Erro ao gerar código de barras:', error);
-    // Fallback: retornar SVG simples com texto
-    return `<svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
-      <text x="100" y="30" text-anchor="middle" font-size="16" font-family="monospace">${text}</text>
-    </svg>`;
+    return Promise.resolve(`<span style="font-family: monospace;">${text}</span>`);
   }
 }

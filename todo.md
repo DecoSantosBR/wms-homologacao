@@ -938,3 +938,13 @@
 - [x] Usar Map para cachear SVG gerado e reutilizar no HTML
 - [x] Aplicar mesma correção em generatePreallocationWordLabels
 - [ ] Testar download e visualização de etiquetas com código de barras
+
+
+## Fase: Converter SVG para Base64 PNG para Word
+- [x] Modificar generateBarcodeSVG para retornar Promise<string> com Base64 PNG
+- [x] Usar Canvas API para renderizar SVG e extrair PNG via toDataURL
+- [x] Modificar generateWordLabels para async e aguardar geração de códigos de barras
+- [x] Modificar generatePreallocationWordLabels para async
+- [x] Atualizar handleConfirmPrint em ambos componentes para async/await
+- [x] Usar XMLSerializer + Blob + Image.onload para conversão SVG → PNG
+- [ ] Testar etiquetas em Microsoft Word e LibreOffice

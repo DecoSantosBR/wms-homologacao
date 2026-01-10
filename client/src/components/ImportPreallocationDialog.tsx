@@ -150,9 +150,9 @@ export function ImportPreallocationDialog({
     setShowLabelPreview(true);
   };
 
-  const handleConfirmPrint = () => {
+  const handleConfirmPrint = async () => {
     // Gerar etiquetas Word
-    generatePreallocationWordLabels(previewLabels);
+    await generatePreallocationWordLabels(previewLabels);
     toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
     setShowLabelPreview(false);
     setPreviewLabels([]);
@@ -329,7 +329,7 @@ export function ImportPreallocationDialog({
  * Gera etiquetas em formato Word (.doc) para pré-alocações
  * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
  */
-function generatePreallocationWordLabels(preallocations: any[]) {
+async function generatePreallocationWordLabels(preallocations: any[]) {
   // Gerar HTML para documento Word
   let htmlContent = `
     <!DOCTYPE html>
@@ -396,11 +396,12 @@ function generatePreallocationWordLabels(preallocations: any[]) {
 
   // Gerar códigos de barras antes do loop
   const barcodes = new Map<string, string>();
-  preallocations.forEach((prealloc) => {
+  for (const prealloc of preallocations) {
     if (!barcodes.has(prealloc.endereco)) {
-      barcodes.set(prealloc.endereco, generatePreallocationBarcodeSVG(prealloc.endereco));
+      const barcode = await generatePreallocationBarcodeSVG(prealloc.endereco);
+      barcodes.set(prealloc.endereco, barcode);
     }
-  });
+  }
 
   preallocations.forEach((prealloc) => {
     const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
@@ -438,7 +439,7 @@ function generatePreallocationWordLabels(preallocations: any[]) {
 /**
  * Gera código de barras Code 128 usando JsBarcode
  */
-function generatePreallocationBarcodeSVG(text: string): string {
+function generatePreallocationBarcodeSVG(text: string): Promise<string> {
   try {
     // Criar elemento SVG temporário
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -447,19 +448,40 @@ function generatePreallocationBarcodeSVG(text: string): string {
     JsBarcode(svg, text, {
       format: 'CODE128',
       width: 2,
-      height: 45,
+      height: 50,
       displayValue: true,
-      fontSize: 13,
+      fontSize: 14,
       margin: 5,
     });
     
-    // Retornar SVG como string
-    return svg.outerHTML;
+    // Converter SVG para Base64 PNG
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    // Definir tamanho do canvas baseado no SVG
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    // Retornar promise que resolve com Base64
+    return new Promise<string>((resolve) => {
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const base64 = canvas.toDataURL('image/png');
+        resolve(`<img src="${base64}" alt="${text}" />`);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(`<span style="font-family: monospace;">${text}</span>`);
+      };
+      img.src = url;
+    });
   } catch (error) {
     console.error('Erro ao gerar código de barras:', error);
-    // Fallback: retornar SVG simples com texto
-    return `<svg width="180" height="55" xmlns="http://www.w3.org/2000/svg">
-      <text x="90" y="30" text-anchor="middle" font-size="14" font-family="monospace">${text}</text>
-    </svg>`;
+    return Promise.resolve(`<span style="font-family: monospace;">${text}</span>`);
   }
 }
