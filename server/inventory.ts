@@ -52,12 +52,12 @@ export async function getInventoryPositions(
 
   const conditions = [];
 
-  // Filtro por tenant
+  // Filtro por tenant (usar inventory.tenantId em vez de location.tenantId)
   if (filters.tenantId !== undefined) {
     if (filters.tenantId === null) {
-      conditions.push(isNull(warehouseLocations.tenantId));
+      conditions.push(isNull(inventory.tenantId));
     } else {
-      conditions.push(eq(warehouseLocations.tenantId, filters.tenantId));
+      conditions.push(eq(inventory.tenantId, filters.tenantId));
     }
   }
 
@@ -107,7 +107,7 @@ export async function getInventoryPositions(
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
       status: inventory.status,
-      tenantId: warehouseLocations.tenantId,
+      tenantId: inventory.tenantId,
       tenantName: locationTenant.name,
       createdAt: inventory.createdAt,
       updatedAt: inventory.updatedAt,
@@ -116,7 +116,7 @@ export async function getInventoryPositions(
     .innerJoin(products, eq(inventory.productId, products.id))
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
+    .leftJoin(locationTenant, eq(inventory.tenantId, locationTenant.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(warehouseLocations.code, products.sku)
     .limit(1000);
@@ -202,7 +202,7 @@ export async function getExpiringProducts(
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
       status: inventory.status,
-      tenantId: warehouseLocations.tenantId,
+      tenantId: inventory.tenantId,
       tenantName: locationTenant.name,
       createdAt: inventory.createdAt,
       updatedAt: inventory.updatedAt,
@@ -211,7 +211,7 @@ export async function getExpiringProducts(
     .innerJoin(products, eq(inventory.productId, products.id))
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
+    .leftJoin(locationTenant, eq(inventory.tenantId, locationTenant.id))
     .where(
       and(
         lte(inventory.expiryDate, futureDate),

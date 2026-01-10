@@ -824,3 +824,13 @@
 - [x] Garantir que supplierName seja do emitente mas tenantId seja do cliente selecionado
 - [x] Adicionar JOIN com tenants na listagem para exibir nome do cliente
 - [x] Testar importação com cliente diferente do emitente
+
+
+## Fase: Corrigir Alocação e Cliente no Estoque
+- [x] Campo tenantId já existe na tabela inventory
+- [x] Atualizar query getInventoryPositions para usar inventory.tenantId
+- [x] Investigar lógica de conferência cega (alocação de endereços)
+- [x] Corrigir alocação para usar endereços do cliente correto (tenantId da ordem)
+- [x] Garantir que inventory.tenantId seja salvo com valor da ordem de recebimento (já estava correto)
+- [ ] Testar fluxo completo: importar NF-e → conferir → verificar estoque
+- [x] Criar documento de atualização da documentação
