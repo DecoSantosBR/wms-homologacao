@@ -850,3 +850,11 @@
 - [x] Adicionar PageHeader com botões "Início" e "Voltar" em /picking
 - [x] Atualizar frontend para exibir clientName em vez de customerName
 - [ ] Testar exibição correta do cliente Hapvida
+
+
+## Fase: Correção de Erro em Detalhes de Picking
+- [x] Investigar endpoint picking.getById (verificar se existe no backend)
+- [x] Identificar problema: endpoint filtrava por tenantId do usuário (admin tem tenantId=null)
+- [x] Corrigir picking.getById para admins poderem ver pedidos de qualquer cliente
+- [x] Corrigir picking.updateStatus com mesma lógica de permissões
+- [ ] Testar página /picking/:id com pedido válido

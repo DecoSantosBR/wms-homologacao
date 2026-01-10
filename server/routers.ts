@@ -1120,18 +1120,30 @@ export const appRouter = router({
       .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const tenantId = ctx.user.tenantId!;
 
-        const [order] = await db
-          .select()
-          .from(pickingOrders)
-          .where(
-            and(
-              eq(pickingOrders.id, input.id),
-              eq(pickingOrders.tenantId, tenantId)
+        // Admin pode ver qualquer pedido, usuário comum apenas do seu tenant
+        let order;
+        if (ctx.user.role === "admin") {
+          const [result] = await db
+            .select()
+            .from(pickingOrders)
+            .where(eq(pickingOrders.id, input.id))
+            .limit(1);
+          order = result;
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          const [result] = await db
+            .select()
+            .from(pickingOrders)
+            .where(
+              and(
+                eq(pickingOrders.id, input.id),
+                eq(pickingOrders.tenantId, tenantId)
+              )
             )
-          )
-          .limit(1);
+            .limit(1);
+          order = result;
+        }
 
         if (!order) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
@@ -1167,17 +1179,25 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const tenantId = ctx.user.tenantId!;
 
-        await db
-          .update(pickingOrders)
-          .set({ status: input.status })
-          .where(
-            and(
-              eq(pickingOrders.id, input.id),
-              eq(pickingOrders.tenantId, tenantId)
-            )
-          );
+        // Admin pode atualizar qualquer pedido, usuário comum apenas do seu tenant
+        if (ctx.user.role === "admin") {
+          await db
+            .update(pickingOrders)
+            .set({ status: input.status })
+            .where(eq(pickingOrders.id, input.id));
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          await db
+            .update(pickingOrders)
+            .set({ status: input.status })
+            .where(
+              and(
+                eq(pickingOrders.id, input.id),
+                eq(pickingOrders.tenantId, tenantId)
+              )
+            );
+        }
 
         return { success: true };
       }),
