@@ -810,3 +810,9 @@
 - [x] Excluir produto do estoque (não transferir) quando for Descarte
 - [x] Ocultar campo "Endereço Destino" na interface quando tipo = Descarte
 - [x] Testar fluxo completo de Descarte
+
+
+## Fase: Alterar Label de Fornecedor para Cliente
+- [x] Localizar página de Ordens de Recebimento
+- [x] Alterar label "Fornecedor" para "Cliente" na tabela
+- [x] Verificar se há outras referências a "Fornecedor" que precisam ser alteradas

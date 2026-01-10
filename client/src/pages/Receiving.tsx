@@ -218,7 +218,7 @@ export default function Receiving() {
                       />
                     </TableHead>
                     <TableHead>Número</TableHead>
-                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead>NF-e</TableHead>
                     <TableHead>Data Agendada</TableHead>
                     <TableHead>Status</TableHead>
