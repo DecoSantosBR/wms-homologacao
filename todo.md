@@ -899,3 +899,13 @@
 - [x] Adicionar informações de zona e tipo de endereço (Zona: X | Tipo: Y)
 - [x] Adicionar linha de descrição adicional (Rua, Prédio, Andar ou informações do produto)
 - [ ] Testar geração de etiquetas com novo layout
+
+
+## Fase: Implementar JsBarcode para Códigos de Barras Profissionais
+- [x] Instalar biblioteca jsbarcode via pnpm (v3.12.3)
+- [x] Importar JsBarcode em Locations.tsx e ImportPreallocationDialog.tsx
+- [x] Substituir generateBarcodeSVG por função usando JsBarcode
+- [x] Substituir generatePreallocationBarcodeSVG por função usando JsBarcode
+- [x] Configurar JsBarcode para formato Code 128 com displayValue=true
+- [x] Adicionar tratamento de erro com fallback para SVG simples
+- [ ] Testar geração de códigos de barras nas etiquetas .doc

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import JsBarcode from "jsbarcode";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
@@ -404,32 +405,30 @@ function generatePreallocationWordLabels(preallocations: any[]) {
 }
 
 /**
- * Gera código de barras em formato SVG (simplificado)
+ * Gera código de barras Code 128 usando JsBarcode
  */
 function generatePreallocationBarcodeSVG(text: string): string {
-  const barcodeWidth = 180;
-  const barcodeHeight = 35;
-  const barWidth = 2;
-  
-  let svg = `<svg width="${barcodeWidth}" height="${barcodeHeight}" xmlns="http://www.w3.org/2000/svg">`;
-  
-  // Gerar padrão de barras baseado no texto
-  let x = 10;
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
-    const pattern = charCode % 2 === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1];
+  try {
+    // Criar elemento SVG temporário
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     
-    pattern.forEach(bar => {
-      if (bar === 1) {
-        svg += `<rect x="${x}" y="0" width="${barWidth}" height="${barcodeHeight - 10}" fill="black"/>`;
-      }
-      x += barWidth;
+    // Gerar código de barras Code 128
+    JsBarcode(svg, text, {
+      format: 'CODE128',
+      width: 2,
+      height: 45,
+      displayValue: true,
+      fontSize: 13,
+      margin: 5,
     });
+    
+    // Retornar SVG como string
+    return svg.outerHTML;
+  } catch (error) {
+    console.error('Erro ao gerar código de barras:', error);
+    // Fallback: retornar SVG simples com texto
+    return `<svg width="180" height="55" xmlns="http://www.w3.org/2000/svg">
+      <text x="90" y="30" text-anchor="middle" font-size="14" font-family="monospace">${text}</text>
+    </svg>`;
   }
-  
-  // Adicionar texto abaixo do código de barras
-  svg += `<text x="${barcodeWidth / 2}" y="${barcodeHeight}" text-anchor="middle" font-size="9" font-family="monospace">${text}</text>`;
-  svg += '</svg>';
-  
-  return svg;
 }

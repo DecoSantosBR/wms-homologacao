@@ -39,6 +39,7 @@ import { trpc } from "@/lib/trpc";
 import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import JsBarcode from "jsbarcode";
 
 export default function Locations() {
   const { data: locations, isLoading } = trpc.locations.list.useQuery();
@@ -1334,33 +1335,30 @@ function generateWordLabels(locations: any[]) {
 }
 
 /**
- * Gera código de barras em formato SVG (Code 128)
+ * Gera código de barras Code 128 usando JsBarcode
  */
 function generateBarcodeSVG(text: string): string {
-  // Simplificação: gerar barras baseadas no texto
-  const barcodeWidth = 200;
-  const barcodeHeight = 40;
-  const barWidth = 2;
-  
-  let svg = `<svg width="${barcodeWidth}" height="${barcodeHeight}" xmlns="http://www.w3.org/2000/svg">`;
-  
-  // Gerar padrão de barras baseado no texto (simplificado)
-  let x = 10;
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
-    const pattern = charCode % 2 === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1];
+  try {
+    // Criar elemento SVG temporário
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     
-    pattern.forEach(bar => {
-      if (bar === 1) {
-        svg += `<rect x="${x}" y="0" width="${barWidth}" height="${barcodeHeight - 10}" fill="black"/>`;
-      }
-      x += barWidth;
+    // Gerar código de barras Code 128
+    JsBarcode(svg, text, {
+      format: 'CODE128',
+      width: 2,
+      height: 50,
+      displayValue: true,
+      fontSize: 14,
+      margin: 5,
     });
+    
+    // Retornar SVG como string
+    return svg.outerHTML;
+  } catch (error) {
+    console.error('Erro ao gerar código de barras:', error);
+    // Fallback: retornar SVG simples com texto
+    return `<svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
+      <text x="100" y="30" text-anchor="middle" font-size="16" font-family="monospace">${text}</text>
+    </svg>`;
   }
-  
-  // Adicionar texto abaixo do código de barras
-  svg += `<text x="${barcodeWidth / 2}" y="${barcodeHeight}" text-anchor="middle" font-size="10" font-family="monospace">${text}</text>`;
-  svg += '</svg>';
-  
-  return svg;
 }
