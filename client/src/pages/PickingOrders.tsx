@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/PageHeader";
 
 interface ProductItem {
   productId: number;
@@ -175,20 +176,18 @@ export default function PickingOrders() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Pedidos de Separação</h1>
-          <p className="text-muted-foreground">Gerencie e acompanhe pedidos de picking</p>
-        </div>
-
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Pedido
-            </Button>
-          </DialogTrigger>
+    <>
+      <PageHeader
+        title="Pedidos de Separação"
+        description="Gerencie e acompanhe pedidos de picking"
+        actions={
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Pedido
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Pedido de Separação</DialogTitle>
@@ -347,10 +346,12 @@ export default function PickingOrders() {
               </div>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
-      <div className="grid gap-4">
+      <div className="container mx-auto py-8">
+        <div className="grid gap-4">
         {orders && orders.length === 0 && (
           <Card className="p-8 text-center">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -375,7 +376,7 @@ export default function PickingOrders() {
                   </div>
 
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Cliente: {order.customerName || "N/A"}</p>
+                    <p>Cliente: {order.clientName || "N/A"}</p>
                     <p>
                       Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}
                     </p>
@@ -390,7 +391,8 @@ export default function PickingOrders() {
             </Card>
           </Link>
         ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

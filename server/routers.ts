@@ -982,15 +982,53 @@ export const appRouter = router({
         let orders;
         if (ctx.user.role === "admin") {
           orders = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              tenantId: pickingOrders.tenantId,
+              clientName: tenants.name, // Nome do cliente (tenant) correto
+              orderNumber: pickingOrders.orderNumber,
+              customerName: pickingOrders.customerName,
+              priority: pickingOrders.priority,
+              status: pickingOrders.status,
+              totalItems: pickingOrders.totalItems,
+              totalQuantity: pickingOrders.totalQuantity,
+              scheduledDate: pickingOrders.scheduledDate,
+              createdAt: pickingOrders.createdAt,
+              createdBy: pickingOrders.createdBy,
+              assignedTo: pickingOrders.assignedTo,
+              pickedBy: pickingOrders.pickedBy,
+              pickedAt: pickingOrders.pickedAt,
+              nfeNumber: pickingOrders.nfeNumber,
+              nfeKey: pickingOrders.nfeKey,
+            })
             .from(pickingOrders)
+            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
             .orderBy(desc(pickingOrders.createdAt))
             .limit(input.limit);
         } else {
           const tenantId = ctx.user.tenantId!;
           orders = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              tenantId: pickingOrders.tenantId,
+              clientName: tenants.name, // Nome do cliente (tenant) correto
+              orderNumber: pickingOrders.orderNumber,
+              customerName: pickingOrders.customerName,
+              priority: pickingOrders.priority,
+              status: pickingOrders.status,
+              totalItems: pickingOrders.totalItems,
+              totalQuantity: pickingOrders.totalQuantity,
+              scheduledDate: pickingOrders.scheduledDate,
+              createdAt: pickingOrders.createdAt,
+              createdBy: pickingOrders.createdBy,
+              assignedTo: pickingOrders.assignedTo,
+              pickedBy: pickingOrders.pickedBy,
+              pickedAt: pickingOrders.pickedAt,
+              nfeNumber: pickingOrders.nfeNumber,
+              nfeKey: pickingOrders.nfeKey,
+            })
             .from(pickingOrders)
+            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
             .where(eq(pickingOrders.tenantId, tenantId))
             .orderBy(desc(pickingOrders.createdAt))
             .limit(input.limit);

@@ -842,3 +842,11 @@
 - [x] Criar endereço REC-SHARED-01 com tenantId=null
 - [x] Corrigir chaves duplicadas (180002) na renderização de lista React
 - [ ] Testar conferência cega após correções
+
+
+## Fase: Correção de Bugs em Picking
+- [x] Investigar por que cliente está incorreto em Pedidos de Separação
+- [x] Corrigir query picking.list para usar JOIN com tenants (similar ao fix de Recebimento)
+- [x] Adicionar PageHeader com botões "Início" e "Voltar" em /picking
+- [x] Atualizar frontend para exibir clientName em vez de customerName
+- [ ] Testar exibição correta do cliente Hapvida
