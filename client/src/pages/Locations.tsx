@@ -40,6 +40,7 @@ import { MapPin, Pencil, Trash2, Plus, Layers, Search, ArrowUpDown, X, Printer }
 import { toast } from "sonner";
 import { useState } from "react";
 import JsBarcode from "jsbarcode";
+import { LabelPreviewDialog } from "@/components/LabelPreviewDialog";
 
 export default function Locations() {
   const { data: locations, isLoading } = trpc.locations.list.useQuery();
@@ -51,6 +52,9 @@ export default function Locations() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedLocations, setSelectedLocations] = useState<number[]>([]);
+  const [showLabelPreview, setShowLabelPreview] = useState(false);
+  const [previewLabels, setPreviewLabels] = useState<any[]>([]);
   const [editForm, setEditForm] = useState({
     zoneId: 0,
     tenantId: 0,
@@ -312,25 +316,34 @@ export default function Locations() {
   };
 
   const handlePrintLabels = () => {
-    if (selectedIds.length === 0) {
-      toast.error("Selecione pelo menos um endereço para imprimir");
+    if (selectedLocations.length === 0) {
+      toast.error("Selecione pelo menos um endereço para imprimir etiquetas");
       return;
     }
 
-    // Buscar dados completos dos endereços selecionados
-    const selectedLocations = locations?.filter((loc: any) => selectedIds.includes(loc.id)) || [];
-    
-    if (selectedLocations.length === 0) {
+    // Buscar dados dos endereços selecionados
+    const selectedLocs = locations?.filter((loc: any) =>
+      selectedLocations.includes(loc.id)
+    );
+
+    if (!selectedLocs || selectedLocs.length === 0) {
       toast.error("Nenhum endereço encontrado");
       return;
     }
 
-    // Gerar documento Word e fazer download
-    generateWordLabels(selectedLocations);
-    toast.success(`${selectedLocations.length} etiqueta(s) enviada(s) para impressão`);
+    // Abrir modal de pré-visualização
+    setPreviewLabels(selectedLocs);
+    setShowLabelPreview(true);
   };
 
-  // Filter and sort logic
+  const handleConfirmPrint = () => {
+    // Gerar documento Word e fazer download
+    generateWordLabels(previewLabels);
+    toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
+    setShowLabelPreview(false);
+    setPreviewLabels([]);
+  };
+
   const filteredAndSortedLocations = React.useMemo(() => {
     if (!locations) return [];
 
@@ -1219,6 +1232,15 @@ export default function Locations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Pré-visualização de Etiquetas */}
+      <LabelPreviewDialog
+        open={showLabelPreview}
+        onOpenChange={setShowLabelPreview}
+        labels={previewLabels}
+        onConfirm={handleConfirmPrint}
+        type="location"
+      />
     </div>
   );
 }

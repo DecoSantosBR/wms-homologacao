@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import JsBarcode from "jsbarcode";
+import { LabelPreviewDialog } from "@/components/LabelPreviewDialog";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,8 @@ export function ImportPreallocationDialog({
   const [validations, setValidations] = useState<any[] | null>(null);
   const [stats, setStats] = useState<{ totalRows: number; validRows: number; invalidRows: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showLabelPreview, setShowLabelPreview] = useState(false);
+  const [previewLabels, setPreviewLabels] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFileMutation = trpc.preallocation.processFile.useMutation({
@@ -142,12 +145,21 @@ export function ImportPreallocationDialog({
       return;
     }
 
+    // Abrir modal de pré-visualização
+    setPreviewLabels(validPreallocations);
+    setShowLabelPreview(true);
+  };
+
+  const handleConfirmPrint = () => {
     // Gerar etiquetas Word
-    generatePreallocationWordLabels(validPreallocations);
-    toast.success(`${validPreallocations.length} etiqueta(s) enviada(s) para impressão`);
+    generatePreallocationWordLabels(previewLabels);
+    toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
+    setShowLabelPreview(false);
+    setPreviewLabels([]);
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
@@ -300,6 +312,16 @@ export function ImportPreallocationDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Pré-visualização de Etiquetas */}
+    <LabelPreviewDialog
+      open={showLabelPreview}
+      onOpenChange={setShowLabelPreview}
+      labels={previewLabels}
+      onConfirm={handleConfirmPrint}
+      type="preallocation"
+    />
+    </>
   );
 }
 

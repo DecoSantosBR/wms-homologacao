@@ -909,3 +909,14 @@
 - [x] Configurar JsBarcode para formato Code 128 com displayValue=true
 - [x] Adicionar tratamento de erro com fallback para SVG simples
 - [ ] Testar geração de códigos de barras nas etiquetas .doc
+
+
+## Fase: Pré-visualização de Etiquetas
+- [x] Criar componente LabelPreviewDialog.tsx
+- [x] Implementar renderização de etiquetas no modal usando mesmo layout do .doc
+- [x] Adicionar botões "Cancelar" e "Confirmar e Baixar"
+- [x] Integrar modal em handlePrintLabels (Locations.tsx)
+- [x] Integrar modal em handlePrintLabels (ImportPreallocationDialog.tsx)
+- [x] Renderizar códigos de barras Code 128 usando JsBarcode no modal
+- [x] Suportar dois tipos de etiquetas: location e preallocation
+- [ ] Testar pré-visualização com múltiplas etiquetas
