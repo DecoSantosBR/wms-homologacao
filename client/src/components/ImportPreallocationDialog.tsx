@@ -334,7 +334,9 @@ async function printPreallocationLabelsDirectly(preallocations: any[]) {
   // Criar container temporário para impressão
   const printContainer = document.createElement('div');
   printContainer.id = 'print-prealloc-labels-container';
-  printContainer.style.display = 'none';
+  printContainer.style.position = 'fixed';
+  printContainer.style.left = '-9999px';
+  printContainer.style.top = '0';
   document.body.appendChild(printContainer);
 
   // Gerar códigos de barras antes do loop
@@ -372,18 +374,15 @@ async function printPreallocationLabelsDirectly(preallocations: any[]) {
         size: 10cm 5cm;
         margin: 0;
       }
-      body * {
-        visibility: hidden;
-      }
-      #print-prealloc-labels-container,
-      #print-prealloc-labels-container * {
-        visibility: visible;
+      body > *:not(#print-prealloc-labels-container) {
+        display: none !important;
       }
       #print-prealloc-labels-container {
-        position: absolute;
-        left: 0;
-        top: 0;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
         width: 100%;
+        display: block !important;
       }
       .print-prealloc-label {
         width: 10cm;

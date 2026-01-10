@@ -960,3 +960,18 @@
 - [x] Usar visibility:hidden para ocultar resto da página durante impressão
 - [x] Limpar container e style após impressão (timeout 1s)
 - [ ] Testar impressão em Zebra GC420T
+
+
+## Fase: Corrigir Problema de Impressão Direta
+- [ ] Investigar por que window.print() não está sendo chamado
+- [ ] Verificar se há erros no console do navegador
+- [ ] Adicionar logs para debug
+- [ ] Testar impressão direta após correção
+
+
+## Fase: Corrigir Etiquetas em Branco na Impressão
+- [x] Substituir display:none por position:fixed left:-9999px (permite renderização fora da tela)
+- [x] Ajustar CSS @media print: usar display:none em vez de visibility:hidden
+- [x] Tornar container position:static e display:block durante impressão
+- [x] Aplicar correção em printLabelsDirectly e printPreallocationLabelsDirectly
+- [ ] Testar impressão com conteúdo visível
