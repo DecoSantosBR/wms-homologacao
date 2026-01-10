@@ -929,3 +929,12 @@
 - [x] Remover declaração não utilizada de selectedLocations
 - [ ] Testar seleção múltipla de endereços
 - [ ] Testar impressão de etiquetas após seleção
+
+
+## Fase: Corrigir Código de Barras nas Etiquetas Word
+- [x] Investigar função generateBarcodeSVG em generateWordLabels
+- [x] Identificar problema: JsBarcode era chamado dentro do loop de geração HTML
+- [x] Modificar generateWordLabels para gerar códigos de barras antes do loop
+- [x] Usar Map para cachear SVG gerado e reutilizar no HTML
+- [x] Aplicar mesma correção em generatePreallocationWordLabels
+- [ ] Testar download e visualização de etiquetas com código de barras

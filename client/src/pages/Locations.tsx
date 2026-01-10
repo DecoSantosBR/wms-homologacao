@@ -1313,6 +1313,14 @@ function generateWordLabels(locations: any[]) {
     <body>
   `;
 
+  // Gerar códigos de barras antes do loop
+  const barcodes = new Map<string, string>();
+  locations.forEach((location) => {
+    if (!barcodes.has(location.code)) {
+      barcodes.set(location.code, generateBarcodeSVG(location.code));
+    }
+  });
+
   locations.forEach((location) => {
     // Determinar zona (baseado no código ou zona do location)
     const zoneName = location.zoneName || 'Armazenagem';
@@ -1327,12 +1335,14 @@ function generateWordLabels(locations: any[]) {
     if (location.level) details.push(`Andar: ${location.level}`);
     const detailsText = details.length > 0 ? details.join(' | ') : 'Endereço de Armazenagem';
 
+    const barcodeSVG = barcodes.get(location.code) || '';
+
     htmlContent += `
       <div class="label">
         <div class="title">ENDEREÇO</div>
         <div class="code">${location.code}</div>
         <div class="barcode">
-          ${generateBarcodeSVG(location.code)}
+          ${barcodeSVG}
         </div>
         <div class="info">Zona: ${zoneName} | Tipo: ${tipoText}</div>
         <div class="description">${detailsText}</div>

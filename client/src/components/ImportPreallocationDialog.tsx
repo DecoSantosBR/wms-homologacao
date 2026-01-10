@@ -394,16 +394,25 @@ function generatePreallocationWordLabels(preallocations: any[]) {
     <body>
   `;
 
+  // Gerar códigos de barras antes do loop
+  const barcodes = new Map<string, string>();
+  preallocations.forEach((prealloc) => {
+    if (!barcodes.has(prealloc.endereco)) {
+      barcodes.set(prealloc.endereco, generatePreallocationBarcodeSVG(prealloc.endereco));
+    }
+  });
+
   preallocations.forEach((prealloc) => {
     const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
     const productInfo = `Produto: ${prealloc.codInterno} | ${loteText} | Qtd: ${prealloc.quantidade}`;
+    const barcodeSVG = barcodes.get(prealloc.endereco) || '';
 
     htmlContent += `
       <div class="label">
         <div class="title">ENDEREÇO</div>
         <div class="code">${prealloc.endereco}</div>
         <div class="barcode">
-          ${generatePreallocationBarcodeSVG(prealloc.endereco)}
+          ${barcodeSVG}
         </div>
         <div class="info">Zona: Pré-Alocação | Tipo: Palete Inteiro</div>
         <div class="description">${productInfo}</div>
