@@ -834,3 +834,11 @@
 - [x] Garantir que inventory.tenantId seja salvo com valor da ordem de recebimento (já estava correto)
 - [ ] Testar fluxo completo: importar NF-e → conferir → verificar estoque
 - [x] Criar documento de atualização da documentação
+
+
+## Fase: Correção de Bugs em Recebimento
+- [x] Corrigir erro "Nenhum endereço REC encontrado" para cliente 60006
+- [x] Investigar por que busca de endereço REC não está funcionando (faltava endereço compartilhado)
+- [x] Criar endereço REC-SHARED-01 com tenantId=null
+- [x] Corrigir chaves duplicadas (180002) na renderização de lista React
+- [ ] Testar conferência cega após correções

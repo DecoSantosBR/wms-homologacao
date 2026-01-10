@@ -349,8 +349,8 @@ export default function Receiving() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    orderItems.map((item) => (
-                      <TableRow key={item.id}>
+                    orderItems.map((item, index) => (
+                      <TableRow key={`${item.id}-${index}`}>
                         <TableCell className="font-medium">
                           {item.productDescription || "-"}
                         </TableCell>

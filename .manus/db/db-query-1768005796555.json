@@ -1,0 +1,45 @@
+{
+  "query": "SELECT wl.id, wl.code, wl.tenantId, t.name as tenantName, wl.status \nFROM warehouseLocations wl \nLEFT JOIN tenants t ON wl.tenantId = t.id \nWHERE wl.code LIKE '%REC%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT wl.id, wl.code, wl.tenantId, t.name as tenantName, wl.status \nFROM warehouseLocations wl \nLEFT JOIN tenants t ON wl.tenantId = t.id \nWHERE wl.code LIKE '%REC%';",
+  "rows": [
+    {
+      "id": "150002",
+      "code": "REC-01-A",
+      "tenantId": "0",
+      "tenantName": "NULL",
+      "status": "available"
+    },
+    {
+      "id": "150003",
+      "code": "REC-01-B",
+      "tenantId": "0",
+      "tenantName": "NULL",
+      "status": "available"
+    },
+    {
+      "id": "150004",
+      "code": "REC-01-C",
+      "tenantId": "0",
+      "tenantName": "NULL",
+      "status": "available"
+    },
+    {
+      "id": "150005",
+      "code": "REC-01-D",
+      "tenantId": "0",
+      "tenantName": "NULL",
+      "status": "available"
+    },
+    {
+      "id": "150006",
+      "code": "REC-01-E",
+      "tenantId": "0",
+      "tenantName": "NULL",
+      "status": "available"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\ttenantId\ttenantName\tstatus\n150002\tREC-01-A\t0\tNULL\tavailable\n150003\tREC-01-B\t0\tNULL\tavailable\n150004\tREC-01-C\t0\tNULL\tavailable\n150005\tREC-01-D\t0\tNULL\tavailable\n150006\tREC-01-E\t0\tNULL\tavailable\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}
