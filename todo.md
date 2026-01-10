@@ -948,3 +948,15 @@
 - [x] Atualizar handleConfirmPrint em ambos componentes para async/await
 - [x] Usar XMLSerializer + Blob + Image.onload para conversão SVG → PNG
 - [ ] Testar etiquetas em Microsoft Word e LibreOffice
+
+
+## Fase: Impressão Direta de Etiquetas (Zebra GC420T)
+- [x] Substituir generateWordLabels por printLabelsDirectly
+- [x] Substituir generatePreallocationWordLabels por printPreallocationLabelsDirectly
+- [x] Criar CSS @media print com @page size 10cm x 5cm
+- [x] Adicionar espaçamento de 0,2cm entre etiquetas (margin-bottom)
+- [x] Implementar window.print() após renderizar etiquetas
+- [x] Criar container temporário com display:none para renderizar etiquetas
+- [x] Usar visibility:hidden para ocultar resto da página durante impressão
+- [x] Limpar container e style após impressão (timeout 1s)
+- [ ] Testar impressão em Zebra GC420T

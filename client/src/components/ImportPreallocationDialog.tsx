@@ -151,8 +151,8 @@ export function ImportPreallocationDialog({
   };
 
   const handleConfirmPrint = async () => {
-    // Gerar etiquetas Word
-    await generatePreallocationWordLabels(previewLabels);
+    // Imprimir etiquetas diretamente
+    await printPreallocationLabelsDirectly(previewLabels);
     toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
     setShowLabelPreview(false);
     setPreviewLabels([]);
@@ -326,73 +326,16 @@ export function ImportPreallocationDialog({
 }
 
 /**
- * Gera etiquetas em formato Word (.doc) para pré-alocações
- * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
+ * Imprime etiquetas de pré-alocação diretamente via window.print()
+ * Formato: 10cm x 5cm por etiqueta para Zebra GC420T
+ * Espaçamento: 0,2cm entre etiquetas
  */
-async function generatePreallocationWordLabels(preallocations: any[]) {
-  // Gerar HTML para documento Word
-  let htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Etiquetas de Pré-Alocação</title>
-      <style>
-        @page {
-          size: 10cm 5cm;
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: Arial, sans-serif;
-        }
-        .label {
-          width: 10cm;
-          height: 5cm;
-          padding: 0.3cm 0.5cm;
-          box-sizing: border-box;
-          page-break-after: always;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-        }
-        .label:last-child {
-          page-break-after: auto;
-        }
-        .title {
-          font-size: 14pt;
-          font-weight: bold;
-          color: #000;
-          margin-bottom: 8px;
-          letter-spacing: 2px;
-        }
-        .code {
-          font-size: 48pt;
-          font-weight: bold;
-          color: #000;
-          margin: 10px 0;
-          line-height: 1;
-        }
-        .barcode {
-          margin: 10px 0;
-        }
-        .info {
-          font-size: 10pt;
-          color: #000;
-          margin: 3px 0;
-        }
-        .description {
-          font-size: 9pt;
-          color: #000;
-          margin: 2px 0;
-        }
-      </style>
-    </head>
-    <body>
-  `;
+async function printPreallocationLabelsDirectly(preallocations: any[]) {
+  // Criar container temporário para impressão
+  const printContainer = document.createElement('div');
+  printContainer.id = 'print-prealloc-labels-container';
+  printContainer.style.display = 'none';
+  document.body.appendChild(printContainer);
 
   // Gerar códigos de barras antes do loop
   const barcodes = new Map<string, string>();
@@ -403,37 +346,108 @@ async function generatePreallocationWordLabels(preallocations: any[]) {
     }
   }
 
-  preallocations.forEach((prealloc) => {
+  // Criar etiquetas HTML
+  for (const prealloc of preallocations) {
     const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
     const productInfo = `Produto: ${prealloc.codInterno} | ${loteText} | Qtd: ${prealloc.quantidade}`;
     const barcodeSVG = barcodes.get(prealloc.endereco) || '';
 
-    htmlContent += `
-      <div class="label">
-        <div class="title">ENDEREÇO</div>
-        <div class="code">${prealloc.endereco}</div>
-        <div class="barcode">
-          ${barcodeSVG}
-        </div>
-        <div class="info">Zona: Pré-Alocação | Tipo: Palete Inteiro</div>
-        <div class="description">${productInfo}</div>
-      </div>
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'print-prealloc-label';
+    labelDiv.innerHTML = `
+      <div class="print-prealloc-label-title">ENDEREÇO</div>
+      <div class="print-prealloc-label-code">${prealloc.endereco}</div>
+      <div class="print-prealloc-label-barcode">${barcodeSVG}</div>
+      <div class="print-prealloc-label-info">Zona: Pré-Alocação | Tipo: Palete Inteiro</div>
+      <div class="print-prealloc-label-description">${productInfo}</div>
     `;
-  });
+    printContainer.appendChild(labelDiv);
+  }
 
-  htmlContent += `
-    </body>
-    </html>
+  // Adicionar CSS para impressão
+  const style = document.createElement('style');
+  style.textContent = `
+    @media print {
+      @page {
+        size: 10cm 5cm;
+        margin: 0;
+      }
+      body * {
+        visibility: hidden;
+      }
+      #print-prealloc-labels-container,
+      #print-prealloc-labels-container * {
+        visibility: visible;
+      }
+      #print-prealloc-labels-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      .print-prealloc-label {
+        width: 10cm;
+        height: 5cm;
+        padding: 0.3cm 0.5cm;
+        box-sizing: border-box;
+        page-break-after: always;
+        margin-bottom: 0.2cm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .print-prealloc-label:last-child {
+        page-break-after: auto;
+        margin-bottom: 0;
+      }
+      .print-prealloc-label-title {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 8px;
+        letter-spacing: 2px;
+      }
+      .print-prealloc-label-code {
+        font-size: 48pt;
+        font-weight: bold;
+        color: #000;
+        margin: 10px 0;
+        line-height: 1;
+      }
+      .print-prealloc-label-barcode {
+        margin: 10px 0;
+      }
+      .print-prealloc-label-barcode img {
+        max-width: 100%;
+        height: auto;
+      }
+      .print-prealloc-label-info {
+        font-size: 10pt;
+        color: #000;
+        margin: 3px 0;
+      }
+      .print-prealloc-label-description {
+        font-size: 9pt;
+        color: #000;
+        margin: 2px 0;
+      }
+    }
   `;
+  document.head.appendChild(style);
 
-  // Criar blob e fazer download como .doc
-  const blob = new Blob([htmlContent], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `etiquetas_preallocacao_${Date.now()}.doc`;
-  link.click();
-  URL.revokeObjectURL(url);
+  // Aguardar um momento para renderização
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // Abrir janela de impressão
+  window.print();
+
+  // Limpar após impressão
+  setTimeout(() => {
+    document.body.removeChild(printContainer);
+    document.head.removeChild(style);
+  }, 1000);
 }
 
 /**

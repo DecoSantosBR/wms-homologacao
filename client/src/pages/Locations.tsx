@@ -336,8 +336,8 @@ export default function Locations() {
   };
 
   const handleConfirmPrint = async () => {
-    // Gerar documento Word e fazer download
-    await generateWordLabels(previewLabels);
+    // Imprimir etiquetas diretamente
+    await printLabelsDirectly(previewLabels);
     toast.success(`${previewLabels.length} etiqueta(s) enviada(s) para impressão`);
     setShowLabelPreview(false);
     setPreviewLabels([]);
@@ -1245,73 +1245,16 @@ export default function Locations() {
 }
 
 /**
- * Gera etiquetas em formato Word (.doc)
- * Formato: 10cm x 5cm por etiqueta (replicando layout do PDF)
+ * Imprime etiquetas diretamente via window.print()
+ * Formato: 10cm x 5cm por etiqueta para Zebra GC420T
+ * Espaçamento: 0,2cm entre etiquetas
  */
-async function generateWordLabels(locations: any[]) {
-  // Gerar HTML para documento Word
-  let htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Etiquetas de Endereços</title>
-      <style>
-        @page {
-          size: 10cm 5cm;
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: Arial, sans-serif;
-        }
-        .label {
-          width: 10cm;
-          height: 5cm;
-          padding: 0.3cm 0.5cm;
-          box-sizing: border-box;
-          page-break-after: always;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-        }
-        .label:last-child {
-          page-break-after: auto;
-        }
-        .title {
-          font-size: 14pt;
-          font-weight: bold;
-          color: #000;
-          margin-bottom: 8px;
-          letter-spacing: 2px;
-        }
-        .code {
-          font-size: 48pt;
-          font-weight: bold;
-          color: #000;
-          margin: 10px 0;
-          line-height: 1;
-        }
-        .barcode {
-          margin: 10px 0;
-        }
-        .info {
-          font-size: 10pt;
-          color: #000;
-          margin: 3px 0;
-        }
-        .description {
-          font-size: 9pt;
-          color: #000;
-          margin: 2px 0;
-        }
-      </style>
-    </head>
-    <body>
-  `;
+async function printLabelsDirectly(locations: any[]) {
+  // Criar container temporário para impressão
+  const printContainer = document.createElement('div');
+  printContainer.id = 'print-labels-container';
+  printContainer.style.display = 'none';
+  document.body.appendChild(printContainer);
 
   // Gerar códigos de barras antes do loop
   const barcodes = new Map<string, string>();
@@ -1322,14 +1265,11 @@ async function generateWordLabels(locations: any[]) {
     }
   }
 
-  locations.forEach((location) => {
-    // Determinar zona (baseado no código ou zona do location)
+  // Criar etiquetas HTML
+  for (const location of locations) {
     const zoneName = location.zoneName || 'Armazenagem';
-    
-    // Determinar tipo
     const tipoText = location.locationType === 'whole' ? 'Palete Inteiro' : 'Fração';
     
-    // Montar informações adicionais
     const details = [];
     if (location.aisle) details.push(`Rua: ${location.aisle}`);
     if (location.rack) details.push(`Préd: ${location.rack}`);
@@ -1338,32 +1278,102 @@ async function generateWordLabels(locations: any[]) {
 
     const barcodeSVG = barcodes.get(location.code) || '';
 
-    htmlContent += `
-      <div class="label">
-        <div class="title">ENDEREÇO</div>
-        <div class="code">${location.code}</div>
-        <div class="barcode">
-          ${barcodeSVG}
-        </div>
-        <div class="info">Zona: ${zoneName} | Tipo: ${tipoText}</div>
-        <div class="description">${detailsText}</div>
-      </div>
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'print-label';
+    labelDiv.innerHTML = `
+      <div class="print-label-title">ENDEREÇO</div>
+      <div class="print-label-code">${location.code}</div>
+      <div class="print-label-barcode">${barcodeSVG}</div>
+      <div class="print-label-info">Zona: ${zoneName} | Tipo: ${tipoText}</div>
+      <div class="print-label-description">${detailsText}</div>
     `;
-  });
+    printContainer.appendChild(labelDiv);
+  }
 
-  htmlContent += `
-    </body>
-    </html>
+  // Adicionar CSS para impressão
+  const style = document.createElement('style');
+  style.textContent = `
+    @media print {
+      @page {
+        size: 10cm 5cm;
+        margin: 0;
+      }
+      body * {
+        visibility: hidden;
+      }
+      #print-labels-container,
+      #print-labels-container * {
+        visibility: visible;
+      }
+      #print-labels-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      .print-label {
+        width: 10cm;
+        height: 5cm;
+        padding: 0.3cm 0.5cm;
+        box-sizing: border-box;
+        page-break-after: always;
+        margin-bottom: 0.2cm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .print-label:last-child {
+        page-break-after: auto;
+        margin-bottom: 0;
+      }
+      .print-label-title {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 8px;
+        letter-spacing: 2px;
+      }
+      .print-label-code {
+        font-size: 48pt;
+        font-weight: bold;
+        color: #000;
+        margin: 10px 0;
+        line-height: 1;
+      }
+      .print-label-barcode {
+        margin: 10px 0;
+      }
+      .print-label-barcode img {
+        max-width: 100%;
+        height: auto;
+      }
+      .print-label-info {
+        font-size: 10pt;
+        color: #000;
+        margin: 3px 0;
+      }
+      .print-label-description {
+        font-size: 9pt;
+        color: #000;
+        margin: 2px 0;
+      }
+    }
   `;
+  document.head.appendChild(style);
 
-  // Criar blob e fazer download como .doc
-  const blob = new Blob([htmlContent], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `etiquetas_enderecos_${Date.now()}.doc`;
-  link.click();
-  URL.revokeObjectURL(url);
+  // Aguardar um momento para renderização
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // Abrir janela de impressão
+  window.print();
+
+  // Limpar após impressão
+  setTimeout(() => {
+    document.body.removeChild(printContainer);
+    document.head.removeChild(style);
+  }, 1000);
 }
 
 /**
