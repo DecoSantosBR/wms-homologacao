@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 export default function PickingExecution() {
   const [, params] = useRoute("/picking/:id");
@@ -32,6 +33,8 @@ export default function PickingExecution() {
   const [locationId, setLocationId] = useState("");
   const [batch, setBatch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showLocationScanner, setShowLocationScanner] = useState(false);
+  const [showBatchScanner, setShowBatchScanner] = useState(false);
 
   const { data: order, isLoading, refetch } = trpc.picking.getById.useQuery({ id: orderId });
   
@@ -358,25 +361,50 @@ export default function PickingExecution() {
               )}
 
               <div>
-                <Label>ID do Endereço *</Label>
-                <Input
-                  type="number"
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  placeholder="ID do endereço de origem"
-                />
+                <Label>Cód. do Endereço *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={locationId}
+                    onChange={(e) => setLocationId(e.target.value)}
+                    placeholder="Ex: H01-08-01"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowLocationScanner(true)}
+                  >
+                    <Scan className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Clique em uma sugestão acima ou digite manualmente
+                  Clique em uma sugestão acima, scaneie ou digite manualmente
                 </p>
               </div>
 
               <div>
                 <Label>Lote (Opcional)</Label>
-                <Input
-                  value={batch}
-                  onChange={(e) => setBatch(e.target.value)}
-                  placeholder="Número do lote"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={batch}
+                    onChange={(e) => setBatch(e.target.value)}
+                    placeholder="Número do lote"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowBatchScanner(true)}
+                    title="Scanear etiqueta do produto para extrair lote"
+                  >
+                    <Scan className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Scaneie a etiqueta do produto para extrair o lote automaticamente
+                </p>
               </div>
 
               <Button
@@ -390,6 +418,70 @@ export default function PickingExecution() {
           </Card>
         )}
       </div>
+
+      {/* Scanner de Código de Endereço */}
+      {showLocationScanner && (
+        <BarcodeScanner
+          onScan={(code) => {
+            setLocationId(code);
+            setShowLocationScanner(false);
+          }}
+          onClose={() => setShowLocationScanner(false)}
+        />
+      )}
+
+      {/* Scanner Inteligente de Lote */}
+      {showBatchScanner && (
+        <BarcodeScanner
+          onScan={(code) => {
+            const extractedBatch = extractBatchFromBarcode(code);
+            if (extractedBatch) {
+              setBatch(extractedBatch);
+              toast.success(`Lote extraído: ${extractedBatch}`);
+            } else {
+              toast.warning("Não foi possível extrair o lote. Digite manualmente.");
+            }
+            setShowBatchScanner(false);
+          }}
+          onClose={() => setShowBatchScanner(false)}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * Função para extrair número de lote de código de barras
+ * Tenta identificar padrões comuns de lote em etiquetas de produtos farmacêuticos
+ */
+function extractBatchFromBarcode(barcode: string): string | null {
+  // Padrões comuns de lote:
+  // 1. LOT seguido de números/letras: LOT12345, LOT-ABC123
+  // 2. LOTE seguido de números/letras: LOTE12345
+  // 3. L seguido de números: L12345
+  // 4. Sequência alfanumérica de 6-12 caracteres após separadores
+  
+  const patterns = [
+    /LOT[:\s-]?([A-Z0-9]{4,12})/i,
+    /LOTE[:\s-]?([A-Z0-9]{4,12})/i,
+    /\bL([0-9]{5,10})\b/,
+    /BATCH[:\s-]?([A-Z0-9]{4,12})/i,
+    /\(10\)([A-Z0-9]{6,12})/, // GS1 DataMatrix - lote
+    /\(21\)([A-Z0-9]{6,20})/, // GS1 DataMatrix - serial number (pode conter lote)
+  ];
+
+  for (const pattern of patterns) {
+    const match = barcode.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
+  // Fallback: tentar encontrar sequência alfanumérica isolada de 6-12 caracteres
+  const fallbackMatch = barcode.match(/\b([A-Z0-9]{6,12})\b/);
+  if (fallbackMatch && fallbackMatch[1]) {
+    return fallbackMatch[1];
+  }
+
+  return null;
 }

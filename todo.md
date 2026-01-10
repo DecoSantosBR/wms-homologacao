@@ -858,3 +858,12 @@
 - [x] Corrigir picking.getById para admins poderem ver pedidos de qualquer cliente
 - [x] Corrigir picking.updateStatus com mesma lógica de permissões
 - [ ] Testar página /picking/:id com pedido válido
+
+
+## Fase: Melhorias em Scanner de Picking
+- [x] Alterar label "ID do Endereço" para "Cód. do Endereço"
+- [x] Implementar scanner de código de barras para campo "Cód. Endereço" (mobile/PC)
+- [x] Reutilizar componente BarcodeScanner existente (html5-qrcode)
+- [x] Implementar scanner inteligente de Lote (extrai lote da etiqueta do produto)
+- [x] Criar função extractBatchFromBarcode com padrões GS1 e comuns
+- [ ] Testar scanner em dispositivo móvel e desktop
