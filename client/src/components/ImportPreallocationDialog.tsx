@@ -141,8 +141,8 @@ export function ImportPreallocationDialog({
       return;
     }
 
-    // Gerar etiquetas ZPL
-    generatePreallocationZPLLabels(validPreallocations);
+    // Gerar etiquetas Word
+    generatePreallocationWordLabels(validPreallocations);
     toast.success(`${validPreallocations.length} etiqueta(s) enviada(s) para impressão`);
   };
 
@@ -303,63 +303,136 @@ export function ImportPreallocationDialog({
 }
 
 /**
- * Gera etiquetas ZPL para pré-alocações (endereços)
- * Formato: 10cm x 5cm para impressoras Zebra
+ * Gera etiquetas em formato Word (.doc) para pré-alocações
+ * Formato: 10cm x 5cm por etiqueta
  */
-function generatePreallocationZPLLabels(preallocations: any[]) {
-  let zplCode = '';
+function generatePreallocationWordLabels(preallocations: any[]) {
+  // Gerar HTML para documento Word
+  let htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Etiquetas de Pré-Alocação</title>
+      <style>
+        @page {
+          size: 10cm 5cm;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+        }
+        .label {
+          width: 10cm;
+          height: 5cm;
+          padding: 0.5cm;
+          box-sizing: border-box;
+          page-break-after: always;
+          border: 1px solid #ddd;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .label:last-child {
+          page-break-after: auto;
+        }
+        .header {
+          font-size: 9pt;
+          font-weight: bold;
+          color: #666;
+          margin-bottom: 3px;
+        }
+        .code {
+          font-size: 20pt;
+          font-weight: bold;
+          margin: 3px 0;
+        }
+        .product {
+          font-size: 8pt;
+          color: #333;
+          margin: 3px 0;
+          padding-top: 3px;
+          border-top: 2px solid #000;
+        }
+        .info {
+          font-size: 7pt;
+          color: #555;
+          margin: 2px 0;
+        }
+        .barcode {
+          text-align: center;
+          margin-top: 3px;
+        }
+        .barcode svg {
+          height: 25px;
+        }
+      </style>
+    </head>
+    <body>
+  `;
 
   preallocations.forEach((prealloc) => {
-    // Início da etiqueta
-    zplCode += '^XA\n';
-    
-    // Configurações da etiqueta (10cm x 5cm = 400 x 200 dots @ 203dpi)
-    zplCode += '^PW400\n';  // Largura: 400 dots (10cm)
-    zplCode += '^LL200\n';  // Altura: 200 dots (5cm)
-    
-    // Título "ENDEREÇO"
-    zplCode += '^FO50,20^A0N,25,25^FDEndereco^FS\n';
-    
-    // Código do endereço (grande e destacado)
-    zplCode += '^FO50,50^A0N,45,45^FD' + prealloc.endereco + '^FS\n';
-    
-    // Linha separadora
-    zplCode += '^FO50,105^GB300,2,2^FS\n';
-    
-    // Informações do produto
-    zplCode += '^FO50,115^A0N,18,18^FDProduto: ' + prealloc.codInterno + '^FS\n';
-    
-    // Lote e quantidade
     const loteText = prealloc.lote ? `Lote: ${prealloc.lote}` : 'Sem lote';
-    zplCode += '^FO50,138^A0N,16,16^FD' + loteText + ' | Qtd: ' + prealloc.quantidade + '^FS\n';
-    
-    // Código de barras Code 128 (código do endereço)
-    zplCode += '^FO50,165^BCN,30,N,N,N^FD' + prealloc.endereco + '^FS\n';
-    
-    // Fim da etiqueta
-    zplCode += '^XZ\n\n';
+
+    htmlContent += `
+      <div class="label">
+        <div>
+          <div class="header">ENDEREÇO</div>
+          <div class="code">${prealloc.endereco}</div>
+          <div class="product">Produto: ${prealloc.codInterno}</div>
+          <div class="info">${loteText} | Qtd: ${prealloc.quantidade}</div>
+        </div>
+        <div class="barcode">
+          ${generatePreallocationBarcodeSVG(prealloc.endereco)}
+        </div>
+      </div>
+    `;
   });
 
-  // Criar blob e abrir janela de impressão
-  const blob = new Blob([zplCode], { type: 'text/plain' });
+  htmlContent += `
+    </body>
+    </html>
+  `;
+
+  // Criar blob e fazer download como .doc
+  const blob = new Blob([htmlContent], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `etiquetas_preallocacao_${Date.now()}.doc`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Gera código de barras em formato SVG (simplificado)
+ */
+function generatePreallocationBarcodeSVG(text: string): string {
+  const barcodeWidth = 180;
+  const barcodeHeight = 35;
+  const barWidth = 2;
   
-  // Abrir em nova janela para impressão
-  const printWindow = window.open(url, '_blank');
+  let svg = `<svg width="${barcodeWidth}" height="${barcodeHeight}" xmlns="http://www.w3.org/2000/svg">`;
   
-  if (printWindow) {
-    printWindow.onload = () => {
-      // Aguardar carregamento e abrir diálogo de impressão
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    };
-  } else {
-    // Fallback: download do arquivo ZPL
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `etiquetas_preallocacao_${Date.now()}.zpl`;
-    link.click();
-    URL.revokeObjectURL(url);
+  // Gerar padrão de barras baseado no texto
+  let x = 10;
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const pattern = charCode % 2 === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1];
+    
+    pattern.forEach(bar => {
+      if (bar === 1) {
+        svg += `<rect x="${x}" y="0" width="${barWidth}" height="${barcodeHeight - 10}" fill="black"/>`;
+      }
+      x += barWidth;
+    });
   }
+  
+  // Adicionar texto abaixo do código de barras
+  svg += `<text x="${barcodeWidth / 2}" y="${barcodeHeight}" text-anchor="middle" font-size="9" font-family="monospace">${text}</text>`;
+  svg += '</svg>';
+  
+  return svg;
 }

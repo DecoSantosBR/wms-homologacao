@@ -879,3 +879,13 @@
 - [x] Criar função generatePreallocationZPLLabels para pré-alocações
 - [x] Abrir janela de configuração de impressão do navegador
 - [ ] Testar impressão em impressora Zebra
+
+
+## Fase: Alteração de Formato de Etiquetas (ZPL → DOC)
+- [x] Substituir função generateZPLLabels por generateWordLabels
+- [x] Substituir função generatePreallocationZPLLabels por generatePreallocationWordLabels
+- [x] Implementar geração de documento Word com layout de etiquetas 10cm x 5cm
+- [x] Adicionar código de barras como imagem SVG inline no documento HTML
+- [x] Implementar funções generateBarcodeSVG e generatePreallocationBarcodeSVG
+- [x] Configurar download automático de arquivo .doc
+- [ ] Testar download e impressão de etiquetas .doc

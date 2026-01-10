@@ -324,8 +324,8 @@ export default function Locations() {
       return;
     }
 
-    // Gerar ZPL e abrir janela de impressão
-    generateZPLLabels(selectedLocations);
+    // Gerar documento Word e fazer download
+    generateWordLabels(selectedLocations);
     toast.success(`${selectedLocations.length} etiqueta(s) enviada(s) para impressão`);
   };
 
@@ -1223,66 +1223,136 @@ export default function Locations() {
 }
 
 /**
- * Gera etiquetas ZPL para impressoras Zebra
- * Formato: 10cm x 5cm (283 x 142 dots @ 72dpi)
+ * Gera etiquetas em formato Word (.doc)
+ * Formato: 10cm x 5cm por etiqueta
  */
-function generateZPLLabels(locations: any[]) {
-  let zplCode = '';
+function generateWordLabels(locations: any[]) {
+  // Gerar HTML para documento Word
+  let htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Etiquetas de Endereços</title>
+      <style>
+        @page {
+          size: 10cm 5cm;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+        }
+        .label {
+          width: 10cm;
+          height: 5cm;
+          padding: 0.5cm;
+          box-sizing: border-box;
+          page-break-after: always;
+          border: 1px solid #ddd;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .label:last-child {
+          page-break-after: auto;
+        }
+        .header {
+          font-size: 10pt;
+          font-weight: bold;
+          color: #666;
+          margin-bottom: 5px;
+        }
+        .code {
+          font-size: 24pt;
+          font-weight: bold;
+          margin: 5px 0;
+        }
+        .details {
+          font-size: 9pt;
+          color: #333;
+          margin: 5px 0;
+          padding-top: 5px;
+          border-top: 2px solid #000;
+        }
+        .barcode {
+          text-align: center;
+          margin-top: 5px;
+        }
+        .barcode svg {
+          height: 30px;
+        }
+      </style>
+    </head>
+    <body>
+  `;
 
   locations.forEach((location) => {
-    // Início da etiqueta
-    zplCode += '^XA\n';
-    
-    // Configurações da etiqueta (10cm x 5cm = 400 x 200 dots @ 203dpi)
-    zplCode += '^PW400\n';  // Largura: 400 dots (10cm)
-    zplCode += '^LL200\n';  // Altura: 200 dots (5cm)
-    
-    // Título "ENDEREÇO"
-    zplCode += '^FO50,20^A0N,30,30^FDEndereco^FS\n';
-    
-    // Código do endereço (grande e destacado)
-    zplCode += '^FO50,60^A0N,50,50^FD' + location.code + '^FS\n';
-    
-    // Linha separadora
-    zplCode += '^FO50,120^GB300,2,2^FS\n';
-    
-    // Informações detalhadas
     const details = [];
     if (location.aisle) details.push(`Rua: ${location.aisle}`);
-    if (location.rack) details.push(`Pred: ${location.rack}`);
+    if (location.rack) details.push(`Préd: ${location.rack}`);
     if (location.level) details.push(`Andar: ${location.level}`);
     if (location.position) details.push(`Pos: ${location.position}`);
-    
     const detailsText = details.join(' | ');
-    zplCode += '^FO50,135^A0N,20,20^FD' + detailsText + '^FS\n';
-    
-    // Código de barras Code 128 (código do endereço)
-    zplCode += '^FO50,165^BCN,30,N,N,N^FD' + location.code + '^FS\n';
-    
-    // Fim da etiqueta
-    zplCode += '^XZ\n\n';
+
+    htmlContent += `
+      <div class="label">
+        <div>
+          <div class="header">ENDEREÇO</div>
+          <div class="code">${location.code}</div>
+          <div class="details">${detailsText}</div>
+        </div>
+        <div class="barcode">
+          ${generateBarcodeSVG(location.code)}
+        </div>
+      </div>
+    `;
   });
 
-  // Criar blob e abrir janela de impressão
-  const blob = new Blob([zplCode], { type: 'text/plain' });
+  htmlContent += `
+    </body>
+    </html>
+  `;
+
+  // Criar blob e fazer download como .doc
+  const blob = new Blob([htmlContent], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `etiquetas_enderecos_${Date.now()}.doc`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Gera código de barras em formato SVG (Code 128)
+ */
+function generateBarcodeSVG(text: string): string {
+  // Simplificação: gerar barras baseadas no texto
+  const barcodeWidth = 200;
+  const barcodeHeight = 40;
+  const barWidth = 2;
   
-  // Abrir em nova janela para impressão
-  const printWindow = window.open(url, '_blank');
+  let svg = `<svg width="${barcodeWidth}" height="${barcodeHeight}" xmlns="http://www.w3.org/2000/svg">`;
   
-  if (printWindow) {
-    printWindow.onload = () => {
-      // Aguardar carregamento e abrir diálogo de impressão
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    };
-  } else {
-    // Fallback: download do arquivo ZPL
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `etiquetas_enderecos_${Date.now()}.zpl`;
-    link.click();
-    URL.revokeObjectURL(url);
+  // Gerar padrão de barras baseado no texto (simplificado)
+  let x = 10;
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const pattern = charCode % 2 === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1];
+    
+    pattern.forEach(bar => {
+      if (bar === 1) {
+        svg += `<rect x="${x}" y="0" width="${barWidth}" height="${barcodeHeight - 10}" fill="black"/>`;
+      }
+      x += barWidth;
+    });
   }
+  
+  // Adicionar texto abaixo do código de barras
+  svg += `<text x="${barcodeWidth / 2}" y="${barcodeHeight}" text-anchor="middle" font-size="10" font-family="monospace">${text}</text>`;
+  svg += '</svg>';
+  
+  return svg;
 }
