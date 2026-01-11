@@ -1104,3 +1104,25 @@
 - [x] Corrigir tenantId do estoque existente (UPDATE inventory SET tenantId=60006)
 - [ ] Investigar origem do problema (por que estoque foi criado com tenantId NULL)
 - [ ] Testar criação de onda com pedidos da Hapvida (botão Confirmar não responde)
+
+
+## Fase 44: Exclusão em Lote de Pedidos de Separação
+
+**Objetivo**: Implementar exclusão em lote de pedidos de separação na página /picking
+
+**Tarefas**:
+- [x] Criar endpoint backend picking.deleteMany com validações
+- [x] Adicionar checkboxes de seleção múltipla na tabela de pedidos (já existiam)
+- [x] Implementar botão "Excluir Selecionados" com contador
+- [x] Criar modal de confirmação com avisos de segurança
+- [x] Integrar mutation e atualizar listagem após exclusão
+- [x] Testar exclusão em lote com múltiplos pedidos (3 pedidos excluídos com sucesso)
+
+## Fase 45: Limpeza de Estoque e Movimentações
+
+**Objetivo**: Limpar estoque geral e excluir registros de movimentação
+
+**Tarefas**:
+- [x] Executar DELETE FROM inventory (via webdev_execute_sql)
+- [x] Executar DELETE FROM inventoryMovements (via webdev_execute_sql)
+- [x] Validar que dados foram removidos

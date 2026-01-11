@@ -1447,6 +1447,74 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    // Excluir múltiplos pedidos de separação
+    deleteMany: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        if (input.ids.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhum pedido selecionado" });
+        }
+
+        // Verificar se há pedidos em processamento (não podem ser excluídos)
+        const ordersInProgress = await db
+          .select({ id: pickingOrders.id, status: pickingOrders.status })
+          .from(pickingOrders)
+          .where(
+            and(
+              inArray(pickingOrders.id, input.ids),
+              or(
+                eq(pickingOrders.status, "picking"),
+                eq(pickingOrders.status, "checking"),
+                eq(pickingOrders.status, "packed")
+              )
+            )
+          );
+
+        if (ordersInProgress.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `${ordersInProgress.length} pedido(s) estão em processamento e não podem ser excluídos. Apenas pedidos pendentes, separados, expedidos ou cancelados podem ser removidos.`,
+          });
+        }
+
+        // Admin pode excluir qualquer pedido, usuário comum apenas do seu tenant
+        if (ctx.user.role === "admin") {
+          // Excluir itens primeiro (foreign key)
+          await db.delete(pickingOrderItems).where(inArray(pickingOrderItems.pickingOrderId, input.ids));
+          
+          // Excluir pedidos
+          await db.delete(pickingOrders).where(inArray(pickingOrders.id, input.ids));
+        } else {
+          const tenantId = ctx.user.tenantId;
+          if (!tenantId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant associado" });
+          }
+
+          // Excluir itens primeiro (foreign key)
+          const ordersToDelete = await db
+            .select({ id: pickingOrders.id })
+            .from(pickingOrders)
+            .where(
+              and(
+                inArray(pickingOrders.id, input.ids),
+                eq(pickingOrders.tenantId, tenantId)
+              )
+            );
+
+          const orderIdsToDelete = ordersToDelete.map(o => o.id);
+          
+          if (orderIdsToDelete.length > 0) {
+            await db.delete(pickingOrderItems).where(inArray(pickingOrderItems.pickingOrderId, orderIdsToDelete));
+            await db.delete(pickingOrders).where(inArray(pickingOrders.id, orderIdsToDelete));
+          }
+        }
+
+        return { success: true, deletedCount: input.ids.length };
+      }),
   }),
 });
 

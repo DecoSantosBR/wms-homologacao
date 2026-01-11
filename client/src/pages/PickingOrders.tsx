@@ -32,6 +32,7 @@ export default function PickingOrders() {
   const [unit, setUnit] = useState<"box" | "unit">("box");
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [isWaveDialogOpen, setIsWaveDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: ordersRaw, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   
@@ -62,6 +63,30 @@ export default function PickingOrders() {
       alert(`Erro ao criar pedido: ${error.message}`);
     },
   });
+
+  const deleteManyMutation = trpc.picking.deleteMany.useMutation({
+    onSuccess: (data) => {
+      refetch();
+      setSelectedOrderIds([]);
+      setIsDeleteDialogOpen(false);
+      alert(`${data.deletedCount} pedido(s) excluído(s) com sucesso!`);
+    },
+    onError: (error) => {
+      alert(`Erro ao excluir pedidos: ${error.message}`);
+    },
+  });
+
+  const handleDeleteSelected = () => {
+    if (selectedOrderIds.length === 0) {
+      alert("Nenhum pedido selecionado");
+      return;
+    }
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    deleteManyMutation.mutate({ ids: selectedOrderIds });
+  };
 
   const handleAddProduct = () => {
     if (!selectedProductId || quantity <= 0) {
@@ -197,14 +222,24 @@ export default function PickingOrders() {
         actions={
           <div className="flex gap-2">
             {selectedOrderIds.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => setIsWaveDialogOpen(true)}
-                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-              >
-                <Layers className="h-4 w-4 mr-2" />
-                Gerar Onda ({selectedOrderIds.length})
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteSelected}
+                  className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Selecionados ({selectedOrderIds.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsWaveDialogOpen(true)}
+                  className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  Gerar Onda ({selectedOrderIds.length})
+                </Button>
+              </>
             )}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -446,6 +481,41 @@ export default function PickingOrders() {
         ))}
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a excluir <strong>{selectedOrderIds.length}</strong> pedido(s) de separação.
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>⚠️ Atenção:</strong> Esta ação é irreversível. Apenas pedidos pendentes, separados, expedidos ou cancelados podem ser excluídos.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={deleteManyMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteManyMutation.isPending}
+              >
+                {deleteManyMutation.isPending ? "Excluindo..." : "Confirmar Exclusão"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
