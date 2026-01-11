@@ -1123,3 +1123,6 @@
 
 ## Bug - Botão Gerar Onda (11/01/2026)
 - [x] Corrigir botão "Gerar Onda" que não funciona em /picking
+
+## Bug - Validação de Cliente (11/01/2026)
+- [x] Corrigir validação que impede criar onda com pedidos do mesmo cliente mas destinatários diferentes

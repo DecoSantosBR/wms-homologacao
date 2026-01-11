@@ -389,11 +389,11 @@ export default function PickingOrders() {
                 </p>
                 <Button 
                   onClick={() => {
-                    // Validar que todos os pedidos são do mesmo cliente
+                    // Validar que todos os pedidos são do mesmo cliente (tenantId)
                     const selectedOrders = orders?.filter(o => selectedOrderIds.includes(o.id));
-                    const uniqueClients = new Set(selectedOrders?.map(o => o.customerName));
+                    const uniqueTenants = new Set(selectedOrders?.map(o => o.tenantId).filter(Boolean));
                     
-                    if (uniqueClients.size > 1) {
+                    if (uniqueTenants.size > 1) {
                       alert("Todos os pedidos devem ser do mesmo cliente para gerar uma onda.");
                       return;
                     }
