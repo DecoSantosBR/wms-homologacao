@@ -1125,6 +1125,8 @@ export const appRouter = router({
           }
 
           // Buscar estoque disponível (FIFO/FEFO)
+          // IMPORTANTE: Usar input.tenantId (cliente selecionado) ao invés de ctx.user.tenantId (usuário logado)
+          // Isso permite que admin crie pedidos para qualquer cliente
           const availableStock = await db
             .select({
               id: inventory.id,
@@ -1140,7 +1142,7 @@ export const appRouter = router({
             .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
             .where(
               and(
-                eq(inventory.tenantId, tenantId),
+                eq(inventory.tenantId, input.tenantId), // ← CORRIGIDO: usar cliente selecionado
                 eq(inventory.productId, item.productId),
                 eq(inventory.status, "available"),
                 sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`
