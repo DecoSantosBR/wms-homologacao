@@ -277,6 +277,8 @@ export default function StockPositions() {
                       <TableHead>Produto</TableHead>
                       <TableHead>Lote</TableHead>
                       <TableHead className="text-right">Quantidade</TableHead>
+                      <TableHead className="text-right">Qtd. Reservada</TableHead>
+                      <TableHead className="text-right">Qtd. Disponível</TableHead>
                       <TableHead>Validade</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -292,6 +294,12 @@ export default function StockPositions() {
                         <TableCell className="font-mono">{pos.batch || "-"}</TableCell>
                         <TableCell className="text-right font-bold">
                           {pos.quantity.toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 font-semibold">
+                          {pos.reservedQuantity > 0 ? pos.reservedQuantity.toLocaleString("pt-BR") : "-"}
+                        </TableCell>
+                        <TableCell className="text-right text-green-600 font-semibold">
+                          {(pos.quantity - pos.reservedQuantity).toLocaleString("pt-BR")}
                         </TableCell>
                         <TableCell>
                           {pos.expiryDate ? format(new Date(pos.expiryDate), "dd/MM/yyyy") : "-"}

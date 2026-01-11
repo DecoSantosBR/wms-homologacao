@@ -34,6 +34,7 @@ export interface InventoryPosition {
   batch: string | null;
   expiryDate: Date | null;
   quantity: number;
+  reservedQuantity: number;
   status: string;
   tenantId: number | null;
   tenantName: string | null;
@@ -106,6 +107,7 @@ export async function getInventoryPositions(
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
+      reservedQuantity: inventory.reservedQuantity,
       status: inventory.status,
       tenantId: inventory.tenantId,
       tenantName: locationTenant.name,
@@ -201,6 +203,7 @@ export async function getExpiringProducts(
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
+      reservedQuantity: inventory.reservedQuantity,
       status: inventory.status,
       tenantId: inventory.tenantId,
       tenantName: locationTenant.name,

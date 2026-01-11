@@ -1130,3 +1130,5 @@
 ## Melhorias FEFO e Bloqueio de Estoque (11/01/2026)
 - [x] Implementar FEFO multi-lote: quando não há saldo suficiente em um lote, buscar automaticamente outros lotes do mesmo SKU priorizando por vencimento
 - [x] Implementar bloqueio de estoque: ao confirmar separação de onda, marcar saldo como "reserved" até confirmação na próxima etapa
+
+- [x] Adicionar coluna "Qtd. Reservada" na tela de consulta de estoque (/stock)
