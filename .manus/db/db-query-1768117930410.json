@@ -1,9 +1,0 @@
-{
-  "query": "-- Manter produto ID 180001, deletar 180002\n-- 1. Atualizar labelAssociations\nUPDATE labelAssociations \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 2. Atualizar pickingWaveItems\nUPDATE pickingWaveItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 3. Atualizar pickingOrderItems\nUPDATE pickingOrderItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 4. Atualizar receivingOrderItems\nUPDATE receivingOrderItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 5. Atualizar inventory\nUPDATE inventory \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 6. Deletar produto duplicado\nDELETE FROM products WHERE id = 180002;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute -- Manter produto ID 180001, deletar 180002\n-- 1. Atualizar labelAssociations\nUPDATE labelAssociations \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 2. Atualizar pickingWaveItems\nUPDATE pickingWaveItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 3. Atualizar pickingOrderItems\nUPDATE pickingOrderItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 4. Atualizar receivingOrderItems\nUPDATE receivingOrderItems \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 5. Atualizar inventory\nUPDATE inventory \nSET productId = 180001 \nWHERE productId = 180002;\n\n-- 6. Deletar produto duplicado\nDELETE FROM products WHERE id = 180002;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 97
-}

@@ -8,7 +8,6 @@
 import { getDb } from "../db";
 import { inventory, inventoryMovements, products, warehouseLocations } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { updateLocationStatus } from "../movements";
 
 interface MovementSummary {
   productId: number;
@@ -178,9 +177,6 @@ export async function updateInventoryBalance(
       await db
         .delete(inventory)
         .where(eq(inventory.id, existing[0].id));
-      
-      // Atualizar status do endereço para "available" quando estoque zerar
-      await updateLocationStatus(locationId);
     } else {
       // Atualizar quantidade e validade (se fornecida)
       const updateData: any = { 

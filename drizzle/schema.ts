@@ -757,32 +757,6 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   locationIdx: index("wave_item_location_idx").on(table.locationId),
 }));
 
-/**
- * Tabela de execução de picking (conferência cega)
- * Registra cada item escaneado pelo operador durante a separação
- */
-export const pickingExecutionItems = mysqlTable("pickingExecutionItems", {
-  id: int("id").autoincrement().primaryKey(),
-  waveId: int("waveId").notNull(), // Onda de separação
-  waveItemId: int("waveItemId").notNull(), // Item da onda (pickingWaveItems)
-  locationId: int("locationId").notNull(), // Endereço de origem
-  locationCode: varchar("locationCode", { length: 50 }).notNull(),
-  labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta escaneada
-  productId: int("productId").notNull(),
-  productSku: varchar("productSku", { length: 100 }).notNull(),
-  productName: varchar("productName", { length: 255 }).notNull(),
-  batch: varchar("batch", { length: 100 }).notNull(), // Lote identificado
-  expiryDate: date("expiryDate"), // Validade do lote
-  quantity: int("quantity").notNull(), // Quantidade separada
-  pickedBy: int("pickedBy").notNull(), // Operador que separou
-  pickedAt: timestamp("pickedAt").defaultNow().notNull(),
-}, (table) => ({
-  waveIdx: index("picking_exec_wave_idx").on(table.waveId),
-  waveItemIdx: index("picking_exec_wave_item_idx").on(table.waveItemId),
-  locationIdx: index("picking_exec_location_idx").on(table.locationId),
-  labelIdx: index("picking_exec_label_idx").on(table.labelCode),
-}));
-
 // ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
@@ -821,5 +795,3 @@ export type PickingWave = typeof pickingWaves.$inferSelect;
 export type InsertPickingWave = typeof pickingWaves.$inferInsert;
 export type PickingWaveItem = typeof pickingWaveItems.$inferSelect;
 export type InsertPickingWaveItem = typeof pickingWaveItems.$inferInsert;
-export type PickingExecutionItem = typeof pickingExecutionItems.$inferSelect;
-export type InsertPickingExecutionItem = typeof pickingExecutionItems.$inferInsert;

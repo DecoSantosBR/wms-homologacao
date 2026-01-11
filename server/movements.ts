@@ -142,8 +142,7 @@ export async function registerMovement(input: RegisterMovementInput) {
         })
         .where(eq(inventory.id, toInventory[0].id));
     } else {
-      // Criar novo registro preservando o tenantId do estoque de origem
-      const tenantIdToUse = input.tenantId !== undefined ? input.tenantId : (fromInventory[0]?.tenantId || null);
+      // Criar novo registro
       await dbConn.insert(inventory).values({
         productId: input.productId,
         locationId: input.toLocationId,
@@ -151,13 +150,12 @@ export async function registerMovement(input: RegisterMovementInput) {
         quantity: input.quantity,
         expiryDate: fromInventory[0]?.expiryDate || null,
         status: "available",
-        tenantId: tenantIdToUse,
+        tenantId: input.tenantId || null,
       });
     }
   }
 
-  // Registrar movimentação no histórico preservando tenantId do estoque de origem
-  const tenantIdForMovement = input.tenantId !== undefined ? input.tenantId : (fromInventory[0]?.tenantId || null);
+  // Registrar movimentação no histórico
   await dbConn.insert(inventoryMovements).values({
     productId: input.productId,
     fromLocationId: input.fromLocationId,
@@ -167,7 +165,7 @@ export async function registerMovement(input: RegisterMovementInput) {
     movementType: input.movementType,
     notes: input.notes || null,
     performedBy: input.performedBy,
-    tenantId: tenantIdForMovement,
+    tenantId: input.tenantId || null,
     createdAt: new Date(),
   });
 
@@ -200,9 +198,8 @@ export async function registerMovement(input: RegisterMovementInput) {
 
 /**
  * Atualiza status de um endereço baseado no estoque
- * Exportada para uso em outros módulos (inventory-sync, etc.)
  */
-export async function updateLocationStatus(locationId: number) {
+async function updateLocationStatus(locationId: number) {
   const dbConn = await getDb();
   if (!dbConn) return;
 

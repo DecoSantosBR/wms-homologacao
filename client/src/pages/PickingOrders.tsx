@@ -1,19 +1,16 @@
-import { useState, useMemo } from "react";
-import { Link, useLocation } from "wouter";
+import { useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Layers } from "lucide-react";
-import { CreateWaveDialog } from "@/components/CreateWaveDialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductItem {
   productId: number;
@@ -23,7 +20,6 @@ interface ProductItem {
 }
 
 export default function PickingOrders() {
-  const [, navigate] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
@@ -32,21 +28,8 @@ export default function PickingOrders() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [unit, setUnit] = useState<"box" | "unit">("box");
-  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
-  const [isWaveDialogOpen, setIsWaveDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const { data: ordersRaw, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
-  
-  // Remover pedidos duplicados (caso a API retorne duplicatas)
-  const orders = useMemo(() => {
-    if (!ordersRaw) return [];
-    const uniqueOrders = new Map();
-    ordersRaw.forEach((order: any) => {
-      uniqueOrders.set(order.id, order);
-    });
-    return Array.from(uniqueOrders.values());
-  }, [ordersRaw]);
+  const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
@@ -65,30 +48,6 @@ export default function PickingOrders() {
       alert(`Erro ao criar pedido: ${error.message}`);
     },
   });
-
-  const deleteManyMutation = trpc.picking.deleteMany.useMutation({
-    onSuccess: (data) => {
-      refetch();
-      setSelectedOrderIds([]);
-      setIsDeleteDialogOpen(false);
-      alert(`${data.deletedCount} pedido(s) excluído(s) com sucesso!`);
-    },
-    onError: (error) => {
-      alert(`Erro ao excluir pedidos: ${error.message}`);
-    },
-  });
-
-  const handleDeleteSelected = () => {
-    if (selectedOrderIds.length === 0) {
-      alert("Nenhum pedido selecionado");
-      return;
-    }
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    deleteManyMutation.mutate({ ids: selectedOrderIds });
-  };
 
   const handleAddProduct = () => {
     if (!selectedProductId || quantity <= 0) {
@@ -219,43 +178,22 @@ export default function PickingOrders() {
   return (
     <>
       <PageHeader
-        title="Separação"
-        description="Gerencie pedidos e ondas de picking"
+        title="Pedidos de Separação"
+        description="Gerencie e acompanhe pedidos de picking"
         actions={
-          <div className="flex gap-2">
-            {selectedOrderIds.length > 0 && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleDeleteSelected}
-                  className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir Selecionados ({selectedOrderIds.length})
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsWaveDialogOpen(true)}
-                  className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                >
-                  <Layers className="h-4 w-4 mr-2" />
-                  Gerar Onda ({selectedOrderIds.length})
-                </Button>
-              </>
-            )}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Pedido
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Criar Pedido de Separação</DialogTitle>
-                </DialogHeader>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Pedido
+              </Button>
+            </DialogTrigger>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Criar Pedido de Separação</DialogTitle>
+            </DialogHeader>
 
-                <div className="space-y-6">
+            <div className="space-y-6">
               {/* Dados do Pedido */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Dados do Pedido</h3>
@@ -407,30 +345,12 @@ export default function PickingOrders() {
                 </Button>
               </div>
             </div>
-            </DialogContent>
-            </Dialog>
-          </div>
+          </DialogContent>
+          </Dialog>
         }
       />
 
-      <CreateWaveDialog
-        open={isWaveDialogOpen}
-        onOpenChange={setIsWaveDialogOpen}
-        selectedOrderIds={selectedOrderIds}
-        onSuccess={() => {
-          setSelectedOrderIds([]);
-          refetch();
-        }}
-      />
-
       <div className="container mx-auto py-8">
-        <Tabs defaultValue="pedidos" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-            <TabsTrigger value="ondas" onClick={() => navigate("/waves")}>Ondas</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="pedidos" className="space-y-6">
         <div className="grid gap-4">
         {orders && orders.length === 0 && (
           <Card className="p-8 text-center">
@@ -445,88 +365,34 @@ export default function PickingOrders() {
         )}
 
         {orders?.map((order) => (
-          <Card key={order.id} className="p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start gap-4">
-              {/* Checkbox de Seleção */}
-              <div className="pt-1">
-                <Checkbox
-                  checked={selectedOrderIds.includes(order.id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedOrderIds([...selectedOrderIds, order.id]);
-                    } else {
-                      setSelectedOrderIds(selectedOrderIds.filter((id) => id !== order.id));
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Conteúdo do Card */}
-              <Link href={`/picking/${order.id}`} className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+          <Link key={order.id} href={`/picking/${order.id}`}>
+            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
                     {getStatusBadge(order.status)}
                     {getPriorityBadge(order.priority)}
                   </div>
 
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Cliente: {order.clientName || "N/A"}</p>
-                      <p>
-                        Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}
-                      </p>
-                      <p>Criado em: {new Date(order.createdAt).toLocaleString("pt-BR")}</p>
-                    </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Cliente: {order.clientName || "N/A"}</p>
+                    <p>
+                      Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}
+                    </p>
+                    <p>Criado em: {new Date(order.createdAt).toLocaleString("pt-BR")}</p>
                   </div>
-
-                  <Button variant="outline" size="sm">
-                    Ver Detalhes
-                  </Button>
                 </div>
-              </Link>
-            </div>
-          </Card>
+
+                <Button variant="outline" size="sm">
+                  Ver Detalhes
+                </Button>
+              </div>
+            </Card>
+          </Link>
         ))}
         </div>
-          </TabsContent>
-        </Tabs>
       </div>
-
-      {/* Modal de Confirmação de Exclusão */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Você está prestes a excluir <strong>{selectedOrderIds.length}</strong> pedido(s) de separação.
-            </p>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <p className="text-sm text-yellow-800">
-                <strong>⚠️ Atenção:</strong> Esta ação é irreversível. Apenas pedidos pendentes, separados, expedidos ou cancelados podem ser excluídos.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteDialogOpen(false)}
-                disabled={deleteManyMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={deleteManyMutation.isPending}
-              >
-                {deleteManyMutation.isPending ? "Excluindo..." : "Confirmar Exclusão"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, tenants } from "../drizzle/schema";
-import { eq, and, or, isNull, inArray, sql, desc, asc } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
 
 /**
  * Lógica de geração e gerenciamento de ondas de separação (Wave Picking)
@@ -107,17 +107,14 @@ async function allocateLocations(
   for (const item of consolidatedItems) {
     // Buscar estoque disponível do produto ordenado por FIFO ou FEFO
     const orderBy = pickingRule === "FEFO" ? asc(inventory.expiryDate) : asc(inventory.createdAt);
-    
-    // Buscar estoque disponível para este produto
-    console.log(`[allocateLocations] Buscando estoque para produto ${item.productId} (${item.productName}), tenantId: ${tenantId}, quantidade necessária: ${item.totalQuantity}`);
-    
+
     const availableStock = await db
       .select({
         locationId: inventory.locationId,
         locationCode: warehouseLocations.code,
-        quantity: inventory.quantity,
         batch: inventory.batch,
         expiryDate: inventory.expiryDate,
+        quantity: inventory.quantity,
       })
       .from(inventory)
       .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
@@ -128,43 +125,30 @@ async function allocateLocations(
           sql`${inventory.quantity} > 0`
         )
       )
-      .orderBy(orderBy); // Buscar todos os endereços disponíveis
-    
-    console.log(`[allocateLocations] Encontrados ${availableStock.length} endereços com estoque:`, JSON.stringify(availableStock, null, 2));
-    
+      .orderBy(orderBy)
+      .limit(1); // Pegar primeiro endereço disponível (FIFO/FEFO)
+
     if (availableStock.length === 0) {
-      throw new Error(`Estoque insuficiente para produto ${item.productId} (${item.productName})`);
+      throw new Error(`Estoque insuficiente para produto ${item.productSku} (${item.productName})`);
     }
 
-    // Calcular estoque total disponível
-    const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.quantity, 0);
+    const location = availableStock[0];
 
-    // Verificar se quantidade total disponível é suficiente
-    if (totalAvailable < item.totalQuantity) {
+    // Verificar se quantidade disponível é suficiente
+    if (location.quantity < item.totalQuantity) {
       throw new Error(
-        `Estoque insuficiente para produto ${item.productId} (${item.productName}). ` +
-        `Disponível: ${totalAvailable}, Necessário: ${item.totalQuantity}`
+        `Estoque insuficiente no endereço ${location.locationCode} para produto ${item.productSku}. ` +
+        `Disponível: ${location.quantity}, Necessário: ${item.totalQuantity}`
       );
     }
 
-    // Alocar de múltiplos endereços se necessário (FIFO/FEFO)
-    let remainingQuantity = item.totalQuantity;
-    for (const location of availableStock) {
-      if (remainingQuantity <= 0) break;
-
-      const quantityFromThisLocation = Math.min(location.quantity, remainingQuantity);
-      
-      allocated.push({
-        ...item,
-        totalQuantity: quantityFromThisLocation,
-        locationId: location.locationId,
-        locationCode: location.locationCode!,
-        batch: location.batch || undefined,
-        expiryDate: location.expiryDate || undefined,
-      });
-
-      remainingQuantity -= quantityFromThisLocation;
-    }
+    allocated.push({
+      ...item,
+      locationId: location.locationId,
+      locationCode: location.locationCode!,
+      batch: location.batch || undefined,
+      expiryDate: location.expiryDate || undefined,
+    });
   }
 
   return allocated;

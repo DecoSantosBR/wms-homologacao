@@ -13,12 +13,14 @@ import { warehouseZones } from "../drizzle/schema";
 import { blindConferenceRouter } from "./blindConferenceRouter";
 import { stockRouter } from "./stockRouter";
 import { preallocationRouter } from "./preallocationRouter";
+import { waveRouter } from "./waveRouter";
 
 export const appRouter = router({
   system: systemRouter,
   blindConference: blindConferenceRouter,
   stock: stockRouter,
   preallocation: preallocationRouter,
+  wave: waveRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -207,25 +209,6 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        
-        // Verificar se já existe produto com mesmo SKU e tenantId
-        const existing = await db
-          .select()
-          .from(products)
-          .where(
-            and(
-              eq(products.tenantId, input.tenantId),
-              eq(products.sku, input.sku)
-            )
-          )
-          .limit(1);
-        
-        if (existing.length > 0) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: `Já existe um produto com SKU "${input.sku}" para este cliente. Use um SKU diferente ou edite o produto existente.`
-          });
-        }
         
         await db.insert(products).values(input);
         return { success: true };
@@ -1140,83 +1123,6 @@ export const appRouter = router({
         return { success: true, orderId: order.id, orderNumber };
       }),
 
-    // Buscar múltiplos pedidos por IDs (para geração de onda)
-    getByIds: protectedProcedure
-      .input(z.object({ ids: z.array(z.number()) }))
-      .query(async ({ input, ctx }) => {
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-        if (input.ids.length === 0) return [];
-
-        // Admin pode ver qualquer pedido, usuário comum apenas do seu tenant
-        let orders;
-        if (ctx.user.role === "admin") {
-          orders = await db
-            .select({
-              id: pickingOrders.id,
-              orderNumber: pickingOrders.orderNumber,
-              tenantId: pickingOrders.tenantId,
-              customerName: pickingOrders.customerName,
-              status: pickingOrders.status,
-              priority: pickingOrders.priority,
-              totalItems: pickingOrders.totalItems,
-              createdAt: pickingOrders.createdAt,
-              updatedAt: pickingOrders.updatedAt,
-            })
-            .from(pickingOrders)
-            .where(inArray(pickingOrders.id, input.ids));
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          orders = await db
-            .select({
-              id: pickingOrders.id,
-              orderNumber: pickingOrders.orderNumber,
-              tenantId: pickingOrders.tenantId,
-              customerName: pickingOrders.customerName,
-              status: pickingOrders.status,
-              priority: pickingOrders.priority,
-              totalItems: pickingOrders.totalItems,
-              createdAt: pickingOrders.createdAt,
-              updatedAt: pickingOrders.updatedAt,
-            })
-            .from(pickingOrders)
-            .where(
-              and(
-                inArray(pickingOrders.id, input.ids),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            );
-        }
-
-        // Buscar itens de todos os pedidos
-        const allOrderIds = orders.map(o => o.id);
-        if (allOrderIds.length === 0) return [];
-
-        const allItems = await db
-          .select({
-            pickingOrderId: pickingOrderItems.pickingOrderId,
-            id: pickingOrderItems.id,
-            productId: pickingOrderItems.productId,
-            productName: products.description,
-            productSku: products.sku,
-            productDescription: products.description,
-            requestedQuantity: pickingOrderItems.requestedQuantity,
-            requestedUM: pickingOrderItems.requestedUM,
-            pickedQuantity: pickingOrderItems.pickedQuantity,
-            status: pickingOrderItems.status,
-          })
-          .from(pickingOrderItems)
-          .leftJoin(products, eq(pickingOrderItems.productId, products.id))
-          .where(inArray(pickingOrderItems.pickingOrderId, allOrderIds));
-
-        // Agrupar itens por pedido
-        return orders.map(order => ({
-          ...order,
-          items: allItems.filter(item => item.pickingOrderId === order.id),
-        }));
-      }),
-
     // Buscar pedido por ID
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -1346,10 +1252,13 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        // Admin pode ver todas as ondas ou filtrar por tenantId específico
-        // Usuários normais só veem ondas do seu tenant
-        const isAdmin = ctx.user.role === "admin";
-        const filterTenantId = input?.tenantId || ctx.user.tenantId;
+        const tenantId = ctx.user.role === "admin" && input?.tenantId 
+          ? input.tenantId 
+          : ctx.user.tenantId;
+
+        if (!tenantId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
+        }
 
         let query = db
           .select({
@@ -1365,15 +1274,8 @@ export const appRouter = router({
             pickedAt: pickingWaves.pickedAt,
             createdAt: pickingWaves.createdAt,
           })
-          .from(pickingWaves);
-
-        // Aplicar filtro de tenant apenas se não for admin OU se admin especificou um tenant
-        if (!isAdmin || input?.tenantId) {
-          if (!filterTenantId) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
-          }
-          query = query.where(eq(pickingWaves.tenantId, filterTenantId));
-        }
+          .from(pickingWaves)
+          .where(eq(pickingWaves.tenantId, tenantId));
 
         const waves = await query;
 
@@ -1491,149 +1393,131 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Excluir múltiplos pedidos de separação
-    deleteMany: protectedProcedure
-      .input(z.object({ ids: z.array(z.number()) }))
-      .mutation(async ({ input, ctx }) => {
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-        if (input.ids.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhum pedido selecionado" });
-        }
-
-        // Verificar se há pedidos em processamento (não podem ser excluídos)
-        const ordersInProgress = await db
-          .select({ id: pickingOrders.id, status: pickingOrders.status })
-          .from(pickingOrders)
-          .where(
-            and(
-              inArray(pickingOrders.id, input.ids),
-              or(
-                eq(pickingOrders.status, "picking"),
-                eq(pickingOrders.status, "checking"),
-                eq(pickingOrders.status, "packed")
-              )
-            )
-          );
-
-        if (ordersInProgress.length > 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `${ordersInProgress.length} pedido(s) estão em processamento e não podem ser excluídos. Apenas pedidos pendentes, separados, expedidos ou cancelados podem ser removidos.`,
-          });
-        }
-
-        // Admin pode excluir qualquer pedido, usuário comum apenas do seu tenant
-        if (ctx.user.role === "admin") {
-          // Excluir itens primeiro (foreign key)
-          await db.delete(pickingOrderItems).where(inArray(pickingOrderItems.pickingOrderId, input.ids));
-          
-          // Excluir pedidos
-          await db.delete(pickingOrders).where(inArray(pickingOrders.id, input.ids));
-        } else {
-          const tenantId = ctx.user.tenantId;
-          if (!tenantId) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant associado" });
-          }
-
-          // Excluir itens primeiro (foreign key)
-          const ordersToDelete = await db
-            .select({ id: pickingOrders.id })
-            .from(pickingOrders)
-            .where(
-              and(
-                inArray(pickingOrders.id, input.ids),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            );
-
-          const orderIdsToDelete = ordersToDelete.map(o => o.id);
-          
-          if (orderIdsToDelete.length > 0) {
-            await db.delete(pickingOrderItems).where(inArray(pickingOrderItems.pickingOrderId, orderIdsToDelete));
-            await db.delete(pickingOrders).where(inArray(pickingOrders.id, orderIdsToDelete));
-          }
-        }
-
-        return { success: true, deletedCount: input.ids.length };
-      }),
-
-    // ========== ENDPOINTS DE EXECUÇÃO DE PICKING ==========
-
-    // Buscar ondas disponíveis para separação
-    getAvailableWaves: protectedProcedure
-      .query(async ({ ctx }) => {
-        const tenantId = ctx.user.tenantId;
-        if (!tenantId && ctx.user.role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant associado" });
-        }
-
-        const { getAvailableWaves } = await import("./pickingExecution");
-        return getAvailableWaves(tenantId);
-      }),
-
-    // Iniciar separação de uma onda
-    startWavePicking: protectedProcedure
-      .input(z.object({ waveId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        const { startWavePicking } = await import("./pickingExecution");
-        return startWavePicking(input.waveId, ctx.user.id);
-      }),
-
-    // Buscar próximo endereço para separação
-    getNextLocation: protectedProcedure
-      .input(z.object({ waveId: z.number() }))
-      .query(async ({ input }) => {
-        const { getNextLocation } = await import("./pickingExecution");
-        return getNextLocation(input.waveId);
-      }),
-
-    // Buscar itens de um endereço específico
-    getLocationItems: protectedProcedure
-      .input(z.object({ 
-        waveId: z.number(),
-        locationCode: z.string() 
-      }))
-      .query(async ({ input }) => {
-        const { getLocationItems } = await import("./pickingExecution");
-        return getLocationItems(input.waveId, input.locationCode);
-      }),
-
-    // Registrar item separado (conferência cega)
-    registerPickedItem: protectedProcedure
-      .input(z.object({
-        waveId: z.number(),
-        waveItemId: z.number(),
-        locationCode: z.string(),
-        labelCode: z.string(),
-        quantity: z.number(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const { registerPickedItem } = await import("./pickingExecution");
-        return registerPickedItem({
-          ...input,
-          userId: ctx.user.id,
-        });
-      }),
-
-    // Buscar progresso da separação
+    // Buscar progresso de execução de uma onda (proxy para wave.getPickingProgress)
     getPickingProgress: protectedProcedure
       .input(z.object({ waveId: z.number() }))
       .query(async ({ input }) => {
-        const { getPickingProgress } = await import("./pickingExecution");
-        return getPickingProgress(input.waveId);
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const [wave] = await db
+          .select()
+          .from(pickingWaves)
+          .where(eq(pickingWaves.id, input.waveId))
+          .limit(1);
+
+        if (!wave) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+        }
+
+        const items = await db
+          .select()
+          .from(pickingWaveItems)
+          .where(eq(pickingWaveItems.waveId, input.waveId));
+
+        const totalItems = items.length;
+        const completedItems = items.filter(item => item.status === "picked").length;
+        const totalQuantity = items.reduce((sum, item) => sum + item.totalQuantity, 0);
+        const pickedQuantity = items.reduce((sum, item) => sum + item.pickedQuantity, 0);
+
+        return {
+          wave,
+          items,
+          progress: {
+            totalItems,
+            completedItems,
+            totalQuantity,
+            pickedQuantity,
+            percentComplete: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
+          },
+        };
       }),
 
-    // Listar etiquetas disponíveis para picking
-    getAvailableLabels: protectedProcedure
-      .input(z.object({ 
-        productId: z.number(),
-        batch: z.string().optional(),
+    // Registrar item separado (escanear etiqueta) (proxy para wave.registerPickedItem)
+    registerPickedItem: protectedProcedure
+      .input(z.object({
+        waveId: z.number(),
+        itemId: z.number(),
+        scannedCode: z.string(),
+        quantity: z.number().min(1),
       }))
-      .query(async ({ input }) => {
-        const { getAvailableLabels } = await import("./pickingExecution");
-        return getAvailableLabels(input);
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const [waveItem] = await db
+          .select()
+          .from(pickingWaveItems)
+          .where(eq(pickingWaveItems.id, input.itemId))
+          .limit(1);
+
+        if (!waveItem) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Item da onda não encontrado" });
+        }
+
+        const scannedSku = input.scannedCode.substring(0, 7);
+        if (scannedSku !== waveItem.productSku) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" pertence ao SKU: ${scannedSku}`,
+          });
+        }
+
+        const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
+        if (newPickedQuantity > waveItem.totalQuantity) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Quantidade excede o solicitado! Solicitado: ${waveItem.totalQuantity}, já separado: ${waveItem.pickedQuantity}, tentando adicionar: ${input.quantity}`,
+          });
+        }
+
+        const isComplete = newPickedQuantity === waveItem.totalQuantity;
+        await db
+          .update(pickingWaveItems)
+          .set({
+            pickedQuantity: newPickedQuantity,
+            status: isComplete ? "picked" : "picking",
+          })
+          .where(eq(pickingWaveItems.id, input.itemId));
+
+        const allItems = await db
+          .select()
+          .from(pickingWaveItems)
+          .where(eq(pickingWaveItems.waveId, input.waveId));
+
+        const allCompleted = allItems.every(item => 
+          item.id === input.itemId ? isComplete : item.status === "picked"
+        );
+
+        if (allCompleted) {
+          await db
+            .update(pickingWaves)
+            .set({ status: "completed" })
+            .where(eq(pickingWaves.id, input.waveId));
+
+          await db
+            .update(pickingOrders)
+            .set({ status: "picked" })
+            .where(eq(pickingOrders.waveId, input.waveId));
+        } else {
+          await db
+            .update(pickingWaves)
+            .set({ status: "picking" })
+            .where(
+              and(
+                eq(pickingWaves.id, input.waveId),
+                eq(pickingWaves.status, "pending")
+              )
+            );
+        }
+
+        return {
+          success: true,
+          itemCompleted: isComplete,
+          waveCompleted: allCompleted,
+          pickedQuantity: newPickedQuantity,
+          totalQuantity: waveItem.totalQuantity,
+        };
       }),
   }),
 });
