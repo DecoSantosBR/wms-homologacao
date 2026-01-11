@@ -4,7 +4,9 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Layers } from "lucide-react";
+import { CreateWaveDialog } from "@/components/CreateWaveDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +30,8 @@ export default function PickingOrders() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [unit, setUnit] = useState<"box" | "unit">("box");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [isWaveDialogOpen, setIsWaveDialogOpen] = useState(false);
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
@@ -181,19 +185,30 @@ export default function PickingOrders() {
         title="Pedidos de Separação"
         description="Gerencie e acompanhe pedidos de picking"
         actions={
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Pedido
+          <div className="flex gap-2">
+            {selectedOrderIds.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setIsWaveDialogOpen(true)}
+                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                <Layers className="h-4 w-4 mr-2" />
+                Gerar Onda ({selectedOrderIds.length})
               </Button>
-            </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Criar Pedido de Separação</DialogTitle>
-            </DialogHeader>
+            )}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Pedido
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Criar Pedido de Separação</DialogTitle>
+                </DialogHeader>
 
-            <div className="space-y-6">
+                <div className="space-y-6">
               {/* Dados do Pedido */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Dados do Pedido</h3>
@@ -345,9 +360,20 @@ export default function PickingOrders() {
                 </Button>
               </div>
             </div>
-          </DialogContent>
-          </Dialog>
+            </DialogContent>
+            </Dialog>
+          </div>
         }
+      />
+
+      <CreateWaveDialog
+        open={isWaveDialogOpen}
+        onOpenChange={setIsWaveDialogOpen}
+        selectedOrderIds={selectedOrderIds}
+        onSuccess={() => {
+          setSelectedOrderIds([]);
+          refetch();
+        }}
       />
 
       <div className="container mx-auto py-8">
@@ -365,31 +391,48 @@ export default function PickingOrders() {
         )}
 
         {orders?.map((order) => (
-          <Link key={order.id} href={`/picking/${order.id}`}>
-            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+          <Card key={order.id} className="p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4">
+              {/* Checkbox de Seleção */}
+              <div className="pt-1">
+                <Checkbox
+                  checked={selectedOrderIds.includes(order.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedOrderIds([...selectedOrderIds, order.id]);
+                    } else {
+                      setSelectedOrderIds(selectedOrderIds.filter((id) => id !== order.id));
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Conteúdo do Card */}
+              <Link href={`/picking/${order.id}`} className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
                     {getStatusBadge(order.status)}
                     {getPriorityBadge(order.priority)}
                   </div>
 
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Cliente: {order.clientName || "N/A"}</p>
-                    <p>
-                      Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}
-                    </p>
-                    <p>Criado em: {new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Cliente: {order.clientName || "N/A"}</p>
+                      <p>
+                        Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}
+                      </p>
+                      <p>Criado em: {new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+                    </div>
                   </div>
-                </div>
 
-                <Button variant="outline" size="sm">
-                  Ver Detalhes
-                </Button>
-              </div>
-            </Card>
-          </Link>
+                  <Button variant="outline" size="sm">
+                    Ver Detalhes
+                  </Button>
+                </div>
+              </Link>
+            </div>
+          </Card>
         ))}
         </div>
       </div>

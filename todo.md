@@ -1051,3 +1051,19 @@
 - [x] Criar arquivo wave.test.ts com suite de testes
 - [ ] Ajustar testes (muitas dependências de schema - testar via interface)
 - [ ] Testar endpoints manualmente via interface
+
+
+## Fase 40: Interface de Geração de Onda (Wave Picking)
+
+**Objetivo**: Implementar modal de seleção múltipla de pedidos e prévia de consolidação em /picking
+
+**Tarefas**:
+- [x] Analisar página PickingOrders.tsx atual
+- [x] Criar componente CreateWaveDialog.tsx
+- [x] Adicionar checkboxes de seleção múltipla na tabela de pedidos
+- [x] Implementar lógica de consolidação de itens (agrupar por produto)
+- [x] Criar prévia visual da onda (produtos consolidados, quantidades somadas)
+- [x] Adicionar validações (todos pedidos do mesmo cliente)
+- [x] Integrar botão "Gerar Onda" no PageHeader
+- [x] Testar interface de seleção e modal
+- [ ] Corrigir carregamento de itens na prévia (useEffect não executando)
