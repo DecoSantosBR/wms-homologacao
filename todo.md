@@ -1120,3 +1120,6 @@
 ## Bug Crítico - Validação com 7 caracteres fixos (11/01/2026)
 - [x] Remover todas as ocorrências de validação com 7 caracteres fixos
 - [x] Garantir que fallback use tamanho correto do SKU
+
+## Bug - Botão Gerar Onda (11/01/2026)
+- [x] Corrigir botão "Gerar Onda" que não funciona em /picking

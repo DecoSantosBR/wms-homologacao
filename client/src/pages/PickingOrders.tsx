@@ -387,9 +387,23 @@ export default function PickingOrders() {
                 <p className="font-semibold">
                   {selectedOrderIds.length} pedido(s) selecionado(s)
                 </p>
-                <Button onClick={() => setIsCreateWaveDialogOpen(true)}>
+                <Button 
+                  onClick={() => {
+                    // Validar que todos os pedidos são do mesmo cliente
+                    const selectedOrders = orders?.filter(o => selectedOrderIds.includes(o.id));
+                    const uniqueClients = new Set(selectedOrders?.map(o => o.customerName));
+                    
+                    if (uniqueClients.size > 1) {
+                      alert("Todos os pedidos devem ser do mesmo cliente para gerar uma onda.");
+                      return;
+                    }
+                    
+                    createWaveMutation.mutate({ orderIds: selectedOrderIds });
+                  }}
+                  disabled={createWaveMutation.isPending}
+                >
                   <Waves className="h-4 w-4 mr-2" />
-                  Gerar Onda ({selectedOrderIds.length})
+                  {createWaveMutation.isPending ? "Gerando..." : `Gerar Onda (${selectedOrderIds.length})`}
                 </Button>
               </div>
             )}
