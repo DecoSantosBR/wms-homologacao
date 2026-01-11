@@ -1071,3 +1071,13 @@
 - [ ] Criar página de execução de onda (/picking/execute/:waveId)
 - [ ] Implementar scanner de etiquetas na execução
 - [ ] Testar fluxo completo
+
+## Fase: Página de Execução de Onda
+- [x] Criar componente WaveExecution.tsx
+- [x] Buscar dados da onda via trpc.picking.getPickingProgress
+- [x] Implementar lista de itens consolidados
+- [x] Adicionar input de scanner com auto-focus
+- [x] Implementar validação de etiqueta via trpc.picking.registerPickedItem
+- [x] Adicionar barra de progresso visual
+- [x] Exibir feedback de sucesso/erro ao escanear
+- [x] Registrar rota no App.tsx
