@@ -1126,3 +1126,16 @@
 - [x] Executar DELETE FROM inventory (via webdev_execute_sql)
 - [x] Executar DELETE FROM inventoryMovements (via webdev_execute_sql)
 - [x] Validar que dados foram removidos
+
+
+## Fase 46: Correção de TenantId na Movimentação de Endereços
+
+**Objetivo**: Corrigir perda de tenantId ao mover de REC para endereço de armazenagem
+
+**Tarefas**:
+- [x] Investigar lógica de movimentação em server/movements.ts (função registerMovement)
+- [x] Identificar onde o tenantId está sendo perdido (linha 153: tenantId: input.tenantId || null)
+- [x] Implementar correção para preservar tenantId do estoque de origem (fromInventory)
+- [x] Aplicar correção também no registro de inventoryMovements
+- [ ] Testar movimentação REC → H01-01-01 e verificar tenantId no banco
+- [ ] Validar que cliente não muda para "Compartilhado" após movimentação
