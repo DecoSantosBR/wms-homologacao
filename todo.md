@@ -1091,3 +1091,16 @@
 - [x] Corrigir validação de estoque insuficiente na criação de onda (permitir múltiplos endereços FIFO/FEFO)
 - [x] Testar interface de modal de criação de onda (abre corretamente, prévia funciona)
 - [ ] Investigar problema de onClick no botão Confirmar (não responde a cliques manuais ou programáticos)
+
+
+## Fase 43: Investigação de Erro de Estoque Insuficiente
+
+**Objetivo**: Investigar e corrigir erro "Estoque insuficiente para produto 180001 (EXTENSOFIX 60 CM)"
+
+**Tarefas**:
+- [x] Verificar estoque disponível do produto 180001 no banco de dados (560 unidades em 2 endereços)
+- [x] Analisar logs de debug da função allocateLocations (encontrados 0 endereços com estoque)
+- [x] Identificar problema de tenantId (estoque criado com tenantId=NULL ao invés de tenantId=60006 da Hapvida)
+- [x] Corrigir tenantId do estoque existente (UPDATE inventory SET tenantId=60006)
+- [ ] Investigar origem do problema (por que estoque foi criado com tenantId NULL)
+- [ ] Testar criação de onda com pedidos da Hapvida (botão Confirmar não responde)

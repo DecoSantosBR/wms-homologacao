@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, tenants } from "../drizzle/schema";
-import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, sql, desc, asc } from "drizzle-orm";
 
 /**
  * Lógica de geração e gerenciamento de ondas de separação (Wave Picking)
@@ -107,14 +107,17 @@ async function allocateLocations(
   for (const item of consolidatedItems) {
     // Buscar estoque disponível do produto ordenado por FIFO ou FEFO
     const orderBy = pickingRule === "FEFO" ? asc(inventory.expiryDate) : asc(inventory.createdAt);
-
+    
+    // Buscar estoque disponível para este produto
+    console.log(`[allocateLocations] Buscando estoque para produto ${item.productId} (${item.productName}), tenantId: ${tenantId}, quantidade necessária: ${item.totalQuantity}`);
+    
     const availableStock = await db
       .select({
         locationId: inventory.locationId,
         locationCode: warehouseLocations.code,
+        quantity: inventory.quantity,
         batch: inventory.batch,
         expiryDate: inventory.expiryDate,
-        quantity: inventory.quantity,
       })
       .from(inventory)
       .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
@@ -126,7 +129,9 @@ async function allocateLocations(
         )
       )
       .orderBy(orderBy); // Buscar todos os endereços disponíveis
-
+    
+    console.log(`[allocateLocations] Encontrados ${availableStock.length} endereços com estoque:`, JSON.stringify(availableStock, null, 2));
+    
     if (availableStock.length === 0) {
       throw new Error(`Estoque insuficiente para produto ${item.productId} (${item.productName})`);
     }
