@@ -1216,3 +1216,5 @@
 - [x] Implementar impressão de lista de picking
 - [x] Corrigir query listWaves: admins devem ver todas as ondas
 - [x] Testar fluxo completo de gerenciamento de ondas
+
+- [x] Corrigir erro "Invalid Hook Call" em WaveExecution.tsx (mover trpc.useUtils() para fora do callback)

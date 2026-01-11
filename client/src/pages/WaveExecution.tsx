@@ -38,11 +38,14 @@ export default function WaveExecution() {
     { enabled: waveId > 0 }
   );
 
+  // Hooks devem ser chamados no nível do componente, não dentro de callbacks
+  const utils = trpc.useUtils();
+
   const updateStatusMutation = trpc.picking.updateWaveStatus.useMutation({
     onSuccess: () => {
       toast.success("Status atualizado com sucesso!");
       // Invalidar cache para atualizar dados
-      trpc.useUtils().picking.getWaveById.invalidate({ id: waveId });
+      utils.picking.getWaveById.invalidate({ id: waveId });
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar status: ${error.message}`);
