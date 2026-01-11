@@ -1121,6 +1121,63 @@ export const appRouter = router({
         return { success: true, orderId: order.id, orderNumber };
       }),
 
+    // Buscar múltiplos pedidos por IDs (para geração de onda)
+    getByIds: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        if (input.ids.length === 0) return [];
+
+        // Admin pode ver qualquer pedido, usuário comum apenas do seu tenant
+        let orders;
+        if (ctx.user.role === "admin") {
+          orders = await db
+            .select()
+            .from(pickingOrders)
+            .where(inArray(pickingOrders.id, input.ids));
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          orders = await db
+            .select()
+            .from(pickingOrders)
+            .where(
+              and(
+                inArray(pickingOrders.id, input.ids),
+                eq(pickingOrders.tenantId, tenantId)
+              )
+            );
+        }
+
+        // Buscar itens de todos os pedidos
+        const allOrderIds = orders.map(o => o.id);
+        if (allOrderIds.length === 0) return [];
+
+        const allItems = await db
+          .select({
+            pickingOrderId: pickingOrderItems.pickingOrderId,
+            id: pickingOrderItems.id,
+            productId: pickingOrderItems.productId,
+            productName: products.description,
+            productSku: products.sku,
+            productDescription: products.description,
+            requestedQuantity: pickingOrderItems.requestedQuantity,
+            requestedUM: pickingOrderItems.requestedUM,
+            pickedQuantity: pickingOrderItems.pickedQuantity,
+            status: pickingOrderItems.status,
+          })
+          .from(pickingOrderItems)
+          .leftJoin(products, eq(pickingOrderItems.productId, products.id))
+          .where(inArray(pickingOrderItems.pickingOrderId, allOrderIds));
+
+        // Agrupar itens por pedido
+        return orders.map(order => ({
+          ...order,
+          items: allItems.filter(item => item.pickingOrderId === order.id),
+        }));
+      }),
+
     // Buscar pedido por ID
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))

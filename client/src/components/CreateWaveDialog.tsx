@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, Package, Layers, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Package, Layers, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateWaveDialogProps {
@@ -20,104 +20,29 @@ interface ConsolidatedItem {
   productDescription: string;
   totalQuantity: number;
   unit: string;
-  orderCount: number; // Quantos pedidos contêm este produto
-}
-
-interface OrderWithItems {
-  id: number;
-  tenantId: number;
-  clientName?: string | null;
-  orderNumber: string;
-  items?: Array<{
-    productId: number;
-    productSku?: string | null;
-    productDescription?: string | null;
-    productName?: string | null;
-    requestedQuantity?: number;
-    quantity?: number;
-    requestedUM?: string;
-    unit?: string;
-  }>;
+  orderCount: number;
 }
 
 export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSuccess }: CreateWaveDialogProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [ordersWithItems, setOrdersWithItems] = useState<OrderWithItems[]>([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(false);
-
   // Buscar detalhes dos pedidos selecionados
   const { data: orders } = trpc.picking.list.useQuery({ limit: 1000 });
+
+  // Buscar itens dos pedidos selecionados usando o novo endpoint getByIds
+  const { data: ordersWithItems, isLoading: isLoadingItems, isError: hasError } = trpc.picking.getByIds.useQuery(
+    { ids: selectedOrderIds },
+    { enabled: open && selectedOrderIds.length > 0 }
+  );
 
   const createWaveMutation = trpc.picking.createWave.useMutation({
     onSuccess: () => {
       toast.success("Onda criada com sucesso!");
       onSuccess();
       onOpenChange(false);
-      setOrdersWithItems([]);
     },
     onError: (error) => {
       toast.error(`Erro ao criar onda: ${error.message}`);
-      setIsGenerating(false);
     },
   });
-
-  // Buscar itens dos pedidos selecionados quando o modal abrir
-  useEffect(() => {
-    if (!open || selectedOrderIds.length === 0) {
-      setOrdersWithItems([]);
-      return;
-    }
-
-    const fetchOrderItems = async () => {
-      setIsLoadingItems(true);
-      console.log("[CreateWaveDialog] Iniciando busca de itens para pedidos:", selectedOrderIds);
-      
-      try {
-        // Buscar cada pedido individualmente
-        const promises = selectedOrderIds.map(async (orderId) => {
-          const url = `/api/trpc/picking.getById?input=${encodeURIComponent(JSON.stringify({ id: orderId }))}`;
-          console.log("[CreateWaveDialog] Buscando pedido:", orderId, "URL:", url);
-          
-          const response = await fetch(url);
-          console.log("[CreateWaveDialog] Response status:", response.status, "para pedido:", orderId);
-          
-          if (!response.ok) {
-            console.error("[CreateWaveDialog] Erro ao buscar pedido", orderId, "status:", response.status);
-            throw new Error(`Failed to fetch order ${orderId}`);
-          }
-          
-          const data = await response.json();
-          console.log("[CreateWaveDialog] Dados recebidos para pedido", orderId, ":", data);
-          return data.result.data;
-        });
-        
-        const results = await Promise.all(promises);
-        console.log("[CreateWaveDialog] Todos os resultados:", results);
-        
-        // Mapear resultados para formato esperado
-        const mappedResults = results.filter(Boolean).map((order: any) => ({
-          ...order,
-          items: order.items?.map((item: any) => ({
-            ...item,
-            productSku: item.productSku || item.productName,
-            productDescription: item.productDescription || item.productName,
-            quantity: item.requestedQuantity || item.quantity,
-            unit: item.requestedUM || item.unit,
-          })),
-        }));
-        
-        console.log("[CreateWaveDialog] Resultados mapeados:", mappedResults);
-        setOrdersWithItems(mappedResults as OrderWithItems[]);
-      } catch (error) {
-        console.error("[CreateWaveDialog] Erro ao buscar itens dos pedidos:", error);
-        toast.error("Erro ao carregar itens dos pedidos");
-      } finally {
-        setIsLoadingItems(false);
-      }
-    };
-
-    fetchOrderItems();
-  }, [open, selectedOrderIds]);
 
   // Filtrar pedidos selecionados
   const selectedOrders = useMemo(() => {
@@ -141,12 +66,15 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
 
   // Consolidar itens dos pedidos
   const consolidatedItems = useMemo(() => {
+    if (!ordersWithItems) return [];
+
     const itemsMap = new Map<number, ConsolidatedItem>();
 
     ordersWithItems.forEach((orderData) => {
       orderData?.items?.forEach((item: any) => {
-        const quantity = item.quantity || item.requestedQuantity || 0;
+        const quantity = item.requestedQuantity || item.quantity || 0;
         const existing = itemsMap.get(item.productId);
+        
         if (existing) {
           existing.totalQuantity += quantity;
           existing.orderCount += 1;
@@ -156,7 +84,7 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
             productSku: item.productSku || item.productName || "N/A",
             productDescription: item.productDescription || item.productName || "Produto sem descrição",
             totalQuantity: quantity,
-            unit: item.unit || item.requestedUM || "UN",
+            unit: item.requestedUM || item.unit || "UN",
             orderCount: 1,
           });
         }
@@ -172,7 +100,6 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
       return;
     }
 
-    setIsGenerating(true);
     createWaveMutation.mutate({ orderIds: selectedOrderIds });
   };
 
@@ -201,6 +128,14 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
             </span>
           </div>
 
+          {/* Erro ao carregar itens */}
+          {hasError && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-red-700">Erro ao carregar itens dos pedidos</span>
+            </div>
+          )}
+
           {/* Resumo da Onda */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -209,14 +144,22 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
             </div>
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
               <div className="text-sm text-purple-600 font-medium">Produtos Distintos</div>
-              <div className="text-2xl font-bold text-purple-700">
-                {isLoadingItems ? "..." : consolidatedItems.length}
+              <div className="text-2xl font-bold text-purple-700 flex items-center gap-2">
+                {isLoadingItems ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  consolidatedItems.length
+                )}
               </div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <div className="text-sm text-green-600 font-medium">Itens Totais</div>
-              <div className="text-2xl font-bold text-green-700">
-                {isLoadingItems ? "..." : consolidatedItems.reduce((sum, item) => sum + item.totalQuantity, 0)}
+              <div className="text-2xl font-bold text-green-700 flex items-center gap-2">
+                {isLoadingItems ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  consolidatedItems.reduce((sum, item) => sum + item.totalQuantity, 0)
+                )}
               </div>
             </div>
           </div>
@@ -253,13 +196,16 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
                 <TableBody>
                   {isLoadingItems ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500">
-                        Carregando itens...
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Carregando itens...</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : consolidatedItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500">
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                         Nenhum item para consolidar
                       </TableCell>
                     </TableRow>
@@ -283,15 +229,32 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
 
           {/* Botões de Ação */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isGenerating}>
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              disabled={createWaveMutation.isPending}
+            >
               Cancelar
             </Button>
             <Button
               onClick={handleCreateWave}
-              disabled={!clientValidation.valid || isGenerating || consolidatedItems.length === 0 || isLoadingItems}
+              disabled={
+                !clientValidation.valid || 
+                createWaveMutation.isPending || 
+                consolidatedItems.length === 0 || 
+                isLoadingItems ||
+                hasError
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isGenerating ? "Gerando Onda..." : "Confirmar e Gerar Onda"}
+              {createWaveMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando Onda...
+                </>
+              ) : (
+                "Confirmar e Gerar Onda"
+              )}
             </Button>
           </div>
         </div>

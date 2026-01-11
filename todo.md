@@ -1066,4 +1066,17 @@
 - [x] Adicionar validações (todos pedidos do mesmo cliente)
 - [x] Integrar botão "Gerar Onda" no PageHeader
 - [x] Testar interface de seleção e modal
-- [ ] Corrigir carregamento de itens na prévia (useEffect não executando)
+- [x] Corrigir carregamento de itens na prévia (resolvido na Fase 41)
+
+
+## Fase 41: Correção de Carregamento Assíncrono na Prévia de Consolidação
+
+**Objetivo**: Corrigir o problema de carregamento dos itens dos pedidos no CreateWaveDialog
+
+**Tarefas**:
+- [x] Analisar problema do useEffect (queries dinâmicas violando regras dos hooks)
+- [x] Criar endpoint getByIds no servidor para buscar múltiplos pedidos
+- [x] Refatorar CreateWaveDialog para usar getByIds com query condicional
+- [x] Testar carregamento com 1, 2 e 3 pedidos selecionados
+- [x] Verificar consolidação correta de itens (agrupamento por produto)
+- [x] Validar exibição na tabela de prévia
