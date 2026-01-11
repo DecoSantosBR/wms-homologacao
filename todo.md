@@ -1100,3 +1100,16 @@
 ## Correções Urgentes (11/01/2026 - Sessão 2)
 - [x] Corrigir seleção de pedidos em /picking (checkboxes não funcionam na aba Pedidos)
 - [x] Adicionar botão "Separar" em cada SKU listado em /picking/execute/:waveId
+
+## Correções Urgentes (11/01/2026 - Sessão 3)
+- [x] Modificar botão "Separar" para abrir modal de separação guiada
+- [x] Implementar etapa 1: Escanear endereço (validar com endereço sugerido)
+- [x] Implementar etapa 2: Escanear produto (validar SKU/lote)
+- [x] Implementar etapa 3: Informar quantidade manualmente
+- [x] Adicionar suporte a scanner por coletor e câmera em cada etapa
+
+## Ajuste de Validação de Etiquetas (11/01/2026 - Sessão 4)
+- [x] Remover validação de formato fixo de etiqueta (não deve extrair SKU dos primeiros caracteres)
+- [x] Validar etiqueta comparando com código armazenado no recebimento (conferência cega)
+- [x] Verificar se schema tem campo para armazenar código completo da etiqueta
+- [x] Ajustar modal de separação para usar código armazenado

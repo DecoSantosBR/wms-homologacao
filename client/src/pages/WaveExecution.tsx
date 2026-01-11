@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package, MapPin, Calendar, CheckCircle2, AlertCircle, Scan, Camera } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { PickingStepModal } from "@/components/PickingStepModal";
 
 export default function WaveExecution() {
   const [, params] = useRoute("/picking/execute/:id");
@@ -18,6 +19,8 @@ export default function WaveExecution() {
   const [scannedCode, setScannedCode] = useState("");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isPickingModalOpen, setIsPickingModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, refetch } = trpc.picking.getPickingProgress.useQuery(
@@ -283,9 +286,8 @@ export default function WaveExecution() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          // Focar no input do scanner para o operador escanear este item
-                          scannerInputRef.current?.focus();
-                          scannerInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          setSelectedItem(item);
+                          setIsPickingModalOpen(true);
                         }}
                       >
                         Separar
@@ -298,6 +300,29 @@ export default function WaveExecution() {
           })}
         </div>
       </div>
+
+      {/* Modal de Separação Guiada */}
+      {isPickingModalOpen && selectedItem && (
+        <PickingStepModal
+          isOpen={isPickingModalOpen}
+          onClose={() => {
+            setIsPickingModalOpen(false);
+            setSelectedItem(null);
+          }}
+          onComplete={(data) => {
+            // Registrar item separado
+            registerMutation.mutate({
+              waveId,
+              itemId: selectedItem.id,
+              scannedCode: data.productCode,
+              quantity: data.quantity,
+            });
+            setIsPickingModalOpen(false);
+            setSelectedItem(null);
+          }}
+          item={selectedItem}
+        />
+      )}
 
       {/* Scanner de Câmera */}
       {isCameraOpen && (

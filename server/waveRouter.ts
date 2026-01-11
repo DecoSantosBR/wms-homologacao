@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products, labelAssociations } from "../drizzle/schema";
 import { eq, and, inArray, desc } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { TRPCError } from "@trpc/server";
@@ -82,19 +82,55 @@ export const waveRouter = router({
 
       // Buscar itens da onda com progresso
       const items = await db
-        .select()
+        .select({
+          id: pickingWaveItems.id,
+          waveId: pickingWaveItems.waveId,
+          productId: pickingWaveItems.productId,
+          productName: pickingWaveItems.productName,
+          productSku: pickingWaveItems.productSku,
+          totalQuantity: pickingWaveItems.totalQuantity,
+          pickedQuantity: pickingWaveItems.pickedQuantity,
+          locationId: pickingWaveItems.locationId,
+          locationCode: pickingWaveItems.locationCode,
+          batch: pickingWaveItems.batch,
+          expiryDate: pickingWaveItems.expiryDate,
+          status: pickingWaveItems.status,
+          pickedAt: pickingWaveItems.pickedAt,
+          createdAt: pickingWaveItems.createdAt,
+        })
         .from(pickingWaveItems)
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
+      // Buscar labelCode para cada item (da tabela labelAssociations)
+      const itemsWithLabels = await Promise.all(
+        items.map(async (item) => {
+          if (!item.batch) return { ...item, labelCode: undefined };
+
+          // Buscar etiqueta associada ao produto/lote
+          const [label] = await db
+            .select({ labelCode: labelAssociations.labelCode })
+            .from(labelAssociations)
+            .where(
+              and(
+                eq(labelAssociations.productId, item.productId),
+                eq(labelAssociations.batch, item.batch)
+              )
+            )
+            .limit(1);
+
+          return { ...item, labelCode: label?.labelCode };
+        })
+      );
+
       // Calcular progresso
-      const totalItems = items.length;
-      const completedItems = items.filter(item => item.status === "picked").length;
-      const totalQuantity = items.reduce((sum, item) => sum + item.totalQuantity, 0);
-      const pickedQuantity = items.reduce((sum, item) => sum + item.pickedQuantity, 0);
+      const totalItems = itemsWithLabels.length;
+      const completedItems = itemsWithLabels.filter(item => item.status === "picked").length;
+      const totalQuantity = itemsWithLabels.reduce((sum, item) => sum + item.totalQuantity, 0);
+      const pickedQuantity = itemsWithLabels.reduce((sum, item) => sum + item.pickedQuantity, 0);
 
       return {
         wave,
-        items,
+        items: itemsWithLabels,
         progress: {
           totalItems,
           completedItems,
