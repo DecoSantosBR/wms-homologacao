@@ -4,13 +4,14 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductItem {
   productId: number;
@@ -20,6 +21,7 @@ interface ProductItem {
 }
 
 export default function PickingOrders() {
+  const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
@@ -30,6 +32,7 @@ export default function PickingOrders() {
   const [unit, setUnit] = useState<"box" | "unit">("box");
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
+  const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
@@ -351,7 +354,20 @@ export default function PickingOrders() {
       />
 
       <div className="container mx-auto py-8">
-        <div className="grid gap-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "orders" | "waves")}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="orders" className="gap-2">
+              <Package className="h-4 w-4" />
+              Pedidos
+            </TabsTrigger>
+            <TabsTrigger value="waves" className="gap-2">
+              <Waves className="h-4 w-4" />
+              Ondas
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="orders">
+            <div className="grid gap-4">
         {orders && orders.length === 0 && (
           <Card className="p-8 text-center">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -391,7 +407,54 @@ export default function PickingOrders() {
             </Card>
           </Link>
         ))}
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="waves">
+            <div className="grid gap-4">
+              {wavesLoading && (
+                <p className="text-muted-foreground">Carregando ondas...</p>
+              )}
+
+              {waves && waves.length === 0 && (
+                <Card className="p-8 text-center">
+                  <Waves className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma onda encontrada</h3>
+                  <p className="text-muted-foreground mb-4">Agrupe múltiplos pedidos do mesmo cliente em uma onda</p>
+                  <Button disabled>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Gerar Onda (em breve)
+                  </Button>
+                </Card>
+              )}
+
+              {waves?.map((wave: any) => (
+                <Link key={wave.id} href={`/picking/execute/${wave.id}`}>
+                  <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold">{wave.waveNumber}</h3>
+                          {getStatusBadge(wave.status)}
+                        </div>
+
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>Pedidos: {wave.totalOrders} | Itens: {wave.totalItems}</p>
+                          <p>Quantidade Total: {wave.totalQuantity}</p>
+                          <p>Criado em: {new Date(wave.createdAt).toLocaleString("pt-BR")}</p>
+                        </div>
+                      </div>
+
+                      <Button variant="outline" size="sm">
+                        Executar
+                      </Button>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

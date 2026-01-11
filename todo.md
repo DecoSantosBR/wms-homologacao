@@ -1058,3 +1058,12 @@
 - [x] Implementar procedure backend picking.registerPickedItem  
 - [ ] Criar interface de execução de onda com scanner de etiquetas
 - [ ] Testar fluxo completo de execução de onda
+
+## Fase: Interface de Ondas de Picking
+- [x] Adicionar componente Tabs na página PickingOrders.tsx
+- [x] Implementar aba "Pedidos" com listagem existente
+- [x] Implementar aba "Ondas" com listagem de ondas criadas
+- [ ] Criar modal de geração de onda com seleção de pedidos
+- [ ] Criar página de execução de onda (/picking/execute/:waveId)
+- [ ] Implementar scanner de etiquetas na execução
+- [ ] Testar fluxo completo
