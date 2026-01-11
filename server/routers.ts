@@ -1539,6 +1539,72 @@ export const appRouter = router({
 
         return { success: true, deletedCount: input.ids.length };
       }),
+
+    // ========== ENDPOINTS DE EXECUÇÃO DE PICKING ==========
+
+    // Buscar ondas disponíveis para separação
+    getAvailableWaves: protectedProcedure
+      .query(async ({ ctx }) => {
+        const tenantId = ctx.user.tenantId;
+        if (!tenantId && ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant associado" });
+        }
+
+        const { getAvailableWaves } = await import("./pickingExecution");
+        return getAvailableWaves(tenantId);
+      }),
+
+    // Iniciar separação de uma onda
+    startWavePicking: protectedProcedure
+      .input(z.object({ waveId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const { startWavePicking } = await import("./pickingExecution");
+        return startWavePicking(input.waveId, ctx.user.id);
+      }),
+
+    // Buscar próximo endereço para separação
+    getNextLocation: protectedProcedure
+      .input(z.object({ waveId: z.number() }))
+      .query(async ({ input }) => {
+        const { getNextLocation } = await import("./pickingExecution");
+        return getNextLocation(input.waveId);
+      }),
+
+    // Buscar itens de um endereço específico
+    getLocationItems: protectedProcedure
+      .input(z.object({ 
+        waveId: z.number(),
+        locationCode: z.string() 
+      }))
+      .query(async ({ input }) => {
+        const { getLocationItems } = await import("./pickingExecution");
+        return getLocationItems(input.waveId, input.locationCode);
+      }),
+
+    // Registrar item separado (conferência cega)
+    registerPickedItem: protectedProcedure
+      .input(z.object({
+        waveId: z.number(),
+        waveItemId: z.number(),
+        locationCode: z.string(),
+        labelCode: z.string(),
+        quantity: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { registerPickedItem } = await import("./pickingExecution");
+        return registerPickedItem({
+          ...input,
+          userId: ctx.user.id,
+        });
+      }),
+
+    // Buscar progresso da separação
+    getPickingProgress: protectedProcedure
+      .input(z.object({ waveId: z.number() }))
+      .query(async ({ input }) => {
+        const { getPickingProgress } = await import("./pickingExecution");
+        return getPickingProgress(input.waveId);
+      }),
   }),
 });
 

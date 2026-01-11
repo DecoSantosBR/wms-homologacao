@@ -80,7 +80,7 @@ export default function Home() {
         "Separar itens",
         "Confirmar picking"
       ],
-      href: "/picking"
+      href: "/picking/execute"
     },
     {
       title: "Expedição",

@@ -14,6 +14,8 @@ import PickingOrders from "./pages/PickingOrders";
 import PickingExecution from "./pages/PickingExecution";
 import Waves from "./pages/Waves";
 import WaveExecution from "./pages/WaveExecution";
+import PickingExecute from "./pages/PickingExecute";
+import PickingExecuteWave from "./pages/PickingExecuteWave";
 import Inventory from "./pages/Inventory";
 import Cadastros from "./pages/Cadastros";
 import Users from "./pages/Users";
@@ -35,6 +37,8 @@ function Router() {
       <Route path={"/picking/:id"} component={PickingExecution} />
       <Route path={"/waves"} component={Waves} />
       <Route path={"/waves/:id"} component={WaveExecution} />
+      <Route path={"/picking/execute"} component={PickingExecute} />
+      <Route path={"/picking/execute/:id"} component={PickingExecuteWave} />
       <Route path={"/separacao"} component={Picking} />
       <Route path={"/inventory"} component={Inventory} />
       <Route path={"/cadastros"} component={Cadastros} />

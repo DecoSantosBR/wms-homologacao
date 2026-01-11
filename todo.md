@@ -1218,3 +1218,40 @@
 - [x] Testar fluxo completo de gerenciamento de ondas
 
 - [x] Corrigir erro "Invalid Hook Call" em WaveExecution.tsx (mover trpc.useUtils() para fora do callback)
+
+## Fase 51: Interface de Execução de Picking com Scanner
+
+- [ ] Criar endpoints para execução de picking (iniciar, registrar item separado, finalizar endereço)
+- [ ] Implementar tela de seleção de onda para operador (/picking/execute)
+- [ ] Criar interface de separação por endereço com scanner de código de barras
+- [ ] Implementar conferência cega (scanner de produto, lote, quantidade)
+- [ ] Adicionar navegação entre endereços da OS
+- [ ] Implementar finalização e envio para Stage
+- [ ] Testar fluxo completo de separação
+
+## Fase 51: Implementação de Execução de Picking com Scanner
+**Objetivo**: Implementar interface completa de execução de picking com scanner de código de barras
+**Tarefas**:
+- [x] Criar tabela pickingExecutionItems para registrar conferência cega
+- [x] Implementar endpoints de execução (getAvailableWaves, startWavePicking, getNextLocation, etc.)
+- [x] Criar página PickingExecute.tsx (seleção de onda)
+- [x] Criar página PickingExecuteWave.tsx (execução com scanner)
+- [x] Implementar conferência cega (scan de endereço e produto)
+- [x] Adicionar rotas no App.tsx
+- [x] Atualizar Home.tsx com link para /picking/execute
+- [ ] Ajustar frontend para exibir ondas disponíveis (query travando)
+- [ ] Testar fluxo completo de separação
+
+**Implementado**:
+- ✅ Backend completo (pickingExecution.ts com todas as funções)
+- ✅ Endpoints tRPC (getAvailableWaves, startWavePicking, getNextLocation, getLocationItems, registerPickedItem, getPickingProgress)
+- ✅ Interface de seleção de onda
+- ✅ Interface de execução com scanner
+- ✅ Conferência cega (valida produto, lote, quantidade)
+- ✅ Atualização automática de progresso
+- ✅ Navegação entre endereços
+- ✅ Finalização automática quando onda completa
+
+**Pendente**:
+- 🔧 Ajustar query getAvailableWaves no frontend (travando em loading)
+- 🔧 Testar fluxo end-to-end com dados reais
