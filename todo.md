@@ -1268,3 +1268,23 @@ Para garantir que nunca sejam perdidas:
 - [x] Adicionar input no formulário
 - [x] Exibir em listagens e detalhes
 - [x] Testar funcionalidade
+
+
+## Fase IMPORTAÇÃO DE PEDIDOS - 11/01/2026
+- [ ] Criar template Excel de importação de pedidos
+- [ ] Implementar endpoint backend picking.importOrders
+- [ ] Validar dados (cliente, produto, unidade)
+- [ ] Agrupar itens por número do pedido
+- [ ] Criar modal de upload no frontend
+- [ ] Exibir preview de resultados (sucessos e erros)
+- [ ] Testar importação com múltiplos pedidos
+
+
+## Status da Fase IMPORTAÇÃO DE PEDIDOS - 11/01/2026
+- [x] Criar template Excel de importação de pedidos
+- [x] Implementar endpoint backend picking.importOrders
+- [x] Validar dados (cliente, produto, unidade)
+- [x] Agrupar itens por número do pedido
+- [x] Criar modal de upload no frontend
+- [x] Exibir preview de resultados (sucessos e erros)
+- [ ] Testar importação com múltiplos pedidos

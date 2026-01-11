@@ -1911,6 +1911,320 @@ export const appRouter = router({
           totalQuantity: waveItem.totalQuantity,
         };
       }),
+
+    // Importar pedidos via Excel
+    importOrders: protectedProcedure
+      .input(
+        z.object({
+          fileData: z.string(), // Base64 do arquivo Excel
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        try {
+          // Decodificar base64 e processar Excel
+          const buffer = Buffer.from(input.fileData, 'base64');
+          const xlsx = await import('xlsx');
+          const workbook = xlsx.read(buffer, { type: 'buffer' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows: any[] = xlsx.utils.sheet_to_json(sheet);
+
+          if (rows.length === 0) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Planilha vazia" });
+          }
+
+          const results = {
+            success: [] as any[],
+            errors: [] as any[],
+          };
+
+          // Agrupar por número do pedido
+          const orderGroups = new Map<string, any[]>();
+          
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rowNum = i + 2; // +2 porque linha 1 é cabeçalho e array começa em 0
+
+            // Validar campos obrigatórios
+            if (!row['Nº do Pedido']) {
+              results.errors.push({ linha: rowNum, erro: 'Nº do Pedido é obrigatório' });
+              continue;
+            }
+            if (!row['Cliente']) {
+              results.errors.push({ linha: rowNum, erro: 'Cliente é obrigatório' });
+              continue;
+            }
+            if (!row['Destinatário']) {
+              results.errors.push({ linha: rowNum, erro: 'Destinatário é obrigatório' });
+              continue;
+            }
+            if (!row['Cód. do Produto']) {
+              results.errors.push({ linha: rowNum, erro: 'Cód. do Produto é obrigatório' });
+              continue;
+            }
+            if (!row['Quantidade'] || row['Quantidade'] <= 0) {
+              results.errors.push({ linha: rowNum, erro: 'Quantidade deve ser maior que zero' });
+              continue;
+            }
+            if (!row['Unidade de Medida']) {
+              results.errors.push({ linha: rowNum, erro: 'Unidade de Medida é obrigatória' });
+              continue;
+            }
+
+            const orderNumber = String(row['Nº do Pedido']).trim();
+            if (!orderGroups.has(orderNumber)) {
+              orderGroups.set(orderNumber, []);
+            }
+            orderGroups.get(orderNumber)!.push({ ...row, rowNum });
+          }
+
+          // Processar cada pedido
+          for (const [orderNumber, items] of Array.from(orderGroups.entries())) {
+            try {
+              const firstItem = items[0];
+              const clientName = String(firstItem['Cliente']).trim();
+              const customerName = String(firstItem['Destinatário']).trim();
+
+              // Buscar cliente (tenant) por nome
+              const [tenant] = await db
+                .select()
+                .from(tenants)
+                .where(sql`LOWER(${tenants.name}) = LOWER(${clientName})`)
+                .limit(1);
+
+              if (!tenant) {
+                results.errors.push({
+                  pedido: orderNumber,
+                  erro: `Cliente "${clientName}" não encontrado no sistema`,
+                });
+                continue;
+              }
+
+              // Validar permissões
+              if (ctx.user.role !== "admin" && ctx.user.tenantId !== tenant.id) {
+                results.errors.push({
+                  pedido: orderNumber,
+                  erro: "Você não tem permissão para criar pedidos para este cliente",
+                });
+                continue;
+              }
+
+              // Processar itens do pedido
+              const orderItems: Array<{
+                productId: number;
+                requestedQuantity: number;
+                requestedUnit: "box" | "unit" | "pallet";
+              }> = [];
+
+              let hasItemError = false;
+              for (const item of items) {
+                const productCode = String(item['Cód. do Produto']).trim();
+                const quantity = Number(item['Quantidade']);
+                const unit = String(item['Unidade de Medida']).toLowerCase().trim();
+
+                // Buscar produto por SKU
+                const [product] = await db
+                  .select()
+                  .from(products)
+                  .where(
+                    and(
+                      eq(products.tenantId, tenant.id),
+                      sql`LOWER(${products.sku}) = LOWER(${productCode})`
+                    )
+                  )
+                  .limit(1);
+
+                if (!product) {
+                  results.errors.push({
+                    pedido: orderNumber,
+                    linha: item.rowNum,
+                    erro: `Produto "${productCode}" não encontrado para o cliente ${clientName}`,
+                  });
+                  hasItemError = true;
+                  break;
+                }
+
+                // Validar unidade de medida
+                let requestedUnit: "box" | "unit" | "pallet";
+                if (unit === "caixa" || unit === "box") {
+                  requestedUnit = "box";
+                } else if (unit === "unidade" || unit === "unit" || unit === "un") {
+                  requestedUnit = "unit";
+                } else if (unit === "pallet" || unit === "palete") {
+                  requestedUnit = "pallet";
+                } else {
+                  results.errors.push({
+                    pedido: orderNumber,
+                    linha: item.rowNum,
+                    erro: `Unidade de medida inválida: "${item['Unidade de Medida']}". Use: caixa, unidade ou pallet`,
+                  });
+                  hasItemError = true;
+                  break;
+                }
+
+                orderItems.push({
+                  productId: product.id,
+                  requestedQuantity: quantity,
+                  requestedUnit,
+                });
+              }
+
+              if (hasItemError) {
+                continue;
+              }
+
+              // Criar pedido usando a mesma lógica do endpoint create
+              const generatedOrderNumber = `PK${Date.now()}`;
+
+              // Validar estoque antes de criar
+              for (const item of orderItems) {
+                const availableStock = await db
+                  .select({
+                    availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+                  })
+                  .from(inventory)
+                  .where(
+                    and(
+                      eq(inventory.tenantId, tenant.id),
+                      eq(inventory.productId, item.productId),
+                      eq(inventory.status, "available"),
+                      sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`
+                    )
+                  );
+
+                const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+
+                if (totalAvailable < item.requestedQuantity) {
+                  const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+                  results.errors.push({
+                    pedido: orderNumber,
+                    erro: `Estoque insuficiente para produto ${product?.sku}. Disponível: ${totalAvailable}, Solicitado: ${item.requestedQuantity}`,
+                  });
+                  hasItemError = true;
+                  break;
+                }
+              }
+
+              if (hasItemError) {
+                continue;
+              }
+
+              // Criar pedido
+              await db.insert(pickingOrders).values({
+                tenantId: tenant.id,
+                orderNumber: generatedOrderNumber,
+                customerOrderNumber: orderNumber, // Usar número do pedido do cliente
+                customerName,
+                priority: "normal",
+                status: "pending",
+                totalItems: orderItems.length,
+                totalQuantity: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+                createdBy: ctx.user.id,
+              });
+
+              // Buscar pedido criado
+              const [order] = await db
+                .select()
+                .from(pickingOrders)
+                .where(
+                  and(
+                    eq(pickingOrders.tenantId, tenant.id),
+                    eq(pickingOrders.orderNumber, generatedOrderNumber)
+                  )
+                )
+                .limit(1);
+
+              if (!order) {
+                throw new Error("Falha ao criar pedido");
+              }
+
+              // Criar itens do pedido
+              await db.insert(pickingOrderItems).values(
+                orderItems.map((item) => ({
+                  pickingOrderId: order.id,
+                  productId: item.productId,
+                  requestedQuantity: item.requestedQuantity,
+                  requestedUM: item.requestedUnit,
+                  pickedQuantity: 0,
+                  status: "pending" as const,
+                }))
+              );
+
+              // Reservar estoque (FEFO)
+              for (const item of orderItems) {
+                const availableStock = await db
+                  .select({
+                    id: inventory.id,
+                    quantity: inventory.quantity,
+                    reservedQuantity: inventory.reservedQuantity,
+                    batch: inventory.batch,
+                    expiryDate: inventory.expiryDate,
+                    availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+                  })
+                  .from(inventory)
+                  .where(
+                    and(
+                      eq(inventory.tenantId, tenant.id),
+                      eq(inventory.productId, item.productId),
+                      eq(inventory.status, "available"),
+                      sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`
+                    )
+                  )
+                  .orderBy(inventory.expiryDate); // FEFO
+
+                let remainingToReserve = item.requestedQuantity;
+                for (const stock of availableStock) {
+                  if (remainingToReserve <= 0) break;
+
+                  const quantityToReserve = Math.min(remainingToReserve, stock.availableQuantity);
+
+                  // Atualizar estoque reservado
+                  await db
+                    .update(inventory)
+                    .set({
+                      reservedQuantity: sql`${inventory.reservedQuantity} + ${quantityToReserve}`,
+                    })
+                    .where(eq(inventory.id, stock.id));
+
+                  // Registrar reserva
+                  await db.insert(pickingReservations).values({
+                    pickingOrderId: order.id,
+                    productId: item.productId,
+                    inventoryId: stock.id,
+                    quantity: quantityToReserve,
+                  });
+
+                  remainingToReserve -= quantityToReserve;
+                }
+              }
+
+              results.success.push({
+                pedido: orderNumber,
+                numeroSistema: generatedOrderNumber,
+                cliente: clientName,
+                destinatario: customerName,
+                itens: orderItems.length,
+                quantidadeTotal: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+              });
+            } catch (error: any) {
+              results.errors.push({
+                pedido: orderNumber,
+                erro: error.message || "Erro ao processar pedido",
+              });
+            }
+          }
+
+          return results;
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message || "Erro ao processar arquivo Excel",
+          });
+        }
+      }),
   }),
 });
 

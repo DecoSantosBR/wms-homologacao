@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
 
 interface ProductItem {
   productId: number;
@@ -23,6 +24,7 @@ interface ProductItem {
 export default function PickingOrders() {
   const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [isCreateWaveDialogOpen, setIsCreateWaveDialogOpen] = useState(false);
@@ -385,13 +387,18 @@ export default function PickingOrders() {
         title="Pedidos de Separação"
         description="Gerencie e acompanhe pedidos de picking"
         actions={
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Pedido
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+              <Package className="h-4 w-4 mr-2" />
+              Importar Excel
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Pedido
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Pedido de Separação</DialogTitle>
@@ -562,6 +569,7 @@ export default function PickingOrders() {
             </div>
         </DialogContent>
       </Dialog>
+          </div>
         }
       />
 
@@ -1175,6 +1183,17 @@ export default function PickingOrders() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Importação */}
+      <ImportOrdersDialog 
+        open={isImportDialogOpen} 
+        onOpenChange={(open) => {
+          setIsImportDialogOpen(open);
+          if (!open) {
+            refetch(); // Recarregar lista após importação
+          }
+        }} 
+      />
     </>
   );
 }
