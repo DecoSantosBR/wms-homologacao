@@ -1,4 +1,81 @@
-# Changelog - WMS Med@x
+# Changelog - WM# CHANGELOG
+
+## [2026-01-11] - Correção: Erros na Página de Picking
+
+### 🐛 Problemas Identificados
+
+1. **Erro de chave duplicada no React**:
+   - Mensagem: `Encountered two children with the same key, \`180002\``
+   - Causa: API retornando pedidos duplicados no array
+
+2. **Erro de validação de estoque**:
+   - Mensagem: `Estoque insuficiente para produto 443060 (EXTENSOFIX 60 CM)`
+   - Causa: Lógica verificava apenas primeiro endereço, não permitia picking de múltiplos endereços
+
+### ✅ Correções Implementadas
+
+**1. Chave Duplicada (client/src/pages/PickingOrders.tsx)**
+
+Adicionado `useMemo` para remover duplicatas:
+```tsx
+const uniqueOrders = useMemo(() => {
+  if (!orders) return [];
+  const seen = new Set<number>();
+  const unique: typeof orders = [];
+  orders.forEach((order) => {
+    if (!seen.has(order.id)) {
+      seen.add(order.id);
+      unique.push(order);
+    }
+  });
+  return unique;
+}, [orders]);
+```
+
+**2. Alocação de Múltiplos Endereços (server/waveLogic.ts)**
+
+Refatorada função `allocateLocations` para:
+- Buscar TODOS os endereços disponíveis (removido `.limit(1)`)
+- Calcular estoque total somando todos os endereços
+- Alocar de múltiplos endereços respeitando FIFO/FEFO
+
+```ts
+// Buscar todos os endereços disponíveis
+const availableStock = await db.select({...}).orderBy(orderBy);
+
+// Calcular total disponível
+const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.quantity, 0);
+
+// Alocar de múltiplos endereços
+let remainingQuantity = item.totalQuantity;
+for (const location of availableStock) {
+  if (remainingQuantity <= 0) break;
+  const quantityFromThisLocation = Math.min(location.quantity, remainingQuantity);
+  allocated.push({...item, totalQuantity: quantityFromThisLocation, ...});
+  remainingQuantity -= quantityFromThisLocation;
+}
+```
+
+**3. Novo Endpoint `picking.getByIds` (server/routers.ts)**
+
+Criado endpoint para buscar múltiplos pedidos de uma vez:
+```ts
+getByIds: publicProcedure
+  .input(z.object({ ids: z.array(z.number()) }))
+  .query(async ({ input }) => {
+    // Busca pedidos e seus itens em uma única requisição
+  }),
+```
+
+**Resultado:**
+- ✅ Erro de chave duplicada eliminado
+- ✅ Picking de múltiplos endereços funcionando (FIFO/FEFO)
+- ✅ Modal de geração de onda exibindo prévia correta
+- ❌ Problema pendente: botão "Confirmar" não responde a cliques
+
+**Documentação**: Ver `CORRECAO_ERROS_PICKING.md` para detalhes completos
+
+---
 
 ## [2026-01-09] - Correção: Importação Excel Gerando Códigos com ZONA
 
