@@ -169,10 +169,22 @@ export async function registerPickedItem(params: {
     });
   }
 
-  // 2. Buscar item da onda
+  // 2. Buscar item da onda com informações do produto
   const [waveItem] = await db
-    .select()
+    .select({
+      id: pickingWaveItems.id,
+      waveId: pickingWaveItems.waveId,
+      productId: pickingWaveItems.productId,
+      batch: pickingWaveItems.batch,
+      locationId: pickingWaveItems.locationId,
+      totalQuantity: pickingWaveItems.totalQuantity,
+      pickedQuantity: pickingWaveItems.pickedQuantity,
+      status: pickingWaveItems.status,
+      productSku: products.sku,
+      productName: products.description,
+    })
     .from(pickingWaveItems)
+    .innerJoin(products, eq(pickingWaveItems.productId, products.id))
     .where(eq(pickingWaveItems.id, params.waveItemId))
     .limit(1);
 
