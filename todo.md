@@ -1288,3 +1288,30 @@ Para garantir que nunca sejam perdidas:
 - [x] Criar modal de upload no frontend
 - [x] Exibir preview de resultados (sucessos e erros)
 - [ ] Testar importação com múltiplos pedidos
+
+
+## Fase CONVERSÃO DE UNIDADES - 11/01/2026
+- [ ] Analisar lógica atual de criação de pedidos
+- [ ] Implementar conversão de caixa para unidade no endpoint create
+- [ ] Implementar conversão no endpoint importOrders
+- [ ] Atualizar reserva de estoque com quantidade convertida
+- [ ] Atualizar interface de separação para exibir unidades corretas
+- [ ] Testar criação manual com caixa
+- [ ] Testar importação com caixa
+
+
+## Status da Fase CONVERSÃO DE UNIDADES - 11/01/2026
+- [x] Analisar lógica atual de criação de pedidos
+- [x] Implementar conversão de caixa para unidade no endpoint create
+- [x] Implementar conversão no endpoint importOrders
+- [x] Atualizar reserva de estoque com quantidade convertida
+- [x] Atualizar interface de separação para exibir unidades corretas
+- [x] Testar criação manual com caixa
+- [x] Testar importação com caixa
+
+**Correção implementada:**
+- Quando pedido solicita "caixa", sistema multiplica pela quantidade `unitsPerBox` do produto
+- Validação de estoque usa quantidade convertida em unidades
+- Reserva de estoque usa quantidade convertida em unidades
+- Mensagens de erro mostram conversão (ex: "5 caixa(s) = 50 unidades")
+- Validação garante que produto tenha `unitsPerBox` configurado antes de aceitar pedido em caixa

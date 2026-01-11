@@ -1119,7 +1119,7 @@ export const appRouter = router({
         }> = [];
 
         for (const item of input.items) {
-          // Buscar produto para obter SKU e nome
+          // Buscar produto para obter SKU, nome e unitsPerBox
           const [product] = await db
             .select()
             .from(products)
@@ -1131,6 +1131,18 @@ export const appRouter = router({
               code: "NOT_FOUND", 
               message: `Produto ID ${item.productId} não encontrado` 
             });
+          }
+
+          // Converter quantidade para unidades se solicitado em caixa
+          let quantityInUnits = item.requestedQuantity;
+          if (item.requestedUnit === "box") {
+            if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Produto ${product.sku} não possui quantidade por caixa configurada`
+              });
+            }
+            quantityInUnits = item.requestedQuantity * product.unitsPerBox;
           }
 
           // Buscar estoque disponível (FIFO/FEFO)
@@ -1162,15 +1174,15 @@ export const appRouter = router({
           // Calcular total disponível
           const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
 
-          if (totalAvailable < item.requestedQuantity) {
+          if (totalAvailable < quantityInUnits) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${totalAvailable}, Solicitado: ${item.requestedQuantity}`
+              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${totalAvailable} unidades, Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades)`
             });
           }
 
-          // Armazenar validação para uso posterior
-          stockValidations.push({ item, product, availableStock });
+          // Armazenar validação para uso posterior (incluindo quantidade convertida)
+          stockValidations.push({ item, product, availableStock, quantityInUnits } as any);
         }
 
         // PASSO 2: Todas as validações passaram, agora criar o pedido
@@ -1203,10 +1215,10 @@ export const appRouter = router({
 
         // PASSO 3: Criar itens e reservar estoque
         for (const validation of stockValidations) {
-          const { item, product, availableStock } = validation;
+          const { item, product, availableStock, quantityInUnits } = validation as any;
 
-          // Reservar estoque e registrar reservas
-          let remainingToReserve = item.requestedQuantity;
+          // Reservar estoque e registrar reservas (em unidades)
+          let remainingToReserve = quantityInUnits;
           for (const stock of availableStock) {
             if (remainingToReserve <= 0) break;
 
@@ -2065,11 +2077,27 @@ export const appRouter = router({
                   break;
                 }
 
+                // Converter quantidade para unidades se solicitado em caixa
+                let quantityInUnits = quantity;
+                if (requestedUnit === "box") {
+                  if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+                    results.errors.push({
+                      pedido: orderNumber,
+                      linha: item.rowNum,
+                      erro: `Produto ${product.sku} não possui quantidade por caixa configurada`,
+                    });
+                    hasItemError = true;
+                    break;
+                  }
+                  quantityInUnits = quantity * product.unitsPerBox;
+                }
+
                 orderItems.push({
                   productId: product.id,
                   requestedQuantity: quantity,
                   requestedUnit,
-                });
+                  quantityInUnits, // Adicionar quantidade convertida
+                } as any);
               }
 
               if (hasItemError) {
@@ -2081,6 +2109,7 @@ export const appRouter = router({
 
               // Validar estoque antes de criar
               for (const item of orderItems) {
+                const itemAny = item as any;
                 const availableStock = await db
                   .select({
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
@@ -2097,11 +2126,11 @@ export const appRouter = router({
 
                 const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
 
-                if (totalAvailable < item.requestedQuantity) {
+                if (totalAvailable < itemAny.quantityInUnits) {
                   const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
                   results.errors.push({
                     pedido: orderNumber,
-                    erro: `Estoque insuficiente para produto ${product?.sku}. Disponível: ${totalAvailable}, Solicitado: ${item.requestedQuantity}`,
+                    erro: `Estoque insuficiente para produto ${product?.sku}. Disponível: ${totalAvailable} unidades, Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${itemAny.quantityInUnits} unidades)`,
                   });
                   hasItemError = true;
                   break;
@@ -2155,6 +2184,7 @@ export const appRouter = router({
 
               // Reservar estoque (FEFO)
               for (const item of orderItems) {
+                const itemAny = item as any;
                 const availableStock = await db
                   .select({
                     id: inventory.id,
@@ -2175,7 +2205,7 @@ export const appRouter = router({
                   )
                   .orderBy(inventory.expiryDate); // FEFO
 
-                let remainingToReserve = item.requestedQuantity;
+                let remainingToReserve = itemAny.quantityInUnits; // Usar quantidade convertida
                 for (const stock of availableStock) {
                   if (remainingToReserve <= 0) break;
 
