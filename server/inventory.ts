@@ -30,6 +30,7 @@ export interface InventoryPosition {
   locationId: number;
   locationCode: string;
   locationStatus: string;
+  locationTenantId: number | null;
   zoneName: string;
   batch: string | null;
   expiryDate: Date | null;
@@ -103,6 +104,7 @@ export async function getInventoryPositions(
       locationId: inventory.locationId,
       locationCode: warehouseLocations.code,
       locationStatus: warehouseLocations.status,
+      locationTenantId: warehouseLocations.tenantId,
       zoneName: warehouseZones.name,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
@@ -118,7 +120,7 @@ export async function getInventoryPositions(
     .innerJoin(products, eq(inventory.productId, products.id))
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(locationTenant, eq(inventory.tenantId, locationTenant.id))
+    .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(warehouseLocations.code, products.sku)
     .limit(1000);
@@ -199,6 +201,7 @@ export async function getExpiringProducts(
       locationId: inventory.locationId,
       locationCode: warehouseLocations.code,
       locationStatus: warehouseLocations.status,
+      locationTenantId: warehouseLocations.tenantId,
       zoneName: warehouseZones.name,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
@@ -214,7 +217,7 @@ export async function getExpiringProducts(
     .innerJoin(products, eq(inventory.productId, products.id))
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(locationTenant, eq(inventory.tenantId, locationTenant.id))
+    .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
     .where(
       and(
         lte(inventory.expiryDate, futureDate),

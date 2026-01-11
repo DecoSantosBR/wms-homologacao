@@ -43,6 +43,13 @@ export default function StockPositions() {
   const { data: tenants = [] } = trpc.tenants.list.useQuery();
   const { data: zones = [] } = trpc.zones.list.useQuery();
 
+  // Função para obter nome do cliente dono do endereço
+  const getLocationTenantName = (locationTenantId: number | null) => {
+    if (!locationTenantId) return "Compartilhado";
+    const tenant = tenants.find(t => t.id === locationTenantId);
+    return tenant?.name || "Compartilhado";
+  };
+
   // Status badge
   const getLocationStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
@@ -285,7 +292,7 @@ export default function StockPositions() {
                   <TableBody>
                     {positions.map((pos) => (
                       <TableRow key={`${pos.id}-${pos.batch}-${pos.locationId}`}>
-                        <TableCell>{pos.tenantName || "Compartilhado"}</TableCell>
+                        <TableCell>{getLocationTenantName(pos.locationTenantId)}</TableCell>
                         <TableCell>{pos.zoneName}</TableCell>
                         <TableCell className="font-mono">{pos.locationCode}</TableCell>
                         <TableCell>{getLocationStatusBadge(pos.locationStatus)}</TableCell>
