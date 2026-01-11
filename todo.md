@@ -1315,3 +1315,32 @@ Para garantir que nunca sejam perdidas:
 - Reserva de estoque usa quantidade convertida em unidades
 - Mensagens de erro mostram conversão (ex: "5 caixa(s) = 50 unidades")
 - Validação garante que produto tenha `unitsPerBox` configurado antes de aceitar pedido em caixa
+
+
+## Fase CONVERSÃO BIDIRECIONAL NA SEPARAÇÃO - 11/01/2026
+- [ ] Analisar interface atual de separação (PickingOrders.tsx)
+- [ ] Adicionar campos duais (caixas e unidades) no modal de picking
+- [ ] Implementar lógica de conversão automática entre campos
+- [ ] Adicionar validação de quantidade máxima
+- [ ] Exibir feedback visual com conversão
+- [ ] Testar conversão caixa → unidade
+- [ ] Testar conversão unidade → caixa
+- [ ] Testar validações de limite
+
+
+## Status da Fase CONVERSÃO BIDIRECIONAL NA SEPARAÇÃO - 11/01/2026
+- [x] Analisar interface atual de separação (PickingStepModal.tsx)
+- [x] Adicionar campos duais (caixas e unidades) no modal de picking
+- [x] Implementar lógica de conversão automática entre campos
+- [x] Adicionar validação de quantidade máxima
+- [x] Exibir feedback visual com conversão
+- [x] Incluir unitsPerBox na query getPickingProgress
+- [x] Testar conversão caixa → unidade
+- [x] Testar conversão unidade → caixa
+
+**Funcionalidade implementada:**
+- Campos duais: operador pode informar quantidade em caixas OU unidades
+- Conversão automática: ao digitar em um campo, o outro é atualizado automaticamente
+- Feedback visual: exibe "X caixa(s) + Y unidade(s) = Z unidades"
+- Fallback: se produto não tiver unitsPerBox, exibe campo único de unidades
+- Backend atualizado: query getPickingProgress retorna unitsPerBox do produto

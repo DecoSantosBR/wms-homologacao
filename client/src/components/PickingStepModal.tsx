@@ -21,6 +21,7 @@ interface PickingStepModalProps {
     labelCode?: string; // Código da etiqueta armazenado no recebimento
     totalQuantity: number;
     pickedQuantity: number;
+    unitsPerBox?: number; // Quantidade de unidades por caixa
   };
 }
 
@@ -31,6 +32,8 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
   const [scannedLocation, setScannedLocation] = useState("");
   const [scannedProduct, setScannedProduct] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [quantityInBoxes, setQuantityInBoxes] = useState<number>(0);
+  const [quantityInUnits, setQuantityInUnits] = useState<number>(1);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -45,9 +48,31 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
       setScannedLocation("");
       setScannedProduct("");
       setQuantity(1);
+      setQuantityInBoxes(0);
+      setQuantityInUnits(1);
       setError(null);
     }
   }, [isOpen]);
+
+  // Converter caixas para unidades
+  const handleBoxesChange = (boxes: number) => {
+    setQuantityInBoxes(boxes);
+    if (item.unitsPerBox && item.unitsPerBox > 0) {
+      const units = boxes * item.unitsPerBox;
+      setQuantityInUnits(units);
+      setQuantity(units);
+    }
+  };
+
+  // Converter unidades para caixas
+  const handleUnitsChange = (units: number) => {
+    setQuantityInUnits(units);
+    setQuantity(units);
+    if (item.unitsPerBox && item.unitsPerBox > 0) {
+      const boxes = Math.floor(units / item.unitsPerBox);
+      setQuantityInBoxes(boxes);
+    }
+  };
 
   // Auto-focus no input da etapa atual
   useEffect(() => {
@@ -357,34 +382,98 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Input
-                    ref={quantityInputRef}
-                    type="number"
-                    min="1"
-                    max={remainingQuantity}
-                    placeholder="Quantidade..."
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                    className="text-lg text-center font-semibold"
-                    autoFocus
-                  />
-                  
-                  {/* Botões rápidos */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1, 5, 10, remainingQuantity].map((value) => (
-                      <Button
-                        key={value}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setQuantity(value)}
-                        disabled={value > remainingQuantity}
-                      >
-                        {value === remainingQuantity ? "Tudo" : value}
-                      </Button>
-                    ))}
-                  </div>
+                <div className="space-y-4">
+                  {/* Exibir campos duais se produto tiver unitsPerBox */}
+                  {item.unitsPerBox && item.unitsPerBox > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Campo de Caixas */}
+                        <div className="space-y-2">
+                          <Label htmlFor="boxes" className="text-sm font-medium">
+                            Caixas
+                          </Label>
+                          <Input
+                            id="boxes"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={quantityInBoxes || ""}
+                            onChange={(e) => handleBoxesChange(parseInt(e.target.value) || 0)}
+                            className="text-lg text-center font-semibold"
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            {item.unitsPerBox} un/caixa
+                          </p>
+                        </div>
+
+                        {/* Campo de Unidades */}
+                        <div className="space-y-2">
+                          <Label htmlFor="units" className="text-sm font-medium">
+                            Unidades
+                          </Label>
+                          <Input
+                            ref={quantityInputRef}
+                            id="units"
+                            type="number"
+                            min="1"
+                            max={remainingQuantity}
+                            placeholder="1"
+                            value={quantityInUnits || ""}
+                            onChange={(e) => handleUnitsChange(parseInt(e.target.value) || 0)}
+                            className="text-lg text-center font-semibold"
+                            autoFocus
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            Máx: {remainingQuantity}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Feedback visual da conversão */}
+                      {quantityInUnits > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-900 text-center">
+                            <strong>{quantityInBoxes} caixa(s)</strong> + <strong>{quantityInUnits % (item.unitsPerBox || 1)} unidade(s)</strong> = <strong className="text-blue-700">{quantityInUnits} unidades</strong>
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Fallback: campo único se não houver unitsPerBox */
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity" className="text-sm font-medium">
+                        Quantidade (unidades)
+                      </Label>
+                      <Input
+                        ref={quantityInputRef}
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        max={remainingQuantity}
+                        placeholder="Quantidade..."
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                        className="text-lg text-center font-semibold"
+                        autoFocus
+                      />
+                      
+                      {/* Botões rápidos */}
+                      <div className="grid grid-cols-4 gap-2">
+                        {[1, 5, 10, remainingQuantity].map((value) => (
+                          <Button
+                            key={value}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setQuantity(value)}
+                            disabled={value > remainingQuantity}
+                          >
+                            {value === remainingQuantity ? "Tudo" : value}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {error && (

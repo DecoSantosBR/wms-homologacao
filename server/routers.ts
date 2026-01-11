@@ -1772,8 +1772,25 @@ export const appRouter = router({
         }
 
         const items = await db
-          .select()
+          .select({
+            id: pickingWaveItems.id,
+            waveId: pickingWaveItems.waveId,
+            productId: pickingWaveItems.productId,
+            productSku: pickingWaveItems.productSku,
+            productName: pickingWaveItems.productName,
+            totalQuantity: pickingWaveItems.totalQuantity,
+            pickedQuantity: pickingWaveItems.pickedQuantity,
+            locationId: pickingWaveItems.locationId,
+            locationCode: pickingWaveItems.locationCode,
+            batch: pickingWaveItems.batch,
+            expiryDate: pickingWaveItems.expiryDate,
+            status: pickingWaveItems.status,
+            pickedAt: pickingWaveItems.pickedAt,
+            createdAt: pickingWaveItems.createdAt,
+            unitsPerBox: products.unitsPerBox, // Adicionar unitsPerBox do produto
+          })
           .from(pickingWaveItems)
+          .leftJoin(products, eq(pickingWaveItems.productId, products.id))
           .where(eq(pickingWaveItems.waveId, input.waveId));
 
         const totalItems = items.length;
