@@ -1246,3 +1246,17 @@ Para garantir que nunca sejam perdidas:
 1. NUNCA fazer `git reset --hard`
 2. SEMPRE usar `webdev_rollback_checkpoint` para voltar versões
 3. Checkpoint 651a865c é a versão estável com todas as correções
+
+
+## Fase TESTES AUTOMATIZADOS - 11/01/2026
+- [x] Criar suite de testes para fluxo completo de separação
+- [x] Testes de criação de pedidos (sucesso e falhas)
+- [x] Testes de validação de estoque insuficiente
+- [x] Testes de validação de produto inexistente
+- [x] Testes de reserva automática de estoque (FEFO)
+- [x] Executar todos os testes e validar cobertura (3/3 passaram)
+- [x] Documentar testes criados
+
+**Arquivo de testes:** `server/picking.flow.test.ts`
+**Resultado:** ✅ 3/3 testes passaram (865ms)
+**Cobertura:** Criação de pedidos, validação de estoque, reservas FEFO, casos de erro
