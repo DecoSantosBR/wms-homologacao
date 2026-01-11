@@ -1211,6 +1211,107 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Atualizar pedido completo (apenas pendentes)
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          tenantId: z.number(),
+          customerName: z.string().min(1),
+          priority: z.enum(["low", "normal", "urgent", "emergency"]),
+          scheduledDate: z.string().optional(),
+          items: z.array(
+            z.object({
+              productId: z.number(),
+              requestedQuantity: z.number().positive(),
+              requestedUnit: z.enum(["box", "unit", "pallet"]),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        // Buscar pedido para validar permissões e status
+        let order;
+        if (ctx.user.role === "admin") {
+          const [result] = await db
+            .select()
+            .from(pickingOrders)
+            .where(eq(pickingOrders.id, input.id))
+            .limit(1);
+          order = result;
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          const [result] = await db
+            .select()
+            .from(pickingOrders)
+            .where(
+              and(
+                eq(pickingOrders.id, input.id),
+                eq(pickingOrders.tenantId, tenantId)
+              )
+            )
+            .limit(1);
+          order = result;
+        }
+
+        if (!order) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
+        }
+
+        // Apenas pedidos pendentes podem ser editados
+        if (order.status !== "pending") {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "Apenas pedidos pendentes podem ser editados" 
+          });
+        }
+
+        // Validar permissão para alterar tenantId (apenas admin)
+        if (ctx.user.role !== "admin" && input.tenantId !== order.tenantId) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Você não tem permissão para alterar o cliente do pedido" 
+          });
+        }
+
+        // Atualizar pedido
+        await db
+          .update(pickingOrders)
+          .set({
+            tenantId: input.tenantId,
+            customerName: input.customerName,
+            priority: input.priority,
+            scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+            totalItems: input.items.length,
+            totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+          })
+          .where(eq(pickingOrders.id, input.id));
+
+        // Excluir itens antigos
+        await db
+          .delete(pickingOrderItems)
+          .where(eq(pickingOrderItems.pickingOrderId, input.id));
+
+        // Inserir novos itens
+        if (input.items.length > 0) {
+          await db.insert(pickingOrderItems).values(
+            input.items.map((item) => ({
+              pickingOrderId: input.id,
+              productId: item.productId,
+              requestedQuantity: item.requestedQuantity,
+              requestedUM: item.requestedUnit,
+              pickedQuantity: 0,
+              status: "pending" as const,
+            }))
+          );
+        }
+
+        return { success: true };
+      }),
+
     // Excluir pedidos em lote
     deleteBatch: protectedProcedure
       .input(

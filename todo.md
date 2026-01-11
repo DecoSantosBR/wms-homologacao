@@ -1140,3 +1140,5 @@
 - [x] Implementar funcionalidade "Excluir Selecionados" em /picking
 - [ ] Implementar funcionalidade "Editar Pedido" em /picking (placeholder adicionado)
 - [x] Criar endpoint picking.deleteBatch no backend para exclusão em lote
+- [ ] Limpar base de dados (produtos, estoque, recebimentos, separação)
+- [x] Implementar edição completa de pedidos pendentes (modal funcional)

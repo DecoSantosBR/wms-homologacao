@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -34,12 +34,39 @@ export default function PickingOrders() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [unit, setUnit] = useState<"box" | "unit">("box");
+  
+  // Estados para edição
+  const [editTenantId, setEditTenantId] = useState<string>("");
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editPriority, setEditPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
+  const [editProducts, setEditProducts] = useState<ProductItem[]>([]);
+  const [editSelectedProductId, setEditSelectedProductId] = useState<string>("");
+  const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [editUnit, setEditUnit] = useState<"box" | "unit">("box");
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
+  const { data: editOrderDetails } = trpc.picking.getById.useQuery(
+    { id: editingOrder?.id || 0 },
+    { enabled: !!editingOrder }
+  );
+
+  // Carregar itens do pedido ao editar
+  useEffect(() => {
+    if (editOrderDetails?.items && isEditDialogOpen) {
+      setEditProducts(
+        editOrderDetails.items.map((item: any) => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.requestedQuantity,
+          unit: item.requestedUM,
+        }))
+      );
+    }
+  }, [editOrderDetails, isEditDialogOpen]);
 
   const createWaveMutation = trpc.wave.create.useMutation({
     onSuccess: () => {
@@ -167,6 +194,80 @@ export default function PickingOrders() {
       customerName,
       priority,
       items: selectedProducts.map((p) => ({
+        productId: p.productId,
+        requestedQuantity: p.quantity,
+        requestedUnit: p.unit,
+      })),
+    });
+  };
+
+  const handleEdit = async (order: any) => {
+    setEditingOrder(order);
+    setEditTenantId(order.tenantId.toString());
+    setEditCustomerName(order.customerName);
+    setEditPriority(order.priority);
+    setEditProducts([]); // Limpar produtos antes de carregar
+    setIsEditDialogOpen(true);
+  };
+
+  const handleAddEditProduct = () => {
+    if (!editSelectedProductId || editQuantity <= 0) {
+      alert("Selecione um produto e informe a quantidade.");
+      return;
+    }
+
+    const product = products?.find((p) => p.id === parseInt(editSelectedProductId));
+    if (!product) {
+      alert("Produto não encontrado.");
+      return;
+    }
+
+    if (editProducts.some((p) => p.productId === product.id)) {
+      alert("Produto já adicionado. Remova-o para adicionar novamente.");
+      return;
+    }
+
+    setEditProducts([
+      ...editProducts,
+      {
+        productId: product.id,
+        productName: product.description,
+        quantity: editQuantity,
+        unit: editUnit,
+      },
+    ]);
+
+    setEditSelectedProductId("");
+    setEditQuantity(1);
+    setEditUnit("box");
+  };
+
+  const handleRemoveEditProduct = (productId: number) => {
+    setEditProducts(editProducts.filter((p) => p.productId !== productId));
+  };
+
+  const handleUpdate = () => {
+    if (!editTenantId) {
+      alert("Selecione o cliente.");
+      return;
+    }
+
+    if (!editCustomerName) {
+      alert("Informe o nome do cliente.");
+      return;
+    }
+
+    if (editProducts.length === 0) {
+      alert("Adicione pelo menos um produto ao pedido.");
+      return;
+    }
+
+    updateMutation.mutate({
+      id: editingOrder.id,
+      tenantId: parseInt(editTenantId),
+      customerName: editCustomerName,
+      priority: editPriority,
+      items: editProducts.map((p) => ({
         productId: p.productId,
         requestedQuantity: p.quantity,
         requestedUnit: p.unit,
@@ -387,10 +488,172 @@ export default function PickingOrders() {
                 </Button>
               </div>
             </div>
-          </DialogContent>
-          </Dialog>
+        </DialogContent>
+      </Dialog>
         }
       />
+
+      {/* Dialog de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Pedido de Separação</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Dados do Pedido */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Dados do Pedido</h3>
+                
+                <div>
+                  <Label>Cliente (Tenant) *</Label>
+                  <Select value={editTenantId} onValueChange={setEditTenantId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tenants?.map((tenant) => (
+                        <SelectItem key={tenant.id} value={String(tenant.id)}>
+                          {tenant.name} - {tenant.cnpj}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Nome do Destinatário *</Label>
+                  <Input
+                    value={editCustomerName}
+                    onChange={(e) => setEditCustomerName(e.target.value)}
+                    placeholder="Nome do destinatário (farmácia, hospital, etc.)"
+                  />
+                </div>
+
+                <div>
+                  <Label>Prioridade</Label>
+                  <Select value={editPriority} onValueChange={(v: any) => setEditPriority(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixa</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="urgent">Urgente</SelectItem>
+                      <SelectItem value="emergency">Emergência</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Adicionar Produtos */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Produtos</h3>
+                
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-5">
+                    <Label>Produto</Label>
+                    <Select value={editSelectedProductId} onValueChange={setEditSelectedProductId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map((product) => (
+                          <SelectItem key={product.id} value={String(product.id)}>
+                            {product.sku} - {product.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <Label>Quantidade</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editQuantity}
+                      onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Unidade</Label>
+                    <Select value={editUnit} onValueChange={(v: any) => setEditUnit(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="box">Caixa</SelectItem>
+                        <SelectItem value="unit">Unidade</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-2 flex items-end">
+                    <Button type="button" onClick={handleAddEditProduct} className="w-full">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Lista de Produtos Adicionados */}
+                {editProducts.length > 0 && (
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                          <TableHead>Unidade</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {editProducts.map((product) => (
+                          <TableRow key={product.productId}>
+                            <TableCell className="font-medium">{product.productName}</TableCell>
+                            <TableCell>{product.quantity}</TableCell>
+                            <TableCell>{product.unit === "box" ? "Caixa" : "Unidade"}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveEditProduct(product.productId)}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {editProducts.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum produto adicionado</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleUpdate} 
+                  disabled={!editCustomerName || editProducts.length === 0 || updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? "Atualizando..." : "Atualizar Pedido"}
+                </Button>
+              </div>
+            </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="container mx-auto py-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "orders" | "waves")}>
@@ -526,7 +789,7 @@ export default function PickingOrders() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              alert("Funcionalidade de edição em desenvolvimento. Por enquanto, exclua e crie um novo pedido.");
+                              handleEdit(order);
                             }}
                           >
                             <Edit className="h-4 w-4" />
