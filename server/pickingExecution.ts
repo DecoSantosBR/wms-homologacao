@@ -192,8 +192,9 @@ export async function registerPickedItem(params: {
     throw new TRPCError({ code: "NOT_FOUND", message: "Item da onda não encontrado" });
   }
 
-  // 3. Verificar se produto corresponde
-  if (label.productId !== waveItem.productId) {
+  // 3. Verificar se produto corresponde (compara SKU, não productId)
+  // Nota: Comparamos SKU porque podem existir produtos duplicados no banco com mesmo SKU mas IDs diferentes
+  if (label.productSku !== waveItem.productSku) {
     throw new TRPCError({ 
       code: "BAD_REQUEST", 
       message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${params.labelCode}" pertence ao SKU: ${label.productSku}` 
