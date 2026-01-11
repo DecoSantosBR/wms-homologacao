@@ -1204,3 +1204,14 @@
 - [x] Corrigir bug de reservas órfãs após excluir onda completed
 - [x] Adicionar correção automática de reservas órfãs no endpoint deleteBatch
 - [x] Criar teste automatizado para validar correção
+
+## 🐛 BUG - Validação incorreta durante separação
+
+- [ ] Sistema valida contra availableQuantity (quantity - reservedQuantity) ao invés de allocatedQuantity
+- [ ] Deve permitir separar até allocatedQuantity do waveItem, não até availableQuantity
+- [ ] Corrigir lógica em registerPickedItem (waveRouter.ts)
+
+- [x] Sistema valida contra availableQuantity (quantity - reservedQuantity) ao invés de allocatedQuantity
+- [x] Deve permitir separar até allocatedQuantity do waveItem, não até availableQuantity
+- [x] Corrigir lógica em registerPickedItem (waveRouter.ts)
+- [x] Corrigir lógica em registerPickedItem (routers.ts)

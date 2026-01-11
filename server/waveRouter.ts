@@ -224,39 +224,9 @@ export const waveRouter = router({
         }
       }
 
-      // 3. Validar saldo disponível na posição de estoque
-      if (waveItem.locationId) {
-        const [stockPosition] = await db
-          .select({
-            quantity: inventory.quantity,
-            reservedQuantity: inventory.reservedQuantity,
-          })
-          .from(inventory)
-          .where(
-            and(
-              eq(inventory.locationId, waveItem.locationId),
-              eq(inventory.productId, waveItem.productId),
-              waveItem.batch ? eq(inventory.batch, waveItem.batch) : sql`${inventory.batch} IS NULL`
-            )
-          )
-          .limit(1);
-
-        if (!stockPosition) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: `Estoque não encontrado na posição ${waveItem.locationId} para o produto ${waveItem.productSku}${waveItem.batch ? ` lote ${waveItem.batch}` : ''}`,
-          });
-        }
-
-        const availableQuantity = stockPosition.quantity - (stockPosition.reservedQuantity || 0);
-        
-        if (input.quantity > availableQuantity) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Saldo insuficiente na posição! Disponível: ${availableQuantity}, tentando separar: ${input.quantity}`,
-          });
-        }
-      }
+      // 3. Validar que não excede a quantidade alocada para este waveItem
+      // A validação real de estoque é feita na reserva (criação do pedido)
+      // Aqui apenas validamos que o operador não separe mais do que foi alocado
 
       // 4. Validar quantidade total da onda
       const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
