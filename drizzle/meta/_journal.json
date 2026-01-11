@@ -99,6 +99,13 @@
       "when": 1768145982162,
       "tag": "0013_tearful_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1768167430796,
+      "tag": "0014_left_vanisher",
+      "breakpoints": true
     }
   ]
 }

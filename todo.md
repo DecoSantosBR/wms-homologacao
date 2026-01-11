@@ -1260,3 +1260,11 @@ Para garantir que nunca sejam perdidas:
 **Arquivo de testes:** `server/picking.flow.test.ts`
 **Resultado:** ✅ 3/3 testes passaram (865ms)
 **Cobertura:** Criação de pedidos, validação de estoque, reservas FEFO, casos de erro
+
+
+## Fase CAMPO Nº PEDIDO CLIENTE - 11/01/2026
+- [x] Adicionar campo customerOrderNumber no schema
+- [x] Atualizar endpoint de criação de pedidos
+- [x] Adicionar input no formulário
+- [x] Exibir em listagens e detalhes
+- [x] Testar funcionalidade

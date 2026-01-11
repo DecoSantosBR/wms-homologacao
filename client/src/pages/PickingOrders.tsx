@@ -28,6 +28,7 @@ export default function PickingOrders() {
   const [isCreateWaveDialogOpen, setIsCreateWaveDialogOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+  const [customerOrderNumber, setCustomerOrderNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
   const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
@@ -143,6 +144,7 @@ export default function PickingOrders() {
       refetch();
       setIsCreateDialogOpen(false);
       setSelectedTenantId("");
+      setCustomerOrderNumber("");
       setCustomerName("");
       setPriority("normal");
       setSelectedProducts([]);
@@ -249,6 +251,7 @@ export default function PickingOrders() {
 
     createMutation.mutate({
       tenantId: parseInt(selectedTenantId),
+      customerOrderNumber: customerOrderNumber || undefined,
       customerName,
       priority,
       items: selectedProducts.map((p) => ({
@@ -399,6 +402,15 @@ export default function PickingOrders() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Dados do Pedido</h3>
                 
+                <div>
+                  <Label>Nº do Pedido (Cliente)</Label>
+                  <Input
+                    value={customerOrderNumber}
+                    onChange={(e) => setCustomerOrderNumber(e.target.value)}
+                    placeholder="Número do pedido do cliente (opcional)"
+                  />
+                </div>
+
                 <div>
                   <Label>Cliente (Tenant) *</Label>
                   <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
@@ -830,6 +842,9 @@ export default function PickingOrders() {
                   </div>
 
                   <div className="text-sm text-muted-foreground space-y-1">
+                    {order.customerOrderNumber && (
+                      <p className="font-medium text-foreground">Nº Pedido Cliente: {order.customerOrderNumber}</p>
+                    )}
                     <p>Cliente: {order.clientName || "N/A"}</p>
                     <p>
                       Itens: {order.totalItems} | Quantidade Total: {order.totalQuantity}

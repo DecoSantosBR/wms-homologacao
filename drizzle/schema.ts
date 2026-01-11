@@ -417,6 +417,7 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
+  customerOrderNumber: varchar("customerOrderNumber", { length: 100 }), // Número do pedido do cliente (numeração interna)
   customerId: int("customerId"), // Relacionamento com cliente (tenant)
   customerName: varchar("customerName", { length: 255 }),
   deliveryAddress: text("deliveryAddress"),

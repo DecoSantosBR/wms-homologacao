@@ -1023,6 +1023,7 @@ export const appRouter = router({
               tenantId: pickingOrders.tenantId,
               clientName: tenants.name, // Nome do cliente (tenant) correto
               orderNumber: pickingOrders.orderNumber,
+              customerOrderNumber: pickingOrders.customerOrderNumber,
               customerName: pickingOrders.customerName,
               priority: pickingOrders.priority,
               status: pickingOrders.status,
@@ -1049,6 +1050,7 @@ export const appRouter = router({
               tenantId: pickingOrders.tenantId,
               clientName: tenants.name, // Nome do cliente (tenant) correto
               orderNumber: pickingOrders.orderNumber,
+              customerOrderNumber: pickingOrders.customerOrderNumber,
               customerName: pickingOrders.customerName,
               priority: pickingOrders.priority,
               status: pickingOrders.status,
@@ -1078,6 +1080,7 @@ export const appRouter = router({
       .input(
         z.object({
           tenantId: z.number(), // Cliente para quem o pedido está sendo criado
+          customerOrderNumber: z.string().optional(), // Número do pedido do cliente
           customerName: z.string().min(1),
           priority: z.enum(["low", "normal", "urgent", "emergency"]).default("normal"),
           scheduledDate: z.string().optional(),
@@ -1176,6 +1179,7 @@ export const appRouter = router({
         await db.insert(pickingOrders).values({
           tenantId,
           orderNumber,
+          customerOrderNumber: input.customerOrderNumber || null,
           customerName: input.customerName,
           priority: input.priority,
           status: "pending",
