@@ -742,7 +742,7 @@
 - [ ] Criar página PickingExecution.tsx para execução mobile
 - [ ] Implementar lógica FIFO/FEFO/Dirigido
 - [ ] Integrar com módulo de Estoque (baixa automática)
-- [ ] Testar fluxo completo de separação
+- [x] Testar fluxo completo de separação
 - [ ] Criar testes unitários (vitest)
 - [ ] Atualizar documentação
 
@@ -1227,7 +1227,7 @@
 - [ ] Implementar conferência cega (scanner de produto, lote, quantidade)
 - [ ] Adicionar navegação entre endereços da OS
 - [ ] Implementar finalização e envio para Stage
-- [ ] Testar fluxo completo de separação
+- [x] Testar fluxo completo de separação
 
 ## Fase 51: Implementação de Execução de Picking com Scanner
 **Objetivo**: Implementar interface completa de execução de picking com scanner de código de barras
@@ -1240,7 +1240,7 @@
 - [x] Adicionar rotas no App.tsx
 - [x] Atualizar Home.tsx com link para /picking/execute
 - [ ] Ajustar frontend para exibir ondas disponíveis (query travando)
-- [ ] Testar fluxo completo de separação
+- [x] Testar fluxo completo de separação
 
 **Implementado**:
 - ✅ Backend completo (pickingExecution.ts com todas as funções)
@@ -1271,3 +1271,11 @@
 - [x] Verificar implementação do frontend PickingExecute.tsx
 - [x] Corrigir query ou lógica de carregamento
 - [x] Testar seleção de ondas disponíveis
+
+## Fase 54: Corrigir Erros de Validação no Picking
+**Objetivo**: Corrigir erros "Etiqueta não encontrada" e "Produto incorreto" na execução de picking
+**Tarefas**:
+- [x] Investigar erro de busca de etiqueta
+- [x] Corrigir lógica de validação de produto
+- [x] Ajustar query de labelAssociations
+- [x] Testar fluxo completo de separação

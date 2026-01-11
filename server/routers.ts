@@ -1605,6 +1605,17 @@ export const appRouter = router({
         const { getPickingProgress } = await import("./pickingExecution");
         return getPickingProgress(input.waveId);
       }),
+
+    // Listar etiquetas disponíveis para picking
+    getAvailableLabels: protectedProcedure
+      .input(z.object({ 
+        productId: z.number(),
+        batch: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { getAvailableLabels } = await import("./pickingExecution");
+        return getAvailableLabels(input);
+      }),
   }),
 });
 

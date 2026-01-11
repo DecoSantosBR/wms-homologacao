@@ -1,0 +1,8 @@
+{
+  "query": "SELECT la.labelCode, la.batch, la.expiryDate, la.quantity, p.sku, p.description, wl.code as locationCode\nFROM labelAssociations la\nINNER JOIN products p ON la.productId = p.id\nINNER JOIN warehouseLocations wl ON la.locationId = wl.id\nWHERE la.productId IN (\n  SELECT DISTINCT productId FROM pickingWaveItems WHERE waveId = 1\n)\nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT la.labelCode, la.batch, la.expiryDate, la.quantity, p.sku, p.description, wl.code as locationCode\nFROM labelAssociations la\nINNER JOIN products p ON la.productId = p.id\nINNER JOIN warehouseLocations wl ON la.locationId = wl.id\nWHERE la.productId IN (\n  SELECT DISTINCT productId FROM pickingWaveItems WHERE waveId = 1\n)\nLIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'la.locationid' in 'on clause'"
+  ]
+}

@@ -163,7 +163,10 @@ export async function registerPickedItem(params: {
     .limit(1);
 
   if (!label) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Etiqueta não encontrada" });
+    throw new TRPCError({ 
+      code: "NOT_FOUND", 
+      message: `Etiqueta "${params.labelCode}" não encontrada. Verifique se o código está correto ou se a etiqueta foi criada no recebimento.` 
+    });
   }
 
   // 2. Buscar item da onda
@@ -181,7 +184,7 @@ export async function registerPickedItem(params: {
   if (label.productId !== waveItem.productId) {
     throw new TRPCError({ 
       code: "BAD_REQUEST", 
-      message: `Produto incorreto! Esperado: ${waveItem.productSku}, Escaneado: SKU diferente` 
+      message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${params.labelCode}" pertence ao SKU: ${label.productSku}` 
     });
   }
 
@@ -276,4 +279,38 @@ export async function getPickingProgress(waveId: number) {
     .where(eq(pickingWaveItems.waveId, waveId));
 
   return progress;
+}
+
+/**
+ * Listar etiquetas disponíveis para um produto/lote
+ * Etiquetas são associadas ao produto+lote, não ao endereço
+ * Ajuda o operador a saber quais etiquetas bipar
+ */
+export async function getAvailableLabels(params: {
+  productId: number;
+  batch?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+  // Buscar etiquetas do produto/lote
+  const labels = await db
+    .select({
+      labelCode: labelAssociations.labelCode,
+      batch: labelAssociations.batch,
+      expiryDate: labelAssociations.expiryDate,
+      totalUnits: labelAssociations.totalUnits,
+      productSku: products.sku,
+      productName: products.description,
+    })
+    .from(labelAssociations)
+    .innerJoin(products, eq(labelAssociations.productId, products.id))
+    .where(
+      and(
+        eq(labelAssociations.productId, params.productId),
+        params.batch ? eq(labelAssociations.batch, params.batch) : sql`1=1`
+      )
+    );
+
+  return labels;
 }
