@@ -1139,3 +1139,13 @@
 - [x] Aplicar correção também no registro de inventoryMovements
 - [ ] Testar movimentação REC → H01-01-01 e verificar tenantId no banco
 - [ ] Validar que cliente não muda para "Compartilhado" após movimentação
+
+
+## Fase 47: Atribuir Estoque à Hapvida
+
+**Objetivo**: Atribuir todo o estoque atual ao cliente Hapvida
+
+**Tarefas**:
+- [x] Identificar tenantId da Hapvida no banco (id: 60006, nome: Hapvida)
+- [x] Atualizar todos os registros de inventory (UPDATE inventory SET tenantId = 60006)
+- [x] Validar que todos os registros foram atualizados (todos com tenantId = 60006)
