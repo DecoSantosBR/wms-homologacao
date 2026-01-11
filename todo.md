@@ -1113,3 +1113,6 @@
 - [x] Validar etiqueta comparando com código armazenado no recebimento (conferência cega)
 - [x] Verificar se schema tem campo para armazenar código completo da etiqueta
 - [x] Ajustar modal de separação para usar código armazenado
+
+## Correção Backend - Validação de Etiqueta (11/01/2026 - Sessão 5)
+- [x] Corrigir registerPickedItem para validar etiqueta com código armazenado (não extrair SKU)

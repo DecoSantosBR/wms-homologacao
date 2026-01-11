@@ -177,15 +177,51 @@ export const waveRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Item da onda não encontrado" });
       }
 
-      // 2. Validar que o código escaneado corresponde ao produto
-      // Buscar produto pelo SKU extraído da etiqueta
-      const scannedSku = input.scannedCode.substring(0, 7); // Primeiros 7 caracteres = SKU
+      // 2. Validar que o código escaneado corresponde à etiqueta armazenada no recebimento
+      if (waveItem.batch) {
+        // Buscar etiqueta associada ao produto/lote no recebimento
+        const [labelRecord] = await db
+          .select({ labelCode: labelAssociations.labelCode })
+          .from(labelAssociations)
+          .where(
+            and(
+              eq(labelAssociations.productId, waveItem.productId),
+              eq(labelAssociations.batch, waveItem.batch)
+            )
+          )
+          .limit(1);
 
-      if (scannedSku !== waveItem.productSku) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" pertence ao SKU: ${scannedSku}`,
-        });
+        if (labelRecord) {
+          // Se há labelCode armazenado, comparar diretamente
+          if (input.scannedCode.trim() !== labelRecord.labelCode.trim()) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Etiqueta incorreta! Esperado: ${labelRecord.labelCode}, mas foi escaneado: "${input.scannedCode}"`,
+            });
+          }
+        } else {
+          // Fallback: se não houver labelCode, validar pelo SKU (legado)
+          const skuLength = waveItem.productSku.length;
+          const scannedSku = input.scannedCode.substring(0, skuLength);
+          
+          if (scannedSku !== waveItem.productSku) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" não corresponde`,
+            });
+          }
+        }
+      } else {
+        // Se não há lote, validar apenas pelo SKU
+        const skuLength = waveItem.productSku.length;
+        const scannedSku = input.scannedCode.substring(0, skuLength);
+        
+        if (scannedSku !== waveItem.productSku) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}`,
+          });
+        }
       }
 
       // 3. Validar quantidade
