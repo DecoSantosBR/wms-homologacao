@@ -200,8 +200,9 @@ export async function registerMovement(input: RegisterMovementInput) {
 
 /**
  * Atualiza status de um endereço baseado no estoque
+ * Exportada para uso em outros módulos (inventory-sync, etc.)
  */
-async function updateLocationStatus(locationId: number) {
+export async function updateLocationStatus(locationId: number) {
   const dbConn = await getDb();
   if (!dbConn) return;
 

@@ -1160,3 +1160,33 @@
 - [x] Corrigir CreateWaveDialog.tsx (clientName → customerName)
 - [x] Testar seleção de 2 pedidos e abertura do modal (sucesso: 2 pedidos, 3 produtos, 640 itens)
 - [x] Validar que prévia de consolidação carrega corretamente
+
+
+## Fase 49: Atualização Automática de Status de Endereço ao Zerar Saldo
+**Objetivo**: Implementar lógica para retornar status do endereço para "available" quando saldo de estoque é zerado
+**Tarefas**:
+- [ ] Analisar arquivo server/movements.ts (função registerMovement)
+- [ ] Identificar todos os pontos onde inventory.quantity pode ser zerado
+- [ ] Criar função updateLocationStatusIfEmpty() em server/inventory.ts
+- [ ] Integrar função em registerMovement após cada operação que zera estoque
+- [ ] Testar com movimentação de transferência que zera origem
+- [ ] Testar com movimentação de descarte
+- [ ] Validar que endereço volta para "available" quando quantity = 0
+- [ ] Documentar correção em CHANGELOG.md
+
+**Status**: ✅ CONCLUÍDO
+
+**Implementações**:
+- [x] Analisado arquivo server/movements.ts (função registerMovement)
+- [x] Identificado ponto crítico em server/modules/inventory-sync.ts (updateInventoryBalance)
+- [x] Exportada função updateLocationStatus() de movements.ts
+- [x] Adicionado import em inventory-sync.ts
+- [x] Integrada chamada após deletar inventory (linha 183)
+- [x] Criado script de teste (test-location-status.mjs)
+- [x] Criado script de correção (fix-location-status.mjs)
+- [x] Corrigidos 9 endereços com status incorreto
+- [x] Validado funcionamento com novo teste
+- [x] Documentado em CORRECAO_STATUS_ENDERECO.md
+- [x] Atualizado CHANGELOG.md
+
+**Resultado**: Sistema agora atualiza automaticamente o status de endereços para "available" quando estoque é zerado em TODOS os fluxos (movimentações, conferência, picking, recebimento).

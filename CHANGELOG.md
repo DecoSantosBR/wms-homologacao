@@ -1,5 +1,60 @@
 # Changelog - WM# CHANGELOG
 
+## [2026-01-11] - Correção: Atualização Automática de Status de Endereço
+
+### 🐛 Problema Identificado
+
+Endereços permaneciam com status "occupied" (ocupado) mesmo após o estoque ser completamente zerado (quantidade = 0). O status deveria retornar automaticamente para "available" (disponível).
+
+**Causa Raiz**: A função `updateInventoryBalance()` em `server/modules/inventory-sync.ts` deletava registros de inventory quando a quantidade chegava a zero, mas **não atualizava o status do endereço**.
+
+### ✅ Solução Implementada
+
+**1. Exportar Função de Atualização (server/movements.ts)**
+```typescript
+export async function updateLocationStatus(locationId: number) {
+  // Calcula estoque total no endereço
+  // Atualiza status: "occupied" se > 0, "available" se = 0
+}
+```
+
+**2. Integrar em inventory-sync.ts**
+```typescript
+if (newQuantity <= 0) {
+  await db.delete(inventory).where(eq(inventory.id, existing[0].id));
+  await updateLocationStatus(locationId); // ← NOVO
+}
+```
+
+### 🧪 Testes Realizados
+
+**Antes da correção**:
+- 9 endereços com status "occupied" e estoque zerado
+- Exemplo: H01-08-01 (ID: 120004) - occupied com 0 unidades
+
+**Após correção**:
+- Script `fix-location-status.mjs` corrigiu 9 endereços
+- 1426 endereços já estavam corretos
+- Todos os endereços ocupados agora realmente têm estoque
+
+### 🎯 Impacto
+
+- ✅ Status atualizado automaticamente quando estoque é zerado
+- ✅ Interface reflete status real dos endereços
+- ✅ Filtros de endereços disponíveis funcionam corretamente
+- ✅ Sugestões de endereço para movimentação são precisas
+- ✅ Rastreabilidade mantida (histórico preservado)
+
+### 📝 Arquivos Modificados
+
+- `server/movements.ts` - Exportada função `updateLocationStatus()`
+- `server/modules/inventory-sync.ts` - Adicionada chamada após deletar inventory
+- `test-location-status.mjs` (novo) - Script de teste
+- `fix-location-status.mjs` (novo) - Script de correção
+- `CORRECAO_STATUS_ENDERECO.md` (novo) - Documentação completa
+
+---
+
 ## [2026-01-11] - Correção: Erros na Página de Picking
 
 ### 🐛 Problemas Identificados
