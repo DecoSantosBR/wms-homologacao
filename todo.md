@@ -1096,3 +1096,7 @@
 - [x] Adicionar botão para alternar entre input manual e câmera
 - [x] Integrar scanner na página WaveExecution
 - [x] Testar em dispositivos móveis
+
+## Correções Urgentes (11/01/2026 - Sessão 2)
+- [x] Corrigir seleção de pedidos em /picking (checkboxes não funcionam na aba Pedidos)
+- [x] Adicionar botão "Separar" em cada SKU listado em /picking/execute/:waveId

@@ -279,6 +279,18 @@ export default function WaveExecution() {
 
                   <div className="flex flex-col items-end gap-2">
                     {getStatusBadge(item.status)}
+                    {item.status !== "picked" && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          // Focar no input do scanner para o operador escanear este item
+                          scannerInputRef.current?.focus();
+                          scannerInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }}
+                      >
+                        Separar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>

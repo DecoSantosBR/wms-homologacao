@@ -381,6 +381,19 @@ export default function PickingOrders() {
           </TabsList>
 
           <TabsContent value="orders">
+            {/* Botão Gerar Onda (aparece quando há pedidos selecionados) */}
+            {selectedOrderIds.length > 0 && (
+              <div className="mb-4 flex items-center justify-between bg-primary/10 p-4 rounded-lg border border-primary/20">
+                <p className="font-semibold">
+                  {selectedOrderIds.length} pedido(s) selecionado(s)
+                </p>
+                <Button onClick={() => setIsCreateWaveDialogOpen(true)}>
+                  <Waves className="h-4 w-4 mr-2" />
+                  Gerar Onda ({selectedOrderIds.length})
+                </Button>
+              </div>
+            )}
+
             <div className="grid gap-4">
         {orders && orders.length === 0 && (
           <Card className="p-8 text-center">
@@ -394,11 +407,47 @@ export default function PickingOrders() {
           </Card>
         )}
 
-        {orders?.map((order) => (
-          <Link key={order.id} href={`/picking/${order.id}`}>
-            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+        {orders?.map((order) => {
+          const isSelected = selectedOrderIds.includes(order.id);
+          const isPending = order.status === "pending";
+          const firstSelectedOrder = orders.find(o => selectedOrderIds.includes(o.id));
+          const isDifferentTenant = firstSelectedOrder && firstSelectedOrder.tenantId !== order.tenantId;
+
+          return (
+            <Card 
+              key={order.id} 
+              className={`p-6 transition-shadow ${
+                isSelected ? "border-primary bg-primary/5" : ""
+              } ${
+                isDifferentTenant && isPending ? "opacity-50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                {/* Checkbox para seleção (apenas pedidos pendentes) */}
+                {isPending && (
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    disabled={isDifferentTenant}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      if (isDifferentTenant) return;
+                      
+                      setSelectedOrderIds(prev => 
+                        isSelected 
+                          ? prev.filter(id => id !== order.id)
+                          : [...prev, order.id]
+                      );
+                    }}
+                    className="h-5 w-5 cursor-pointer"
+                  />
+                )}
+
+                {/* Conteúdo do Card (clicável para ver detalhes) */}
+                <Link href={`/picking/${order.id}`} className="flex-1">
+                  <div className="hover:opacity-80 transition-opacity">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
                     {getStatusBadge(order.status)}
@@ -414,13 +463,22 @@ export default function PickingOrders() {
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm">
-                  Ver Detalhes
-                </Button>
+                      <Button variant="outline" size="sm" onClick={(e) => e.preventDefault()}>
+                        Ver Detalhes
+                      </Button>
+                    </div>
+                  </div>
+                </Link>
+
+                {isDifferentTenant && isPending && (
+                  <p className="text-xs text-destructive mt-2">
+                    ⚠️ Cliente diferente dos pedidos já selecionados
+                  </p>
+                )}
               </div>
             </Card>
-          </Link>
-        ))}
+          );
+        })}
             </div>
           </TabsContent>
 
