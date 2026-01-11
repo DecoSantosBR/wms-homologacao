@@ -1139,3 +1139,4 @@
 - [x] Corrigir botão "Ver Detalhes" em /picking
 - [x] Implementar funcionalidade "Excluir Selecionados" em /picking
 - [ ] Implementar funcionalidade "Editar Pedido" em /picking (placeholder adicionado)
+- [x] Criar endpoint picking.deleteBatch no backend para exclusão em lote

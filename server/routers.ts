@@ -1211,6 +1211,68 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Excluir pedidos em lote
+    deleteBatch: protectedProcedure
+      .input(
+        z.object({
+          ids: z.array(z.number()).min(1),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        // Validar permissões e buscar pedidos
+        let ordersToDelete;
+        if (ctx.user.role === "admin") {
+          ordersToDelete = await db
+            .select({ id: pickingOrders.id, status: pickingOrders.status })
+            .from(pickingOrders)
+            .where(inArray(pickingOrders.id, input.ids));
+        } else {
+          const tenantId = ctx.user.tenantId!;
+          ordersToDelete = await db
+            .select({ id: pickingOrders.id, status: pickingOrders.status })
+            .from(pickingOrders)
+            .where(
+              and(
+                inArray(pickingOrders.id, input.ids),
+                eq(pickingOrders.tenantId, tenantId)
+              )
+            );
+        }
+
+        if (ordersToDelete.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum pedido encontrado para exclusão" });
+        }
+
+        // Verificar se algum pedido não pode ser excluído (status não permitido)
+        const nonDeletableOrders = ordersToDelete.filter(
+          order => !['pending', 'cancelled'].includes(order.status)
+        );
+
+        if (nonDeletableOrders.length > 0) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: `${nonDeletableOrders.length} pedido(s) não podem ser excluídos pois já estão em processo de separação` 
+          });
+        }
+
+        const idsToDelete = ordersToDelete.map(o => o.id);
+
+        // Excluir itens dos pedidos primeiro (foreign key)
+        await db
+          .delete(pickingOrderItems)
+          .where(inArray(pickingOrderItems.pickingOrderId, idsToDelete));
+
+        // Excluir pedidos
+        await db
+          .delete(pickingOrders)
+          .where(inArray(pickingOrders.id, idsToDelete));
+
+        return { success: true, deleted: idsToDelete.length };
+      }),
+
     // ========================================
     // WAVE PICKING (SEPARAÇÃO POR ONDA)
     // ========================================
