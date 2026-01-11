@@ -1190,3 +1190,29 @@
 - [x] Atualizado CHANGELOG.md
 
 **Resultado**: Sistema agora atualiza automaticamente o status de endereços para "available" quando estoque é zerado em TODOS os fluxos (movimentações, conferência, picking, recebimento).
+
+
+## Fase 50: Página de Gerenciamento de Ondas
+**Objetivo**: Implementar /waves para visualizar ondas criadas, realizar separações, gerenciar status e imprimir etiquetas/listas
+**Tarefas**:
+- [ ] Verificar endpoints existentes (listWaves, getWaveById, updateWaveStatus)
+- [ ] Criar endpoint para buscar itens detalhados da onda
+- [ ] Criar página Waves.tsx com listagem de ondas
+- [ ] Adicionar filtros por status (pending, picking, picked, staged, shipped)
+- [ ] Criar página WaveExecution.tsx (/waves/:id) para execução
+- [ ] Implementar interface de separação com scanner
+- [ ] Implementar impressão de etiqueta de onda com QR code
+- [ ] Implementar impressão de lista de picking (produtos, quantidades, endereços)
+- [ ] Adicionar rota /waves no App.tsx
+- [ ] Testar fluxo completo: criar onda → visualizar → executar → imprimir
+
+- [x] Corrigir query listWaves: admins devem ver todas as ondas (remover filtro de tenantId para admin)
+
+## Fase 50: Gerenciamento de Ondas - CONCLUÍDO ✅
+
+- [x] Criar página de listagem de ondas (/waves)
+- [x] Criar página de detalhes e execução de onda (/waves/:id)
+- [x] Implementar impressão de etiqueta de onda com QR code
+- [x] Implementar impressão de lista de picking
+- [x] Corrigir query listWaves: admins devem ver todas as ondas
+- [x] Testar fluxo completo de gerenciamento de ondas

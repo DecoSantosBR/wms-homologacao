@@ -1327,13 +1327,10 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        const tenantId = ctx.user.role === "admin" && input?.tenantId 
-          ? input.tenantId 
-          : ctx.user.tenantId;
-
-        if (!tenantId) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
-        }
+        // Admin pode ver todas as ondas ou filtrar por tenantId específico
+        // Usuários normais só veem ondas do seu tenant
+        const isAdmin = ctx.user.role === "admin";
+        const filterTenantId = input?.tenantId || ctx.user.tenantId;
 
         let query = db
           .select({
@@ -1349,8 +1346,15 @@ export const appRouter = router({
             pickedAt: pickingWaves.pickedAt,
             createdAt: pickingWaves.createdAt,
           })
-          .from(pickingWaves)
-          .where(eq(pickingWaves.tenantId, tenantId));
+          .from(pickingWaves);
+
+        // Aplicar filtro de tenant apenas se não for admin OU se admin especificou um tenant
+        if (!isAdmin || input?.tenantId) {
+          if (!filterTenantId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
+          }
+          query = query.where(eq(pickingWaves.tenantId, filterTenantId));
+        }
 
         const waves = await query;
 
