@@ -320,7 +320,7 @@
 - [ ] Testar fluxo de vinculação
 
 ## Fase 24: Complementação de Dados Durante Conferência
-- [ ] Adicionar modal de edição rápida na conferência cega
+- [x] Adicionar modal de edição rápida na conferência cega
 - [ ] Campos: Quantidade por Caixa, Categoria, Fabricante
 - [ ] Atualizar status de "pending_completion" para "active"
 - [ ] Testar complementação durante conferência
@@ -1174,3 +1174,13 @@
 - [x] Atualizar exclusão de pedidos para limpar reservas
 - [x] Criar teste automatizado para validar múltiplos waveItems
 - [x] Adicionar validação de saldo disponível na posição durante separação
+
+## 🆕 Editar e Excluir Ondas Separadas
+
+- [x] Implementar endpoint de exclusão de onda separada (reverter separação, liberar estoque)
+- [x] Implementar endpoint de edição de onda separada (ajustar quantidades separadas)
+- [x] Adicionar botões "Editar" e "Excluir" na interface de ondas
+- [x] Adicionar modal de confirmação para exclusão
+- [x] Adicionar modal de edição com ajuste de quantidades
+- [x] Testar exclusão de onda separada
+- [x] Testar edição de onda separada

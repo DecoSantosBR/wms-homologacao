@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products, labelAssociations } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { TRPCError } from "@trpc/server";
@@ -324,7 +324,7 @@ export const waveRouter = router({
     }),
 
   /**
-   * Cancelar onda
+   * Cancelar onda (apenas ondas pending/picking)
    */
   cancel: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -345,6 +345,157 @@ export const waveRouter = router({
         .where(eq(pickingOrders.waveId, input.id));
 
       return { success: true };
+    }),
+
+  /**
+   * Excluir onda separada (completed)
+   * Reverte separação, libera estoque reservado e cancela onda
+   */
+  deleteCompleted: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 1. Buscar onda
+      const [wave] = await db
+        .select()
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.id))
+        .limit(1);
+
+      if (!wave) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+      }
+
+      if (wave.status !== "completed") {
+        throw new TRPCError({ 
+          code: "BAD_REQUEST", 
+          message: "Apenas ondas separadas (completed) podem ser excluídas. Use cancelar para ondas pendentes." 
+        });
+      }
+
+      // 2. Zerar quantidades separadas nos waveItems
+      await db
+        .update(pickingWaveItems)
+        .set({ 
+          pickedQuantity: 0,
+          status: "pending"
+        })
+        .where(eq(pickingWaveItems.waveId, input.id));
+
+      // 3. Cancelar onda
+      await db
+        .update(pickingWaves)
+        .set({ status: "cancelled" })
+        .where(eq(pickingWaves.id, input.id));
+
+      // 4. Liberar pedidos (voltar para pending, mantendo reservas)
+      await db
+        .update(pickingOrders)
+        .set({ 
+          status: "pending",
+          waveId: null
+        })
+        .where(eq(pickingOrders.waveId, input.id));
+
+      return { 
+        success: true, 
+        message: `Onda ${wave.waveNumber} cancelada com sucesso. Pedidos voltaram para pending com reservas mantidas.`
+      };
+    }),
+
+  /**
+   * Editar quantidades separadas de uma onda completed
+   * Permite ajustar quantidades para corrigir erros de separação
+   */
+  editCompleted: protectedProcedure
+    .input(z.object({ 
+      waveId: z.number(),
+      items: z.array(z.object({
+        waveItemId: z.number(),
+        newPickedQuantity: z.number().min(0),
+      }))
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 1. Buscar onda
+      const [wave] = await db
+        .select()
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.waveId))
+        .limit(1);
+
+      if (!wave) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+      }
+
+      if (wave.status !== "completed") {
+        throw new TRPCError({ 
+          code: "BAD_REQUEST", 
+          message: "Apenas ondas separadas (completed) podem ser editadas" 
+        });
+      }
+
+      // 2. Atualizar quantidades dos itens
+      for (const item of input.items) {
+        // Buscar waveItem
+        const [waveItem] = await db
+          .select()
+          .from(pickingWaveItems)
+          .where(eq(pickingWaveItems.id, item.waveItemId))
+          .limit(1);
+
+        if (!waveItem) {
+          throw new TRPCError({ 
+            code: "NOT_FOUND", 
+            message: `Item ${item.waveItemId} não encontrado` 
+          });
+        }
+
+        // Validar que nova quantidade não excede o total solicitado
+        if (item.newPickedQuantity > waveItem.totalQuantity) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: `Quantidade separada (${item.newPickedQuantity}) não pode exceder quantidade solicitada (${waveItem.totalQuantity}) para o item ${waveItem.productSku}` 
+          });
+        }
+
+        // Atualizar pickedQuantity
+        const newStatus = item.newPickedQuantity === waveItem.totalQuantity ? "picked" : "picking";
+        await db
+          .update(pickingWaveItems)
+          .set({ 
+            pickedQuantity: item.newPickedQuantity,
+            status: newStatus as "pending" | "picking" | "picked"
+          })
+          .where(eq(pickingWaveItems.id, item.waveItemId));
+      }
+
+      // 3. Recalcular status da onda
+      const allWaveItems = await db
+        .select()
+        .from(pickingWaveItems)
+        .where(eq(pickingWaveItems.waveId, input.waveId));
+
+      const allCompleted = allWaveItems.every(
+        item => item.pickedQuantity === item.totalQuantity
+      );
+
+      const newStatus = allCompleted ? "completed" : "picking";
+
+      await db
+        .update(pickingWaves)
+        .set({ status: newStatus })
+        .where(eq(pickingWaves.id, input.waveId));
+
+      return { 
+        success: true, 
+        message: `Onda ${wave.waveNumber} atualizada com sucesso`,
+        newStatus
+      };
     }),
 
   /**

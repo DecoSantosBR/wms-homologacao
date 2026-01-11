@@ -35,7 +35,7 @@ export default function PickingOrders() {
   const [quantity, setQuantity] = useState<number>(1);
   const [unit, setUnit] = useState<"box" | "unit">("box");
   
-  // Estados para edição
+  // Estados para edição de pedido
   const [editTenantId, setEditTenantId] = useState<string>("");
   const [editCustomerName, setEditCustomerName] = useState("");
   const [editPriority, setEditPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
@@ -43,6 +43,11 @@ export default function PickingOrders() {
   const [editSelectedProductId, setEditSelectedProductId] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<number>(1);
   const [editUnit, setEditUnit] = useState<"box" | "unit">("box");
+
+  // Estados para edição de onda
+  const [isEditWaveDialogOpen, setIsEditWaveDialogOpen] = useState(false);
+  const [editingWave, setEditingWave] = useState<any>(null);
+  const [editWaveItems, setEditWaveItems] = useState<Array<{ waveItemId: number; productSku: string; productName: string; totalQuantity: number; pickedQuantity: number }>>([]);
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
@@ -52,6 +57,11 @@ export default function PickingOrders() {
   const { data: editOrderDetails } = trpc.picking.getById.useQuery(
     { id: editingOrder?.id || 0 },
     { enabled: !!editingOrder }
+  );
+
+  const { data: editWaveDetails } = trpc.wave.getById.useQuery(
+    { id: editingWave?.id || 0 },
+    { enabled: !!editingWave }
   );
 
   // Carregar itens do pedido ao editar
@@ -67,6 +77,21 @@ export default function PickingOrders() {
       );
     }
   }, [editOrderDetails, isEditDialogOpen]);
+
+  // Carregar itens da onda ao editar
+  useEffect(() => {
+    if (editWaveDetails?.items && isEditWaveDialogOpen) {
+      setEditWaveItems(
+        editWaveDetails.items.map((item: any) => ({
+          waveItemId: item.id,
+          productSku: item.productSku,
+          productName: item.productName,
+          totalQuantity: item.totalQuantity,
+          pickedQuantity: item.pickedQuantity,
+        }))
+      );
+    }
+  }, [editWaveDetails, isEditWaveDialogOpen]);
 
   const createWaveMutation = trpc.wave.create.useMutation({
     onSuccess: () => {
@@ -87,6 +112,29 @@ export default function PickingOrders() {
     },
     onError: (error) => {
       alert(`Erro ao excluir onda: ${error.message}`);
+    },
+  });
+
+  const deleteCompletedWaveMutation = trpc.wave.deleteCompleted.useMutation({
+    onSuccess: (result) => {
+      refetchWaves();
+      refetch(); // Atualizar lista de pedidos também
+      alert(result.message);
+    },
+    onError: (error) => {
+      alert(`Erro ao excluir onda: ${error.message}`);
+    },
+  });
+
+  const editCompletedWaveMutation = trpc.wave.editCompleted.useMutation({
+    onSuccess: (result) => {
+      refetchWaves();
+      setIsEditWaveDialogOpen(false);
+      setEditingWave(null);
+      alert(result.message);
+    },
+    onError: (error) => {
+      alert(`Erro ao editar onda: ${error.message}`);
     },
   });
 
@@ -967,11 +1015,45 @@ export default function PickingOrders() {
                     </Link>
 
                     <div className="flex gap-2">
-                      <Link href={`/picking/execute/${wave.id}`}>
-                        <Button variant="outline" size="sm">
-                          Executar
-                        </Button>
-                      </Link>
+                      {wave.status !== "cancelled" && (
+                        <Link href={`/picking/execute/${wave.id}`}>
+                          <Button variant="outline" size="sm">
+                            {wave.status === "completed" ? "Visualizar" : "Executar"}
+                          </Button>
+                        </Link>
+                      )}
+                      
+                      {/* Botões para ondas completed */}
+                      {wave.status === "completed" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingWave(wave);
+                              setIsEditWaveDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Tem certeza que deseja excluir a onda ${wave.waveNumber}? A separação será revertida e os pedidos voltam para pending.`)) {
+                                deleteCompletedWaveMutation.mutate({ id: wave.id });
+                              }
+                            }}
+                            disabled={deleteCompletedWaveMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Botão para ondas pending/cancelled */}
                       {(wave.status === "pending" || wave.status === "cancelled") && (
                         <Button
                           variant="destructive"
@@ -994,6 +1076,90 @@ export default function PickingOrders() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modal de Edição de Onda */}
+      <Dialog open={isEditWaveDialogOpen} onOpenChange={setIsEditWaveDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Onda {editingWave?.waveNumber}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ajuste as quantidades separadas de cada item. Use isso para corrigir erros de separação.
+            </p>
+
+            {editWaveItems.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">Carregando itens...</p>
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Solicitado</TableHead>
+                      <TableHead>Separado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {editWaveItems.map((item, index) => (
+                      <TableRow key={item.waveItemId}>
+                        <TableCell className="font-medium">{item.productName}</TableCell>
+                        <TableCell>{item.productSku}</TableCell>
+                        <TableCell>{item.totalQuantity}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={item.totalQuantity}
+                            value={item.pickedQuantity}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setEditWaveItems(prev => 
+                                prev.map((it, i) => 
+                                  i === index ? { ...it, pickedQuantity: newValue } : it
+                                )
+                              );
+                            }}
+                            className="w-24"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditWaveDialogOpen(false);
+                  setEditingWave(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => {
+                  editCompletedWaveMutation.mutate({
+                    waveId: editingWave.id,
+                    items: editWaveItems.map(item => ({
+                      waveItemId: item.waveItemId,
+                      newPickedQuantity: item.pickedQuantity,
+                    })),
+                  });
+                }}
+                disabled={editCompletedWaveMutation.isPending}
+              >
+                {editCompletedWaveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
