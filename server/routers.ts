@@ -208,6 +208,25 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
+        // Verificar se já existe produto com mesmo SKU e tenantId
+        const existing = await db
+          .select()
+          .from(products)
+          .where(
+            and(
+              eq(products.tenantId, input.tenantId),
+              eq(products.sku, input.sku)
+            )
+          )
+          .limit(1);
+        
+        if (existing.length > 0) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Já existe um produto com SKU "${input.sku}" para este cliente. Use um SKU diferente ou edite o produto existente.`
+          });
+        }
+        
         await db.insert(products).values(input);
         return { success: true };
       }),

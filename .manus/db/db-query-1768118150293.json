@@ -1,0 +1,32 @@
+{
+  "query": "SELECT \n  id, \n  sku, \n  tenantId,\n  supplierCode,\n  customerCode,\n  description,\n  gtin,\n  status,\n  createdAt\nFROM products\nWHERE sku = '443060'\nORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  id, \n  sku, \n  tenantId,\n  supplierCode,\n  customerCode,\n  description,\n  gtin,\n  status,\n  createdAt\nFROM products\nWHERE sku = '443060'\nORDER BY id;",
+  "rows": [
+    {
+      "id": "60001",
+      "sku": "443060",
+      "tenantId": "1",
+      "supplierCode": "443060",
+      "customerCode": "NULL",
+      "description": "EXTENSOFIX 60 CM",
+      "gtin": "7891543001875",
+      "status": "active",
+      "createdAt": "2026-01-09 00:28:21"
+    },
+    {
+      "id": "180001",
+      "sku": "443060",
+      "tenantId": "60006",
+      "supplierCode": "443060",
+      "customerCode": "NULL",
+      "description": "EXTENSOFIX 60 CM",
+      "gtin": "7891543001875",
+      "status": "active",
+      "createdAt": "2026-01-09 23:52:28"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsku\ttenantId\tsupplierCode\tcustomerCode\tdescription\tgtin\tstatus\tcreatedAt\n60001\t443060\t1\t443060\tNULL\tEXTENSOFIX 60 CM\t7891543001875\tactive\t2026-01-09 00:28:21\n180001\t443060\t60006\t443060\tNULL\tEXTENSOFIX 60 CM\t7891543001875\tactive\t2026-01-09 23:52:28\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}

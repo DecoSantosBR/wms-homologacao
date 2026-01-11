@@ -1,0 +1,26 @@
+{
+  "query": "SELECT \n  id, \n  sku, \n  tenantId,\n  supplierCode,\n  description,\n  createdAt\nFROM products\nWHERE sku = '401460P'\nORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  id, \n  sku, \n  tenantId,\n  supplierCode,\n  description,\n  createdAt\nFROM products\nWHERE sku = '401460P'\nORDER BY id;",
+  "rows": [
+    {
+      "id": "60002",
+      "sku": "401460P",
+      "tenantId": "1",
+      "supplierCode": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR",
+      "createdAt": "2026-01-09 00:28:21"
+    },
+    {
+      "id": "180002",
+      "sku": "401460P",
+      "tenantId": "60006",
+      "supplierCode": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR",
+      "createdAt": "2026-01-09 23:52:28"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsku\ttenantId\tsupplierCode\tdescription\tcreatedAt\n60002\t401460P\t1\t401460P\tINTRAFIX PRIMELINE AIR\t2026-01-09 00:28:21\n180002\t401460P\t60006\t401460P\tINTRAFIX PRIMELINE AIR\t2026-01-09 23:52:28\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}
