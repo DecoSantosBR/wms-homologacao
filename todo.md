@@ -1279,3 +1279,11 @@
 - [x] Corrigir lógica de validação de produto
 - [x] Ajustar query de labelAssociations
 - [x] Testar fluxo completo de separação
+
+## Fase 55: Scanner de Código de Barras por Câmera
+**Objetivo**: Implementar scanner por câmera para facilitar operação de picking em dispositivos móveis
+**Tarefas**:
+- [x] Instalar biblioteca html5-qrcode
+- [x] Criar componente BarcodeScanner reutilizável
+- [x] Integrar scanner na página PickingExecuteWave
+- [ ] Testar scanner com câmera de dispositivo móvel

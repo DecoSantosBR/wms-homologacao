@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Home, Package, MapPin, CheckCircle2, Barcode } from "lucide-react";
+import { ArrowLeft, Home, Package, MapPin, CheckCircle2, Barcode, Camera } from "lucide-react";
 import { toast } from "sonner";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 type ScanStep = "location" | "item";
 
@@ -21,6 +22,8 @@ export default function PickingExecuteWave() {
   const [currentLocation, setCurrentLocation] = useState<string>("");
   const [scannedLabel, setScannedLabel] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("1");
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<"location" | "label" | null>(null);
 
   const locationInputRef = useRef<HTMLInputElement>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +95,34 @@ export default function PickingExecuteWave() {
       labelInputRef.current?.focus();
     }
   }, [scanStep]);
+
+  // Handlers do scanner
+  const openScanner = (target: "location" | "label") => {
+    setScannerTarget(target);
+    setShowScanner(true);
+  };
+
+  const handleScanResult = (code: string) => {
+    if (scannerTarget === "location") {
+      if (locationInputRef.current) {
+        locationInputRef.current.value = code;
+      }
+      // Processar automaticamente
+      if (nextLocation && code !== nextLocation.locationCode) {
+        toast.error(`Endereço incorreto! Vá para: ${nextLocation.locationCode}`);
+      } else {
+        setCurrentLocation(code);
+        setScanStep("item");
+        toast.success(`Endereço: ${code}`);
+      }
+    } else if (scannerTarget === "label") {
+      setScannedLabel(code);
+      // Focar no campo de quantidade
+      setTimeout(() => quantityInputRef.current?.focus(), 100);
+    }
+    setShowScanner(false);
+    setScannerTarget(null);
+  };
 
   const handleLocationScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,13 +260,24 @@ export default function PickingExecuteWave() {
               <form onSubmit={handleLocationScan} className="space-y-4">
                 <div>
                   <Label htmlFor="location">Código do Endereço</Label>
-                  <Input
-                    id="location"
-                    ref={locationInputRef}
-                    placeholder="Bipe o código de barras do endereço"
-                    autoFocus
-                    className="text-lg"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="location"
+                      ref={locationInputRef}
+                      placeholder="Bipe o código de barras do endereço"
+                      autoFocus
+                      className="text-lg flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="outline"
+                      onClick={() => openScanner("location")}
+                      className="h-auto"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" size="lg">
                   <Barcode className="h-5 w-5 mr-2" />
@@ -309,15 +351,26 @@ export default function PickingExecuteWave() {
               <form onSubmit={handleItemScan} className="space-y-4">
                 <div>
                   <Label htmlFor="label">Código da Etiqueta</Label>
-                  <Input
-                    id="label"
-                    ref={labelInputRef}
-                    value={scannedLabel}
-                    onChange={(e) => setScannedLabel(e.target.value)}
-                    placeholder="Bipe o código de barras da etiqueta"
-                    autoFocus
-                    className="text-lg"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="label"
+                      ref={labelInputRef}
+                      value={scannedLabel}
+                      onChange={(e) => setScannedLabel(e.target.value)}
+                      placeholder="Bipe o código de barras da etiqueta"
+                      autoFocus
+                      className="text-lg flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="outline"
+                      onClick={() => openScanner("label")}
+                      className="h-auto"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="quantity">Quantidade</Label>
@@ -357,6 +410,17 @@ export default function PickingExecuteWave() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Barcode Scanner Modal */}
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleScanResult}
+          onClose={() => {
+            setShowScanner(false);
+            setScannerTarget(null);
+          }}
+        />
       )}
     </div>
   );
