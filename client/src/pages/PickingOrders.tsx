@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ interface ProductItem {
 export default function PickingOrders() {
   const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any>(null);
   const [isCreateWaveDialogOpen, setIsCreateWaveDialogOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
@@ -63,6 +65,29 @@ export default function PickingOrders() {
     },
     onError: (error) => {
       alert(`Erro ao criar pedido: ${error.message}`);
+    },
+  });
+
+  const deleteManyMutation = trpc.picking.deleteBatch.useMutation({
+    onSuccess: (result) => {
+      refetch();
+      setSelectedOrderIds([]);
+      alert(`${result.deleted} pedido(s) excluído(s) com sucesso!`);
+    },
+    onError: (error) => {
+      alert(`Erro ao excluir pedidos: ${error.message}`);
+    },
+  });
+
+  const updateMutation = trpc.picking.update.useMutation({
+    onSuccess: () => {
+      refetch();
+      setIsEditDialogOpen(false);
+      setEditingOrder(null);
+      alert("Pedido atualizado com sucesso!");
+    },
+    onError: (error) => {
+      alert(`Erro ao atualizar pedido: ${error.message}`);
     },
   });
 
@@ -387,24 +412,37 @@ export default function PickingOrders() {
                 <p className="font-semibold">
                   {selectedOrderIds.length} pedido(s) selecionado(s)
                 </p>
-                <Button 
-                  onClick={() => {
-                    // Validar que todos os pedidos são do mesmo cliente (tenantId)
-                    const selectedOrders = orders?.filter(o => selectedOrderIds.includes(o.id));
-                    const uniqueTenants = new Set(selectedOrders?.map(o => o.tenantId).filter(Boolean));
-                    
-                    if (uniqueTenants.size > 1) {
-                      alert("Todos os pedidos devem ser do mesmo cliente para gerar uma onda.");
-                      return;
-                    }
-                    
-                    createWaveMutation.mutate({ orderIds: selectedOrderIds });
-                  }}
-                  disabled={createWaveMutation.isPending}
-                >
-                  <Waves className="h-4 w-4 mr-2" />
-                  {createWaveMutation.isPending ? "Gerando..." : `Gerar Onda (${selectedOrderIds.length})`}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm(`Tem certeza que deseja excluir ${selectedOrderIds.length} pedido(s)?`)) {
+                        deleteManyMutation.mutate({ ids: selectedOrderIds });
+                      }
+                    }}
+                    disabled={deleteManyMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteManyMutation.isPending ? "Excluindo..." : "Excluir Selecionados"}
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const selectedOrders = orders?.filter(o => selectedOrderIds.includes(o.id));
+                      const uniqueTenants = new Set(selectedOrders?.map(o => o.tenantId).filter(Boolean));
+                      
+                      if (uniqueTenants.size > 1) {
+                        alert("Todos os pedidos devem ser do mesmo cliente para gerar uma onda.");
+                        return;
+                      }
+                      
+                      createWaveMutation.mutate({ orderIds: selectedOrderIds });
+                    }}
+                    disabled={createWaveMutation.isPending}
+                  >
+                    <Waves className="h-4 w-4 mr-2" />
+                    {createWaveMutation.isPending ? "Gerando..." : `Gerar Onda (${selectedOrderIds.length})`}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -477,9 +515,24 @@ export default function PickingOrders() {
                   </div>
                 </div>
 
-                      <Button variant="outline" size="sm" onClick={(e) => e.preventDefault()}>
-                        Ver Detalhes
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Ver Detalhes
+                        </Button>
+                        {isPending && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              alert("Funcionalidade de edição em desenvolvimento. Por enquanto, exclua e crie um novo pedido.");
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>

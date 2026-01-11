@@ -1132,3 +1132,10 @@
 - [x] Implementar bloqueio de estoque: ao confirmar separação de onda, marcar saldo como "reserved" até confirmação na próxima etapa
 
 - [x] Adicionar coluna "Qtd. Reservada" na tela de consulta de estoque (/stock)
+
+- [ ] Corrigir botão "Ver Detalhes" na página /picking
+- [ ] Implementar funcionalidade "Excluir Selecionados" em /picking
+- [ ] Implementar funcionalidade "Editar Pedido" em /picking
+- [x] Corrigir botão "Ver Detalhes" em /picking
+- [x] Implementar funcionalidade "Excluir Selecionados" em /picking
+- [ ] Implementar funcionalidade "Editar Pedido" em /picking (placeholder adicionado)
