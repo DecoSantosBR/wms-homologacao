@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, waveNumber, status, totalOrders, totalItems, totalQuantity, createdAt FROM pickingWaves WHERE status IN ('pending', 'picking') ORDER BY createdAt;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT id, waveNumber, status, totalOrders, totalItems, totalQuantity, createdAt FROM pickingWaves WHERE status IN ('pending', 'picking') ORDER BY createdAt;",
+  "rows": [
+    {
+      "id": "1",
+      "waveNumber": "OS-20260111-0001",
+      "status": "pending",
+      "totalOrders": "2",
+      "totalItems": "4",
+      "totalQuantity": "640",
+      "createdAt": "2026-01-11 06:14:55"
+    },
+    {
+      "id": "2",
+      "waveNumber": "OS-20260111-0002",
+      "status": "picking",
+      "totalOrders": "2",
+      "totalItems": "3",
+      "totalQuantity": "370",
+      "createdAt": "2026-01-11 06:46:52"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twaveNumber\tstatus\ttotalOrders\ttotalItems\ttotalQuantity\tcreatedAt\n1\tOS-20260111-0001\tpending\t2\t4\t640\t2026-01-11 06:14:55\n2\tOS-20260111-0002\tpicking\t2\t3\t370\t2026-01-11 06:46:52\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

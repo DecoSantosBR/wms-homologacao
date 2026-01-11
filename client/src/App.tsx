@@ -34,11 +34,11 @@ function Router() {
       <Route path={"/receiving"} component={Receiving} />
       <Route path={"/recebimento"} component={Receiving} />
       <Route path={"/picking"} component={PickingOrders} />
+      <Route path={"/picking/execute"} component={PickingExecute} />
+      <Route path={"/picking/execute/:id"} component={PickingExecuteWave} />
       <Route path={"/picking/:id"} component={PickingExecution} />
       <Route path={"/waves"} component={Waves} />
       <Route path={"/waves/:id"} component={WaveExecution} />
-      <Route path={"/picking/execute"} component={PickingExecute} />
-      <Route path={"/picking/execute/:id"} component={PickingExecuteWave} />
       <Route path={"/separacao"} component={Picking} />
       <Route path={"/inventory"} component={Inventory} />
       <Route path={"/cadastros"} component={Cadastros} />

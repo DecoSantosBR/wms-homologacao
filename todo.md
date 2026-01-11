@@ -1263,3 +1263,11 @@
 - [x] Criar aba "Pedidos" (conteúdo atual)
 - [x] Criar aba "Ondas" (redireciona para /waves ou embute conteúdo)
 - [x] Testar navegação entre abas
+
+## Fase 53: Corrigir Página /picking/execute
+**Objetivo**: Corrigir problema de loading infinito na página de seleção de ondas
+**Tarefas**:
+- [x] Investigar endpoint getAvailableWaves
+- [x] Verificar implementação do frontend PickingExecute.tsx
+- [x] Corrigir query ou lógica de carregamento
+- [x] Testar seleção de ondas disponíveis
