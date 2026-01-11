@@ -224,7 +224,41 @@ export const waveRouter = router({
         }
       }
 
-      // 3. Validar quantidade
+      // 3. Validar saldo disponível na posição de estoque
+      if (waveItem.locationId) {
+        const [stockPosition] = await db
+          .select({
+            quantity: inventory.quantity,
+            reservedQuantity: inventory.reservedQuantity,
+          })
+          .from(inventory)
+          .where(
+            and(
+              eq(inventory.locationId, waveItem.locationId),
+              eq(inventory.productId, waveItem.productId),
+              waveItem.batch ? eq(inventory.batch, waveItem.batch) : sql`${inventory.batch} IS NULL`
+            )
+          )
+          .limit(1);
+
+        if (!stockPosition) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Estoque não encontrado na posição ${waveItem.locationId} para o produto ${waveItem.productSku}${waveItem.batch ? ` lote ${waveItem.batch}` : ''}`,
+          });
+        }
+
+        const availableQuantity = stockPosition.quantity - (stockPosition.reservedQuantity || 0);
+        
+        if (input.quantity > availableQuantity) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Saldo insuficiente na posição! Disponível: ${availableQuantity}, tentando separar: ${input.quantity}`,
+          });
+        }
+      }
+
+      // 4. Validar quantidade total da onda
       const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
       if (newPickedQuantity > waveItem.totalQuantity) {
         throw new TRPCError({
@@ -233,7 +267,7 @@ export const waveRouter = router({
         });
       }
 
-      // 4. Atualizar item da onda
+      // 5. Atualizar item da onda
       const isComplete = newPickedQuantity === waveItem.totalQuantity;
       await db
         .update(pickingWaveItems)
@@ -243,7 +277,7 @@ export const waveRouter = router({
         })
         .where(eq(pickingWaveItems.id, input.itemId));
 
-      // 5. Verificar se todos os itens da onda foram completados
+      // 6. Verificar se todos os itens da onda foram completados
       const allItems = await db
         .select()
         .from(pickingWaveItems)
@@ -255,7 +289,7 @@ export const waveRouter = router({
           : item.status === "picked"
       );
 
-      // 6. Atualizar status da onda se todos os itens foram completados
+      // 7. Atualizar status da onda se todos os itens foram completados
       if (allCompleted) {
         await db
           .update(pickingWaves)

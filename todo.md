@@ -1153,3 +1153,24 @@
 - [x] Finalizar implementação de excluir ondas
 
 - [x] Ajustar layout do modal "Criar Pedido de Separação" para evitar sobreposição
+
+## 🐛 BUG CRÍTICO - Validação de Estoque na Separação
+
+- [ ] Corrigir validação de estoque durante execução de onda - sistema permite separar quantidade maior que o saldo disponível na posição específica
+- [ ] Implementar verificação de saldo disponível (quantity - reservedQuantity) antes de registrar separação
+- [ ] Adicionar validação por posição + lote específico (não apenas total do produto)
+
+## 🐛 BUG CRÍTICO - Interface de Execução de Onda
+
+- [ ] Corrigir interface para exibir múltiplas posições quando FEFO aloca estoque de lotes/endereços diferentes
+- [ ] Verificar se waveLogic.ts cria múltiplos pickingWaveItems (um por posição)
+- [ ] Garantir que WaveExecution.tsx exibe todos os itens separadamente
+
+## ✅ Correções Implementadas - Múltiplas Posições em Ondas
+
+- [x] Criar tabela pickingReservations para rastrear reservas
+- [x] Atualizar criação de pedidos para registrar reservas
+- [x] Atualizar criação de ondas para usar reservas (não FEFO novamente)
+- [x] Atualizar exclusão de pedidos para limpar reservas
+- [x] Criar teste automatizado para validar múltiplos waveItems
+- [x] Adicionar validação de saldo disponível na posição durante separação

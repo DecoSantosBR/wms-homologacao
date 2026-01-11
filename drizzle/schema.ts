@@ -463,6 +463,19 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+/**
+ * Tabela de reservas de estoque para pedidos de separação
+ * Rastreia quais posições de estoque foram reservadas para cada pedido
+ */
+export const pickingReservations = mysqlTable("pickingReservations", {
+  id: int("id").autoincrement().primaryKey(),
+  pickingOrderId: int("pickingOrderId").notNull(),
+  productId: int("productId").notNull(),
+  inventoryId: int("inventoryId").notNull(), // Posição de estoque reservada
+  quantity: int("quantity").notNull(), // Quantidade reservada desta posição
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ============================================================================
 // MÓDULO 6: EXPEDIÇÃO
 // ============================================================================

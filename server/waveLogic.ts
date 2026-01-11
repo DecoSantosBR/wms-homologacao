@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, tenants } from "../drizzle/schema";
+import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, tenants, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
 
 /**
@@ -218,11 +218,43 @@ export async function createWave(params: CreateWaveParams) {
 
   const pickingRule = tenant.pickingRule as "FIFO" | "FEFO" | "Direcionado";
 
-  // 3. Consolidar itens dos pedidos
-  const consolidatedItems = await consolidateItems(params.orderIds);
+  // 3. Buscar reservas dos pedidos (já alocadas durante criação do pedido)
+  const reservations = await db
+    .select({
+      productId: pickingReservations.productId,
+      inventoryId: pickingReservations.inventoryId,
+      quantity: pickingReservations.quantity,
+      productSku: products.sku,
+      productName: products.description,
+      locationId: inventory.locationId,
+      locationCode: warehouseLocations.code,
+      batch: inventory.batch,
+      expiryDate: inventory.expiryDate,
+    })
+    .from(pickingReservations)
+    .leftJoin(products, eq(pickingReservations.productId, products.id))
+    .leftJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
+    .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+    .where(inArray(pickingReservations.pickingOrderId, params.orderIds));
 
-  // 4. Alocar endereços baseado na regra FIFO/FEFO
-  const allocatedItems = await allocateLocations(tenantId, consolidatedItems, pickingRule);
+  if (reservations.length === 0) {
+    throw new Error("Nenhuma reserva encontrada para os pedidos selecionados");
+  }
+
+  // 4. Transformar reservas em formato de allocatedItems
+  const allocatedItems = reservations.map(r => ({
+    productId: r.productId,
+    productSku: r.productSku!,
+    productName: r.productName!,
+    totalQuantity: r.quantity, // Não usado, mas mantido para compatibilidade
+    allocatedQuantity: r.quantity,
+    orders: [], // Não usado na criação de waveItems
+    inventoryId: r.inventoryId,
+    locationId: r.locationId!,
+    locationCode: r.locationCode!,
+    batch: r.batch || undefined,
+    expiryDate: r.expiryDate || undefined,
+  }));
 
   // 5. Gerar número da onda
   const waveNumber = await generateWaveNumber();

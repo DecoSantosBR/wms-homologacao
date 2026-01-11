@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -1158,19 +1158,28 @@ export const appRouter = router({
             });
           }
 
-          // Reservar estoque
+          // Reservar estoque e registrar reservas
           let remainingToReserve = item.requestedQuantity;
           for (const stock of availableStock) {
             if (remainingToReserve <= 0) break;
 
             const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
             
+            // Incrementar reservedQuantity no inventory
             await db
               .update(inventory)
               .set({
                 reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
               })
               .where(eq(inventory.id, stock.id));
+
+            // Registrar reserva na tabela pickingReservations
+            await db.insert(pickingReservations).values({
+              pickingOrderId: order.id,
+              productId: item.productId,
+              inventoryId: stock.id,
+              quantity: toReserve,
+            });
 
             remainingToReserve -= toReserve;
           }
@@ -1429,41 +1438,26 @@ export const appRouter = router({
 
         // Liberar reservas de estoque antes de excluir
         for (const orderId of idsToDelete) {
-          // Buscar itens do pedido
-          const orderItems = await db
+          // Buscar reservas do pedido
+          const reservations = await db
             .select()
-            .from(pickingOrderItems)
-            .where(eq(pickingOrderItems.pickingOrderId, orderId));
+            .from(pickingReservations)
+            .where(eq(pickingReservations.pickingOrderId, orderId));
 
-          for (const item of orderItems) {
-            // Buscar estoque reservado para este produto
-            const stockRecords = await db
-              .select()
-              .from(inventory)
-              .where(
-                and(
-                  eq(inventory.productId, item.productId),
-                  sql`${inventory.reservedQuantity} > 0`
-                )
-              )
-              .orderBy(inventory.expiryDate); // FEFO
-
-            let remainingToRelease = item.requestedQuantity;
-            for (const stock of stockRecords) {
-              if (remainingToRelease <= 0) break;
-
-              const toRelease = Math.min(stock.reservedQuantity, remainingToRelease);
-              
-              await db
-                .update(inventory)
-                .set({
-                  reservedQuantity: sql`${inventory.reservedQuantity} - ${toRelease}`
-                })
-                .where(eq(inventory.id, stock.id));
-
-              remainingToRelease -= toRelease;
-            }
+          // Liberar estoque reservado
+          for (const reservation of reservations) {
+            await db
+              .update(inventory)
+              .set({
+                reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
+              })
+              .where(eq(inventory.id, reservation.inventoryId));
           }
+
+          // Excluir registros de reserva
+          await db
+            .delete(pickingReservations)
+            .where(eq(pickingReservations.pickingOrderId, orderId));
         }
 
         // Excluir itens dos pedidos primeiro (foreign key)
@@ -1766,6 +1760,40 @@ export const appRouter = router({
             throw new TRPCError({
               code: "BAD_REQUEST",
               message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}`,
+            });
+          }
+        }
+
+        // Validar saldo disponível na posição de estoque
+        if (waveItem.locationId) {
+          const [stockPosition] = await db
+            .select({
+              quantity: inventory.quantity,
+              reservedQuantity: inventory.reservedQuantity,
+            })
+            .from(inventory)
+            .where(
+              and(
+                eq(inventory.locationId, waveItem.locationId),
+                eq(inventory.productId, waveItem.productId),
+                waveItem.batch ? eq(inventory.batch, waveItem.batch) : sql`${inventory.batch} IS NULL`
+              )
+            )
+            .limit(1);
+
+          if (!stockPosition) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Estoque não encontrado na posição ${waveItem.locationId} para o produto ${waveItem.productSku}${waveItem.batch ? ` lote ${waveItem.batch}` : ''}`,
+            });
+          }
+
+          const availableQuantity = stockPosition.quantity - (stockPosition.reservedQuantity || 0);
+          
+          if (input.quantity > availableQuantity) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Saldo insuficiente na posição! Disponível: ${availableQuantity}, tentando separar: ${input.quantity}`,
             });
           }
         }
