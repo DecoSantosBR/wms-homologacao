@@ -1081,3 +1081,18 @@
 - [x] Adicionar barra de progresso visual
 - [x] Exibir feedback de sucesso/erro ao escanear
 - [x] Registrar rota no App.tsx
+
+## Fase: Retomar Separação
+- [ ] Adicionar botão "Retomar" para ondas em andamento na listagem
+- [ ] Modificar botão "Executar" para "Retomar" quando onda já iniciada
+- [ ] Preservar progresso de itens parcialmente separados
+- [ ] Exibir indicador visual de ondas em andamento
+- [ ] Testar fluxo de interrupção e retomada
+
+## Fase: Leitura de Etiquetas por Câmera
+- [x] Instalar biblioteca @zxing/browser para leitura de código de barras
+- [x] Criar componente BarcodeScanner.tsx
+- [x] Implementar acesso à câmera do dispositivo
+- [x] Adicionar botão para alternar entre input manual e câmera
+- [x] Integrar scanner na página WaveExecution
+- [x] Testar em dispositivos móveis

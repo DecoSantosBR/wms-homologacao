@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Package, MapPin, Calendar, CheckCircle2, AlertCircle, Scan } from "lucide-react";
+import { ArrowLeft, Package, MapPin, Calendar, CheckCircle2, AlertCircle, Scan, Camera } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 export default function WaveExecution() {
   const [, params] = useRoute("/picking/execute/:id");
@@ -16,6 +17,7 @@ export default function WaveExecution() {
 
   const [scannedCode, setScannedCode] = useState("");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, refetch } = trpc.picking.getPickingProgress.useQuery(
@@ -175,6 +177,16 @@ export default function WaveExecution() {
                   autoFocus
                   disabled={registerMutation.isPending}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsCameraOpen(true)}
+                  disabled={registerMutation.isPending}
+                  title="Usar câmera"
+                >
+                  <Camera className="h-5 w-5" />
+                </Button>
                 <Button type="submit" disabled={!scannedCode.trim() || registerMutation.isPending}>
                   {registerMutation.isPending ? "Processando..." : "Confirmar"}
                 </Button>
@@ -274,6 +286,37 @@ export default function WaveExecution() {
           })}
         </div>
       </div>
+
+      {/* Scanner de Câmera */}
+      {isCameraOpen && (
+        <BarcodeScanner
+          onScan={(code) => {
+            setScannedCode(code);
+            setIsCameraOpen(false);
+            // Submeter automaticamente após scan
+            setTimeout(() => {
+              const pendingItem = data?.items.find(
+                item => item.status !== "picked" && item.productSku === code.substring(0, 7)
+              );
+              if (pendingItem) {
+                registerMutation.mutate({
+                  waveId,
+                  itemId: pendingItem.id,
+                  scannedCode: code.trim(),
+                  quantity: 1,
+                });
+              } else {
+                setFeedback({
+                  type: "error",
+                  message: "Produto não encontrado ou já foi completamente separado",
+                });
+                setTimeout(() => setFeedback(null), 5000);
+              }
+            }, 100);
+          }}
+          onClose={() => setIsCameraOpen(false)}
+        />
+      )}
     </>
   );
 }
