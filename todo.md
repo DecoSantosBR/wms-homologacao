@@ -1116,3 +1116,7 @@
 
 ## Correção Backend - Validação de Etiqueta (11/01/2026 - Sessão 5)
 - [x] Corrigir registerPickedItem para validar etiqueta com código armazenado (não extrair SKU)
+
+## Bug Crítico - Validação com 7 caracteres fixos (11/01/2026)
+- [x] Remover todas as ocorrências de validação com 7 caracteres fixos
+- [x] Garantir que fallback use tamanho correto do SKU

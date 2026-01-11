@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -1455,12 +1455,51 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Item da onda não encontrado" });
         }
 
-        const scannedSku = input.scannedCode.substring(0, 7);
-        if (scannedSku !== waveItem.productSku) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" pertence ao SKU: ${scannedSku}`,
-          });
+        // Validar que o código escaneado corresponde à etiqueta armazenada no recebimento
+        if (waveItem.batch) {
+          // Buscar etiqueta associada ao produto/lote no recebimento
+          const [labelRecord] = await db
+            .select({ labelCode: labelAssociations.labelCode })
+            .from(labelAssociations)
+            .where(
+              and(
+                eq(labelAssociations.productId, waveItem.productId),
+                eq(labelAssociations.batch, waveItem.batch)
+              )
+            )
+            .limit(1);
+
+          if (labelRecord) {
+            // Se há labelCode armazenado, comparar diretamente
+            if (input.scannedCode.trim() !== labelRecord.labelCode.trim()) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Etiqueta incorreta! Esperado: ${labelRecord.labelCode}, mas foi escaneado: "${input.scannedCode}"`,
+              });
+            }
+          } else {
+            // Fallback: se não houver labelCode, validar pelo SKU (legado)
+            const skuLength = waveItem.productSku.length;
+            const scannedSku = input.scannedCode.substring(0, skuLength);
+            
+            if (scannedSku !== waveItem.productSku) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" não corresponde`,
+              });
+            }
+          }
+        } else {
+          // Se não há lote, validar apenas pelo SKU
+          const skuLength = waveItem.productSku.length;
+          const scannedSku = input.scannedCode.substring(0, skuLength);
+          
+          if (scannedSku !== waveItem.productSku) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}`,
+            });
+          }
         }
 
         const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
