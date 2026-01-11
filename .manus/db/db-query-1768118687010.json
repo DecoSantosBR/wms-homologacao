@@ -1,0 +1,50 @@
+{
+  "query": "SELECT \n  'products' as tabela, COUNT(*) as registros FROM products\nUNION ALL\nSELECT 'inventory', COUNT(*) FROM inventory\nUNION ALL\nSELECT 'inventoryMovements', COUNT(*) FROM inventoryMovements\nUNION ALL\nSELECT 'receivingOrders', COUNT(*) FROM receivingOrders\nUNION ALL\nSELECT 'receivingOrderItems', COUNT(*) FROM receivingOrderItems\nUNION ALL\nSELECT 'pickingOrders', COUNT(*) FROM pickingOrders\nUNION ALL\nSELECT 'pickingOrderItems', COUNT(*) FROM pickingOrderItems\nUNION ALL\nSELECT 'pickingWaves', COUNT(*) FROM pickingWaves\nUNION ALL\nSELECT 'pickingWaveItems', COUNT(*) FROM pickingWaveItems\nUNION ALL\nSELECT 'labelAssociations', COUNT(*) FROM labelAssociations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  'products' as tabela, COUNT(*) as registros FROM products\nUNION ALL\nSELECT 'inventory', COUNT(*) FROM inventory\nUNION ALL\nSELECT 'inventoryMovements', COUNT(*) FROM inventoryMovements\nUNION ALL\nSELECT 'receivingOrders', COUNT(*) FROM receivingOrders\nUNION ALL\nSELECT 'receivingOrderItems', COUNT(*) FROM receivingOrderItems\nUNION ALL\nSELECT 'pickingOrders', COUNT(*) FROM pickingOrders\nUNION ALL\nSELECT 'pickingOrderItems', COUNT(*) FROM pickingOrderItems\nUNION ALL\nSELECT 'pickingWaves', COUNT(*) FROM pickingWaves\nUNION ALL\nSELECT 'pickingWaveItems', COUNT(*) FROM pickingWaveItems\nUNION ALL\nSELECT 'labelAssociations', COUNT(*) FROM labelAssociations;",
+  "rows": [
+    {
+      "tabela": "receivingOrderItems",
+      "registros": "0"
+    },
+    {
+      "tabela": "products",
+      "registros": "0"
+    },
+    {
+      "tabela": "receivingOrders",
+      "registros": "0"
+    },
+    {
+      "tabela": "inventoryMovements",
+      "registros": "0"
+    },
+    {
+      "tabela": "inventory",
+      "registros": "0"
+    },
+    {
+      "tabela": "pickingWaveItems",
+      "registros": "0"
+    },
+    {
+      "tabela": "pickingWaves",
+      "registros": "0"
+    },
+    {
+      "tabela": "pickingOrderItems",
+      "registros": "0"
+    },
+    {
+      "tabela": "pickingOrders",
+      "registros": "0"
+    },
+    {
+      "tabela": "labelAssociations",
+      "registros": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\tregistros\nreceivingOrderItems\t0\nproducts\t0\nreceivingOrders\t0\ninventoryMovements\t0\ninventory\t0\npickingWaveItems\t0\npickingWaves\t0\npickingOrderItems\t0\npickingOrders\t0\nlabelAssociations\t0\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}
