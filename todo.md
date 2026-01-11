@@ -1126,3 +1126,7 @@
 
 ## Bug - Validação de Cliente (11/01/2026)
 - [x] Corrigir validação que impede criar onda com pedidos do mesmo cliente mas destinatários diferentes
+
+## Melhorias FEFO e Bloqueio de Estoque (11/01/2026)
+- [x] Implementar FEFO multi-lote: quando não há saldo suficiente em um lote, buscar automaticamente outros lotes do mesmo SKU priorizando por vencimento
+- [x] Implementar bloqueio de estoque: ao confirmar separação de onda, marcar saldo como "reserved" até confirmação na próxima etapa

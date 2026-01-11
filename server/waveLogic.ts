@@ -93,28 +93,32 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
 
 /**
  * Aloca endereços para produtos consolidados baseado na regra FIFO/FEFO
+ * Suporta múltiplos lotes: se um lote não tem saldo suficiente, busca próximo lote automaticamente
  */
 async function allocateLocations(
   tenantId: number,
   consolidatedItems: ConsolidatedItem[],
   pickingRule: "FIFO" | "FEFO" | "Direcionado"
-): Promise<Array<ConsolidatedItem & { locationId: number; locationCode: string; batch?: string; expiryDate?: Date }>> {
+): Promise<Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; batch?: string; expiryDate?: Date; allocatedQuantity: number }>> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const allocated: Array<ConsolidatedItem & { locationId: number; locationCode: string; batch?: string; expiryDate?: Date }> = [];
+  const allocated: Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; batch?: string; expiryDate?: Date; allocatedQuantity: number }> = [];
 
   for (const item of consolidatedItems) {
-    // Buscar estoque disponível do produto ordenado por FIFO ou FEFO
+    // Buscar TODOS os lotes disponíveis do produto ordenado por FIFO ou FEFO
     const orderBy = pickingRule === "FEFO" ? asc(inventory.expiryDate) : asc(inventory.createdAt);
 
     const availableStock = await db
       .select({
+        inventoryId: inventory.id,
         locationId: inventory.locationId,
         locationCode: warehouseLocations.code,
         batch: inventory.batch,
         expiryDate: inventory.expiryDate,
         quantity: inventory.quantity,
+        reservedQuantity: inventory.reservedQuantity,
+        availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
       })
       .from(inventory)
       .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
@@ -122,33 +126,46 @@ async function allocateLocations(
         and(
           eq(inventory.tenantId, tenantId),
           eq(inventory.productId, item.productId),
-          sql`${inventory.quantity} > 0`
+          eq(inventory.status, "available"),
+          sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0` // Considerar apenas quantidade disponível
         )
       )
-      .orderBy(orderBy)
-      .limit(1); // Pegar primeiro endereço disponível (FIFO/FEFO)
+      .orderBy(orderBy); // Buscar TODOS os lotes, não apenas o primeiro
 
     if (availableStock.length === 0) {
       throw new Error(`Estoque insuficiente para produto ${item.productSku} (${item.productName})`);
     }
 
-    const location = availableStock[0];
+    // Calcular total disponível em todos os lotes (quantidade - reservado)
+    const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
 
-    // Verificar se quantidade disponível é suficiente
-    if (location.quantity < item.totalQuantity) {
+    if (totalAvailable < item.totalQuantity) {
       throw new Error(
-        `Estoque insuficiente no endereço ${location.locationCode} para produto ${item.productSku}. ` +
-        `Disponível: ${location.quantity}, Necessário: ${item.totalQuantity}`
+        `Estoque insuficiente para produto ${item.productSku} (${item.productName}). ` +
+        `Disponível: ${totalAvailable}, Necessário: ${item.totalQuantity}`
       );
     }
 
-    allocated.push({
-      ...item,
-      locationId: location.locationId,
-      locationCode: location.locationCode!,
-      batch: location.batch || undefined,
-      expiryDate: location.expiryDate || undefined,
-    });
+    // Alocar lotes em ordem FIFO/FEFO até completar a quantidade necessária
+    let remainingQuantity = item.totalQuantity;
+
+    for (const location of availableStock) {
+      if (remainingQuantity <= 0) break;
+
+      const quantityToAllocate = Math.min(location.availableQuantity, remainingQuantity);
+
+      allocated.push({
+        ...item,
+        inventoryId: location.inventoryId, // ID do registro de inventory para atualizar reservedQuantity
+        locationId: location.locationId,
+        locationCode: location.locationCode!,
+        batch: location.batch || undefined,
+        expiryDate: location.expiryDate || undefined,
+        allocatedQuantity: quantityToAllocate, // Quantidade alocada DESTE lote
+      });
+
+      remainingQuantity -= quantityToAllocate;
+    }
   }
 
   return allocated;
@@ -217,20 +234,20 @@ export async function createWave(params: CreateWaveParams) {
     status: "pending",
     totalOrders: orders.length,
     totalItems: allocatedItems.length,
-    totalQuantity: allocatedItems.reduce((sum, item) => sum + item.totalQuantity, 0),
+    totalQuantity: allocatedItems.reduce((sum, item) => sum + item.allocatedQuantity, 0),
     pickingRule,
     createdBy: params.userId,
   });
 
   const waveId = wave.insertId;
 
-  // 7. Criar itens consolidados da onda
+  // 7. Criar itens consolidados da onda (um registro por lote)
   const waveItemsData = allocatedItems.map((item) => ({
     waveId,
     productId: item.productId,
     productSku: item.productSku,
     productName: item.productName,
-    totalQuantity: item.totalQuantity,
+    totalQuantity: item.allocatedQuantity, // Usar quantidade alocada DESTE lote
     pickedQuantity: 0,
     locationId: item.locationId,
     locationCode: item.locationCode,
@@ -240,6 +257,16 @@ export async function createWave(params: CreateWaveParams) {
   }));
 
   await db.insert(pickingWaveItems).values(waveItemsData);
+
+  // 7.1. Incrementar reservedQuantity nas posições de estoque alocadas
+  for (const item of allocatedItems) {
+    await db
+      .update(inventory)
+      .set({
+        reservedQuantity: sql`${inventory.reservedQuantity} + ${item.allocatedQuantity}`,
+      })
+      .where(eq(inventory.id, item.inventoryId));
+  }
 
   // 8. Atualizar status dos pedidos para "in_wave" e associar à onda
   await db
@@ -255,7 +282,7 @@ export async function createWave(params: CreateWaveParams) {
     waveNumber,
     totalOrders: orders.length,
     totalItems: allocatedItems.length,
-    totalQuantity: allocatedItems.reduce((sum, item) => sum + item.totalQuantity, 0),
+    totalQuantity: allocatedItems.reduce((sum, item) => sum + item.allocatedQuantity, 0),
     items: allocatedItems,
   };
 }

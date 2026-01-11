@@ -1,0 +1,1 @@
+ALTER TABLE `inventory` ADD `reservedQuantity` int DEFAULT 0 NOT NULL;

@@ -380,6 +380,7 @@ export const inventory = mysqlTable("inventory", {
   expiryDate: timestamp("expiryDate"),
   serialNumber: varchar("serialNumber", { length: 100 }),
   quantity: int("quantity").default(0).notNull(),
+  reservedQuantity: int("reservedQuantity").default(0).notNull(), // Quantidade reservada para separação
   status: mysqlEnum("status", ["available", "quarantine", "blocked", "damaged", "expired"]).default("available").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT \n  i.id,\n  wl.code AS endereco,\n  p.sku,\n  p.description,\n  i.batch AS lote,\n  i.quantity AS qtd_total,\n  i.reservedQuantity AS qtd_reservada,\n  (i.quantity - i.reservedQuantity) AS qtd_disponivel\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN products p ON i.productId = p.id\nWHERE i.reservedQuantity > 0\nORDER BY i.updatedAt DESC\nLIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \nSELECT \n  i.id,\n  wl.code AS endereco,\n  p.sku,\n  p.description,\n  i.batch AS lote,\n  i.quantity AS qtd_total,\n  i.reservedQuantity AS qtd_reservada,\n  (i.quantity - i.reservedQuantity) AS qtd_disponivel\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN products p ON i.productId = p.id\nWHERE i.reservedQuantity > 0\nORDER BY i.updatedAt DESC\nLIMIT 10;\n",
+  "rows": [
+    {
+      "id": "210036",
+      "endereco": "H01-03-01",
+      "sku": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR",
+      "lote": "22D08LB108",
+      "qtd_total": "160",
+      "qtd_reservada": "140",
+      "qtd_disponivel": "20"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tendereco\tsku\tdescription\tlote\tqtd_total\tqtd_reservada\tqtd_disponivel\n210036\tH01-03-01\t401460P\tINTRAFIX PRIMELINE AIR\t22D08LB108\t160\t140\t20\n",
+  "stderr": "",
+  "execution_time_ms": 71
+}
