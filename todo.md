@@ -1215,3 +1215,34 @@
 - [x] Deve permitir separar até allocatedQuantity do waveItem, não até availableQuantity
 - [x] Corrigir lógica em registerPickedItem (waveRouter.ts)
 - [x] Corrigir lógica em registerPickedItem (routers.ts)
+
+
+## Fase CORREÇÕES CRÍTICAS - 11/01/2026
+- [x] BUG CRÍTICO: Corrigir validação de estoque durante separação (waveRouter.ts)
+  - Problema: Sistema validava `availableQuantity` (saldo livre) ao invés de `reservedQuantity` (já alocado)
+  - Solução: Remover validação incorreta, permitir separação de estoque reservado
+  - Checkpoint: 8460936
+  
+- [x] BUG CRÍTICO: Corrigir query de estoque na criação de pedidos (routers.ts)
+  - Problema: Admin não conseguia criar pedidos para clientes (usava `ctx.user.tenantId` = null)
+  - Solução: Usar `input.tenantId` (cliente selecionado) ao invés de `ctx.user.tenantId` (usuário logado)
+  - Linha corrigida: 1124 (eq(inventory.tenantId, input.tenantId))
+  
+- [x] BUG CRÍTICO: Implementar validação de estoque ANTES de criar pedido
+  - Problema: Sistema criava pedido órfão quando falhava validação de estoque
+  - Solução: Validar TODOS os itens primeiro, só depois criar pedido e reservas
+  - Fluxo: Validação → Criação do pedido → Itens + Reservas
+  
+- [x] CORREÇÃO DE DADOS: Atualizar tenantId do estoque para Hapvida
+  - Problema: Estoque cadastrado com tenantId incorreto
+  - Solução: UPDATE inventory SET tenantId = (Hapvida ID)
+  - Resultado: Todo estoque agora pertence ao cliente correto
+  
+- [x] Remover logs de debug do código de produção
+- [x] Checkpoint final: 651a865c (TODAS as correções aplicadas)
+
+**IMPORTANTE:** Estas correções são PERMANENTES e estão salvas no checkpoint 651a865c.
+Para garantir que nunca sejam perdidas:
+1. NUNCA fazer `git reset --hard`
+2. SEMPRE usar `webdev_rollback_checkpoint` para voltar versões
+3. Checkpoint 651a865c é a versão estável com todas as correções

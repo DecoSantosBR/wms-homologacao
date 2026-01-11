@@ -31,6 +31,33 @@ export const appRouter = router({
     }),
   }),
 
+  // Endpoint temporário de debug
+  debug: router({
+    checkTenants: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      
+      // Buscar Hapvida
+      const hapvida = await db.select().from(tenants).where(sql`name LIKE '%Hapvida%'`).limit(1);
+      
+      // Buscar estoque
+      const stockTenants = await db
+        .select({
+          tenantId: inventory.tenantId,
+          tenantName: tenants.name,
+          count: sql<number>`COUNT(*)`
+        })
+        .from(inventory)
+        .leftJoin(tenants, eq(inventory.tenantId, tenants.id))
+        .groupBy(inventory.tenantId, tenants.name);
+      
+      return {
+        hapvida: hapvida[0] || null,
+        stockByTenant: stockTenants
+      };
+    })
+  }),
+
   dashboard: router({
     stats: protectedProcedure.query(async () => {
       const db = await getDb();
@@ -1080,35 +1107,14 @@ export const appRouter = router({
         const tenantId = input.tenantId;
         const userId = ctx.user.id;
 
-        // Gerar número do pedido
-        const orderNumber = `PK${Date.now()}`;
+        // PASSO 1: Validar estoque de TODOS os itens ANTES de criar o pedido
+        // Isso evita criar pedidos órfãos quando há estoque insuficiente
+        const stockValidations: Array<{
+          item: typeof input.items[number];
+          product: any;
+          availableStock: any[];
+        }> = [];
 
-        // Criar pedido
-        await db.insert(pickingOrders).values({
-          tenantId,
-          orderNumber,
-          customerName: input.customerName,
-          priority: input.priority,
-          status: "pending",
-          totalItems: input.items.length,
-          totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
-          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
-          createdBy: userId,
-        });
-
-        // Buscar pedido criado
-        const [order] = await db
-          .select()
-          .from(pickingOrders)
-          .where(
-            and(
-              eq(pickingOrders.tenantId, tenantId),
-              eq(pickingOrders.orderNumber, orderNumber)
-            )
-          )
-          .limit(1);
-
-        // Criar itens e reservar estoque
         for (const item of input.items) {
           // Buscar produto para obter SKU e nome
           const [product] = await db
@@ -1159,6 +1165,41 @@ export const appRouter = router({
               message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${totalAvailable}, Solicitado: ${item.requestedQuantity}`
             });
           }
+
+          // Armazenar validação para uso posterior
+          stockValidations.push({ item, product, availableStock });
+        }
+
+        // PASSO 2: Todas as validações passaram, agora criar o pedido
+        const orderNumber = `PK${Date.now()}`;
+
+        await db.insert(pickingOrders).values({
+          tenantId,
+          orderNumber,
+          customerName: input.customerName,
+          priority: input.priority,
+          status: "pending",
+          totalItems: input.items.length,
+          totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+          createdBy: userId,
+        });
+
+        // Buscar pedido criado
+        const [order] = await db
+          .select()
+          .from(pickingOrders)
+          .where(
+            and(
+              eq(pickingOrders.tenantId, tenantId),
+              eq(pickingOrders.orderNumber, orderNumber)
+            )
+          )
+          .limit(1);
+
+        // PASSO 3: Criar itens e reservar estoque
+        for (const validation of stockValidations) {
+          const { item, product, availableStock } = validation;
 
           // Reservar estoque e registrar reservas
           let remainingToReserve = item.requestedQuantity;
