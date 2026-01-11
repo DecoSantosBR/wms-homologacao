@@ -1444,20 +1444,60 @@ export const appRouter = router({
             .from(pickingReservations)
             .where(eq(pickingReservations.pickingOrderId, orderId));
 
-          // Liberar estoque reservado
-          for (const reservation of reservations) {
-            await db
-              .update(inventory)
-              .set({
-                reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
-              })
-              .where(eq(inventory.id, reservation.inventoryId));
-          }
+          if (reservations.length > 0) {
+            // Liberar estoque reservado
+            for (const reservation of reservations) {
+              await db
+                .update(inventory)
+                .set({
+                  reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
+                })
+                .where(eq(inventory.id, reservation.inventoryId));
+            }
 
-          // Excluir registros de reserva
-          await db
-            .delete(pickingReservations)
-            .where(eq(pickingReservations.pickingOrderId, orderId));
+            // Excluir registros de reserva
+            await db
+              .delete(pickingReservations)
+              .where(eq(pickingReservations.pickingOrderId, orderId));
+          } else {
+            // CORREÇÃO: Se não há reservas mas o pedido existe, pode haver reservas órfãs
+            // Buscar itens do pedido para identificar posições de estoque afetadas
+            const orderItems = await db
+              .select()
+              .from(pickingOrderItems)
+              .where(eq(pickingOrderItems.pickingOrderId, orderId));
+
+            // Para cada item, verificar se há estoque com reservedQuantity órfã
+            for (const item of orderItems) {
+              const inventoryRecords = await db
+                .select()
+                .from(inventory)
+                .where(
+                  and(
+                    eq(inventory.productId, item.productId),
+                    sql`${inventory.reservedQuantity} > 0`
+                  )
+                );
+
+              // Verificar se cada posição tem reservas ativas
+              for (const inv of inventoryRecords) {
+                const [activeReservations] = await db
+                  .select({ total: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)` })
+                  .from(pickingReservations)
+                  .where(eq(pickingReservations.inventoryId, inv.id));
+
+                const activeTotal = Number(activeReservations?.total) || 0;
+
+                // Se não há reservas ativas mas reservedQuantity > 0, corrigir
+                if (activeTotal === 0 && inv.reservedQuantity > 0) {
+                  await db
+                    .update(inventory)
+                    .set({ reservedQuantity: 0 })
+                    .where(eq(inventory.id, inv.id));
+                }
+              }
+            }
+          }
         }
 
         // Excluir itens dos pedidos primeiro (foreign key)

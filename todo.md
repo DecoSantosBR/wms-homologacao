@@ -1184,3 +1184,23 @@
 - [x] Adicionar modal de edição com ajuste de quantidades
 - [x] Testar exclusão de onda separada
 - [x] Testar edição de onda separada
+
+## 🐛 BUG - Reservas não liberadas na exclusão de pedidos
+
+- [ ] Investigar lógica de exclusão de pedidos
+- [ ] Corrigir liberação de reservas quando pedidos são excluídos
+- [ ] Testar fluxo: excluir onda → excluir pedidos → verificar reservas liberadas
+
+## 🐛 BUG CRÍTICO - Reservas não liberadas após excluir onda separada
+
+- [ ] Problema: Fluxo "criar pedido → gerar onda → separar → excluir onda completed → excluir pedidos" NÃO libera reservas
+- [ ] Fluxo normal funciona: "criar pedido → gerar onda → excluir onda pending → excluir pedidos" libera reservas corretamente
+- [ ] Investigar diferença entre os dois fluxos
+- [ ] Corrigir liberação de reservas quando onda completed é excluída
+
+## ✅ Correções Concluídas
+
+- [x] Implementar funcionalidades de editar e excluir ondas separadas
+- [x] Corrigir bug de reservas órfãs após excluir onda completed
+- [x] Adicionar correção automática de reservas órfãs no endpoint deleteBatch
+- [x] Criar teste automatizado para validar correção
