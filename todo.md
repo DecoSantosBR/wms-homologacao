@@ -1080,3 +1080,14 @@
 - [x] Testar carregamento com 1, 2 e 3 pedidos selecionados
 - [x] Verificar consolidação correta de itens (agrupamento por produto)
 - [x] Validar exibição na tabela de prévia
+
+
+## Fase 42: Correção de Erros na Página de Picking
+
+**Objetivo**: Corrigir erro de chave duplicada e validação de estoque
+
+**Tarefas**:
+- [x] Investigar e corrigir erro "Encountered two children with the same key, `180002`" (useMemo para remover duplicatas)
+- [x] Corrigir validação de estoque insuficiente na criação de onda (permitir múltiplos endereços FIFO/FEFO)
+- [x] Testar interface de modal de criação de onda (abre corretamente, prévia funciona)
+- [ ] Investigar problema de onClick no botão Confirmar (não responde a cliques manuais ou programáticos)

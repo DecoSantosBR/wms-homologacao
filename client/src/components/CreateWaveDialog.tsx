@@ -94,7 +94,7 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
     return Array.from(itemsMap.values());
   }, [ordersWithItems]);
 
-  const handleCreateWave = async () => {
+  const handleCreateWave = () => {
     if (!clientValidation.valid) {
       toast.error(clientValidation.message);
       return;

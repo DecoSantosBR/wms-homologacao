@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,17 @@ export default function PickingOrders() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [isWaveDialogOpen, setIsWaveDialogOpen] = useState(false);
 
-  const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
+  const { data: ordersRaw, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
+  
+  // Remover pedidos duplicados (caso a API retorne duplicatas)
+  const orders = useMemo(() => {
+    if (!ordersRaw) return [];
+    const uniqueOrders = new Map();
+    ordersRaw.forEach((order: any) => {
+      uniqueOrders.set(order.id, order);
+    });
+    return Array.from(uniqueOrders.values());
+  }, [ordersRaw]);
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes

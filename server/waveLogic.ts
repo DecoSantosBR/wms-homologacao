@@ -125,30 +125,41 @@ async function allocateLocations(
           sql`${inventory.quantity} > 0`
         )
       )
-      .orderBy(orderBy)
-      .limit(1); // Pegar primeiro endereço disponível (FIFO/FEFO)
+      .orderBy(orderBy); // Buscar todos os endereços disponíveis
 
     if (availableStock.length === 0) {
-      throw new Error(`Estoque insuficiente para produto ${item.productSku} (${item.productName})`);
+      throw new Error(`Estoque insuficiente para produto ${item.productId} (${item.productName})`);
     }
 
-    const location = availableStock[0];
+    // Calcular estoque total disponível
+    const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.quantity, 0);
 
-    // Verificar se quantidade disponível é suficiente
-    if (location.quantity < item.totalQuantity) {
+    // Verificar se quantidade total disponível é suficiente
+    if (totalAvailable < item.totalQuantity) {
       throw new Error(
-        `Estoque insuficiente no endereço ${location.locationCode} para produto ${item.productSku}. ` +
-        `Disponível: ${location.quantity}, Necessário: ${item.totalQuantity}`
+        `Estoque insuficiente para produto ${item.productId} (${item.productName}). ` +
+        `Disponível: ${totalAvailable}, Necessário: ${item.totalQuantity}`
       );
     }
 
-    allocated.push({
-      ...item,
-      locationId: location.locationId,
-      locationCode: location.locationCode!,
-      batch: location.batch || undefined,
-      expiryDate: location.expiryDate || undefined,
-    });
+    // Alocar de múltiplos endereços se necessário (FIFO/FEFO)
+    let remainingQuantity = item.totalQuantity;
+    for (const location of availableStock) {
+      if (remainingQuantity <= 0) break;
+
+      const quantityFromThisLocation = Math.min(location.quantity, remainingQuantity);
+      
+      allocated.push({
+        ...item,
+        totalQuantity: quantityFromThisLocation,
+        locationId: location.locationId,
+        locationCode: location.locationCode!,
+        batch: location.batch || undefined,
+        expiryDate: location.expiryDate || undefined,
+      });
+
+      remainingQuantity -= quantityFromThisLocation;
+    }
   }
 
   return allocated;
