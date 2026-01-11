@@ -1146,3 +1146,10 @@
 - [x] Excluir tenant Compartilhado
 - [x] Posições com saldo zerado devem ficar disponíveis automaticamente
 - [x] Corrigir erro "Estoque insuficiente" ao criar onda
+- [x] Implementar funcionalidade "Excluir OS"
+
+- [x] Mover reserva de estoque da criação de onda para criação de pedido
+- [x] Ajustar liberação de reservas na exclusão/cancelamento de pedidos
+- [x] Finalizar implementação de excluir ondas
+
+- [x] Ajustar layout do modal "Criar Pedido de Separação" para evitar sobreposição

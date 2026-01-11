@@ -80,6 +80,16 @@ export default function PickingOrders() {
     },
   });
 
+  const deleteWaveMutation = trpc.wave.delete.useMutation({
+    onSuccess: () => {
+      refetchWaves();
+      alert("Onda excluída com sucesso!");
+    },
+    onError: (error) => {
+      alert(`Erro ao excluir onda: ${error.message}`);
+    },
+  });
+
   const createMutation = trpc.picking.create.useMutation({
     onSuccess: () => {
       refetch();
@@ -386,8 +396,8 @@ export default function PickingOrders() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Produtos</h3>
                 
-                <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-5">
+                <div className="space-y-3">
+                  <div>
                     <Label>Produto</Label>
                     <Select value={selectedProductId} onValueChange={setSelectedProductId}>
                       <SelectTrigger>
@@ -403,33 +413,35 @@ export default function PickingOrders() {
                     </Select>
                   </div>
 
-                  <div className="col-span-3">
-                    <Label>Quantidade</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                    />
-                  </div>
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-5">
+                      <Label>Quantidade</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      />
+                    </div>
 
-                  <div className="col-span-2">
-                    <Label>Unidade</Label>
-                    <Select value={unit} onValueChange={(v: any) => setUnit(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="box">Caixa</SelectItem>
-                        <SelectItem value="unit">Unidade</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="col-span-4">
+                      <Label>Unidade</Label>
+                      <Select value={unit} onValueChange={(v: any) => setUnit(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="box">Caixa</SelectItem>
+                          <SelectItem value="unit">Unidade</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="col-span-2 flex items-end">
-                    <Button type="button" onClick={handleAddProduct} className="w-full">
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="col-span-3 flex items-end">
+                      <Button type="button" onClick={handleAddProduct} className="w-full">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -939,28 +951,44 @@ export default function PickingOrders() {
               )}
 
               {waves?.map((wave: any) => (
-                <Link key={wave.id} href={`/picking/execute/${wave.id}`}>
-                  <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold">{wave.waveNumber}</h3>
-                          {getStatusBadge(wave.status)}
-                        </div>
-
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p>Pedidos: {wave.totalOrders} | Itens: {wave.totalItems}</p>
-                          <p>Quantidade Total: {wave.totalQuantity}</p>
-                          <p>Criado em: {new Date(wave.createdAt).toLocaleString("pt-BR")}</p>
-                        </div>
+                <Card key={wave.id} className="p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <Link href={`/picking/execute/${wave.id}`} className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold">{wave.waveNumber}</h3>
+                        {getStatusBadge(wave.status)}
                       </div>
 
-                      <Button variant="outline" size="sm">
-                        Executar
-                      </Button>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p>Pedidos: {wave.totalOrders} | Itens: {wave.totalItems}</p>
+                        <p>Quantidade Total: {wave.totalQuantity}</p>
+                        <p>Criado em: {new Date(wave.createdAt).toLocaleString("pt-BR")}</p>
+                      </div>
+                    </Link>
+
+                    <div className="flex gap-2">
+                      <Link href={`/picking/execute/${wave.id}`}>
+                        <Button variant="outline" size="sm">
+                          Executar
+                        </Button>
+                      </Link>
+                      {(wave.status === "pending" || wave.status === "cancelled") && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Tem certeza que deseja excluir a onda ${wave.waveNumber}? Os pedidos serão liberados.`)) {
+                              deleteWaveMutation.mutate({ id: wave.id });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                  </Card>
-                </Link>
+                  </div>
+                </Card>
               ))}
             </div>
           </TabsContent>

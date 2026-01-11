@@ -258,15 +258,8 @@ export async function createWave(params: CreateWaveParams) {
 
   await db.insert(pickingWaveItems).values(waveItemsData);
 
-  // 7.1. Incrementar reservedQuantity nas posições de estoque alocadas
-  for (const item of allocatedItems) {
-    await db
-      .update(inventory)
-      .set({
-        reservedQuantity: sql`${inventory.reservedQuantity} + ${item.allocatedQuantity}`,
-      })
-      .where(eq(inventory.id, item.inventoryId));
-  }
+  // Nota: A reserva de estoque já foi feita na criação dos pedidos,
+  // então não precisamos incrementar reservedQuantity aqui novamente.
 
   // 8. Atualizar status dos pedidos para "in_wave" e associar à onda
   await db

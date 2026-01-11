@@ -1108,8 +1108,74 @@ export const appRouter = router({
           )
           .limit(1);
 
-        // Criar itens
+        // Criar itens e reservar estoque
         for (const item of input.items) {
+          // Buscar produto para obter SKU e nome
+          const [product] = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          if (!product) {
+            throw new TRPCError({ 
+              code: "NOT_FOUND", 
+              message: `Produto ID ${item.productId} não encontrado` 
+            });
+          }
+
+          // Buscar estoque disponível (FIFO/FEFO)
+          const availableStock = await db
+            .select({
+              id: inventory.id,
+              locationId: inventory.locationId,
+              locationCode: warehouseLocations.code,
+              quantity: inventory.quantity,
+              reservedQuantity: inventory.reservedQuantity,
+              batch: inventory.batch,
+              expiryDate: inventory.expiryDate,
+              availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+            })
+            .from(inventory)
+            .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .where(
+              and(
+                eq(inventory.tenantId, tenantId),
+                eq(inventory.productId, item.productId),
+                eq(inventory.status, "available"),
+                sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`
+              )
+            )
+            .orderBy(inventory.expiryDate); // FEFO por padrão
+
+          // Calcular total disponível
+          const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+
+          if (totalAvailable < item.requestedQuantity) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${totalAvailable}, Solicitado: ${item.requestedQuantity}`
+            });
+          }
+
+          // Reservar estoque
+          let remainingToReserve = item.requestedQuantity;
+          for (const stock of availableStock) {
+            if (remainingToReserve <= 0) break;
+
+            const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
+            
+            await db
+              .update(inventory)
+              .set({
+                reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+              })
+              .where(eq(inventory.id, stock.id));
+
+            remainingToReserve -= toReserve;
+          }
+
+          // Criar item do pedido
           await db.insert(pickingOrderItems).values({
             pickingOrderId: order.id,
             productId: item.productId,
@@ -1360,6 +1426,45 @@ export const appRouter = router({
         }
 
         const idsToDelete = ordersToDelete.map(o => o.id);
+
+        // Liberar reservas de estoque antes de excluir
+        for (const orderId of idsToDelete) {
+          // Buscar itens do pedido
+          const orderItems = await db
+            .select()
+            .from(pickingOrderItems)
+            .where(eq(pickingOrderItems.pickingOrderId, orderId));
+
+          for (const item of orderItems) {
+            // Buscar estoque reservado para este produto
+            const stockRecords = await db
+              .select()
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.productId, item.productId),
+                  sql`${inventory.reservedQuantity} > 0`
+                )
+              )
+              .orderBy(inventory.expiryDate); // FEFO
+
+            let remainingToRelease = item.requestedQuantity;
+            for (const stock of stockRecords) {
+              if (remainingToRelease <= 0) break;
+
+              const toRelease = Math.min(stock.reservedQuantity, remainingToRelease);
+              
+              await db
+                .update(inventory)
+                .set({
+                  reservedQuantity: sql`${inventory.reservedQuantity} - ${toRelease}`
+                })
+                .where(eq(inventory.id, stock.id));
+
+              remainingToRelease -= toRelease;
+            }
+          }
+        }
 
         // Excluir itens dos pedidos primeiro (foreign key)
         await db

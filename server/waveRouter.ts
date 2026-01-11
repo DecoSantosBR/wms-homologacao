@@ -2,7 +2,7 @@ import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
 import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products, labelAssociations } from "../drizzle/schema";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { TRPCError } from "@trpc/server";
 
@@ -309,6 +309,63 @@ export const waveRouter = router({
         .update(pickingOrders)
         .set({ status: "pending", waveId: null })
         .where(eq(pickingOrders.waveId, input.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Excluir onda (apenas ondas pendentes ou canceladas)
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Verificar se a onda existe e seu status
+      const [wave] = await db
+        .select()
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.id))
+        .limit(1);
+
+      if (!wave) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+      }
+
+      // Apenas ondas pendentes ou canceladas podem ser excluídas
+      if (wave.status !== "pending" && wave.status !== "cancelled") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas ondas pendentes ou canceladas podem ser excluídas"
+        });
+      }
+
+      // Verificar permissão (apenas admin pode excluir)
+      if (ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem excluir ondas" });
+      }
+
+      // Nota: NÃO liberamos as reservas de estoque aqui porque:
+      // - As reservas foram feitas na criação dos pedidos
+      // - Os pedidos ainda existem (apenas voltam para "pending")
+      // - As reservas só devem ser liberadas quando os pedidos forem excluídos/cancelados
+
+      // Liberar pedidos associados (voltar para pending)
+      await db
+        .update(pickingOrders)
+        .set({ status: "pending", waveId: null })
+        .where(eq(pickingOrders.waveId, input.id));
+
+      // Excluir itens da onda
+      await db
+        .delete(pickingWaveItems)
+        .where(eq(pickingWaveItems.waveId, input.id));
+
+      // Excluir onda
+      await db
+        .delete(pickingWaves)
+        .where(eq(pickingWaves.id, input.id));
 
       return { success: true };
     }),
