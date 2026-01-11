@@ -23,6 +23,8 @@ interface ProductItem {
 export default function PickingOrders() {
   const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateWaveDialogOpen, setIsCreateWaveDialogOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "urgent" | "emergency">("normal");
@@ -36,6 +38,18 @@ export default function PickingOrders() {
   const { data: products } = trpc.products.list.useQuery();
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
+
+  const createWaveMutation = trpc.wave.create.useMutation({
+    onSuccess: () => {
+      refetchWaves();
+      setIsCreateWaveDialogOpen(false);
+      setSelectedOrderIds([]);
+      alert("Onda criada com sucesso!");
+    },
+    onError: (error) => {
+      alert(`Erro ao criar onda: ${error.message}`);
+    },
+  });
 
   const createMutation = trpc.picking.create.useMutation({
     onSuccess: () => {
@@ -421,10 +435,118 @@ export default function PickingOrders() {
                   <Waves className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">Nenhuma onda encontrada</h3>
                   <p className="text-muted-foreground mb-4">Agrupe múltiplos pedidos do mesmo cliente em uma onda</p>
-                  <Button disabled>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Gerar Onda (em breve)
-                  </Button>
+                  <Dialog open={isCreateWaveDialogOpen} onOpenChange={setIsCreateWaveDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Gerar Onda
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Gerar Onda de Separação</DialogTitle>
+                      </DialogHeader>
+
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Selecione múltiplos pedidos do mesmo cliente para consolidar em uma onda.
+                        </p>
+
+                        {/* Filtrar apenas pedidos pendentes */}
+                        {orders?.filter(o => o.status === "pending").length === 0 ? (
+                          <p className="text-center py-8 text-muted-foreground">
+                            Nenhum pedido pendente disponível para criar onda.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {orders?.filter(o => o.status === "pending").map((order) => {
+                              const isSelected = selectedOrderIds.includes(order.id);
+                              const firstSelectedOrder = orders.find(o => selectedOrderIds.includes(o.id));
+                              const isDifferentTenant = firstSelectedOrder && firstSelectedOrder.tenantId !== order.tenantId;
+
+                              return (
+                                <Card 
+                                  key={order.id} 
+                                  className={`p-4 cursor-pointer transition-colors ${
+                                    isSelected ? "border-primary bg-primary/5" : ""
+                                  } ${isDifferentTenant ? "opacity-50" : ""}`}
+                                  onClick={() => {
+                                    if (isDifferentTenant) return;
+                                    
+                                    setSelectedOrderIds(prev => 
+                                      isSelected 
+                                        ? prev.filter(id => id !== order.id)
+                                        : [...prev, order.id]
+                                    );
+                                  }}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      disabled={isDifferentTenant}
+                                      onChange={() => {}} // Controlled by card click
+                                      className="h-4 w-4"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-semibold">{order.orderNumber}</span>
+                                        {getPriorityBadge(order.priority)}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        <p>Cliente: {order.clientName || "N/A"}</p>
+                                        <p>Itens: {order.totalItems} | Quantidade: {order.totalQuantity}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {isDifferentTenant && (
+                                    <p className="text-xs text-destructive mt-2">
+                                      ⚠️ Cliente diferente dos pedidos já selecionados
+                                    </p>
+                                  )}
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {selectedOrderIds.length > 0 && (
+                          <div className="bg-muted p-4 rounded-lg">
+                            <p className="font-semibold mb-2">
+                              {selectedOrderIds.length} pedido(s) selecionado(s)
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Os itens serão consolidados e os endereços alocados automaticamente.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 justify-end pt-4 border-t">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setIsCreateWaveDialogOpen(false);
+                              setSelectedOrderIds([]);
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              if (selectedOrderIds.length === 0) {
+                                alert("Selecione pelo menos um pedido.");
+                                return;
+                              }
+                              createWaveMutation.mutate({ orderIds: selectedOrderIds });
+                            }}
+                            disabled={selectedOrderIds.length === 0 || createWaveMutation.isPending}
+                          >
+                            {createWaveMutation.isPending ? "Gerando..." : "Gerar Onda"}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </Card>
               )}
 

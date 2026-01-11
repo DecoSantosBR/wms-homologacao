@@ -1063,7 +1063,11 @@
 - [x] Adicionar componente Tabs na página PickingOrders.tsx
 - [x] Implementar aba "Pedidos" com listagem existente
 - [x] Implementar aba "Ondas" com listagem de ondas criadas
-- [ ] Criar modal de geração de onda com seleção de pedidos
+- [x] Criar modal "Gerar Onda" com listagem de pedidos pendentes
+- [x] Implementar checkboxes para seleção múltipla
+- [x] Validar que todos os pedidos são do mesmo cliente
+- [x] Integrar com trpc.wave.create
+- [x] Exibir feedback de sucesso e atualizar listagem
 - [ ] Criar página de execução de onda (/picking/execute/:waveId)
 - [ ] Implementar scanner de etiquetas na execução
 - [ ] Testar fluxo completo
