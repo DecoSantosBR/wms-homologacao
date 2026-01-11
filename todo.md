@@ -1255,3 +1255,11 @@
 **Pendente**:
 - 🔧 Ajustar query getAvailableWaves no frontend (travando em loading)
 - 🔧 Testar fluxo end-to-end com dados reais
+
+## Fase 52: Adicionar Navegação por Abas em /picking
+**Objetivo**: Adicionar abas na página /picking para navegar entre Pedidos e Ondas
+**Tarefas**:
+- [x] Modificar PickingOrders.tsx para incluir Tabs component
+- [x] Criar aba "Pedidos" (conteúdo atual)
+- [x] Criar aba "Ondas" (redireciona para /waves ou embute conteúdo)
+- [x] Testar navegação entre abas

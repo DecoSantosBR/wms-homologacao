@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductItem {
   productId: number;
@@ -22,6 +23,7 @@ interface ProductItem {
 }
 
 export default function PickingOrders() {
+  const [, navigate] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
@@ -217,8 +219,8 @@ export default function PickingOrders() {
   return (
     <>
       <PageHeader
-        title="Pedidos de Separação"
-        description="Gerencie e acompanhe pedidos de picking"
+        title="Separação"
+        description="Gerencie pedidos e ondas de picking"
         actions={
           <div className="flex gap-2">
             {selectedOrderIds.length > 0 && (
@@ -422,6 +424,13 @@ export default function PickingOrders() {
       />
 
       <div className="container mx-auto py-8">
+        <Tabs defaultValue="pedidos" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
+            <TabsTrigger value="ondas" onClick={() => navigate("/waves")}>Ondas</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="pedidos" className="space-y-6">
         <div className="grid gap-4">
         {orders && orders.length === 0 && (
           <Card className="p-8 text-center">
@@ -480,6 +489,8 @@ export default function PickingOrders() {
           </Card>
         ))}
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modal de Confirmação de Exclusão */}
