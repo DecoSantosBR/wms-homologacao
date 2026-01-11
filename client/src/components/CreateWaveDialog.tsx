@@ -24,9 +24,6 @@ interface ConsolidatedItem {
 }
 
 export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSuccess }: CreateWaveDialogProps) {
-  // Buscar detalhes dos pedidos selecionados
-  const { data: orders } = trpc.picking.list.useQuery({ limit: 1000 });
-
   // Buscar itens dos pedidos selecionados usando o novo endpoint getByIds
   const { data: ordersWithItems, isLoading: isLoadingItems, isError: hasError } = trpc.picking.getByIds.useQuery(
     { ids: selectedOrderIds },
@@ -44,11 +41,10 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
     },
   });
 
-  // Filtrar pedidos selecionados
+  // Usar diretamente ordersWithItems como selectedOrders
   const selectedOrders = useMemo(() => {
-    if (!orders) return [];
-    return orders.filter((order) => selectedOrderIds.includes(order.id));
-  }, [orders, selectedOrderIds]);
+    return ordersWithItems || [];
+  }, [ordersWithItems]);
 
   // Validar se todos os pedidos são do mesmo cliente
   const clientValidation = useMemo(() => {
@@ -61,7 +57,7 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
       return { valid: false, message: "Todos os pedidos devem ser do mesmo cliente" };
     }
     
-    return { valid: true, message: `Cliente: ${selectedOrders[0].clientName || "N/A"}` };
+    return { valid: true, message: `Cliente: ${selectedOrders[0].customerName || "N/A"}` };
   }, [selectedOrders]);
 
   // Consolidar itens dos pedidos
@@ -173,7 +169,7 @@ export function CreateWaveDialog({ open, onOpenChange, selectedOrderIds, onSucce
             <div className="flex flex-wrap gap-2">
               {selectedOrders.map((order) => (
                 <Badge key={order.id} variant="outline" className="text-sm">
-                  #{order.orderNumber} - {order.clientName}
+                  #{order.orderNumber} - {order.customerName}
                 </Badge>
               ))}
             </div>

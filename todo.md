@@ -1149,3 +1149,14 @@
 - [x] Identificar tenantId da Hapvida no banco (id: 60006, nome: Hapvida)
 - [x] Atualizar todos os registros de inventory (UPDATE inventory SET tenantId = 60006)
 - [x] Validar que todos os registros foram atualizados (todos com tenantId = 60006)
+
+
+#### Fase 48: Correção de Bug - Modal de Onda Sem Pedidos Selecionados
+**Objetivo**: Corrigir bug onde modal "Gerar Onda" abre mostrando "Nenhum pedido selecionado" mesmo com checkboxes marcados
+**Tarefas**:
+- [x] Investigar estado de seleção (problema era campo clientName inexistente)
+- [x] Identificar que o campo correto é customerName no schema
+- [x] Corrigir server/routers.ts endpoint getByIds (clientName → customerName)
+- [x] Corrigir CreateWaveDialog.tsx (clientName → customerName)
+- [x] Testar seleção de 2 pedidos e abertura do modal (sucesso: 2 pedidos, 3 produtos, 640 itens)
+- [x] Validar que prévia de consolidação carrega corretamente

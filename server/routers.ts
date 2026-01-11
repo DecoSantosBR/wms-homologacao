@@ -1134,13 +1134,33 @@ export const appRouter = router({
         let orders;
         if (ctx.user.role === "admin") {
           orders = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              orderNumber: pickingOrders.orderNumber,
+              tenantId: pickingOrders.tenantId,
+              customerName: pickingOrders.customerName,
+              status: pickingOrders.status,
+              priority: pickingOrders.priority,
+              totalItems: pickingOrders.totalItems,
+              createdAt: pickingOrders.createdAt,
+              updatedAt: pickingOrders.updatedAt,
+            })
             .from(pickingOrders)
             .where(inArray(pickingOrders.id, input.ids));
         } else {
           const tenantId = ctx.user.tenantId!;
           orders = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              orderNumber: pickingOrders.orderNumber,
+              tenantId: pickingOrders.tenantId,
+              customerName: pickingOrders.customerName,
+              status: pickingOrders.status,
+              priority: pickingOrders.priority,
+              totalItems: pickingOrders.totalItems,
+              createdAt: pickingOrders.createdAt,
+              updatedAt: pickingOrders.updatedAt,
+            })
             .from(pickingOrders)
             .where(
               and(
