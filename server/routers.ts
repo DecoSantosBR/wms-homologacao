@@ -1173,11 +1173,40 @@ export const appRouter = router({
 
           // Calcular total disponível
           const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+          
+          console.log(`[PICKING DEBUG] Product: ${product.sku}, Available: ${totalAvailable}, Requested: ${quantityInUnits}`);
 
           if (totalAvailable < quantityInUnits) {
+            console.log(`[PICKING DEBUG] Insufficient stock, fetching detailed breakdown...`);
+            // Buscar estoque total (todos os status) para mensagem mais informativa
+            const totalStockAll = await db
+              .select({
+                quantity: inventory.quantity,
+                reservedQuantity: inventory.reservedQuantity,
+                status: inventory.status,
+              })
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.tenantId, input.tenantId),
+                  eq(inventory.productId, item.productId)
+                )
+              );
+            
+            const totalInStock = totalStockAll.reduce((sum, s) => sum + (s.quantity - s.reservedQuantity), 0);
+            const statusBreakdown = totalStockAll.reduce((acc, s) => {
+              const available = s.quantity - s.reservedQuantity;
+              acc[s.status] = (acc[s.status] || 0) + available;
+              return acc;
+            }, {} as Record<string, number>);
+            
+            const statusMsg = Object.entries(statusBreakdown)
+              .map(([status, qty]) => `${status}: ${qty}`)
+              .join(', ');
+
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${totalAvailable} unidades, Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades)`
+              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível para picking: ${totalAvailable} unidades. Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades). Estoque total: ${totalInStock} unidades (${statusMsg})`
             });
           }
 
@@ -2017,17 +2046,25 @@ export const appRouter = router({
               const clientName = String(firstItem['Cliente']).trim();
               const customerName = String(firstItem['Destinatário']).trim();
 
-              // Buscar cliente (tenant) por nome
+              // Buscar cliente (tenant) por nome ou nome fantasia
+              // Normalizar nome do cliente (remover espaços extras e converter para lowercase)
+              const normalizedClientName = clientName.toLowerCase().trim();
+              
               const [tenant] = await db
                 .select()
                 .from(tenants)
-                .where(sql`LOWER(${tenants.name}) = LOWER(${clientName})`)
+                .where(
+                  or(
+                    sql`LOWER(TRIM(${tenants.name})) = ${normalizedClientName}`,
+                    sql`LOWER(TRIM(${tenants.tradeName})) = ${normalizedClientName}`
+                  )
+                )
                 .limit(1);
 
               if (!tenant) {
                 results.errors.push({
                   pedido: orderNumber,
-                  erro: `Cliente "${clientName}" não encontrado no sistema`,
+                  erro: `Cliente "${clientName}" não encontrado no sistema. Verifique se o nome está correto.`,
                 });
                 continue;
               }

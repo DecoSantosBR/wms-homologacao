@@ -1344,3 +1344,106 @@ Para garantir que nunca sejam perdidas:
 - Feedback visual: exibe "X caixa(s) + Y unidade(s) = Z unidades"
 - Fallback: se produto não tiver unitsPerBox, exibe campo único de unidades
 - Backend atualizado: query getPickingProgress retorna unitsPerBox do produto
+
+
+## BUG: Validação de estoque na importação - 11/01/2026
+- [ ] Investigar query de validação de estoque no importOrders
+- [ ] Verificar se está usando tenantId correto
+- [ ] Comparar com query do endpoint create (que funciona)
+- [ ] Corrigir query de validação
+- [ ] Testar importação com dados reais
+
+**Problema reportado:**
+- Estoque existe (140 unidades disponíveis visíveis na tela)
+- Importação falha dizendo "Disponível: 0 unidades"
+- Erro ocorre tanto para pedidos em caixa quanto em unidades
+
+
+## Status do BUG: Validação de estoque na importação - 11/01/2026
+- [x] Investigar query de validação de estoque no importOrders
+- [x] Verificar se está usando tenantId correto
+- [x] Comparar com query do endpoint create (que funciona)
+- [x] Melhorar busca de tenant (nome ou tradeName, case-insensitive, trim)
+- [ ] Aguardar teste do usuário com dados reais
+
+**Correção aplicada:**
+- Busca de tenant agora aceita nome OU tradeName
+- Normalização de strings (lowercase + trim)
+- Uso de TRIM no SQL para remover espaços das colunas do banco
+- Mensagem de erro mais descritiva
+
+
+## ATUALIZAÇÃO BUG: Problema também na criação manual - 11/01/2026
+**Novo diagnóstico:**
+- Erro ocorre tanto na importação quanto na criação manual
+- Estoque visível na tela: 560 unidades disponíveis
+- Query retorna: 0 unidades disponíveis
+- Produto: 401460P (INTRAFIX PRIMELINE AIR)
+- Cliente: Hapvida
+
+**Possíveis causas:**
+- [ ] Status do inventory não é "available"
+- [ ] TenantId não está sendo passado corretamente
+- [ ] Problema no cálculo de availableQuantity
+- [ ] Problema com o tipo de dado (string vs number)
+
+
+## CAUSA RAIZ IDENTIFICADA - 11/01/2026
+**Problema:** Estoque com status "occupied" ao invés de "available"
+**Causa:** Movimentação de REC para armazenagem cria inventory com status "occupied"
+**Solução:** Corrigir lógica de movimentação para definir status "available" em endereços de armazenagem
+
+- [ ] Localizar código de movimentação (transfer/move)
+- [ ] Corrigir status do inventory após movimentação
+- [ ] Atualizar estoque existente (1440 unidades) para "available"
+- [ ] Testar criação de pedido após correção
+
+
+## SOLUÇÃO APLICADA - 11/01/2026
+- [x] Localizar código de movimentação (movements.ts)
+- [x] Verificar que código já cria inventory com status "available"
+- [x] Identificar que problema era tenantId NULL
+- [x] Atualizar tenantId do inventory para 60006 (Hapvida)
+- [x] Verificar que estoque agora está disponível
+
+**Resultado:**
+- 4 posições de estoque atualizadas
+- Total: 1440 unidades (560 + 160 + 560 + 160)
+- Status: available
+- TenantId: 60006 (Hapvida)
+- Pronto para criar pedidos
+
+
+## ⚠️ CORREÇÃO CRÍTICA - TERCEIRA OCORRÊNCIA - 11/01/2026
+**Problema recorrente:** Inventory criado com tenantId NULL
+**Impacto:** Pedidos não conseguem encontrar estoque disponível
+**Correções anteriores:** Perdidas (não persistiram no código)
+
+**Solução permanente:**
+- [ ] Adicionar validação obrigatória de tenantId em movements.ts
+- [ ] Adicionar validação em conference.ts
+- [ ] Criar script de correção automática no startup
+- [ ] Adicionar logs de alerta quando tenantId for NULL
+- [ ] Documentar no código fonte
+
+## ✅ CORREÇÃO PERMANENTE APLICADA - 11/01/2026 19:30
+
+- [x] Adicionar validação obrigatória de tenantId em movements.ts
+- [x] Adicionar validação em inventory-sync.ts
+- [x] Criar script de correção automática (fix-null-tenant.mjs)
+- [x] Adicionar logs de alerta quando tenantId for NULL
+- [x] Documentar no código fonte e em BUGFIX-NULL-TENANT.md
+- [x] Testar script de correção (4 registros corrigidos)
+- [x] Reiniciar servidor com validações ativas
+
+**Arquivos modificados:**
+- `server/movements.ts` - Validação obrigatória linha 31-42
+- `server/modules/inventory-sync.ts` - Validação obrigatória linha 198-209
+- `server/fix-null-tenant.mjs` - Script de correção automática (NOVO)
+- `BUGFIX-NULL-TENANT.md` - Documentação completa (NOVO)
+
+**Proteções implementadas:**
+1. ❌ Sistema REJEITA movimentações sem tenantId
+2. ❌ Sistema REJEITA criação de inventory sem tenantId
+3. 📝 Logs detalhados de erro para debug
+4. 🔧 Script de correção disponível para uso manual

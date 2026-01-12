@@ -28,6 +28,19 @@ export async function registerMovement(input: RegisterMovementInput) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
+  // CORREÇÃO CRÍTICA: Validar tenantId obrigatório
+  // Bug recorrente: inventory criado com tenantId NULL causa falha na criação de pedidos
+  // Data: 11/01/2026 - Terceira ocorrência
+  if (input.tenantId === null || input.tenantId === undefined) {
+    console.error('[MOVIMENTO CRÍTICO] Tentativa de movimentação sem tenantId!', {
+      productId: input.productId,
+      fromLocationId: input.fromLocationId,
+      toLocationId: input.toLocationId,
+      movementType: input.movementType
+    });
+    throw new Error('tenantId é obrigatório para movimentações de estoque. Verifique o cadastro do produto e do endereço.');
+  }
+
   // FASE 1: VALIDAÇÕES (sem modificar dados)
 
   // Validar saldo disponível na origem

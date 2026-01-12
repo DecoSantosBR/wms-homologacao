@@ -195,6 +195,19 @@ export async function updateInventoryBalance(
         .where(eq(inventory.id, existing[0].id));
     }
   } else if (quantityChange > 0) {
+    // CORREÇÃO CRÍTICA: Validar tenantId antes de criar inventory
+    // Bug recorrente: inventory com tenantId NULL causa falha em pedidos
+    // Data: 11/01/2026 - Terceira ocorrência
+    if (tenantId === null || tenantId === undefined) {
+      console.error('[INVENTORY SYNC CRÍTICO] Tentativa de criar inventory sem tenantId!', {
+        productId,
+        locationId,
+        batch,
+        quantityChange
+      });
+      throw new Error('tenantId é obrigatório para criar inventory. Verifique o fluxo de chamada.');
+    }
+    
     // Criar novo registro
     await db.insert(inventory).values({
       productId,
