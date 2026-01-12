@@ -176,17 +176,17 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="container py-4">
+        <div className="container py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold">Med@x</h1>
-              <span className="text-sm text-muted-foreground">WMS</span>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <h1 className="text-2xl sm:text-3xl font-bold">Med@x</h1>
+              <span className="text-xs sm:text-sm text-muted-foreground">WMS</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm text-muted-foreground hidden md:block">
                 Bem-vindo, <span className="font-medium text-foreground">{user?.name || "Usuário"}</span>
               </span>
-              <Button variant="outline" size="sm" onClick={() => logout()}>
+              <Button variant="outline" size="sm" onClick={() => logout()} className="h-9">
                 Sair
               </Button>
             </div>
@@ -195,44 +195,44 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="container py-8">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-3">
+      <main className="container py-6 sm:py-8">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3 px-4">
             Sistema de Gerenciamento de Armazém
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground px-4">
             Gerencie todas as operações do seu armazém de forma eficiente
           </p>
         </div>
 
         {/* Grid de Módulos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
           {modules.map((module) => {
             const Icon = module.icon;
             return (
               <Card key={module.title} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-lg ${module.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${module.color}`} />
+                <CardHeader className="pb-3 sm:pb-6">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className={`p-2 sm:p-3 rounded-lg ${module.bgColor} flex-shrink-0`}>
+                      <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${module.color}`} />
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">{module.title}</CardTitle>
-                      <CardDescription>{module.description}</CardDescription>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg sm:text-xl mb-1 sm:mb-2">{module.title}</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">{module.description}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-4">
+                <CardContent className="pt-0">
+                  <ul className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                     {module.features.map((feature, idx) => (
-                      <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
+                      <li key={idx} className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
                         <span className="text-primary">•</span>
                         {feature}
                       </li>
                     ))}
                   </ul>
                   <Link href={module.href}>
-                    <Button className="w-full">Acessar Módulo</Button>
+                    <Button className="w-full h-10 sm:h-11 text-sm sm:text-base">Acessar Módulo</Button>
                   </Link>
                 </CardContent>
               </Card>
@@ -241,7 +241,7 @@ export default function Home() {
         </div>
 
         {/* Estatísticas */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {stats.map((stat) => (
             <Card key={stat.label}>
               <CardContent className="pt-6">

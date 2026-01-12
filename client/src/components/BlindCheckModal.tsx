@@ -287,7 +287,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -317,35 +317,35 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
           ) : (
             <div className="space-y-6">
               {/* Métricas */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="text-sm text-gray-600 mb-1">Volumes Lidos</div>
-                    <div className="text-3xl font-bold">{totalVolumes}</div>
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Volumes Lidos</div>
+                    <div className="text-xl sm:text-3xl font-bold">{totalVolumes}</div>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="text-sm text-gray-600 mb-1">Unidades Totais</div>
-                    <div className="text-3xl font-bold">{totalUnits}</div>
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Unidades Totais</div>
+                    <div className="text-xl sm:text-3xl font-bold">{totalUnits}</div>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="text-sm text-gray-600 mb-1">Produtos Distintos</div>
-                    <div className="text-3xl font-bold">{distinctProducts}</div>
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Produtos Distintos</div>
+                    <div className="text-xl sm:text-3xl font-bold">{distinctProducts}</div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Leitura de Etiquetas */}
               <Card>
-                <CardContent className="p-6">
-                  <div className="mb-2">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="mb-3">
                     <Label className="text-base font-semibold">Leitura de Etiquetas</Label>
-                    <p className="text-sm text-gray-600">Escaneie ou digite o código da etiqueta</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Escaneie ou digite o código da etiqueta</p>
                   </div>
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
                     <Input
                       ref={labelInputRef}
                       value={labelCode}
@@ -356,13 +356,15 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                         }
                       }}
                       placeholder="Código da etiqueta..."
-                      className="flex-1 text-lg"
+                      className="flex-1 text-base sm:text-lg h-12 sm:h-auto"
                       disabled={readLabelMutation.isPending}
+                      inputMode="numeric"
                     />
                     <Button
                       onClick={handleLabelSubmit}
                       disabled={readLabelMutation.isPending || !labelCode.trim()}
                       size="lg"
+                      className="w-full sm:w-auto min-h-[48px]"
                     >
                       {readLabelMutation.isPending ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -371,73 +373,77 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                       )}
                     </Button>
                   </div>
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => setShowScanner(true)}
-                    className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                    className="w-full sm:w-auto min-h-[48px]"
                   >
-                    <Camera className="w-4 h-4" />
+                    <Camera className="w-4 h-4 mr-2" />
                     Escanear com Câmera
-                  </button>
+                  </Button>
                 </CardContent>
               </Card>
 
               {/* Produtos Conferidos */}
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="mb-4">
                     <h3 className="text-base font-semibold">Produtos Conferidos</h3>
-                    <p className="text-sm text-gray-600">Resumo das associações e quantidades lidas</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Resumo das associações e quantidades lidas</p>
                   </div>
 
                   {isLoadingSummary ? (
                     <div className="text-center py-8 text-gray-500">Carregando...</div>
                   ) : !summary?.associations.length ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <p className="text-lg mb-2">Nenhum produto conferido ainda</p>
-                      <p className="text-sm">Escaneie ou digite o código da primeira etiqueta para começar</p>
+                    <div className="text-center py-8 sm:py-12 text-gray-500">
+                      <p className="text-base sm:text-lg mb-2">Nenhum produto conferido ainda</p>
+                      <p className="text-xs sm:text-sm">Escaneie ou digite o código da primeira etiqueta para começar</p>
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Produto</TableHead>
-                          <TableHead>Lote</TableHead>
-                          <TableHead className="text-right">Un/Volume</TableHead>
-                          <TableHead className="text-right">Volumes</TableHead>
-                          <TableHead className="text-right">Unidades</TableHead>
-                          <TableHead className="text-center">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {summary.associations.map((assoc: any) => (
-                          <TableRow key={assoc.id}>
-                            <TableCell>
-                              <div className="font-medium">{assoc.productName}</div>
-                              <div className="text-sm text-gray-600">{assoc.productSku}</div>
-                            </TableCell>
-                            <TableCell>{assoc.batch || "-"}</TableCell>
-                            <TableCell className="text-right">{assoc.unitsPerPackage}</TableCell>
-                            <TableCell className="text-right font-semibold">{assoc.packagesRead}</TableCell>
-                            <TableCell className="text-right font-semibold">{assoc.totalUnits}</TableCell>
-                            <TableCell className="text-center">
-                              <Button variant="ghost" size="icon">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Produto</TableHead>
+                            <TableHead>Lote</TableHead>
+                            <TableHead className="text-right">Un/Volume</TableHead>
+                            <TableHead className="text-right">Volumes</TableHead>
+                            <TableHead className="text-right">Unidades</TableHead>
+                            <TableHead className="text-center">Ações</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {summary.associations.map((assoc: any) => (
+                            <TableRow key={assoc.id}>
+                              <TableCell>
+                                <div className="font-medium">{assoc.productName}</div>
+                                <div className="text-sm text-gray-600">{assoc.productSku}</div>
+                              </TableCell>
+                              <TableCell>{assoc.batch || "-"}</TableCell>
+                              <TableCell className="text-right">{assoc.unitsPerPackage}</TableCell>
+                              <TableCell className="text-right font-semibold">{assoc.packagesRead}</TableCell>
+                              <TableCell className="text-right font-semibold">{assoc.totalUnits}</TableCell>
+                              <TableCell className="text-center">
+                                <Button variant="ghost" size="icon">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>
 
               {/* Ações */}
-              <div className="flex gap-2 justify-end">
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
                 <Button
                   variant="outline"
                   onClick={handleUndo}
                   disabled={!summary?.associations.length || undoLastReadingMutation.isPending}
+                  className="min-h-[48px] w-full sm:w-auto"
                 >
                   <Undo className="w-4 h-4 mr-2" />
                   Desfazer Última
@@ -445,7 +451,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 <Button
                   onClick={handleFinishClick}
                   disabled={!summary?.associations.length}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 min-h-[48px] w-full sm:w-auto"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Finalizar Conferência

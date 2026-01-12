@@ -70,45 +70,45 @@ export default function Cadastros() {
         description="Gestão de dados mestre do sistema"
       />
       
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
           {modules.map((module) => {
             const Icon = module.icon;
             return (
               <Link key={module.id} href={module.href}>
-                <div className="block group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-200 hover:border-blue-300 h-full">
+                <div className="block group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-4 sm:p-6 border border-gray-200 hover:border-blue-300 h-full">
                   {/* Icon and Title */}
-                  <div className="flex items-start gap-4 mb-4">
+                  <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
                     <div
-                      className={`${module.bgColor} ${module.color} p-3 rounded-lg group-hover:scale-110 transition-transform duration-300`}
+                      className={`${module.bgColor} ${module.color} p-2 sm:p-3 rounded-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}
                     >
-                      <Icon className="w-6 h-6" />
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
                         {module.title}
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs sm:text-sm text-gray-600">
                         {module.description}
                       </p>
                     </div>
                   </div>
 
                   {/* Features List */}
-                  <ul className="space-y-2 mb-4">
+                  <ul className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                     {module.features.map((feature, idx) => (
                       <li
                         key={idx}
-                        className="text-sm text-gray-600 flex items-center gap-2"
+                        className="text-xs sm:text-sm text-gray-600 flex items-center gap-2"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0"></span>
                         {feature}
                       </li>
                     ))}
                   </ul>
 
                   {/* Action Button */}
-                  <div className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg text-center">
+                  <div className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg text-center text-sm sm:text-base min-h-[44px] flex items-center justify-center">
                     Acessar Módulo
                   </div>
                 </div>

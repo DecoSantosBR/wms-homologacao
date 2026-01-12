@@ -144,11 +144,11 @@ export default function Receiving() {
         title="Recebimento"
         description="Gerencie ordens de recebimento, confira mercadorias e realize endereçamento"
       />
-      <div className="container py-6">
+      <div className="container py-4 sm:py-6">
         {/* Filtros e Ações */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
+        <Card className="mb-4 sm:mb-6">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {/* Busca */}
               <div className="flex-1">
                 <div className="relative">
@@ -157,15 +157,15 @@ export default function Receiving() {
                     placeholder="Buscar por número, fornecedor ou NF-e..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-11"
                   />
                 </div>
               </div>
 
               {/* Filtro de Status */}
-              <div className="w-full md:w-48">
+              <div className="w-full sm:w-64">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
                       <SelectValue placeholder="Status" />
@@ -189,6 +189,7 @@ export default function Receiving() {
                   variant="destructive"
                   onClick={handleDeleteBatch}
                   disabled={deleteBatchMutation.isPending}
+                  className="h-11 w-full sm:w-auto"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Deletar ({selectedOrders.length})
@@ -206,8 +207,104 @@ export default function Receiving() {
               {filteredOrders.length} ordem(ns) encontrada(s)
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="p-0 sm:p-6">
+            {/* Mobile: Cards */}
+            <div className="block sm:hidden">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center text-gray-500 py-8 px-4">
+                  Nenhuma ordem de recebimento encontrada
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredOrders.map((order) => (
+                    <div key={order.id} className="p-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <Checkbox
+                          checked={selectedOrders.includes(order.id)}
+                          onCheckedChange={() => toggleSelect(order.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono font-medium text-sm mb-1">
+                            {order.orderNumber}
+                          </div>
+                          <div className="text-sm text-gray-600 mb-2">
+                            {(order as any).clientName || "-"}
+                          </div>
+                          <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]}>
+                            {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS]}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm mb-3">
+                        {order.nfeNumber && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">NF-e:</span>
+                            <span className="font-mono">{order.nfeNumber}</span>
+                          </div>
+                        )}
+                        {order.scheduledDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Data Agendada:</span>
+                            <span>{format(new Date(order.scheduledDate), "dd/MM/yyyy", { locale: ptBR })}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setScheduleOrderId(order.id)}
+                          className="flex-1 min-w-[100px]"
+                        >
+                          <Calendar className="h-4 w-4 mr-1" />
+                          Agendar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setImportPreallocationOrderId(order.id)}
+                          disabled={order.status === "completed" || order.status === "cancelled"}
+                          className="flex-1 min-w-[100px]"
+                        >
+                          <FileSpreadsheet className="h-4 w-4 mr-1" />
+                          Pré-Aloc.
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCheckOrderId(order.id)}
+                          disabled={order.status === "completed" || order.status === "cancelled"}
+                          className="flex-1 min-w-[100px]"
+                        >
+                          <ClipboardCheck className="h-4 w-4 mr-1" />
+                          Conferir
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewItemsOrderId(order.id)}
+                          className="flex-1 min-w-[100px]"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver Itens
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(order.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden sm:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
