@@ -48,3 +48,43 @@
 ## ✅ HISTÓRICO DE FUNCIONALIDADES IMPLEMENTADAS
 
 [Conteúdo anterior do todo.md foi preservado mas omitido aqui para brevidade]
+
+
+## 📸 OTIMIZAÇÃO DO SCANNER - 11/01/2026 20:00
+
+### Suporte a Formatos de Código
+- [x] Adicionar suporte a EAN-13 (padrão europeu)
+- [x] Adicionar suporte a EAN-8 (versão curta)
+- [x] Adicionar suporte a Code 128 (uso industrial)
+- [x] Adicionar suporte a Code 39
+- [x] Adicionar suporte a QR Code
+- [x] Adicionar suporte a Data Matrix
+- [x] Permitir configuração de formatos ativos
+
+### Feedback Visual
+- [x] Adicionar overlay com guia de alinhamento
+- [x] Implementar animação de scan (linha verde)
+- [x] Mostrar preview do código detectado
+- [x] Adicionar indicador de sucesso (checkmark verde)
+- [x] Adicionar indicador de erro (X vermelho)
+- [x] Implementar contador de tentativas
+
+### Feedback Háptico
+- [x] Vibração ao detectar código com sucesso
+- [x] Vibração de erro ao falhar
+- [x] Padrão de vibração diferenciado por tipo
+- [x] Suporte a dispositivos sem vibração
+
+### Melhorias de UI
+- [x] Botão de lanterna (flash) para ambientes escuros
+- [x] Zoom in/out para ajuste de distância
+- [x] Botão de troca de câmera (frontal/traseira)
+- [x] Instruções contextuais na tela
+- [x] Modo fullscreen otimizado
+- [x] Estatísticas de scan (taxa de sucesso)
+
+### Performance
+- [x] Otimizar taxa de frames (FPS)
+- [x] Reduzir latência de detecção
+- [x] Implementar debounce para evitar leituras duplicadas
+- [x] Cache de configurações do usuário
