@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
+import { InsufficientStockModal } from "@/components/InsufficientStockModal";
 
 interface ProductItem {
   productId: number;
@@ -46,6 +47,17 @@ export default function PickingOrders() {
   const [editSelectedProductId, setEditSelectedProductId] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<number>(1);
   const [editUnit, setEditUnit] = useState<"box" | "unit">("box");
+  
+  // Estados para modal de erro de estoque
+  const [showStockErrorModal, setShowStockErrorModal] = useState(false);
+  const [stockErrorData, setStockErrorData] = useState<{
+    productSku: string;
+    productName: string;
+    requestedQuantity: number;
+    requestedUnit: string;
+    availableQuantity: number;
+    availableUnit: string;
+  } | null>(null);
 
   // Estados para edição de onda
   const [isEditWaveDialogOpen, setIsEditWaveDialogOpen] = useState(false);
@@ -153,7 +165,30 @@ export default function PickingOrders() {
       alert("Pedido criado com sucesso!");
     },
     onError: (error) => {
-      alert(`Erro ao criar pedido: ${error.message}`);
+      // Parsear mensagem de erro de estoque insuficiente
+      const message = error.message;
+      
+      // Regex para extrair informações da mensagem:
+      // "Estoque insuficiente para produto SKU (Nome). Disponível para picking: X unidades. Solicitado: Y caixa(s) (Z unidades)..."
+      const match = message.match(
+        /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível para picking: ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)/
+      );
+      
+      if (match) {
+        const [, sku, name, available, requested, unit, requestedUnits] = match;
+        setStockErrorData({
+          productSku: sku,
+          productName: name,
+          requestedQuantity: parseFloat(requested),
+          requestedUnit: unit.replace('(s)', 's'),
+          availableQuantity: parseFloat(available),
+          availableUnit: 'unidades',
+        });
+        setShowStockErrorModal(true);
+      } else {
+        // Fallback para outros erros
+        alert(`Erro ao criar pedido: ${message}`);
+      }
     },
   });
 
@@ -1194,6 +1229,23 @@ export default function PickingOrders() {
           }
         }} 
       />
+
+      {/* Modal de Erro de Estoque Insuficiente */}
+      {stockErrorData && (
+        <InsufficientStockModal
+          open={showStockErrorModal}
+          onClose={() => {
+            setShowStockErrorModal(false);
+            setStockErrorData(null);
+          }}
+          productSku={stockErrorData.productSku}
+          productName={stockErrorData.productName}
+          requestedQuantity={stockErrorData.requestedQuantity}
+          requestedUnit={stockErrorData.requestedUnit}
+          availableQuantity={stockErrorData.availableQuantity}
+          availableUnit={stockErrorData.availableUnit}
+        />
+      )}
     </>
   );
 }

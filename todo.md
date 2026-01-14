@@ -88,3 +88,15 @@
 - [x] Reduzir latência de detecção
 - [x] Implementar debounce para evitar leituras duplicadas
 - [x] Cache de configurações do usuário
+
+
+## 🚨 MELHORIA DE MENSAGEM DE ERRO - 11/01/2026 20:15
+
+### Modal de Saldo Insuficiente
+- [x] Criar componente InsufficientStockModal
+- [x] Exibir título "Quantidade insuficiente:"
+- [x] Mostrar SKU e nome do produto
+- [x] Exibir quantidade solicitada em vermelho
+- [x] Exibir quantidade disponível em verde
+- [x] Formatar unidades (caixas/unidades)
+- [x] Integrar no fluxo de criação de pedido de separação
