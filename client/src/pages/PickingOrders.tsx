@@ -159,8 +159,28 @@ export default function PickingOrders() {
     onError: (error) => {
       const message = error.message;
       
-      // Estoque insuficiente - novo formato
-      // "Estoque insuficiente para produto SKU (Nome). Disponível: X caixa(s) / Y unidades. Solicitado: A caixa(s) (B unidades). UnitsPerBox: Z"
+      // Tentar parsear como JSON estruturado (múltiplos produtos)
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed.type === 'INSUFFICIENT_STOCK_MULTIPLE' && Array.isArray(parsed.items)) {
+          const items = parsed.items.map((item: any) => ({
+            productSku: item.sku,
+            productName: item.name,
+            requestedQuantity: item.requestedQuantity,
+            requestedUnit: item.requestedUnit,
+            requestedUnits: item.requestedUnits,
+            availableQuantity: item.availableUnits,
+            availableBoxes: item.availableBoxes,
+            unitsPerBox: item.unitsPerBox,
+          }));
+          businessError.showInsufficientStock(items);
+          return;
+        }
+      } catch (e) {
+        // Não é JSON, continuar com regex
+      }
+      
+      // Fallback: Estoque insuficiente - formato legado (produto único)
       const stockMatch = message.match(
         /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível: ([\d.]+) caixa\(s\) \/ ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)\. UnitsPerBox: ([\d.]+)/
       );
@@ -225,8 +245,28 @@ export default function PickingOrders() {
     onError: (error) => {
       const message = error.message;
       
-      // Estoque insuficiente - novo formato
-      // "Estoque insuficiente para produto SKU (Nome). Disponível: X caixa(s) / Y unidades. Solicitado: A caixa(s) (B unidades). UnitsPerBox: Z"
+      // Tentar parsear como JSON estruturado (múltiplos produtos)
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed.type === 'INSUFFICIENT_STOCK_MULTIPLE' && Array.isArray(parsed.items)) {
+          const items = parsed.items.map((item: any) => ({
+            productSku: item.sku,
+            productName: item.name,
+            requestedQuantity: item.requestedQuantity,
+            requestedUnit: item.requestedUnit,
+            requestedUnits: item.requestedUnits,
+            availableQuantity: item.availableUnits,
+            availableBoxes: item.availableBoxes,
+            unitsPerBox: item.unitsPerBox,
+          }));
+          businessError.showInsufficientStock(items);
+          return;
+        }
+      } catch (e) {
+        // Não é JSON, continuar com regex
+      }
+      
+      // Fallback: Estoque insuficiente - formato legado (produto único)
       const stockMatch = message.match(
         /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível: ([\d.]+) caixa\(s\) \/ ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)\. UnitsPerBox: ([\d.]+)/
       );

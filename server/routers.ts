@@ -1117,6 +1117,17 @@ export const appRouter = router({
           product: any;
           availableStock: any[];
         }> = [];
+        
+        const insufficientStockErrors: Array<{
+          sku: string;
+          name: string;
+          availableBoxes: number;
+          availableUnits: number;
+          requestedQuantity: number;
+          requestedUnit: string;
+          requestedUnits: number;
+          unitsPerBox: number;
+        }> = [];
 
         for (const item of input.items) {
           // Buscar produto para obter SKU, nome e unitsPerBox
@@ -1177,46 +1188,41 @@ export const appRouter = router({
           console.log(`[PICKING DEBUG] Product: ${product.sku}, Available: ${totalAvailable}, Requested: ${quantityInUnits}`);
 
           if (totalAvailable < quantityInUnits) {
-            console.log(`[PICKING DEBUG] Insufficient stock, fetching detailed breakdown...`);
-            // Buscar estoque total (todos os status) para mensagem mais informativa
-            const totalStockAll = await db
-              .select({
-                quantity: inventory.quantity,
-                reservedQuantity: inventory.reservedQuantity,
-                status: inventory.status,
-              })
-              .from(inventory)
-              .where(
-                and(
-                  eq(inventory.tenantId, input.tenantId),
-                  eq(inventory.productId, item.productId)
-                )
-              );
+            console.log(`[PICKING DEBUG] Insufficient stock for ${product.sku}, accumulating error...`);
             
-            const totalInStock = totalStockAll.reduce((sum, s) => sum + (s.quantity - s.reservedQuantity), 0);
-            const statusBreakdown = totalStockAll.reduce((acc, s) => {
-              const available = s.quantity - s.reservedQuantity;
-              acc[s.status] = (acc[s.status] || 0) + available;
-              return acc;
-            }, {} as Record<string, number>);
-            
-            const statusMsg = Object.entries(statusBreakdown)
-              .map(([status, qty]) => `${status}: ${qty}`)
-              .join(', ');
-
             // Calcular disponível em caixas
             const availableBoxes = product.unitsPerBox && product.unitsPerBox > 0 
               ? Math.floor(totalAvailable / product.unitsPerBox)
               : 0;
             
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${availableBoxes} caixa(s) / ${totalAvailable} unidades. Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades). UnitsPerBox: ${product.unitsPerBox || 0}`
+            // Acumular erro ao invés de lançar imediatamente
+            insufficientStockErrors.push({
+              sku: product.sku,
+              name: product.description || '',
+              availableBoxes,
+              availableUnits: totalAvailable,
+              requestedQuantity: item.requestedQuantity,
+              requestedUnit: item.requestedUnit === 'box' ? 'caixas' : 'unidades',
+              requestedUnits: quantityInUnits,
+              unitsPerBox: product.unitsPerBox || 0,
             });
+          } else {
+            // Armazenar validação para uso posterior (incluindo quantidade convertida)
+            stockValidations.push({ item, product, availableStock, quantityInUnits } as any);
           }
+        }
 
-          // Armazenar validação para uso posterior (incluindo quantidade convertida)
-          stockValidations.push({ item, product, availableStock, quantityInUnits } as any);
+        // Se houver erros de estoque, lançar todos de uma vez
+        if (insufficientStockErrors.length > 0) {
+          const errorMessage = JSON.stringify({
+            type: 'INSUFFICIENT_STOCK_MULTIPLE',
+            items: insufficientStockErrors,
+          });
+          
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: errorMessage,
+          });
         }
 
         // PASSO 2: Todas as validações passaram, agora criar o pedido

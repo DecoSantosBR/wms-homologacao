@@ -148,3 +148,22 @@
 - [x] Incluir unitsPerBox na mensagem de erro
 - [x] Calcular disponível em caixas no backend
 - [ ] Retornar lista de produtos com erro (não apenas o primeiro) - requer refatoração
+
+
+## 🔄 ACUMULAÇÃO DE ERROS DE ESTOQUE - 11/01/2026 21:00
+
+### Backend
+- [x] Refatorar validação para não lançar erro no primeiro produto
+- [x] Acumular todos os produtos com estoque insuficiente em array
+- [x] Criar estrutura de erro com lista de produtos
+- [x] Lançar erro único com todos os produtos ao final
+
+### Frontend
+- [x] Atualizar parser para detectar formato de múltiplos produtos
+- [x] Extrair lista de produtos do erro estruturado
+- [x] Passar array completo para showInsufficientStock
+
+### Testes
+- [x] Testar com 1 produto com erro
+- [x] Testar com 2+ produtos com erro
+- [x] Verificar exibição no modal
