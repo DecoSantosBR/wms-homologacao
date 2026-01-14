@@ -128,3 +128,23 @@
 - [x] Cores semânticas (vermelho=erro, amarelo=alerta, azul=info)
 - [x] Tipografia uniforme
 - [x] Espaçamentos padronizados
+
+
+## 🔧 CORREÇÃO MODAL ESTOQUE INSUFICIENTE - 11/01/2026 20:45
+
+### Formato de Quantidades
+- [x] Exibir caixas E unidades na linha "Solicitada"
+- [x] Exibir caixas E unidades na linha "Disponível"
+- [x] Calcular conversão correta usando unitsPerBox
+- [x] Formato: "1.000 caixas / 80.000 unidades"
+
+### Múltiplos Produtos
+- [x] Suportar lista de produtos com estoque insuficiente
+- [x] Exibir todos os produtos no mesmo modal
+- [x] Layout em cards ou lista para múltiplos itens
+- [ ] Parser de erro que detecta múltiplos produtos (backend precisa retornar lista)
+
+### Backend
+- [x] Incluir unitsPerBox na mensagem de erro
+- [x] Calcular disponível em caixas no backend
+- [ ] Retornar lista de produtos com erro (não apenas o primeiro) - requer refatoração

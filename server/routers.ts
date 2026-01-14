@@ -1204,9 +1204,14 @@ export const appRouter = router({
               .map(([status, qty]) => `${status}: ${qty}`)
               .join(', ');
 
+            // Calcular disponível em caixas
+            const availableBoxes = product.unitsPerBox && product.unitsPerBox > 0 
+              ? Math.floor(totalAvailable / product.unitsPerBox)
+              : 0;
+            
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível para picking: ${totalAvailable} unidades. Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades). Estoque total: ${totalInStock} unidades (${statusMsg})`
+              message: `Estoque insuficiente para produto ${product.sku} (${product.description}). Disponível: ${availableBoxes} caixa(s) / ${totalAvailable} unidades. Solicitado: ${item.requestedQuantity} ${item.requestedUnit === 'box' ? 'caixa(s)' : 'unidade(s)'} (${quantityInUnits} unidades). UnitsPerBox: ${product.unitsPerBox || 0}`
             });
           }
 

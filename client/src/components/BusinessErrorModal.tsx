@@ -12,6 +12,17 @@ export type ErrorType =
   | "duplicate_entry"
   | "generic";
 
+interface InsufficientStockItem {
+  productSku: string;
+  productName: string;
+  requestedQuantity: number;
+  requestedUnit: string;
+  requestedUnits: number;
+  availableQuantity: number;
+  availableBoxes?: number;
+  unitsPerBox?: number;
+}
+
 interface BusinessErrorModalProps {
   open: boolean;
   onClose: () => void;
@@ -23,6 +34,7 @@ interface BusinessErrorModalProps {
     value: string;
     variant?: "default" | "error" | "success" | "warning";
   }>;
+  insufficientStockItems?: InsufficientStockItem[];
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -79,6 +91,7 @@ export function BusinessErrorModal({
   title,
   message,
   details,
+  insufficientStockItems,
   actionLabel,
   onAction,
 }: BusinessErrorModalProps) {
@@ -87,7 +100,7 @@ export function BusinessErrorModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className={cn("flex items-center gap-2 text-lg", config.titleColor)}>
             <Icon className={cn("w-5 h-5", config.iconColor)} />
@@ -101,6 +114,36 @@ export function BusinessErrorModal({
             <p className="text-sm text-gray-700 leading-relaxed">
               {message}
             </p>
+          )}
+
+          {/* Itens com Estoque Insuficiente */}
+          {insufficientStockItems && insufficientStockItems.length > 0 && (
+            <div className="space-y-4">
+              {insufficientStockItems.map((item, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  {/* SKU e Nome */}
+                  <p className="text-sm font-semibold text-gray-900">
+                    SKU: {item.productSku} - {item.productName}
+                  </p>
+                  
+                  {/* Quantidade Solicitada */}
+                  <p className="text-sm text-red-600 font-medium">
+                    <span className="font-semibold">Qtnd. Solicitada:</span>{" "}
+                    {item.requestedQuantity.toLocaleString('pt-BR')} {item.requestedUnit} /{" "}
+                    {item.requestedUnits.toLocaleString('pt-BR')} unidades
+                  </p>
+                  
+                  {/* Quantidade Disponível */}
+                  <p className="text-sm text-green-600 font-medium">
+                    <span className="font-semibold">Qtnd. Disponível:</span>{" "}
+                    {item.availableBoxes !== undefined && item.unitsPerBox 
+                      ? `${item.availableBoxes.toLocaleString('pt-BR')} ${item.requestedUnit} / `
+                      : ''}
+                    {item.availableQuantity.toLocaleString('pt-BR')} unidades
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Detalhes Estruturados */}

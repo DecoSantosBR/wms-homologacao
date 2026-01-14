@@ -159,19 +159,23 @@ export default function PickingOrders() {
     onError: (error) => {
       const message = error.message;
       
-      // Estoque insuficiente
+      // Estoque insuficiente - novo formato
+      // "Estoque insuficiente para produto SKU (Nome). Disponível: X caixa(s) / Y unidades. Solicitado: A caixa(s) (B unidades). UnitsPerBox: Z"
       const stockMatch = message.match(
-        /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível para picking: ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)/
+        /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível: ([\d.]+) caixa\(s\) \/ ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)\. UnitsPerBox: ([\d.]+)/
       );
       
       if (stockMatch) {
-        const [, sku, name, available, requested, unit] = stockMatch;
+        const [, sku, name, availableBoxes, availableUnits, requested, unit, requestedUnits, unitsPerBox] = stockMatch;
         businessError.showInsufficientStock({
           productSku: sku,
           productName: name,
           requestedQuantity: parseFloat(requested),
           requestedUnit: unit.replace('(s)', 's'),
-          availableQuantity: parseFloat(available),
+          requestedUnits: parseFloat(requestedUnits),
+          availableQuantity: parseFloat(availableUnits),
+          availableBoxes: parseFloat(availableBoxes),
+          unitsPerBox: parseFloat(unitsPerBox),
         });
         return;
       }
@@ -221,19 +225,23 @@ export default function PickingOrders() {
     onError: (error) => {
       const message = error.message;
       
-      // Estoque insuficiente
+      // Estoque insuficiente - novo formato
+      // "Estoque insuficiente para produto SKU (Nome). Disponível: X caixa(s) / Y unidades. Solicitado: A caixa(s) (B unidades). UnitsPerBox: Z"
       const stockMatch = message.match(
-        /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível para picking: ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)/
+        /Estoque insuficiente para produto ([\w-]+) \((.+?)\)\. Disponível: ([\d.]+) caixa\(s\) \/ ([\d.]+) unidades\. Solicitado: ([\d.]+) (caixa\(s\)|unidade\(s\)) \(([\d.]+) unidades\)\. UnitsPerBox: ([\d.]+)/
       );
       
       if (stockMatch) {
-        const [, sku, name, available, requested, unit] = stockMatch;
+        const [, sku, name, availableBoxes, availableUnits, requested, unit, requestedUnits, unitsPerBox] = stockMatch;
         businessError.showInsufficientStock({
           productSku: sku,
           productName: name,
           requestedQuantity: parseFloat(requested),
           requestedUnit: unit.replace('(s)', 's'),
-          availableQuantity: parseFloat(available),
+          requestedUnits: parseFloat(requestedUnits),
+          availableQuantity: parseFloat(availableUnits),
+          availableBoxes: parseFloat(availableBoxes),
+          unitsPerBox: parseFloat(unitsPerBox),
         });
         return;
       }

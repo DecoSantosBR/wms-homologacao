@@ -7,11 +7,23 @@ interface ErrorDetail {
   variant?: "default" | "error" | "success" | "warning";
 }
 
+interface InsufficientStockItem {
+  productSku: string;
+  productName: string;
+  requestedQuantity: number;
+  requestedUnit: string;
+  requestedUnits: number;
+  availableQuantity: number;
+  availableBoxes?: number;
+  unitsPerBox?: number;
+}
+
 interface ErrorState {
   type: ErrorType;
   title: string;
   message: string;
   details?: ErrorDetail[];
+  insufficientStockItems?: InsufficientStockItem[];
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -31,34 +43,14 @@ export function useBusinessError() {
   };
 
   // Helpers para erros comuns
-  const showInsufficientStock = (data: {
-    productSku: string;
-    productName: string;
-    requestedQuantity: number;
-    requestedUnit: string;
-    availableQuantity: number;
-  }) => {
+  const showInsufficientStock = (items: InsufficientStockItem | InsufficientStockItem[]) => {
+    const itemsArray = Array.isArray(items) ? items : [items];
+    
     showError({
       type: "insufficient_stock",
       title: "Quantidade insuficiente:",
       message: "",
-      details: [
-        {
-          label: "SKU",
-          value: `${data.productSku} - ${data.productName}`,
-          variant: "default",
-        },
-        {
-          label: "Qtnd. Solicitada",
-          value: `${data.requestedQuantity.toLocaleString('pt-BR')} ${data.requestedUnit}`,
-          variant: "error",
-        },
-        {
-          label: "Qtnd. Disponível",
-          value: `${data.availableQuantity.toLocaleString('pt-BR')} unidades`,
-          variant: "success",
-        },
-      ],
+      insufficientStockItems: itemsArray,
     });
   };
 
@@ -166,6 +158,7 @@ export function useBusinessError() {
       title={errorState.title}
       message={errorState.message}
       details={errorState.details}
+      insufficientStockItems={errorState.insufficientStockItems}
       actionLabel={errorState.actionLabel}
       onAction={errorState.onAction}
     />
