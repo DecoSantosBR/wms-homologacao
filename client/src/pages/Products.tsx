@@ -44,11 +44,15 @@ import { Package, Pencil, Trash2 } from "lucide-react";
 import { CreateProductDialog } from "@/components/CreateProductDialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { useBusinessError } from "@/hooks/useBusinessError";
 
 export default function Products() {
   const { data: products, isLoading } = trpc.products.list.useQuery();
   const { data: tenants } = trpc.tenants.list.useQuery();
   const utils = trpc.useUtils();
+  
+  // Hook de erros de negócio
+  const businessError = useBusinessError();
   
   // Estados de seleção múltipla
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -84,7 +88,15 @@ export default function Products() {
       setEditDialogOpen(false);
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar produto: " + error.message);
+      const message = error.message;
+      
+      if (message.includes("SKU já existe") || message.includes("duplicado")) {
+        businessError.showDuplicateEntry("SKU", editForm.sku);
+      } else if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("atualizar produtos");
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -95,7 +107,26 @@ export default function Products() {
       setDeleteDialogOpen(false);
     },
     onError: (error) => {
-      toast.error("Erro ao excluir produto: " + error.message);
+      const message = error.message;
+      
+      if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("excluir produtos");
+      } else if (message.includes("em uso") || message.includes("referência")) {
+        businessError.showError({
+          type: "invalid_data",
+          title: "Produto em uso",
+          message: "Este produto não pode ser excluído pois está sendo referenciado em pedidos ou estoque.",
+          details: [
+            {
+              label: "Sugestão",
+              value: "Altere o status do produto para 'Inativo' ao invés de excluí-lo.",
+              variant: "default",
+            },
+          ],
+        });
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -107,7 +138,13 @@ export default function Products() {
       setBulkDeleteDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(error.message);
+      const message = error.message;
+      
+      if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("excluir produtos em lote");
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -606,6 +643,9 @@ export default function Products() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Erros de Negócio */}
+      {businessError.ErrorModal}
     </div>
   );
 }

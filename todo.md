@@ -100,3 +100,31 @@
 - [x] Exibir quantidade disponível em verde
 - [x] Formatar unidades (caixas/unidades)
 - [x] Integrar no fluxo de criação de pedido de separação
+
+
+## 🎨 SISTEMA DE MODAIS DE ERRO - 11/01/2026 20:30
+
+### Componente Genérico
+- [x] Criar BusinessErrorModal base reutilizável
+- [x] Suporte a diferentes tipos de ícones (erro, alerta, info)
+- [x] Cores semânticas por tipo de erro
+- [x] Layout responsivo consistente
+
+### Modais Específicos
+- [x] ProductNotFoundModal - Produto não encontrado
+- [x] PermissionDeniedModal - Permissão negada
+- [x] DivergenceModal - Divergência de conferência
+- [x] InvalidDataModal - Dados inválidos
+- [x] DuplicateEntryModal - Entrada duplicada
+
+### Integração
+- [x] Aplicar em PickingOrders (criar, editar, deletar)
+- [x] Aplicar em Receiving (criar, conferir)
+- [ ] Aplicar em Inventory (movimentar, ajustar)
+- [x] Aplicar em Cadastros (produtos, clientes, endereços)
+
+### Padrão Visual
+- [x] Ícones consistentes (AlertCircle, XCircle, Info, Lock)
+- [x] Cores semânticas (vermelho=erro, amarelo=alerta, azul=info)
+- [x] Tipografia uniforme
+- [x] Espaçamentos padronizados

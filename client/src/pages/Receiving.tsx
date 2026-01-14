@@ -13,6 +13,7 @@ import { ImportPreallocationDialog } from "@/components/ImportPreallocationDialo
 import { PageHeader } from "@/components/PageHeader";
 import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
+import { useBusinessError } from "@/hooks/useBusinessError";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -43,6 +44,9 @@ export default function Receiving() {
   const [scheduledDate, setScheduledDate] = useState("");
   const [checkOrderId, setCheckOrderId] = useState<number | null>(null);
   const [importPreallocationOrderId, setImportPreallocationOrderId] = useState<number | null>(null);
+  
+  // Hook de erros de negócio
+  const businessError = useBusinessError();
 
   const { data: orders, refetch } = trpc.receiving.list.useQuery();
   const { data: orderItems } = trpc.receiving.getItems.useQuery(
@@ -61,7 +65,13 @@ export default function Receiving() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error("Erro ao deletar ordem: " + error.message);
+      const message = error.message;
+      
+      if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("deletar ordens de recebimento");
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -72,7 +82,13 @@ export default function Receiving() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error("Erro ao deletar ordens: " + error.message);
+      const message = error.message;
+      
+      if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("deletar ordens de recebimento");
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -84,7 +100,15 @@ export default function Receiving() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error("Erro ao agendar: " + error.message);
+      const message = error.message;
+      
+      if (message.includes("Data inválida")) {
+        businessError.showInvalidData("Data de agendamento", message);
+      } else if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("agendar recebimentos");
+      } else {
+        businessError.showGenericError(message);
+      }
     },
   });
 
@@ -532,6 +556,9 @@ export default function Receiving() {
             }}
           />
         )}
+
+        {/* Modal de Erros de Negócio */}
+        {businessError.ErrorModal}
       </div>
     </div>
   );
