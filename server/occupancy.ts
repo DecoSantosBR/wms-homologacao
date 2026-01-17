@@ -40,11 +40,7 @@ export async function getOccupancyByZone(): Promise<ZoneOccupancy[]> {
       zoneId: warehouseZones.id,
       zoneName: warehouseZones.name,
       total: sql<number>`COUNT(DISTINCT ${warehouseLocations.id})`,
-      occupied: sql<number>`COUNT(DISTINCT CASE WHEN EXISTS(
-        SELECT 1 FROM ${inventory} 
-        WHERE ${inventory.locationId} = ${warehouseLocations.id} 
-        AND ${inventory.quantity} > 0
-      ) THEN ${warehouseLocations.id} END)`,
+      occupied: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'occupied' THEN ${warehouseLocations.id} END)`,
       available: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'available' THEN ${warehouseLocations.id} END)`,
       blocked: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'blocked' THEN ${warehouseLocations.id} END)`,
       counting: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'counting' THEN ${warehouseLocations.id} END)`,
@@ -69,11 +65,7 @@ export async function getOverallOccupancy() {
   const result = await dbConn
     .select({
       total: sql<number>`COUNT(DISTINCT ${warehouseLocations.id})`,
-      occupied: sql<number>`COUNT(DISTINCT CASE WHEN EXISTS(
-        SELECT 1 FROM ${inventory} 
-        WHERE ${inventory.locationId} = ${warehouseLocations.id} 
-        AND ${inventory.quantity} > 0
-      ) THEN ${warehouseLocations.id} END)`,
+      occupied: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'occupied' THEN ${warehouseLocations.id} END)`,
       available: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'available' THEN ${warehouseLocations.id} END)`,
       blocked: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'blocked' THEN ${warehouseLocations.id} END)`,
       counting: sql<number>`COUNT(DISTINCT CASE WHEN ${warehouseLocations.status} = 'counting' THEN ${warehouseLocations.id} END)`,
