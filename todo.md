@@ -261,3 +261,8 @@
 
 - [x] Caixas de seleção não apareciam - RESOLVIDO: pedidos estavam com status 'in_wave' ao invés de 'pending' devido à deleção manual de onda anterior. Atualizado status no banco de dados para 'pending'.
 - [x] Erro ao criar onda - RESOLVIDO: mesmo problema do status 'in_wave'. Após correção, onda foi criada com sucesso com 4 pedidos e customerOrderNumber aparece corretamente em preto.
+
+
+## Novo Bug Reportado - 17/01/2026 (15:07)
+
+- [x] Erro React: "Encountered two children with the same key, `10`" - RESOLVIDO: alterado key de `item.id` para chave composta `${item.id}-${item.productId}-${item.locationCode}` para garantir unicidade

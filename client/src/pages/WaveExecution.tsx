@@ -514,7 +514,7 @@ export default function WaveExecution() {
               : 0;
 
             return (
-              <Card key={item.id} className="p-4">
+              <Card key={`${item.id}-${item.productId}-${item.locationCode}`} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-3 mb-2">
