@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, tenants } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingReservations, tenants } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 interface WaveDocumentData {
   waveCode: string;
@@ -50,20 +50,7 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
     .from(tenants)
     .where(eq(tenants.id, wave.tenantId));
 
-  // Buscar itens da onda
-  const items = await db
-    .select({
-      productName: pickingWaveItems.productName,
-      sku: pickingWaveItems.productSku,
-      locationCode: pickingWaveItems.locationCode,
-      batch: pickingWaveItems.batch,
-      expiryDate: pickingWaveItems.expiryDate,
-      quantity: pickingWaveItems.totalQuantity,
-    })
-    .from(pickingWaveItems)
-    .where(eq(pickingWaveItems.waveId, waveId));
-
-  // Buscar pedidos da onda
+  // Buscar pedidos da onda com seus itens
   const waveOrders = await db
     .select({
       id: pickingOrders.id,
@@ -73,19 +60,45 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
     .from(pickingOrders)
     .where(eq(pickingOrders.waveId, waveId));
 
-  // Agrupar itens por pedido (simulado - ajustar conforme estrutura real)
-  const orders = waveOrders.map((order) => ({
-    orderNumber: order.orderNumber || "N/A",
-    destination: order.deliveryAddress || "N/A",
-    items: items.map((item) => ({
-      productName: item.productName,
-      sku: item.sku,
-      locationCode: item.locationCode,
-      batch: item.batch,
-      expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
-      quantity: item.quantity,
-    })),
-  }));
+  // Para cada pedido, buscar seus itens específicos
+  const orders = await Promise.all(
+    waveOrders.map(async (order) => {
+      // Buscar itens do pedido através das reservas
+      const orderItems = await db
+        .selectDistinct({
+          productName: pickingWaveItems.productName,
+          sku: pickingWaveItems.productSku,
+          locationCode: pickingWaveItems.locationCode,
+          batch: pickingWaveItems.batch,
+          expiryDate: pickingWaveItems.expiryDate,
+          quantity: pickingWaveItems.totalQuantity,
+        })
+        .from(pickingWaveItems)
+        .innerJoin(
+          pickingReservations,
+          eq(pickingWaveItems.productId, pickingReservations.productId)
+        )
+        .where(
+          and(
+            eq(pickingWaveItems.waveId, waveId),
+            eq(pickingReservations.pickingOrderId, order.id)
+          )
+        );
+
+      return {
+        orderNumber: order.orderNumber || "N/A",
+        destination: order.deliveryAddress || "N/A",
+        items: orderItems.map((item) => ({
+          productName: item.productName,
+          sku: item.sku,
+          locationCode: item.locationCode,
+          batch: item.batch,
+          expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+          quantity: item.quantity,
+        })),
+      };
+    })
+  );
 
   return {
     waveCode: wave.waveNumber,

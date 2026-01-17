@@ -235,3 +235,9 @@
   - [x] Criar função de geração de PDF no backend (waveRouter.ts)
   - [x] Adicionar botão "Imprimir Documento" na tela WaveExecution
   - [x] Layout: cabeçalho (Onda | Cliente | Data | Separado por) + corpo agrupado por pedido (Pedido + Destinatário + tabela: Produto, SKU, Endereço, Lote, Validade, Quantidade) + rodapé (Data de Impressão)
+
+## Bugs no Documento de Impressão da Onda
+
+- [x] Destinatário aparece como "N/A" em vez do endereço de entrega real
+- [x] Todos os pedidos mostram os mesmos itens (não está agrupando corretamente por pedido)
+- [x] Itens estão sendo duplicados entre pedidos diferentes
