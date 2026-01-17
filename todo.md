@@ -298,3 +298,8 @@
 ## Bug - 17/01/2026 (09:30)
 
 - [x] Campo "Produto/Lote" na tela de movimentações exibe saldo TOTAL ao invés de saldo DISPONÍVEL (descontando reservas) - RESOLVIDO: modificada função getLocationProducts em movements.ts para calcular saldo disponível (total - reservado) usando LEFT JOIN com pickingReservations. Agora o campo exibe corretamente a quantidade que pode ser movimentada
+
+
+## Bug - 17/01/2026 (09:37)
+
+- [x] Lista de "Endereço Origem" exibe endereços com estoque TOTAL, mas deveria exibir apenas endereços com saldo DISPONÍVEL (descontando reservas) - RESOLVIDO: modificada função getLocationsWithStock em inventory.ts para calcular saldo disponível por endereço (SUM total - SUM reservado) e filtrar apenas endereços com saldo > 0. Agora a lista exibe apenas endereços que realmente podem ter produtos movimentados

@@ -8,6 +8,7 @@ import {
   warehouseZones,
   tenants,
   receivingPreallocations,
+  pickingReservations,
 } from "../drizzle/schema";
 
 export interface InventoryFilters {
@@ -231,26 +232,47 @@ export async function getExpiringProducts(
 }
 
 /**
- * Lista endereços que possuem estoque alocado
+ * Lista endereços que possuem estoque disponível (descontando reservas)
  */
 export async function getLocationsWithStock() {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
+  // Buscar endereços com estoque e calcular saldo disponível
   const results = await dbConn
-    .selectDistinct({
-      id: warehouseLocations.id,
+    .select({
+      locationId: inventory.locationId,
       code: warehouseLocations.code,
       zoneName: warehouseZones.name,
       zoneCode: warehouseZones.code,
+      totalQuantity: sql<number>`SUM(${inventory.quantity})`,
+      reservedQuantity: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)`,
     })
     .from(inventory)
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
     .where(gt(inventory.quantity, 0))
+    .groupBy(
+      inventory.locationId,
+      warehouseLocations.id,
+      warehouseLocations.code,
+      warehouseZones.name,
+      warehouseZones.code
+    )
     .orderBy(warehouseLocations.code);
 
-  return results;
+  // Filtrar apenas endereços com saldo disponível > 0
+  const locationsWithAvailableStock = results
+    .filter(loc => (loc.totalQuantity - loc.reservedQuantity) > 0)
+    .map(loc => ({
+      id: loc.locationId,
+      code: loc.code,
+      zoneName: loc.zoneName,
+      zoneCode: loc.zoneCode,
+    }));
+
+  return locationsWithAvailableStock;
 }
 
 /**
