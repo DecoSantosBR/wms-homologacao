@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package, MapPin, Calendar, CheckCircle2, AlertCircle, Scan, Camera } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PickingStepModal } from "@/components/PickingStepModal";
@@ -28,6 +29,34 @@ export default function WaveExecution() {
     { waveId },
     { enabled: waveId > 0, refetchInterval: 3000 } // Atualizar a cada 3 segundos
   );
+
+  const generateDocumentMutation = trpc.wave.generateDocument.useMutation({
+    onSuccess: (result) => {
+      // Converter base64 para blob e fazer download
+      const byteCharacters = atob(result.pdf);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Criar link de download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Documento gerado com sucesso!');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao gerar documento: ${error.message}`);
+    },
+  });
 
   const registerMutation = trpc.picking.registerPickedItem.useMutation({
     onSuccess: (result) => {
@@ -458,8 +487,15 @@ export default function WaveExecution() {
               Todos os itens foram separados com sucesso.
             </p>
             <div className="flex gap-3 justify-center">
-              <Button onClick={handlePrintOrders} variant="default">
-                Imprimir Pedidos
+              <Button 
+                onClick={() => generateDocumentMutation.mutate({ id: waveId })} 
+                variant="default"
+                disabled={generateDocumentMutation.isPending}
+              >
+                {generateDocumentMutation.isPending ? "Gerando..." : "Imprimir Documento"}
+              </Button>
+              <Button onClick={handlePrintOrders} variant="outline">
+                Imprimir Pedidos (Antigo)
               </Button>
               <Button onClick={() => navigate("/picking")} variant="outline">
                 Voltar para Separação

@@ -231,7 +231,7 @@
 
 ## Novas Funcionalidades
 
-- [ ] Implementar documento de impressão ao finalizar separação de onda
-  - [ ] Criar função de geração de PDF no backend
-  - [ ] Adicionar botão "Imprimir" na tela de execução de onda
-  - [ ] Layout: cabeçalho (onda, cliente, data, separador) + corpo agrupado por pedido (tabela com produto, SKU, endereço, lote, validade, quantidade) + rodapé (data de impressão)
+- [x] Implementar documento de impressão da Onda de Separação
+  - [x] Criar função de geração de PDF no backend (waveRouter.ts)
+  - [x] Adicionar botão "Imprimir Documento" na tela WaveExecution
+  - [x] Layout: cabeçalho (Onda | Cliente | Data | Separado por) + corpo agrupado por pedido (Pedido + Destinatário + tabela: Produto, SKU, Endereço, Lote, Validade, Quantidade) + rodapé (Data de Impressão)

@@ -4,6 +4,7 @@ import { getDb } from "./db";
 import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
+import { generateWaveDocument } from "./waveDocument";
 import { TRPCError } from "@trpc/server";
 
 export const waveRouter = router({
@@ -536,5 +537,22 @@ export const waveRouter = router({
         .where(eq(pickingWaves.id, input.id));
 
       return { success: true };
+    }),
+
+  /**
+   * Gerar documento PDF da onda de separação
+   */
+  generateDocument: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const pdfBuffer = await generateWaveDocument(input.id);
+      
+      // Retornar como base64 para o frontend
+      return {
+        pdf: pdfBuffer.toString('base64'),
+        filename: `onda-${input.id}.pdf`,
+      };
     }),
 });
