@@ -245,3 +245,7 @@
 ## Nova Funcionalidade
 
 - [x] Adicionar customerOrderNumber na tela de conclusão da onda (WaveExecution) ao lado de cada item
+
+## Bug Atual
+
+- [x] customerOrderNumber não está aparecendo na tela de conclusão da onda (WaveExecution)

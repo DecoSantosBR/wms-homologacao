@@ -103,11 +103,12 @@ export const waveRouter = router({
         })
         .from(pickingWaveItems)
         .leftJoin(
+          inventory,
+          eq(pickingWaveItems.locationId, inventory.locationId)
+        )
+        .leftJoin(
           pickingReservations,
-          and(
-            eq(pickingWaveItems.waveId, input.waveId),
-            eq(pickingWaveItems.productId, pickingReservations.productId)
-          )
+          eq(inventory.id, pickingReservations.inventoryId)
         )
         .leftJoin(
           pickingOrders,
