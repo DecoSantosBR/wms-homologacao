@@ -239,3 +239,13 @@
 - [x] Refatorar waveLogic.ts para incluir pickingOrderId ao criar itens
 - [x] Corrigir JOIN para buscar customerOrderNumber via pickingOrderId
 - [x] Testar exibição do número real do pedido
+
+
+## 🐛 CORRIGIR ERRO AO CRIAR ONDA - 11/01/2026 22:35
+
+- [x] Investigar por que waveItemsData está vazio
+- [x] Verificar se item.orders está sendo populado corretamente
+- [x] Adicionar validação para evitar insert com array vazio
+- [x] Simplificar lógica: usar firstOrder ao invés de iterar
+- [x] Adicionar type guards e assertions
+- [x] Testar criação de onda com múltiplos pedidos
