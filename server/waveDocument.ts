@@ -63,9 +63,9 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
   // Para cada pedido, buscar seus itens específicos
   const orders = await Promise.all(
     waveOrders.map(async (order) => {
-      // Buscar itens do pedido através das reservas
+      // Buscar itens do pedido usando pickingOrderId diretamente
       const orderItems = await db
-        .selectDistinct({
+        .select({
           productName: pickingWaveItems.productName,
           sku: pickingWaveItems.productSku,
           locationCode: pickingWaveItems.locationCode,
@@ -74,14 +74,10 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
           quantity: pickingWaveItems.totalQuantity,
         })
         .from(pickingWaveItems)
-        .innerJoin(
-          pickingReservations,
-          eq(pickingWaveItems.productId, pickingReservations.productId)
-        )
         .where(
           and(
             eq(pickingWaveItems.waveId, waveId),
-            eq(pickingReservations.pickingOrderId, order.id)
+            eq(pickingWaveItems.pickingOrderId, order.id)
           )
         );
 

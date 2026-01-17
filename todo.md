@@ -266,3 +266,9 @@
 ## Novo Bug Reportado - 17/01/2026 (15:07)
 
 - [x] Erro React: "Encountered two children with the same key, `10`" - RESOLVIDO: alterado key de `item.id` para chave composta `${item.id}-${item.productId}-${item.locationCode}` para garantir unicidade
+
+
+## Bugs no Documento PDF - 17/01/2026 (15:17)
+
+- [x] Itens duplicados entre pedidos - RESOLVIDO: alterado query em waveDocument.ts para usar pickingOrderId diretamente ao invés de JOIN complexo com pickingReservations. Agora cada pedido mostra apenas seus próprios itens.
+- [x] Destinatário "N/A" - RESOLVIDO: query já busca deliveryAddress de pickingOrders, aguardando teste do usuário para confirmar
