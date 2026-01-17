@@ -5,31 +5,53 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Tenants from "./pages/Tenants";
+import Products from "./pages/Products";
+import Locations from "./pages/Locations";
+import Receiving from "./pages/Receiving";
+import Picking from "./pages/Picking";
+import PickingOrders from "./pages/PickingOrders";
+import PickingExecution from "./pages/PickingExecution";
+import WaveExecution from "./pages/WaveExecution";
+import Inventory from "./pages/Inventory";
+import Cadastros from "./pages/Cadastros";
+import Users from "./pages/Users";
+import NFEImport from "./pages/NFEImport";
+import StockPositions from "./pages/StockPositions";
+import StockMovements from "./pages/StockMovements";
+import OccupancyDashboard from "./pages/OccupancyDashboard";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/tenants"} component={Tenants} />
+      <Route path={"/products"} component={Products} />
+      <Route path={"/locations"} component={Locations} />
+      <Route path={"/receiving"} component={Receiving} />
+      <Route path={"/recebimento"} component={Receiving} />
+      <Route path={"/picking"} component={PickingOrders} />
+      <Route path={"/picking/:id"} component={PickingExecution} />
+      <Route path={"/picking/execute/:id"} component={WaveExecution} />
+      <Route path={"/separacao"} component={Picking} />
+      <Route path={"/inventory"} component={Inventory} />
+      <Route path={"/cadastros"} component={Cadastros} />
+      <Route path={"/cadastros/produtos"} component={Products} />
+      <Route path={"/users"} component={Users} />
+      <Route path={"/nfe-import"} component={NFEImport} />
+      <Route path={"/stock"} component={StockPositions} />
+      <Route path={"/stock/movements"} component={StockMovements} />
+      <Route path={"/stock/occupancy"} component={OccupancyDashboard} />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

@@ -1,0 +1,58 @@
+{
+  "query": "SELECT la.labelCode, la.batch, p.sku, p.description \nFROM labelAssociations la \nJOIN products p ON la.productId = p.id \nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT la.labelCode, la.batch, p.sku, p.description \nFROM labelAssociations la \nJOIN products p ON la.productId = p.id \nLIMIT 10;",
+  "rows": [
+    {
+      "labelCode": "44306022D14LA124",
+      "batch": "22D14LA124",
+      "sku": "443060",
+      "description": "EXTENSOFIX 60 CM"
+    },
+    {
+      "labelCode": "401460P22D08LB108",
+      "batch": "22D08LB108",
+      "sku": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR"
+    },
+    {
+      "labelCode": "401460P22D10LB111",
+      "batch": "22D10LB111",
+      "sku": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR"
+    },
+    {
+      "labelCode": "83420722D08LA129",
+      "batch": "22D08LA129",
+      "sku": "834207",
+      "description": "PERFUSOR SET 60 CM"
+    },
+    {
+      "labelCode": "44306022D14LA125",
+      "batch": "22D14LA125",
+      "sku": "443060",
+      "description": "EXTENSOFIX 60 CM"
+    },
+    {
+      "labelCode": "401460P22D08LB109",
+      "batch": "22D08LB109",
+      "sku": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR"
+    },
+    {
+      "labelCode": "401460P22D10LB112",
+      "batch": "22D10LB112",
+      "sku": "401460P",
+      "description": "INTRAFIX PRIMELINE AIR"
+    },
+    {
+      "labelCode": "83420722D08LA130",
+      "batch": "22D08LA130",
+      "sku": "834207",
+      "description": "PERFUSOR SET 60 CM"
+    }
+  ],
+  "messages": [],
+  "stdout": "labelCode\tbatch\tsku\tdescription\n44306022D14LA124\t22D14LA124\t443060\tEXTENSOFIX 60 CM\n401460P22D08LB108\t22D08LB108\t401460P\tINTRAFIX PRIMELINE AIR\n401460P22D10LB111\t22D10LB111\t401460P\tINTRAFIX PRIMELINE AIR\n83420722D08LA129\t22D08LA129\t834207\tPERFUSOR SET 60 CM\n44306022D14LA125\t22D14LA125\t443060\tEXTENSOFIX 60 CM\n401460P22D08LB109\t22D08LB109\t401460P\tINTRAFIX PRIMELINE AIR\n401460P22D10LB112\t22D10LB112\t401460P\tINTRAFIX PRIMELINE AIR\n83420722D08LA130\t22D08LA130\t834207\tPERFUSOR SET 60 CM\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

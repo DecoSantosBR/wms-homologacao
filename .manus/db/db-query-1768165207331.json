@@ -1,0 +1,21 @@
+{
+  "query": "SELECT \n  po.id,\n  po.orderNumber,\n  po.tenantId,\n  po.customerName,\n  po.totalItems,\n  po.totalQuantity,\n  po.status,\n  po.createdAt,\n  COUNT(poi.id) as actual_items_count\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nWHERE po.orderNumber = 'PK1768164982891'\nGROUP BY po.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  po.id,\n  po.orderNumber,\n  po.tenantId,\n  po.customerName,\n  po.totalItems,\n  po.totalQuantity,\n  po.status,\n  po.createdAt,\n  COUNT(poi.id) as actual_items_count\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nWHERE po.orderNumber = 'PK1768164982891'\nGROUP BY po.id;",
+  "rows": [
+    {
+      "id": "150004",
+      "orderNumber": "PK1768164982891",
+      "tenantId": "60006",
+      "customerName": "A",
+      "totalItems": "1",
+      "totalQuantity": "100",
+      "status": "pending",
+      "createdAt": "2026-01-11 20:56:22",
+      "actual_items_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\ttenantId\tcustomerName\ttotalItems\ttotalQuantity\tstatus\tcreatedAt\tactual_items_count\n150004\tPK1768164982891\t60006\tA\t1\t100\tpending\t2026-01-11 20:56:22\t0\n",
+  "stderr": "",
+  "execution_time_ms": 90
+}
