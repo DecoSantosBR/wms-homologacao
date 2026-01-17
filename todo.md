@@ -277,3 +277,8 @@
 ## Nova Feature - 17/01/2026 (16:50)
 
 - [x] Adicionar logotipo da empresa no cabeçalho do documento PDF - CONCLUÍDO: logo Med@x (120x40px) adicionado no canto esquerdo do cabeçalho, com informações da onda ao lado direito
+
+
+## Bug - 17/01/2026 (17:00)
+
+- [x] Erro ao gerar PDF: "__dirname is not defined" - RESOLVIDO: adicionado fileURLToPath(import.meta.url) para obter __dirname em módulos ES (linhas 5-8 do waveDocument.ts)

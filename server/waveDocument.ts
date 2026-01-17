@@ -2,6 +2,10 @@ import PDFDocument from "pdfkit";
 import { getDb } from "./db";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { pickingWaves, pickingWaveItems, pickingOrders, pickingReservations, tenants } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -122,6 +126,7 @@ export async function generateWaveDocument(waveId: number): Promise<Buffer> {
   // Cabeçalho com logo
   const headerY = 40;
   const logoPath = path.join(__dirname, "assets", "logo.jpg");
+  console.log("Logo path:", logoPath, "exists:", fs.existsSync(logoPath));
   
   // Adicionar logo se existir
   if (fs.existsSync(logoPath)) {
