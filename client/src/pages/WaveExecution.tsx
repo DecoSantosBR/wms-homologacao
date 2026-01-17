@@ -25,7 +25,7 @@ export default function WaveExecution() {
   const [hasAutoPrinted, setHasAutoPrinted] = useState(false);
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading, refetch } = trpc.picking.getPickingProgress.useQuery(
+  const { data, isLoading, refetch } = trpc.wave.getPickingProgress.useQuery(
     { waveId },
     { enabled: waveId > 0, refetchInterval: 3000 } // Atualizar a cada 3 segundos
   );

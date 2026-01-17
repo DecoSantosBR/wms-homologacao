@@ -248,4 +248,4 @@
 
 ## Bug Atual
 
-- [x] customerOrderNumber não está aparecendo na tela de conclusão da onda (WaveExecution)
+- [x] customerOrderNumber AINDA não estava aparecendo na tela de conclusão da onda (WaveExecution) - RESOLVIDO: erro de namespace (trpc.picking → trpc.wave) + deduplicação de itens no JOIN

@@ -104,7 +104,11 @@ export const waveRouter = router({
         .from(pickingWaveItems)
         .leftJoin(
           inventory,
-          eq(pickingWaveItems.locationId, inventory.locationId)
+          and(
+            eq(pickingWaveItems.locationId, inventory.locationId),
+            eq(pickingWaveItems.productId, inventory.productId),
+            eq(pickingWaveItems.batch, inventory.batch)
+          )
         )
         .leftJoin(
           pickingReservations,
@@ -116,9 +120,24 @@ export const waveRouter = router({
         )
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
+      // Deduplic ar itens: quando há múltiplas reservas, o JOIN retorna múltiplas linhas
+      // Agrupar por pickingWaveItem.id e pegar o primeiro orderNumber não-null
+      const itemsMap = new Map<number, typeof items[0]>();
+      for (const item of items) {
+        const existing = itemsMap.get(item.id);
+        if (!existing) {
+          // Primeiro item com este ID
+          itemsMap.set(item.id, item);
+        } else if (!existing.orderNumber && item.orderNumber) {
+          // Substituir se o existente não tem orderNumber mas este tem
+          itemsMap.set(item.id, item);
+        }
+      }
+      const deduplicatedItems = Array.from(itemsMap.values());
+
       // Buscar labelCode para cada item (da tabela labelAssociations)
       const itemsWithLabels = await Promise.all(
-        items.map(async (item) => {
+        deduplicatedItems.map(async (item) => {
           if (!item.batch) return { ...item, labelCode: undefined };
 
           // Buscar etiqueta associada ao produto/lote
