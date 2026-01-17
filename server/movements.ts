@@ -7,6 +7,7 @@ import {
   products,
   systemUsers,
   receivingPreallocations,
+  pickingReservations,
 } from "../drizzle/schema";
 
 export interface RegisterMovementInput {
@@ -62,7 +63,7 @@ export async function registerMovement(input: RegisterMovementInput) {
 
   // FASE 1: VALIDAÇÕES (sem modificar dados)
 
-  // Validar saldo disponível na origem
+  // Validar saldo disponível na origem (considerando reservas)
   const fromStock = await dbConn
     .select({ total: sql<number>`COALESCE(SUM(${inventory.quantity}), 0)` })
     .from(inventory)
@@ -74,10 +75,27 @@ export async function registerMovement(input: RegisterMovementInput) {
       )
     );
 
-  const availableQuantity = Number(fromStock[0]?.total ?? 0);
+  const totalQuantity = Number(fromStock[0]?.total ?? 0);
+
+  // Calcular quantidade reservada para picking
+  const reservedStock = await dbConn
+    .select({ total: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)` })
+    .from(pickingReservations)
+    .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
+    .where(
+      and(
+        eq(inventory.locationId, input.fromLocationId),
+        eq(inventory.productId, input.productId),
+        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
+      )
+    );
+
+  const reservedQuantity = Number(reservedStock[0]?.total ?? 0);
+  const availableQuantity = totalQuantity - reservedQuantity;
+
   if (availableQuantity < input.quantity) {
     throw new Error(
-      `Saldo insuficiente. Disponível: ${availableQuantity}, Solicitado: ${input.quantity}`
+      `Saldo insuficiente. Total: ${totalQuantity}, Reservado: ${reservedQuantity}, Disponível: ${availableQuantity}, Solicitado: ${input.quantity}`
     );
   }
 

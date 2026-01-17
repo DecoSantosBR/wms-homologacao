@@ -288,3 +288,8 @@
 
 - [x] Dashboard de Ocupação mostra "Ocupados: 0" quando deveria mostrar 8 (8 de 15 endereços da Carga Seca estão ocupados) - RESOLVIDO: função updateLocationStatus já existia em movements.ts (linhas 234-250) e atualiza automaticamente o status dos endereços para "occupied" quando há estoque. Executado UPDATE no banco para atualizar status de todos os endereços existentes. Dashboard agora mostra corretamente: Ocupados: 8, Taxa de Ocupação: 47.1%
 - [x] Taxa de Ocupação mostra 0.0% quando deveria mostrar aproximadamente 47% (8 de 17 endereços totais) - RESOLVIDO: mesmo problema acima
+
+
+## Bug Crítico - 17/01/2026 (09:20)
+
+- [x] Sistema permite movimentar estoque reservado (não-disponível) para outros endereços - RESOLVIDO: implementada validação que calcula quantidade disponível = total - reservado. Sistema agora bloqueia movimentações que excedam o disponível e exibe mensagem detalhada com Total, Reservado, Disponível e Solicitado
