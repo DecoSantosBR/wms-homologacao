@@ -325,6 +325,7 @@ export async function getMovementHistory(filters?: {
 
 /**
  * Obtém produtos disponíveis em um endereço para movimentação
+ * Calcula quantidade disponível (total - reservado)
  */
 export async function getLocationProducts(locationId: number) {
   const dbConn = await getDb();
@@ -338,14 +339,31 @@ export async function getLocationProducts(locationId: number) {
       productDescription: products.description,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
-      quantity: inventory.quantity,
+      totalQuantity: inventory.quantity,
+      reservedQuantity: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)`,
       status: inventory.status,
       tenantId: products.tenantId,
     })
     .from(inventory)
     .innerJoin(products, eq(inventory.productId, products.id))
+    .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
     .where(eq(inventory.locationId, locationId))
+    .groupBy(
+      inventory.id,
+      inventory.productId,
+      products.sku,
+      products.description,
+      inventory.batch,
+      inventory.expiryDate,
+      inventory.quantity,
+      inventory.status,
+      products.tenantId
+    )
     .orderBy(products.sku);
 
-  return results;
+  // Calcular quantidade disponível para cada item
+  return results.map(item => ({
+    ...item,
+    quantity: item.totalQuantity - item.reservedQuantity, // Disponível = Total - Reservado
+  }));
 }

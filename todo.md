@@ -293,3 +293,8 @@
 ## Bug Crítico - 17/01/2026 (09:20)
 
 - [x] Sistema permite movimentar estoque reservado (não-disponível) para outros endereços - RESOLVIDO: implementada validação que calcula quantidade disponível = total - reservado. Sistema agora bloqueia movimentações que excedam o disponível e exibe mensagem detalhada com Total, Reservado, Disponível e Solicitado
+
+
+## Bug - 17/01/2026 (09:30)
+
+- [x] Campo "Produto/Lote" na tela de movimentações exibe saldo TOTAL ao invés de saldo DISPONÍVEL (descontando reservas) - RESOLVIDO: modificada função getLocationProducts em movements.ts para calcular saldo disponível (total - reservado) usando LEFT JOIN com pickingReservations. Agora o campo exibe corretamente a quantidade que pode ser movimentada
