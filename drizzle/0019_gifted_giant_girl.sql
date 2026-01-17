@@ -1,0 +1,1 @@
+ALTER TABLE `warehouseLocations` MODIFY COLUMN `tenantId` int NOT NULL;

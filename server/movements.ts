@@ -28,17 +28,36 @@ export async function registerMovement(input: RegisterMovementInput) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
-  // CORREÇÃO CRÍTICA: Validar tenantId obrigatório
-  // Bug recorrente: inventory criado com tenantId NULL causa falha na criação de pedidos
-  // Data: 11/01/2026 - Terceira ocorrência
-  if (input.tenantId === null || input.tenantId === undefined) {
-    console.error('[MOVIMENTO CRÍTICO] Tentativa de movimentação sem tenantId!', {
-      productId: input.productId,
-      fromLocationId: input.fromLocationId,
-      toLocationId: input.toLocationId,
-      movementType: input.movementType
-    });
-    throw new Error('tenantId é obrigatório para movimentações de estoque. Verifique o cadastro do produto e do endereço.');
+  // Buscar tenantId do endereço de origem se não fornecido
+  let tenantId = input.tenantId;
+  if (tenantId === null || tenantId === undefined) {
+    const fromLocation = await dbConn
+      .select({ tenantId: warehouseLocations.tenantId })
+      .from(warehouseLocations)
+      .where(eq(warehouseLocations.id, input.fromLocationId))
+      .limit(1);
+    
+    if (fromLocation[0]?.tenantId) {
+      tenantId = fromLocation[0].tenantId;
+    } else {
+      // Se ainda não tiver tenantId, buscar do inventory
+      const inventoryRecord = await dbConn
+        .select({ tenantId: inventory.tenantId })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.locationId, input.fromLocationId),
+            eq(inventory.productId, input.productId)
+          )
+        )
+        .limit(1);
+      
+      if (inventoryRecord[0]?.tenantId) {
+        tenantId = inventoryRecord[0].tenantId;
+      } else {
+        throw new Error('Não foi possível determinar o cliente (tenantId) para esta movimentação. Verifique o cadastro do endereço e do produto.');
+      }
+    }
   }
 
   // FASE 1: VALIDAÇÕES (sem modificar dados)
@@ -163,7 +182,7 @@ export async function registerMovement(input: RegisterMovementInput) {
         quantity: input.quantity,
         expiryDate: fromInventory[0]?.expiryDate || null,
         status: "available",
-        tenantId: input.tenantId || null,
+        tenantId: tenantId || null,
       });
     }
   }
@@ -178,7 +197,7 @@ export async function registerMovement(input: RegisterMovementInput) {
     movementType: input.movementType,
     notes: input.notes || null,
     performedBy: input.performedBy,
-    tenantId: input.tenantId || null,
+    tenantId: tenantId || null,
     createdAt: new Date(),
   });
 

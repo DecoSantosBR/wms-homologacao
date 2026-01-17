@@ -424,7 +424,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         zoneId: z.number(),
-        tenantId: z.number().optional(),
+        tenantId: z.number(),
         code: z.string().min(1, "Código é obrigatório"),
         aisle: z.string().optional(),
         rack: z.string().optional(),

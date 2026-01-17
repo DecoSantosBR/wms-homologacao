@@ -241,7 +241,7 @@ export const warehouseZones = mysqlTable("warehouseZones", {
 export const warehouseLocations = mysqlTable("warehouseLocations", {
   id: int("id").autoincrement().primaryKey(),
   zoneId: int("zoneId").notNull(),
-  tenantId: int("tenantId"), // Cliente dono do endereço (null = compartilhado)
+  tenantId: int("tenantId").notNull(), // Cliente dono do endereço (OBRIGATÓRIO)
   code: varchar("code", { length: 50 }).notNull().unique(),
   aisle: varchar("aisle", { length: 10 }), // Rua
   rack: varchar("rack", { length: 10 }), // Prédio

@@ -485,11 +485,10 @@ export const blindConferenceRouter = router({
         .from(labelAssociations)
         .where(eq(labelAssociations.sessionId, input.sessionId));
 
-      // Buscar endereço REC do cliente correto (mesmo tenantId da sessão) ou compartilhado
+      // Buscar endereço REC do cliente correto (mesmo tenantId da sessão)
       const sessionTenantId = session[0].tenantId;
       
-      // Primeiro tentar encontrar endereço REC do cliente específico
-      let recLocations = await db.select()
+      const recLocations = await db.select()
         .from(warehouseLocations)
         .where(
           and(
@@ -498,22 +497,9 @@ export const blindConferenceRouter = router({
           )
         )
         .limit(1);
-      
-      // Se não encontrar, buscar endereço compartilhado (tenantId = null)
-      if (recLocations.length === 0) {
-        recLocations = await db.select()
-          .from(warehouseLocations)
-          .where(
-            and(
-              sql`${warehouseLocations.code} LIKE '%REC%'`,
-              isNull(warehouseLocations.tenantId)
-            )
-          )
-          .limit(1);
-      }
 
       if (recLocations.length === 0) {
-        throw new Error(`Nenhum endereço de recebimento (REC) encontrado para o cliente ou compartilhado. Cadastre um endereço REC com tenantId=${sessionTenantId} ou tenantId=null.`);
+        throw new Error(`Nenhum endereço de recebimento (REC) encontrado para o cliente (tenantId=${sessionTenantId}). Cadastre um endereço REC para este cliente.`);
       }
 
       const recLocationId = recLocations[0].id;

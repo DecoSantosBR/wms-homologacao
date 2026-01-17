@@ -120,6 +120,11 @@ export function CreateLocationDialog() {
       return;
     }
     
+    if (!formData.tenantId) {
+      toast.error("Selecione um cliente");
+      return;
+    }
+    
     const codeError = validateLocationCode();
     if (codeError) {
       toast.error(codeError);
@@ -128,7 +133,7 @@ export function CreateLocationDialog() {
 
     createMutation.mutate({
       zoneId: parseInt(formData.zoneId),
-      tenantId: formData.tenantId ? parseInt(formData.tenantId) : undefined,
+      tenantId: parseInt(formData.tenantId),
       code: formData.code,
       aisle: formData.aisle || undefined,
       rack: formData.rack || undefined,

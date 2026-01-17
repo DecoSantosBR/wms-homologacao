@@ -221,3 +221,10 @@
 - [x] Mover useEffect de impressão automática para o topo
 - [x] Garantir que todos os hooks estejam antes dos returns condicionais
 - [x] Testar execução de onda sem erros
+
+## Novos Bugs
+
+- [x] Erro: "tenantId é obrigatório para movimentações de estoque" na página /stock/movements
+
+- [x] Remover lógica de cliente "compartilhado" (tenantId null) em endereços
+- [x] Garantir que todo endereço tenha tenantId obrigatório
