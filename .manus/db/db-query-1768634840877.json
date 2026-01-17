@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as tenant_count FROM tenants;\nSELECT COUNT(*) as product_count FROM products;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT COUNT(*) as tenant_count FROM tenants;\nSELECT COUNT(*) as product_count FROM products;",
+  "rows": [
+    {
+      "tenant_count": "0"
+    },
+    {
+      "tenant_count": "product_count"
+    },
+    {
+      "tenant_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tenant_count\n0\nproduct_count\n0\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}
