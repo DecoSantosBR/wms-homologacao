@@ -255,3 +255,9 @@
 
 - [x] customerOrderNumber ainda não estava correto - RESOLVIDO: adicionado campo pickingOrderId na tabela pickingWaveItems + atualizado waveLogic.ts para popular o campo ao criar ondas + atualizado waveRouter.ts para fazer JOIN direto com pickingOrders. Novas ondas criadas terão o customerOrderNumber correto.
 - [x] Cor do customerOrderNumber mudada de vermelho (text-red-500) para preto (text-gray-900)
+
+
+## Novos Bugs Reportados - 17/01/2026 (Parte 2)
+
+- [x] Caixas de seleção não apareciam - RESOLVIDO: pedidos estavam com status 'in_wave' ao invés de 'pending' devido à deleção manual de onda anterior. Atualizado status no banco de dados para 'pending'.
+- [x] Erro ao criar onda - RESOLVIDO: mesmo problema do status 'in_wave'. Após correção, onda foi criada com sucesso com 4 pedidos e customerOrderNumber aparece corretamente em preto.
