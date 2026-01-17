@@ -82,7 +82,7 @@ export const waveRouter = router({
       }
 
       // Buscar itens da onda com progresso
-      // Incluir orderNumber através de JOIN com pickingOrders
+      // Incluir orderNumber através de JOIN com pickingReservations e pickingOrders
       const items = await db
         .select({
           id: pickingWaveItems.id,
@@ -103,15 +103,15 @@ export const waveRouter = router({
         })
         .from(pickingWaveItems)
         .leftJoin(
-          pickingOrderItems,
+          pickingReservations,
           and(
-            eq(pickingWaveItems.productId, pickingOrderItems.productId),
-            eq(pickingWaveItems.batch, pickingOrderItems.batch)
+            eq(pickingWaveItems.waveId, input.waveId),
+            eq(pickingWaveItems.productId, pickingReservations.productId)
           )
         )
         .leftJoin(
           pickingOrders,
-          eq(pickingOrderItems.pickingOrderId, pickingOrders.id)
+          eq(pickingReservations.pickingOrderId, pickingOrders.id)
         )
         .where(eq(pickingWaveItems.waveId, input.waveId));
 

@@ -241,3 +241,7 @@
 - [x] Destinatário aparece como "N/A" em vez do endereço de entrega real
 - [x] Todos os pedidos mostram os mesmos itens (não está agrupando corretamente por pedido)
 - [x] Itens estão sendo duplicados entre pedidos diferentes
+
+## Nova Funcionalidade
+
+- [x] Adicionar customerOrderNumber na tela de conclusão da onda (WaveExecution) ao lado de cada item
