@@ -99,6 +99,114 @@ export default function WaveExecution() {
     );
   };
 
+  const handlePrintOrders = () => {
+    if (!data) return;
+
+    // Agrupar itens por número de pedido
+    const orderGroups = new Map<string, any[]>();
+    
+    sortedItems.forEach((item: any) => {
+      const orderNum = item.orderNumber || "SEM_PEDIDO";
+      if (!orderGroups.has(orderNum)) {
+        orderGroups.set(orderNum, []);
+      }
+      orderGroups.get(orderNum)!.push(item);
+    });
+
+    // Gerar conteúdo HTML para impressão
+    let printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Pedidos da Onda ${data.wave.waveNumber}</title>
+        <style>
+          @media print {
+            @page { margin: 1cm; }
+            .page-break { page-break-after: always; }
+          }
+          body { font-family: Arial, sans-serif; font-size: 12px; }
+          .order-header { background: #f3f4f6; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+          .order-title { font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 5px; }
+          .order-number { font-size: 16px; color: #ef4444; font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #e5e7eb; padding: 10px; text-align: left; border: 1px solid #d1d5db; font-weight: bold; }
+          td { padding: 10px; border: 1px solid #d1d5db; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #d1d5db; text-align: center; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+    `;
+
+    let isFirst = true;
+    orderGroups.forEach((items, orderNumber) => {
+      if (!isFirst) {
+        printContent += '<div class="page-break"></div>';
+      }
+      isFirst = false;
+
+      printContent += `
+        <div class="order-header">
+          <div class="order-title">Onda ${data.wave.waveNumber}</div>
+          <div class="order-number">Nº do Pedido: ${orderNumber}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>SKU</th>
+              <th>Endereço</th>
+              <th>Lote</th>
+              <th>Validade</th>
+              <th>Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      items.forEach((item: any) => {
+        const expiryDate = item.expiryDate 
+          ? new Date(item.expiryDate).toLocaleDateString("pt-BR")
+          : "-";
+        
+        printContent += `
+          <tr>
+            <td>${item.productName}</td>
+            <td>${item.productSku}</td>
+            <td><strong>${item.locationCode}</strong></td>
+            <td>${item.batch || "-"}</td>
+            <td>${expiryDate}</td>
+            <td><strong>${item.totalQuantity}</strong></td>
+          </tr>
+        `;
+      });
+
+      printContent += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Data de Impressão: ${new Date().toLocaleString("pt-BR")}</p>
+        </div>
+      `;
+    });
+
+    printContent += `
+      </body>
+      </html>
+    `;
+
+    // Abrir janela de impressão
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -124,6 +232,24 @@ export default function WaveExecution() {
 
   const { wave, items, progress } = data;
   const isCompleted = progress.percentComplete === 100;
+  
+  // Ordenar itens por endereço crescente
+  const sortedItems = [...items].sort((a, b) => {
+    // Comparar strings de endereço (ex: H01-01-04, H01-02-01)
+    return a.locationCode.localeCompare(b.locationCode, 'pt-BR', { numeric: true });
+  });
+
+  // Impressão automática ao completar onda
+  const [hasAutoPrinted, setHasAutoPrinted] = useState(false);
+  useEffect(() => {
+    if (isCompleted && !hasAutoPrinted && data) {
+      setHasAutoPrinted(true);
+      // Aguardar 1 segundo antes de imprimir (dar tempo para animação)
+      setTimeout(() => {
+        handlePrintOrders();
+      }, 1000);
+    }
+  }, [isCompleted, hasAutoPrinted, data]);
 
   return (
     <>
@@ -223,9 +349,14 @@ export default function WaveExecution() {
             <p className="text-muted-foreground mb-6">
               Todos os itens foram separados com sucesso.
             </p>
-            <Button onClick={() => navigate("/picking")}>
-              Voltar para Separação
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={handlePrintOrders} variant="default">
+                Imprimir Pedidos
+              </Button>
+              <Button onClick={() => navigate("/picking")} variant="outline">
+                Voltar para Separação
+              </Button>
+            </div>
           </Card>
         )}
 
@@ -233,7 +364,7 @@ export default function WaveExecution() {
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Itens da Onda</h3>
           
-          {items.map((item) => {
+          {sortedItems.map((item) => {
             const progressPercent = item.totalQuantity > 0 
               ? Math.round((item.pickedQuantity / item.totalQuantity) * 100)
               : 0;
@@ -242,12 +373,21 @@ export default function WaveExecution() {
               <Card key={item.id} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h4 className="font-semibold">{item.productName}</h4>
-                        <p className="text-sm text-muted-foreground">SKU: {item.productSku}</p>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-3">
+                        <Package className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <h4 className="font-semibold">{item.productName}</h4>
+                          <p className="text-sm text-muted-foreground">SKU: {item.productSku}</p>
+                        </div>
                       </div>
+                      {(item as any).orderNumber && (
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-red-500">
+                            Nº do Pedido: {(item as any).orderNumber}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm mt-3">

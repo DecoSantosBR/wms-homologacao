@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { TRPCError } from "@trpc/server";
@@ -81,6 +81,7 @@ export const waveRouter = router({
       }
 
       // Buscar itens da onda com progresso
+      // Incluir orderNumber através de JOIN com pickingOrders
       const items = await db
         .select({
           id: pickingWaveItems.id,
@@ -97,8 +98,20 @@ export const waveRouter = router({
           status: pickingWaveItems.status,
           pickedAt: pickingWaveItems.pickedAt,
           createdAt: pickingWaveItems.createdAt,
+          orderNumber: pickingOrders.customerOrderNumber, // Número do pedido (cliente)
         })
         .from(pickingWaveItems)
+        .leftJoin(
+          pickingOrderItems,
+          and(
+            eq(pickingWaveItems.productId, pickingOrderItems.productId),
+            eq(pickingWaveItems.batch, pickingOrderItems.batch)
+          )
+        )
+        .leftJoin(
+          pickingOrders,
+          eq(pickingOrderItems.pickingOrderId, pickingOrders.id)
+        )
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
       // Buscar labelCode para cada item (da tabela labelAssociations)

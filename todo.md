@@ -197,3 +197,19 @@
 - [x] Quando verdadeiro: usar availableQuantity em unidades
 - [x] Quando falso: usar availableBoxes em caixas
 - [x] Atualizar tanto quantity quanto unit no produto
+
+
+## 📋 MELHORIAS EXECUÇÃO DE ONDA - 11/01/2026 21:40
+
+### Ordenação e Exibição
+- [x] Ordenar itens por endereço crescente (H01-01-04, H01-02-01, H01-02-02)
+- [x] Exibir número do pedido em cada item ("Nº do Pedido: 0001")
+- [x] Estilizar número do pedido em vermelho (#ef4444)
+- [x] Posicionar número do pedido no topo direito do card
+
+### Impressão Automática
+- [x] Criar função de geração de PDF dos pedidos
+- [x] Implementar impressão automática ao finalizar onda
+- [x] Gerar um documento por pedido da onda
+- [x] Incluir informações: cliente, produtos, quantidades, endereços
+- [x] Abrir preview de impressão automaticamente
