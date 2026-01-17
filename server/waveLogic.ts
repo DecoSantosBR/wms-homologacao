@@ -221,6 +221,7 @@ export async function createWave(params: CreateWaveParams) {
   // 3. Buscar reservas dos pedidos (já alocadas durante criação do pedido)
   const reservations = await db
     .select({
+      pickingOrderId: pickingReservations.pickingOrderId, // ID do pedido de origem
       productId: pickingReservations.productId,
       inventoryId: pickingReservations.inventoryId,
       quantity: pickingReservations.quantity,
@@ -243,6 +244,7 @@ export async function createWave(params: CreateWaveParams) {
 
   // 4. Transformar reservas em formato de allocatedItems
   const allocatedItems = reservations.map(r => ({
+    pickingOrderId: r.pickingOrderId, // ID do pedido de origem
     productId: r.productId,
     productSku: r.productSku!,
     productName: r.productName!,
@@ -276,6 +278,7 @@ export async function createWave(params: CreateWaveParams) {
   // 7. Criar itens consolidados da onda (um registro por lote)
   const waveItemsData = allocatedItems.map((item) => ({
     waveId,
+    pickingOrderId: item.pickingOrderId, // Pedido de origem do item
     productId: item.productId,
     productSku: item.productSku,
     productName: item.productName,

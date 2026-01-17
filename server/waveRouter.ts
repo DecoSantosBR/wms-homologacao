@@ -82,7 +82,7 @@ export const waveRouter = router({
       }
 
       // Buscar itens da onda com progresso
-      // Incluir orderNumber através de JOIN com pickingReservations e pickingOrders
+      // JOIN direto com pickingOrders usando pickingOrderId
       const items = await db
         .select({
           id: pickingWaveItems.id,
@@ -103,41 +103,14 @@ export const waveRouter = router({
         })
         .from(pickingWaveItems)
         .leftJoin(
-          inventory,
-          and(
-            eq(pickingWaveItems.locationId, inventory.locationId),
-            eq(pickingWaveItems.productId, inventory.productId),
-            eq(pickingWaveItems.batch, inventory.batch)
-          )
-        )
-        .leftJoin(
-          pickingReservations,
-          eq(inventory.id, pickingReservations.inventoryId)
-        )
-        .leftJoin(
           pickingOrders,
-          eq(pickingReservations.pickingOrderId, pickingOrders.id)
+          eq(pickingWaveItems.pickingOrderId, pickingOrders.id)
         )
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
-      // Deduplic ar itens: quando há múltiplas reservas, o JOIN retorna múltiplas linhas
-      // Agrupar por pickingWaveItem.id e pegar o primeiro orderNumber não-null
-      const itemsMap = new Map<number, typeof items[0]>();
-      for (const item of items) {
-        const existing = itemsMap.get(item.id);
-        if (!existing) {
-          // Primeiro item com este ID
-          itemsMap.set(item.id, item);
-        } else if (!existing.orderNumber && item.orderNumber) {
-          // Substituir se o existente não tem orderNumber mas este tem
-          itemsMap.set(item.id, item);
-        }
-      }
-      const deduplicatedItems = Array.from(itemsMap.values());
-
       // Buscar labelCode para cada item (da tabela labelAssociations)
       const itemsWithLabels = await Promise.all(
-        deduplicatedItems.map(async (item) => {
+        items.map(async (item) => {
           if (!item.batch) return { ...item, labelCode: undefined };
 
           // Buscar etiqueta associada ao produto/lote

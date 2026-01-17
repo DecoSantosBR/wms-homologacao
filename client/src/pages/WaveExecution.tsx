@@ -527,7 +527,7 @@ export default function WaveExecution() {
                       </div>
                       {(item as any).orderNumber && (
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-red-500">
+                          <p className="text-sm font-semibold text-gray-900">
                             Nº do Pedido: {(item as any).orderNumber}
                           </p>
                         </div>

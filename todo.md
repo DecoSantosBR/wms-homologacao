@@ -249,3 +249,9 @@
 ## Bug Atual
 
 - [x] customerOrderNumber AINDA não estava aparecendo na tela de conclusão da onda (WaveExecution) - RESOLVIDO: erro de namespace (trpc.picking → trpc.wave) + deduplicação de itens no JOIN
+
+
+## Novos Bugs Reportados - 17/01/2026
+
+- [x] customerOrderNumber ainda não estava correto - RESOLVIDO: adicionado campo pickingOrderId na tabela pickingWaveItems + atualizado waveLogic.ts para popular o campo ao criar ondas + atualizado waveRouter.ts para fazer JOIN direto com pickingOrders. Novas ondas criadas terão o customerOrderNumber correto.
+- [x] Cor do customerOrderNumber mudada de vermelho (text-red-500) para preto (text-gray-900)
