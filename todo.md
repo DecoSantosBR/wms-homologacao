@@ -221,3 +221,11 @@
 - [x] Mover useEffect de impressão automática para o topo
 - [x] Garantir que todos os hooks estejam antes dos returns condicionais
 - [x] Testar execução de onda sem erros
+
+
+## 🔴 ADICIONAR Nº DO PEDIDO NA TELA - 11/01/2026 22:25
+
+- [x] Adicionar campo "Nº do Pedido" em vermelho no card de cada item
+- [x] Posicionar entre SKU e Lote (lado direito)
+- [x] Estilo: text-red-600 font-semibold
+- [x] Testar exibição na tela de execução

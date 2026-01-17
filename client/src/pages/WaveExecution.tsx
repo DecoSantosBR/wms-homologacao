@@ -489,13 +489,11 @@ export default function WaveExecution() {
                           <p className="text-sm text-muted-foreground">SKU: {item.productSku}</p>
                         </div>
                       </div>
-                      {(item as any).orderNumber && (
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-red-500">
-                            Nº do Pedido: {(item as any).orderNumber}
-                          </p>
-                        </div>
-                      )}
+                      <div className="text-right">
+                        <p className="text-base font-semibold text-red-600">
+                          Nº do Pedido: {(item as any).orderNumber || "N/A"}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm mt-3">
