@@ -273,20 +273,43 @@ export async function createWave(params: CreateWaveParams) {
 
   const waveId = wave.insertId;
 
-  // 7. Criar itens consolidados da onda (um registro por lote)
-  const waveItemsData = allocatedItems.map((item) => ({
-    waveId,
-    productId: item.productId,
-    productSku: item.productSku,
-    productName: item.productName,
-    totalQuantity: item.allocatedQuantity, // Usar quantidade alocada DESTE lote
-    pickedQuantity: 0,
-    locationId: item.locationId,
-    locationCode: item.locationCode,
-    batch: item.batch,
-    expiryDate: item.expiryDate,
-    status: "pending" as const,
-  }));
+  // 7. Criar itens da onda (um registro por pedido + produto + lote)
+  // Expandir allocatedItems para criar um item por pedido de origem
+  const waveItemsData: Array<{
+    waveId: number;
+    pickingOrderId: number;
+    productId: number;
+    productSku: string;
+    productName: string;
+    totalQuantity: number;
+    pickedQuantity: number;
+    locationId: number;
+    locationCode: string;
+    batch?: string;
+    expiryDate?: Date;
+    status: "pending";
+  }> = [];
+
+  for (const item of allocatedItems) {
+    // Para cada item alocado, criar um registro por pedido de origem
+    const orders = item.orders as Array<{ orderId: number; quantity: number }>;
+    for (const order of orders) {
+      waveItemsData.push({
+        waveId,
+        pickingOrderId: order.orderId,
+        productId: item.productId,
+        productSku: item.productSku,
+        productName: item.productName,
+        totalQuantity: order.quantity, // Quantidade do pedido específico
+        pickedQuantity: 0,
+        locationId: item.locationId,
+        locationCode: item.locationCode,
+        batch: item.batch,
+        expiryDate: item.expiryDate,
+        status: "pending" as const,
+      });
+    }
+  }
 
   await db.insert(pickingWaveItems).values(waveItemsData);
 

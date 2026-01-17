@@ -229,3 +229,13 @@
 - [x] Posicionar entre SKU e Lote (lado direito)
 - [x] Estilo: text-red-600 font-semibold
 - [x] Testar exibição na tela de execução
+
+
+## 🔧 CORRIGIR NÚMERO DO PEDIDO (N/A) - 11/01/2026 22:30
+
+- [x] Investigar JOIN em waveRouter.ts getPickingProgress
+- [x] Adicionar campo pickingOrderId em pickingWaveItems (schema)
+- [x] Executar db:push para aplicar migração
+- [x] Refatorar waveLogic.ts para incluir pickingOrderId ao criar itens
+- [x] Corrigir JOIN para buscar customerOrderNumber via pickingOrderId
+- [x] Testar exibição do número real do pedido

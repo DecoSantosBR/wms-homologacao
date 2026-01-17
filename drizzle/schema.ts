@@ -754,6 +754,7 @@ export const pickingWaves = mysqlTable("pickingWaves", {
 export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   id: int("id").autoincrement().primaryKey(),
   waveId: int("waveId").notNull(),
+  pickingOrderId: int("pickingOrderId").notNull(), // Referência ao pedido de origem
   productId: int("productId").notNull(),
   productSku: varchar("productSku", { length: 100 }).notNull(),
   productName: varchar("productName", { length: 255 }).notNull(),
@@ -770,6 +771,7 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   waveIdx: index("wave_item_wave_idx").on(table.waveId),
   productIdx: index("wave_item_product_idx").on(table.productId),
   locationIdx: index("wave_item_location_idx").on(table.locationId),
+  orderIdx: index("wave_item_order_idx").on(table.pickingOrderId),
 }));
 
 // ============================================================================
