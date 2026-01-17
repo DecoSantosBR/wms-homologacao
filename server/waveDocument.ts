@@ -56,6 +56,7 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
       id: pickingOrders.id,
       orderNumber: pickingOrders.customerOrderNumber,
       deliveryAddress: pickingOrders.deliveryAddress,
+      customerName: pickingOrders.customerName,
     })
     .from(pickingOrders)
     .where(eq(pickingOrders.waveId, waveId));
@@ -83,7 +84,7 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
 
       return {
         orderNumber: order.orderNumber || "N/A",
-        destination: order.deliveryAddress || "N/A",
+        destination: order.customerName || "N/A",
         items: orderItems.map((item) => ({
           productName: item.productName,
           sku: item.sku,

@@ -271,4 +271,4 @@
 ## Bugs no Documento PDF - 17/01/2026 (15:17)
 
 - [x] Itens duplicados entre pedidos - RESOLVIDO: alterado query em waveDocument.ts para usar pickingOrderId diretamente ao invés de JOIN complexo com pickingReservations. Agora cada pedido mostra apenas seus próprios itens.
-- [x] Destinatário "N/A" - RESOLVIDO: query já busca deliveryAddress de pickingOrders, aguardando teste do usuário para confirmar
+- [x] Destinatário "N/A" - RESOLVIDO: alterado query para buscar customerName e usar no campo destination ao invés de deliveryAddress (linhas 59 e 86 do waveDocument.ts)
