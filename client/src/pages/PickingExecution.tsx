@@ -212,7 +212,7 @@ export default function PickingExecution() {
               </Button>
               <div>
                 <h1 className="text-xl font-bold">{order.orderNumber}</h1>
-                <p className="text-sm text-muted-foreground">Cliente: {order.customerName}</p>
+                <p className="text-sm text-muted-foreground">Destinatário: {order.customerName}</p>
               </div>
             </div>
             {getStatusBadge(order.status)}

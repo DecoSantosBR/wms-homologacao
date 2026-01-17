@@ -228,3 +228,10 @@
 
 - [x] Remover lógica de cliente "compartilhado" (tenantId null) em endereços
 - [x] Garantir que todo endereço tenha tenantId obrigatório
+
+## Novas Funcionalidades
+
+- [ ] Implementar documento de impressão ao finalizar separação de onda
+  - [ ] Criar função de geração de PDF no backend
+  - [ ] Adicionar botão "Imprimir" na tela de execução de onda
+  - [ ] Layout: cabeçalho (onda, cliente, data, separador) + corpo agrupado por pedido (tabela com produto, SKU, endereço, lote, validade, quantidade) + rodapé (data de impressão)
