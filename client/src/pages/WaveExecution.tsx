@@ -490,9 +490,9 @@ export default function WaveExecution() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-base font-semibold text-red-600">
+                        <div className="text-gray-900 font-semibold text-base">
                           Nº do Pedido: {(item as any).orderNumber || "N/A"}
-                        </p>
+                        </div>
                       </div>
                     </div>
 

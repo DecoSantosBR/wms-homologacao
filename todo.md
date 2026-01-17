@@ -259,3 +259,11 @@
 - [x] Corrigir preservação do campo orders em allocatedItems
 - [x] Adicionar pickingOrderId na query de reservations
 - [x] Usar pickingOrderId para popular orders array
+
+
+## 🎨 MUDAR COR NÚMERO DO PEDIDO - 11/01/2026 22:50
+
+- [x] Mudar text-red-600 para text-gray-900 no WaveExecution.tsx
+- [x] Verificar JOIN no waveRouter.ts para corrigir N/A
+- [x] JOIN está correto, N/A aparece porque onda foi criada antes da correção
+- [ ] Criar nova onda para testar exibição correta do número
