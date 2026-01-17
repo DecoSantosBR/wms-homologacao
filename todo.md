@@ -213,3 +213,11 @@
 - [x] Gerar um documento por pedido da onda
 - [x] Incluir informações: cliente, produtos, quantidades, endereços
 - [x] Abrir preview de impressão automaticamente
+
+
+## 🐛 CORREÇÃO HOOKS WAVEEXECUTION - 11/01/2026 22:17
+
+- [x] Mover useState(hasAutoPrinted) para o topo do componente
+- [x] Mover useEffect de impressão automática para o topo
+- [x] Garantir que todos os hooks estejam antes dos returns condicionais
+- [x] Testar execução de onda sem erros
