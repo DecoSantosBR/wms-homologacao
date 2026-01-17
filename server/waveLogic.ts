@@ -221,7 +221,6 @@ export async function createWave(params: CreateWaveParams) {
   // 3. Buscar reservas dos pedidos (já alocadas durante criação do pedido)
   const reservations = await db
     .select({
-      pickingOrderId: pickingReservations.pickingOrderId, // ✅ Adicionar pickingOrderId
       productId: pickingReservations.productId,
       inventoryId: pickingReservations.inventoryId,
       quantity: pickingReservations.quantity,
@@ -249,7 +248,7 @@ export async function createWave(params: CreateWaveParams) {
     productName: r.productName!,
     totalQuantity: r.quantity, // Não usado, mas mantido para compatibilidade
     allocatedQuantity: r.quantity,
-    orders: [{ orderId: r.pickingOrderId, quantity: r.quantity }], // ✅ Usar pickingOrderId da reserva
+    orders: [], // Não usado na criação de waveItems
     inventoryId: r.inventoryId,
     locationId: r.locationId!,
     locationCode: r.locationCode!,
@@ -274,40 +273,20 @@ export async function createWave(params: CreateWaveParams) {
 
   const waveId = wave.insertId;
 
-  // 7. Criar itens da onda (um registro por lote alocado)
-  // Cada allocatedItem já representa uma reserva específica com pickingOrderId
-  const waveItemsData = allocatedItems.map((item) => {
-    // Pegar o primeiro pedido como referência (ou criar lógica de distribuição)
-    const orders = item.orders as Array<{ orderId: number; quantity: number }> | undefined;
-    const firstOrder = (orders && orders.length > 0) 
-      ? orders[0] 
-      : null;
-
-    if (!firstOrder) {
-      console.warn("Item sem pedidos associados:", item);
-      // Fallback: usar dados consolidados sem pickingOrderId
-      return null;
-    }
-
-    return {
-      waveId,
-      pickingOrderId: firstOrder.orderId,
-      productId: item.productId,
-      productSku: item.productSku,
-      productName: item.productName,
-      totalQuantity: item.allocatedQuantity, // Quantidade alocada DESTE lote
-      pickedQuantity: 0,
-      locationId: item.locationId,
-      locationCode: item.locationCode,
-      batch: item.batch,
-      expiryDate: item.expiryDate,
-      status: "pending" as const,
-    };
-  }).filter((item): item is NonNullable<typeof item> => item !== null); // Type guard
-
-  if (waveItemsData.length === 0) {
-    throw new Error("Nenhum item válido para criar onda. Verifique os pedidos selecionados.");
-  }
+  // 7. Criar itens consolidados da onda (um registro por lote)
+  const waveItemsData = allocatedItems.map((item) => ({
+    waveId,
+    productId: item.productId,
+    productSku: item.productSku,
+    productName: item.productName,
+    totalQuantity: item.allocatedQuantity, // Usar quantidade alocada DESTE lote
+    pickedQuantity: 0,
+    locationId: item.locationId,
+    locationCode: item.locationCode,
+    batch: item.batch,
+    expiryDate: item.expiryDate,
+    status: "pending" as const,
+  }));
 
   await db.insert(pickingWaveItems).values(waveItemsData);
 

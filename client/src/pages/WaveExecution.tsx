@@ -24,12 +24,12 @@ export default function WaveExecution() {
   const [hasAutoPrinted, setHasAutoPrinted] = useState(false);
   const scannerInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading, refetch } = trpc.wave.getPickingProgress.useQuery(
+  const { data, isLoading, refetch } = trpc.picking.getPickingProgress.useQuery(
     { waveId },
     { enabled: waveId > 0, refetchInterval: 3000 } // Atualizar a cada 3 segundos
   );
 
-  const registerMutation = trpc.wave.registerPickedItem.useMutation({
+  const registerMutation = trpc.picking.registerPickedItem.useMutation({
     onSuccess: (result) => {
       setFeedback({
         type: "success",
@@ -489,11 +489,13 @@ export default function WaveExecution() {
                           <p className="text-sm text-muted-foreground">SKU: {item.productSku}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-gray-900 font-semibold text-base">
-                          Nº do Pedido: {(item as any).orderNumber || "N/A"}
+                      {(item as any).orderNumber && (
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-red-500">
+                            Nº do Pedido: {(item as any).orderNumber}
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm mt-3">
