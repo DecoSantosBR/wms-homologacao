@@ -169,14 +169,30 @@ export default function PickingOrders() {
           return product;
         }
         
-        // Ajustar quantidade para o disponível
+        // Lógica inteligente de conversão:
+        // Se disponível < 1 caixa OU não é caixa fechada (ex: 3.5 caixas) → usar unidades
+        // Caso contrário → usar caixas
         const availableBoxes = errorItem.availableBoxes || 0;
+        const availableUnits = errorItem.availableQuantity || 0;
         
-        return {
-          ...product,
-          quantity: availableBoxes,
-          unit: 'box' as const,
-        };
+        // Verificar se é caixa fechada (número inteiro >= 1)
+        const isFullBox = availableBoxes >= 1 && Number.isInteger(availableBoxes);
+        
+        if (isFullBox) {
+          // Usar caixas
+          return {
+            ...product,
+            quantity: availableBoxes,
+            unit: 'box' as const,
+          };
+        } else {
+          // Usar unidades (quando < 1 caixa ou caixa fracionada)
+          return {
+            ...product,
+            quantity: availableUnits,
+            unit: 'unit' as const,
+          };
+        }
       });
     });
   };

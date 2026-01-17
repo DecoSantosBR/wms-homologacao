@@ -187,3 +187,13 @@
 - [x] Atualizar selectedProducts com quantidades ajustadas
 - [x] Manter produtos com estoque OK inalterados
 - [x] Passar onAdjust para showInsufficientStock
+
+
+## 🔄 CONVERSÃO INTELIGENTE DE UNIDADES - 11/01/2026 21:30
+
+### Lógica de Ajuste
+- [x] Verificar se availableBoxes < 1
+- [x] Verificar se availableBoxes não é número inteiro (ex: 3.5)
+- [x] Quando verdadeiro: usar availableQuantity em unidades
+- [x] Quando falso: usar availableBoxes em caixas
+- [x] Atualizar tanto quantity quanto unit no produto
