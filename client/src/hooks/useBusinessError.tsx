@@ -26,6 +26,7 @@ interface ErrorState {
   insufficientStockItems?: InsufficientStockItem[];
   actionLabel?: string;
   onAction?: () => void;
+  onAdjust?: () => void;
 }
 
 export function useBusinessError() {
@@ -43,7 +44,10 @@ export function useBusinessError() {
   };
 
   // Helpers para erros comuns
-  const showInsufficientStock = (items: InsufficientStockItem | InsufficientStockItem[]) => {
+  const showInsufficientStock = (
+    items: InsufficientStockItem | InsufficientStockItem[],
+    onAdjust?: () => void
+  ) => {
     const itemsArray = Array.isArray(items) ? items : [items];
     
     showError({
@@ -51,6 +55,7 @@ export function useBusinessError() {
       title: "Quantidade insuficiente:",
       message: "",
       insufficientStockItems: itemsArray,
+      onAdjust,
     });
   };
 
@@ -161,6 +166,7 @@ export function useBusinessError() {
       insufficientStockItems={errorState.insufficientStockItems}
       actionLabel={errorState.actionLabel}
       onAction={errorState.onAction}
+      onAdjust={errorState.onAdjust}
     />
   ) : null;
 

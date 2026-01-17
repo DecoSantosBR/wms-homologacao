@@ -37,6 +37,7 @@ interface BusinessErrorModalProps {
   insufficientStockItems?: InsufficientStockItem[];
   actionLabel?: string;
   onAction?: () => void;
+  onAdjust?: () => void;
 }
 
 const errorConfig = {
@@ -94,6 +95,7 @@ export function BusinessErrorModal({
   insufficientStockItems,
   actionLabel,
   onAction,
+  onAdjust,
 }: BusinessErrorModalProps) {
   const config = errorConfig[type];
   const Icon = config.icon;
@@ -164,6 +166,18 @@ export function BusinessErrorModal({
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>
+            {type === "insufficient_stock" && onAdjust && (
+              <Button 
+                onClick={() => {
+                  onAdjust();
+                  onClose();
+                }} 
+                variant="default"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Ajustar Quantidades
+              </Button>
+            )}
             {actionLabel && onAction && (
               <Button onClick={onAction}>
                 {actionLabel}

@@ -18,6 +18,7 @@ import { useBusinessError } from "@/hooks/useBusinessError";
 interface ProductItem {
   productId: number;
   productName: string;
+  sku?: string;
   quantity: number;
   unit: "box" | "unit";
 }
@@ -145,6 +146,41 @@ export default function PickingOrders() {
     },
   });
 
+  // Função para ajustar quantidades com base no estoque disponível
+  const adjustQuantities = (insufficientItems: Array<{
+    productSku: string;
+    availableBoxes?: number;
+    availableQuantity: number;
+    unitsPerBox?: number;
+  }>) => {
+    const allProducts = products || [];
+    
+    setSelectedProducts(prev => {
+      return prev.map(product => {
+        // Buscar produto completo pelo productId
+        const fullProduct = allProducts.find((p: any) => p.id === product.productId);
+        if (!fullProduct) return product;
+        
+        // Buscar se este produto tem erro de estoque
+        const errorItem = insufficientItems.find(item => item.productSku === fullProduct.sku);
+        
+        if (!errorItem) {
+          // Produto não tem erro, manter como está
+          return product;
+        }
+        
+        // Ajustar quantidade para o disponível
+        const availableBoxes = errorItem.availableBoxes || 0;
+        
+        return {
+          ...product,
+          quantity: availableBoxes,
+          unit: 'box' as const,
+        };
+      });
+    });
+  };
+
   const createMutation = trpc.picking.create.useMutation({
     onSuccess: () => {
       refetch();
@@ -173,7 +209,7 @@ export default function PickingOrders() {
             availableBoxes: item.availableBoxes,
             unitsPerBox: item.unitsPerBox,
           }));
-          businessError.showInsufficientStock(items);
+          businessError.showInsufficientStock(items, () => adjustQuantities(items));
           return;
         }
       } catch (e) {
@@ -187,7 +223,7 @@ export default function PickingOrders() {
       
       if (stockMatch) {
         const [, sku, name, availableBoxes, availableUnits, requested, unit, requestedUnits, unitsPerBox] = stockMatch;
-        businessError.showInsufficientStock({
+        const item = {
           productSku: sku,
           productName: name,
           requestedQuantity: parseFloat(requested),
@@ -196,7 +232,8 @@ export default function PickingOrders() {
           availableQuantity: parseFloat(availableUnits),
           availableBoxes: parseFloat(availableBoxes),
           unitsPerBox: parseFloat(unitsPerBox),
-        });
+        };
+        businessError.showInsufficientStock(item, () => adjustQuantities([item]));
         return;
       }
       
@@ -259,7 +296,7 @@ export default function PickingOrders() {
             availableBoxes: item.availableBoxes,
             unitsPerBox: item.unitsPerBox,
           }));
-          businessError.showInsufficientStock(items);
+          businessError.showInsufficientStock(items, () => adjustQuantities(items));
           return;
         }
       } catch (e) {
@@ -273,7 +310,7 @@ export default function PickingOrders() {
       
       if (stockMatch) {
         const [, sku, name, availableBoxes, availableUnits, requested, unit, requestedUnits, unitsPerBox] = stockMatch;
-        businessError.showInsufficientStock({
+        const item = {
           productSku: sku,
           productName: name,
           requestedQuantity: parseFloat(requested),
@@ -282,7 +319,8 @@ export default function PickingOrders() {
           availableQuantity: parseFloat(availableUnits),
           availableBoxes: parseFloat(availableBoxes),
           unitsPerBox: parseFloat(unitsPerBox),
-        });
+        };
+        businessError.showInsufficientStock(item, () => adjustQuantities([item]));
         return;
       }
       

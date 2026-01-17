@@ -167,3 +167,23 @@
 - [x] Testar com 1 produto com erro
 - [x] Testar com 2+ produtos com erro
 - [x] Verificar exibição no modal
+
+
+## 🔧 BOTÃO AJUSTAR QUANTIDADES - 11/01/2026 21:15
+
+### BusinessErrorModal
+- [x] Adicionar prop onAdjust opcional
+- [x] Exibir botão "Ajustar Quantidades" quando onAdjust fornecido
+- [x] Botão visível apenas para tipo insufficient_stock
+- [x] Fechar modal ao clicar em ajustar
+
+### useBusinessError Hook
+- [x] Adicionar parâmetro onAdjust em showInsufficientStock
+- [x] Passar callback para BusinessErrorModal
+
+### PickingOrders
+- [x] Implementar função adjustQuantities
+- [x] Calcular quantidades disponíveis por produto
+- [x] Atualizar selectedProducts com quantidades ajustadas
+- [x] Manter produtos com estoque OK inalterados
+- [x] Passar onAdjust para showInsufficientStock
