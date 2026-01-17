@@ -249,3 +249,13 @@
 - [x] Simplificar lógica: usar firstOrder ao invés de iterar
 - [x] Adicionar type guards e assertions
 - [x] Testar criação de onda com múltiplos pedidos
+
+
+## 🐛 CORRIGIR "NENHUM ITEM VÁLIDO" - 11/01/2026 22:40
+
+- [x] Adicionar logging em allocateLocations para ver se orders é preservado
+- [x] Verificar se spread operator ...item mantém campo orders
+- [x] Investigar consolidatedItems antes de allocateLocations
+- [x] Corrigir preservação do campo orders em allocatedItems
+- [x] Adicionar pickingOrderId na query de reservations
+- [x] Usar pickingOrderId para popular orders array
