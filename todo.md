@@ -272,3 +272,8 @@
 
 - [x] Itens duplicados entre pedidos - RESOLVIDO: alterado query em waveDocument.ts para usar pickingOrderId diretamente ao invés de JOIN complexo com pickingReservations. Agora cada pedido mostra apenas seus próprios itens.
 - [x] Destinatário "N/A" - RESOLVIDO: alterado query para buscar customerName e usar no campo destination ao invés de deliveryAddress (linhas 59 e 86 do waveDocument.ts)
+
+
+## Nova Feature - 17/01/2026 (16:50)
+
+- [x] Adicionar logotipo da empresa no cabeçalho do documento PDF - CONCLUÍDO: logo Med@x (120x40px) adicionado no canto esquerdo do cabeçalho, com informações da onda ao lado direito

@@ -1,5 +1,7 @@
 import PDFDocument from "pdfkit";
 import { getDb } from "./db";
+import path from "path";
+import fs from "fs";
 import { pickingWaves, pickingWaveItems, pickingOrders, pickingReservations, tenants } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -117,21 +119,28 @@ export async function generateWaveDocument(waveId: number): Promise<Buffer> {
 
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-  // Cabeçalho
-  doc.fontSize(10);
-  doc.fillColor("#666666");
-
+  // Cabeçalho com logo
   const headerY = 40;
-  doc.rect(40, headerY, 515, 30).fill("#f0f0f0");
+  const logoPath = path.join(__dirname, "assets", "logo.jpg");
+  
+  // Adicionar logo se existir
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 40, headerY, { width: 120, height: 40 });
+  }
 
+  // Fundo do cabeçalho
+  doc.rect(170, headerY, 385, 40).fill("#f0f0f0");
+
+  // Informações do cabeçalho
   doc.fillColor("#000000");
   doc.font("Helvetica-Bold");
-  doc.text(`Onda ${data.waveCode}`, 50, headerY + 10, { width: 130 });
-  doc.text(`Cliente: ${data.clientName}`, 190, headerY + 10, { width: 150 });
-  doc.text(`Data: ${data.completedAt.toLocaleDateString("pt-BR")}`, 350, headerY + 10, { width: 100 });
+  doc.fontSize(10);
+  doc.text(`Onda ${data.waveCode}`, 180, headerY + 5, { width: 120 });
+  doc.text(`Cliente: ${data.clientName}`, 180, headerY + 20, { width: 150 });
+  doc.text(`Data: ${data.completedAt.toLocaleDateString("pt-BR")}`, 350, headerY + 5, { width: 100 });
   doc.fontSize(8);
   doc.font("Helvetica");
-  doc.text(`Separado por: ${data.completedBy}`, 460, headerY + 20, { width: 90, align: "right" });
+  doc.text(`Separado por: ${data.completedBy}`, 350, headerY + 25, { width: 200 });
 
   let currentY = headerY + 60;
 
