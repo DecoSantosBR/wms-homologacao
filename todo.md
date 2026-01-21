@@ -341,3 +341,9 @@
 ## Bug - 21/01/2026 (04:21)
 
 - [x] Erro ao registrar item no Stage: "Produto 401460P22D08LB108 não encontrado" - RESOLVIDO: modificada função recordStageItem para buscar produto por labelAssociations.labelCode ao invés de products.gtin. Agora o sistema busca pela etiqueta de lote gerada no recebimento (mesma usada na separação). Frontend atualizado para exibir "Etiqueta do Produto" ao invés de "SKU". Testes atualizados e passando (5/5).
+
+
+## Bugs - 21/01/2026 (04:35)
+
+- [x] Após finalizar separação da onda, status da onda permanece "pendente" - RESOLVIDO: criada procedure `completeWave` que verifica se todos os itens estão separados e atualiza status da onda para "completed". Adicionado botão "Finalizar Separação" na interface de execução da onda. Testes passando (2/2).
+- [x] Após finalizar separação da onda, status dos pedidos permanecem "pendente" - RESOLVIDO: procedure `completeWave` também atualiza status dos pedidos associados para "picked" e registra pickedBy e pickedAt. Testes validam atualização de ambos (onda e pedidos).

@@ -30,6 +30,16 @@ export default function WaveExecution() {
     { enabled: waveId > 0, refetchInterval: 3000 } // Atualizar a cada 3 segundos
   );
 
+  const completeWaveMutation = trpc.wave.completeWave.useMutation({
+    onSuccess: (result) => {
+      toast.success(result.message);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Erro ao finalizar onda: ${error.message}`);
+    },
+  });
+
   const generateDocumentMutation = trpc.wave.generateDocument.useMutation({
     onSuccess: (result) => {
       // Converter base64 para blob e fazer download
@@ -486,20 +496,32 @@ export default function WaveExecution() {
             <p className="text-muted-foreground mb-6">
               Todos os itens foram separados com sucesso.
             </p>
-            <div className="flex gap-3 justify-center">
-              <Button 
-                onClick={() => generateDocumentMutation.mutate({ id: waveId })} 
-                variant="default"
-                disabled={generateDocumentMutation.isPending}
-              >
-                {generateDocumentMutation.isPending ? "Gerando..." : "Imprimir Documento"}
-              </Button>
-              <Button onClick={handlePrintOrders} variant="outline">
-                Imprimir Pedidos (Antigo)
-              </Button>
-              <Button onClick={() => navigate("/picking")} variant="outline">
-                Voltar para Separação
-              </Button>
+            <div className="flex flex-col gap-3 items-center">
+              {data?.wave.status !== "completed" && (
+                <Button 
+                  onClick={() => completeWaveMutation.mutate({ waveId })} 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={completeWaveMutation.isPending}
+                >
+                  {completeWaveMutation.isPending ? "Finalizando..." : "✓ Finalizar Separação"}
+                </Button>
+              )}
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => generateDocumentMutation.mutate({ id: waveId })} 
+                  variant="default"
+                  disabled={generateDocumentMutation.isPending}
+                >
+                  {generateDocumentMutation.isPending ? "Gerando..." : "Imprimir Documento"}
+                </Button>
+                <Button onClick={handlePrintOrders} variant="outline">
+                  Imprimir Pedidos (Antigo)
+                </Button>
+                <Button onClick={() => navigate("/picking")} variant="outline">
+                  Voltar para Separação
+                </Button>
+              </div>
             </div>
           </Card>
         )}

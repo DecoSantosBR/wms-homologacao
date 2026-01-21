@@ -548,4 +548,70 @@ export const waveRouter = router({
         filename: `onda-${input.id}.pdf`,
       };
     }),
+
+  /**
+   * Finalizar onda de separação
+   * Verifica se todos os itens foram separados e atualiza status da onda e pedidos
+   */
+  completeWave: protectedProcedure
+    .input(z.object({
+      waveId: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 1. Buscar onda
+      const [wave] = await db
+        .select()
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.waveId))
+        .limit(1);
+
+      if (!wave) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+      }
+
+      // 2. Verificar se todos os itens foram separados
+      const allItems = await db
+        .select()
+        .from(pickingWaveItems)
+        .where(eq(pickingWaveItems.waveId, input.waveId));
+
+      const allCompleted = allItems.every(item => item.status === "picked");
+
+      if (!allCompleted) {
+        const pendingCount = allItems.filter(item => item.status !== "picked").length;
+        throw new TRPCError({ 
+          code: "PRECONDITION_FAILED", 
+          message: `Ainda há ${pendingCount} item(ns) pendente(s) de separação` 
+        });
+      }
+
+      // 3. Atualizar status da onda para "completed"
+      await db
+        .update(pickingWaves)
+        .set({ 
+          status: "completed",
+          pickedBy: ctx.user.id,
+          pickedAt: new Date(),
+        })
+        .where(eq(pickingWaves.id, input.waveId));
+
+      // 4. Atualizar status dos pedidos associados para "picked"
+      await db
+        .update(pickingOrders)
+        .set({ 
+          status: "picked",
+          pickedBy: ctx.user.id,
+          pickedAt: new Date(),
+        })
+        .where(eq(pickingOrders.waveId, input.waveId));
+
+      return { 
+        success: true, 
+        message: `Onda ${wave.waveNumber} finalizada com sucesso`,
+        waveNumber: wave.waveNumber,
+      };
+    }),
 });
