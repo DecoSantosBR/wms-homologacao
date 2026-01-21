@@ -87,7 +87,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
           { width: labelWidth - 20, align: "center" }
         );
 
-        currentY += 20;
+        currentY += 25;
 
         // Destinatário
         doc.fontSize(14).font("Helvetica-Bold").text(
@@ -97,7 +97,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
           { width: labelWidth - 20, align: "left" }
         );
 
-        currentY += 15;
+        currentY += 20;
 
         // Cliente (Tenant)
         doc.fontSize(14).font("Helvetica-Bold").text(
@@ -107,7 +107,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
           { width: labelWidth - 20, align: "left" }
         );
 
-        currentY += 20;
+        currentY += 25;
 
         // Quantidade de volumes
         doc.fontSize(14).font("Helvetica-Bold").text(
