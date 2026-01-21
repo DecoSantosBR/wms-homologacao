@@ -428,3 +428,16 @@
 ## Nova Feature - 21/01/2026 (08:30)
 
 - [x] Módulo de Gerenciamento de Usuários - CONCLUÍDO: Implementado CRUD completo com listagem (filtros por nome/email/role), estatísticas (total, admins, usuários comuns, com/sem cliente), edição (nome, email, role, tenant). Backend: userRouter.ts com procedures list, getById, update, stats. Frontend: Users.tsx com tabela, filtros e modal de edição. Menu: item "Usuários" adicionado ao DashboardLayout. Testes: 11/11 passando. Apenas administradores podem acessar.
+
+
+## Nova Feature - 21/01/2026 (09:00) - Sistema de Perfis e Permissões
+
+- [ ] Sistema completo de perfis e permissões - EM ANDAMENTO:
+  - [x] 7 perfis criados: Admin (10 perms), Receiving Manager (8), Receiving Operator (6), Picking Manager (7), Picking Operator (5), Stock Analyst (4), Tenant Operator (8)
+  - [x] Tabelas já existiam no schema: roles, permissions, rolePermissions, userRoles (many-to-many)
+  - [x] Banco populado com 7 perfis e 32 permissões via seed script
+  - [x] Backend: roleRouter.ts com procedures listRoles, listPermissions, getRolePermissions, getUserRoles, getUserPermissions, assignRolesToUser, updateRolePermissions, checkPermission
+  - [x] Middleware: authorization.ts com helpers hasPermission, requirePermission, getUserPermissions (suporta múltiplos perfis)
+  - [ ] Frontend: tela de gestão de perfis com atribuição de permissões + interface para atribuir múltiplos perfis a usuários
+  - [ ] Aplicar verificações em todas as rotas existentes (receiving, picking, inventory, etc)
+  - [ ] Testes unitários para autorização com múltiplos perfis

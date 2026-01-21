@@ -16,6 +16,7 @@ import { preallocationRouter } from "./preallocationRouter";
 import { waveRouter } from "./waveRouter";
 import { stageRouter } from "./stageRouter";
 import { userRouter } from "./userRouter";
+import { roleRouter } from "./roleRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   wave: waveRouter,
   stage: stageRouter,
   users: userRouter,
+  roles: roleRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
