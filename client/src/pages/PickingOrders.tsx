@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves, Edit } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves, Edit, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,11 @@ export default function PickingOrders() {
   const [isEditWaveDialogOpen, setIsEditWaveDialogOpen] = useState(false);
   const [editingWave, setEditingWave] = useState<any>(null);
   const [editWaveItems, setEditWaveItems] = useState<Array<{ waveItemId: number; productSku: string; productName: string; totalQuantity: number; pickedQuantity: number }>>([]);
+
+  // Estados para reimpressão de etiquetas
+  const [isReprintDialogOpen, setIsReprintDialogOpen] = useState(false);
+  const [reprintOrder, setReprintOrder] = useState<any>(null);
+  const [reprintVolumeQuantity, setReprintVolumeQuantity] = useState("");
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
@@ -145,6 +150,53 @@ export default function PickingOrders() {
       alert(`Erro ao editar onda: ${error.message}`);
     },
   });
+
+  const generateLabelsMutation = trpc.stage.generateVolumeLabels.useMutation();
+
+  const handleReprintLabels = async () => {
+    const qty = parseInt(reprintVolumeQuantity);
+    if (isNaN(qty) || qty < 1) {
+      alert("Informe uma quantidade válida de volumes");
+      return;
+    }
+
+    try {
+      const result = await generateLabelsMutation.mutateAsync({
+        customerOrderNumber: reprintOrder.customerOrderNumber,
+        customerName: reprintOrder.customerName || "N/A",
+        tenantName: reprintOrder.clientName || "N/A",
+        totalVolumes: qty,
+      });
+
+      // Converter base64 para blob e baixar
+      const byteCharacters = atob(result.pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Criar link de download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert(`Etiquetas geradas com sucesso! (${qty} volumes)`);
+
+      // Resetar estado
+      setIsReprintDialogOpen(false);
+      setReprintOrder(null);
+      setReprintVolumeQuantity("");
+    } catch (error: any) {
+      alert(`Erro ao gerar etiquetas: ${error.message}`);
+    }
+  };
 
   // Função para ajustar quantidades com base no estoque disponível
   const adjustQuantities = (insufficientItems: Array<{
@@ -1056,6 +1108,21 @@ export default function PickingOrders() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
+                        {order.status === "staged" && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setReprintOrder(order);
+                              setIsReprintDialogOpen(true);
+                            }}
+                          >
+                            <Printer className="h-4 w-4 mr-1" />
+                            Reimprimir Etiquetas
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1375,6 +1442,55 @@ export default function PickingOrders() {
 
       {/* Modal de Erros de Negócio */}
       {businessError.ErrorModal}
+
+      {/* Modal de Reimpressão de Etiquetas */}
+      <Dialog open={isReprintDialogOpen} onOpenChange={setIsReprintDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reimprimir Etiquetas de Volumes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Pedido: <span className="font-semibold">{reprintOrder?.customerOrderNumber}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Destinatário: <span className="font-semibold">{reprintOrder?.customerName || "N/A"}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Cliente: <span className="font-semibold">{reprintOrder?.clientName || "N/A"}</span>
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="reprintVolumes">Quantidade de Volumes</Label>
+              <Input
+                id="reprintVolumes"
+                type="number"
+                min="1"
+                value={reprintVolumeQuantity}
+                onChange={(e) => setReprintVolumeQuantity(e.target.value)}
+                placeholder="Ex: 2"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsReprintDialogOpen(false);
+                  setReprintOrder(null);
+                  setReprintVolumeQuantity("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleReprintLabels}>
+                <Printer className="h-4 w-4 mr-2" />
+                Gerar Etiquetas
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -403,3 +403,8 @@
 ## Bug Reportado - 21/01/2026 (07:30)
 
 - [x] Erro "__dirname is not defined" em volumeLabels.ts - RESOLVIDO: Adicionado import de fileURLToPath e dirname. Criadas constantes __filename e __dirname usando import.meta.url (padrão ES modules). Arquivo: server/volumeLabels.ts linhas 5-9. Testes: 4/4 passando.
+
+
+## Nova Feature - 21/01/2026 (07:35)
+
+- [x] Reimpressão de etiquetas de volumes - CONCLUÍDO: Botão "Reimprimir Etiquetas" adicionado na lista de pedidos para status 'staged'. Modal exibe informações do pedido (número, destinatário, cliente) e solicita quantidade de volumes. Gera PDF com etiquetas 10cm x 5cm contendo logo Med@x, código de barras e dados completos. Download automático. Arquivo: client/src/pages/PickingOrders.tsx.
