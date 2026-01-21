@@ -16,6 +16,7 @@ import WaveExecution from "./pages/WaveExecution";
 import Inventory from "./pages/Inventory";
 import Cadastros from "./pages/Cadastros";
 import Users from "./pages/Users";
+import Roles from "./pages/Roles";
 import NFEImport from "./pages/NFEImport";
 import StockPositions from "./pages/StockPositions";
 import StockMovements from "./pages/StockMovements";
@@ -39,6 +40,7 @@ function Router() {
       <Route path={"/cadastros"} component={Cadastros} />
       <Route path={"/cadastros/produtos"} component={Products} />
       <Route path={"/users"} component={Users} />
+      <Route path={"/roles"} component={Roles} />
       <Route path={"/nfe-import"} component={NFEImport} />
       <Route path={"/stock"} component={StockPositions} />
       <Route path={"/stock/movements"} component={StockMovements} />

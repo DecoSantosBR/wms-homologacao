@@ -438,6 +438,6 @@
   - [x] Banco populado com 7 perfis e 32 permissões via seed script
   - [x] Backend: roleRouter.ts com procedures listRoles, listPermissions, getRolePermissions, getUserRoles, getUserPermissions, assignRolesToUser, updateRolePermissions, checkPermission
   - [x] Middleware: authorization.ts com helpers hasPermission, requirePermission, getUserPermissions (suporta múltiplos perfis)
-  - [ ] Frontend: tela de gestão de perfis com atribuição de permissões + interface para atribuir múltiplos perfis a usuários
+  - [x] Frontend: tela de gestão de perfis (Roles.tsx) listando perfis, permissões de cada perfil e interface para atribuir múltiplos perfis a usuários via checkboxes. Menu: item "Perfis" adicionado ao DashboardLayout. Rota /roles configurada em App.tsx.
   - [ ] Aplicar verificações em todas as rotas existentes (receiving, picking, inventory, etc)
   - [ ] Testes unitários para autorização com múltiplos perfis
