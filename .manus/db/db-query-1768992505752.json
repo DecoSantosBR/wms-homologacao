@@ -1,0 +1,13 @@
+{
+  "query": "-- Primeiro, ver qual é o waveId\nSELECT DISTINCT waveId FROM pickingOrders WHERE customerOrderNumber LIKE 'PED-%' AND waveId IS NOT NULL LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute -- Primeiro, ver qual é o waveId\nSELECT DISTINCT waveId FROM pickingOrders WHERE customerOrderNumber LIKE 'PED-%' AND waveId IS NOT NULL LIMIT 1;",
+  "rows": [
+    {
+      "waveId": "60019"
+    }
+  ],
+  "messages": [],
+  "stdout": "waveId\n60019\n",
+  "stderr": "",
+  "execution_time_ms": 378
+}

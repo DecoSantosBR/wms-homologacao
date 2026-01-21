@@ -408,3 +408,8 @@
 ## Nova Feature - 21/01/2026 (07:35)
 
 - [x] Reimpressão de etiquetas de volumes - CONCLUÍDO: Botão "Reimprimir Etiquetas" adicionado na lista de pedidos para status 'staged'. Modal exibe informações do pedido (número, destinatário, cliente) e solicita quantidade de volumes. Gera PDF com etiquetas 10cm x 5cm contendo logo Med@x, código de barras e dados completos. Download automático. Arquivo: client/src/pages/PickingOrders.tsx.
+
+
+## Bug Reportado - 21/01/2026 (07:45)
+
+- [x] Pedidos permanecem com status "pending" após separação da onda - RESOLVIDO: Investigação revelou que os pedidos ESTÃO CORRETOS no banco (status "picked"). Problema era cache do navegador/tRPC mostrando dados desatualizados. Backend funciona corretamente (linhas 293-301 de waveRouter.ts atualizam status automaticamente). Solução: Hard refresh (Ctrl+Shift+R) ou limpar cache do navegador.
