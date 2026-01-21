@@ -680,3 +680,13 @@
 - [x] Adicionar campos: formato padrão (ZPL/PDF), número de cópias, tamanho da etiqueta (10cm x 5cm)
 - [x] Testar salvamento e aplicação das preferências (13 cópias salvas com sucesso)
 - [x] Integrar preferências com sistema de impressão existente (pronto para uso futuro)
+
+
+## 🐛 BUG: ÁREA DE IMPRESSÃO ZPL - 21/01/2026
+
+- [x] Investigar código ZPL atual (generateLabelZPL)
+- [x] Ajustar dimensões do canvas ZPL de 4,5cm x 2,5cm para 10cm x 5cm completos
+- [x] Adicionar comando ^PW812 (Print Width = 10cm) e ^LL406 (Label Length = 5cm)
+- [x] Aumentar tamanho do código de barras (^BCN,100) e fontes (35pt e 28pt)
+- [x] Testar com testes unitários (3/3 passando em 1623ms)
+- [x] Validar dimensões: 812 x 406 pontos a 203 DPI = 10cm x 5cm exatos

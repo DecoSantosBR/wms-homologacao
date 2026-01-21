@@ -944,14 +944,17 @@ export const appRouter = router({
           });
           
           // Gerar código ZPL para impressora Zebra
-          // Etiqueta 10cm x 5cm (283 x 142 pontos a 203 DPI)
+          // Etiqueta 10cm x 5cm (812 x 406 pontos a 203 DPI = 8dpmm)
+          // ^PW = Print Width (largura), ^LL = Label Length (altura)
           const zplCode = `^XA
-^FO50,20^GFA,800,800,8,:Z64:eJxjYBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAUDDwAA//8=:4C1E
-^FO50,80^A0N,25,25^FD${productName?.substring(0, 30) || 'Produto'}^FS
-^FO50,110^A0N,20,20^FDSKU: ${input.productSku}^FS
-^FO50,135^A0N,20,20^FDLote: ${input.batch}^FS
-^FO50,160^A0N,20,20^FDVal: ${input.expiryDate ? new Date(input.expiryDate).toLocaleDateString('pt-BR') : 'N/A'}^FS
-^FO50,200^BCN,80,Y,N,N^FD${labelCode}^FS
+^PW812
+^LL406
+^FO30,20^GFA,800,800,8,:Z64:eJxjYBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAUDDwAA//8=:4C1E
+^FO30,90^A0N,35,35^FD${productName?.substring(0, 28) || 'Produto'}^FS
+^FO30,140^A0N,28,28^FDSKU: ${input.productSku}^FS
+^FO30,180^A0N,28,28^FDLote: ${input.batch}^FS
+^FO30,220^A0N,28,28^FDVal: ${input.expiryDate ? new Date(input.expiryDate).toLocaleDateString('pt-BR') : 'N/A'}^FS
+^FO30,270^BCN,100,Y,N,N^FD${labelCode}^FS
 ^XZ`;
           
           // Gerar preview via Labelary API

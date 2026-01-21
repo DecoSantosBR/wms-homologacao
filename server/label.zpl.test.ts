@@ -54,7 +54,9 @@ describe("receiving.generateLabelZPL", () => {
     expect(result.labelCode).toBe(`${testSku}${testBatch}`);
     expect(result.zplCode).toContain("^XA"); // Início do comando ZPL
     expect(result.zplCode).toContain("^XZ"); // Fim do comando ZPL
-    expect(result.zplCode).toContain("^BCN"); // Código de barras Code-128
+    expect(result.zplCode).toContain("^PW812"); // Largura 10cm (812 pontos a 203 DPI)
+    expect(result.zplCode).toContain("^LL406"); // Altura 5cm (406 pontos a 203 DPI)
+    expect(result.zplCode).toContain("^BCN,100"); // Código de barras Code-128 com 100pt de altura
     expect(result.zplCode).toContain(testSku); // SKU no código
     expect(result.zplCode).toContain(testBatch); // Lote no código
     expect(result.zplCode).toContain("30/12/2026"); // Data de validade formatada (timezone UTC-3)
