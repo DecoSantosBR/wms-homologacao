@@ -180,7 +180,7 @@ export default function StageCheck() {
     try {
       const result = await generateLabelsMutation.mutateAsync({
         customerOrderNumber,
-        customerName: orderInfo?.customerName || "N/A",
+        customerName: orderInfo?.order?.customerName || "N/A",
         totalVolumes: qty,
       });
 

@@ -388,3 +388,8 @@
 ## Nova Feature - 21/01/2026 (06:45)
 
 - [x] Etiquetas de volumes no Stage - CONCLUÍDO: Implementado sistema completo de geração de etiquetas após finalizar conferência. Modal solicita quantidade de volumes, backend gera PDF com etiquetas 10cm x 5cm contendo código de barras Code-128, número do pedido, destinatário e numeração de volumes. Download automático do PDF para impressão. Arquivos: server/volumeLabels.ts, server/stageRouter.ts, client/src/pages/StageCheck.tsx. Testes: 4/4 passando.
+
+
+## Bug Reportado - 21/01/2026 (07:15)
+
+- [x] Etiquetas de volumes mostram "Destinatário: N/A" - RESOLVIDO: Corrigido acesso ao customerName em StageCheck.tsx linha 183. Antes: orderInfo?.customerName (incorreto). Depois: orderInfo?.order?.customerName (correto, pois getOrderForStage retorna { order, items }).
