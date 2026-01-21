@@ -418,6 +418,22 @@ export const appRouter = router({
         
         return { success: true };
       }),
+
+    deleteMultiple: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()).min(1, "Selecione pelo menos uma zona") }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Marcar todas as zonas como inativas
+        for (const id of input.ids) {
+          await db.update(warehouseZones)
+            .set({ status: "inactive" })
+            .where(eq(warehouseZones.id, id));
+        }
+        
+        return { success: true, count: input.ids.length };
+      }),
   }),
 
   locations: router({

@@ -510,3 +510,18 @@
   - [x] Executado DELETE em todas as tabelas respeitando ordem de dependências (filhas primeiro, pai por último)
   - [x] Estrutura das tabelas mantida intacta (apenas dados removidos)
   - [x] Confirmado via interface: tela de Recebimentos mostra "0 ordem(ns) encontrada(s)" e tabela vazia
+
+
+## Nova Feature - 21/01/2026 (15:15) - Exclusão Múltipla de Zonas
+
+- [x] Implementar seleção múltipla de zonas para exclusão em lote - CONCLUÍDO:
+  - [x] Backend: procedure deleteMultiple em zones router (soft delete, marca como inativas)
+  - [x] Frontend: checkbox em cada linha da tabela com hint descritivo ("Selecionar zona X")
+  - [x] Frontend: checkbox "Selecionar todas as zonas" no header da tabela
+  - [x] Frontend: botão "Excluir Selecionadas (X)" vermelho visível apenas quando há seleção
+  - [x] Frontend: contador dinâmico "• X selecionada(s)" em azul
+  - [x] Frontend: AlertDialog de confirmação com aviso amarelo (soft delete, endereços não afetados)
+  - [x] Destaque visual: linhas selecionadas com fundo azul claro (bg-blue-50)
+  - [x] Handlers: handleToggleZoneSelection, handleToggleAllZones, handleBulkDeleteZones, handleBulkDeleteZonesConfirm
+  - [x] Mutation: deleteMultipleZonesMutation com invalidate e limpeza de seleção no onSuccess
+  - [x] Testado manualmente: selecionadas 3 zonas (TEST-CONSOL, TEST-ZONE, ZONE-PICK), contador atualizado (1→2→3), botão apareceu, dialog exibido corretamente

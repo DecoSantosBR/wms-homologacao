@@ -77,6 +77,10 @@ export default function Locations() {
     storageCondition: "ambient" as "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled" | "quarantine",
     hasTemperatureControl: false,
   });
+  
+  // Bulk delete zones states
+  const [selectedZoneIds, setSelectedZoneIds] = useState<number[]>([]);
+  const [bulkDeleteZonesDialogOpen, setBulkDeleteZonesDialogOpen] = useState(false);
 
   // Import Excel states
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -165,6 +169,18 @@ export default function Locations() {
     },
   });
 
+  const deleteMultipleZonesMutation = trpc.zones.deleteMultiple.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.count} zona(s) excluída(s) com sucesso!`);
+      utils.zones.list.invalidate();
+      setBulkDeleteZonesDialogOpen(false);
+      setSelectedZoneIds([]);
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir zonas: " + error.message);
+    },
+  });
+
   const importExcelMutation = trpc.locations.importExcel.useMutation({
     onSuccess: (results) => {
       setImportResults(results);
@@ -249,6 +265,32 @@ export default function Locations() {
   const handleDeleteZoneConfirm = () => {
     if (!selectedZone) return;
     deleteZoneMutation.mutate({ id: selectedZone.id });
+  };
+
+  const handleToggleZoneSelection = (zoneId: number) => {
+    setSelectedZoneIds(prev => 
+      prev.includes(zoneId) 
+        ? prev.filter(id => id !== zoneId)
+        : [...prev, zoneId]
+    );
+  };
+
+  const handleToggleAllZones = () => {
+    if (!zones) return;
+    if (selectedZoneIds.length === zones.length) {
+      setSelectedZoneIds([]);
+    } else {
+      setSelectedZoneIds(zones.map((z: any) => z.id));
+    }
+  };
+
+  const handleBulkDeleteZones = () => {
+    if (selectedZoneIds.length === 0) return;
+    setBulkDeleteZonesDialogOpen(true);
+  };
+
+  const handleBulkDeleteZonesConfirm = () => {
+    deleteMultipleZonesMutation.mutate({ ids: selectedZoneIds });
   };
 
   // Import Excel handlers
@@ -688,12 +730,30 @@ export default function Locations() {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Zonas Cadastradas</h3>
-                    <p className="text-sm text-gray-600">Total de {zones?.length || 0} zona(s) cadastrada(s)</p>
+                    <p className="text-sm text-gray-600">
+                      Total de {zones?.length || 0} zona(s) cadastrada(s)
+                      {selectedZoneIds.length > 0 && (
+                        <span className="ml-2 text-blue-600 font-medium">
+                          • {selectedZoneIds.length} selecionada(s)
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  <Button onClick={handleCreateZone}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nova Zona
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {selectedZoneIds.length > 0 && (
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleBulkDeleteZones}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Selecionadas ({selectedZoneIds.length})
+                      </Button>
+                    )}
+                    <Button onClick={handleCreateZone}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Zona
+                    </Button>
+                  </div>
                 </div>
 
                 {zonesLoading ? (
@@ -702,6 +762,13 @@ export default function Locations() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox 
+                            checked={zones && selectedZoneIds.length === zones.length}
+                            onCheckedChange={handleToggleAllZones}
+                            aria-label="Selecionar todas as zonas"
+                          />
+                        </TableHead>
                         <TableHead>Código</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Tipo</TableHead>
@@ -713,8 +780,16 @@ export default function Locations() {
                     <TableBody>
                       {zones.map((zone: any) => {
                         const conditionBadge = getStorageConditionBadge(zone.storageCondition);
+                        const isSelected = selectedZoneIds.includes(zone.id);
                         return (
-                          <TableRow key={zone.id}>
+                          <TableRow key={zone.id} className={isSelected ? "bg-blue-50" : ""}>
+                            <TableCell>
+                              <Checkbox 
+                                checked={isSelected}
+                                onCheckedChange={() => handleToggleZoneSelection(zone.id)}
+                                aria-label={`Selecionar zona ${zone.code}`}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">{zone.code}</TableCell>
                             <TableCell>{zone.name}</TableCell>
                             <TableCell>
@@ -1104,6 +1179,43 @@ export default function Locations() {
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Zones Dialog */}
+      <AlertDialog open={bulkDeleteZonesDialogOpen} onOpenChange={setBulkDeleteZonesDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão de Zonas</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div>
+                  Você está prestes a <strong className="text-red-600">marcar {selectedZoneIds.length} zona(s) como inativa(s)</strong>.
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-yellow-900 mb-1">
+                    ⚠️ Atenção!
+                  </div>
+                  <div className="text-xs text-yellow-700">
+                    As zonas serão marcadas como inativas (soft delete). Endereços associados não serão afetados.
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Tem certeza que deseja continuar?
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteZonesConfirm}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMultipleZonesMutation.isPending}
+            >
+              {deleteMultipleZonesMutation.isPending ? 'Excluindo...' : `Excluir ${selectedZoneIds.length} Zona(s)`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
