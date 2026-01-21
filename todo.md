@@ -501,3 +501,12 @@
   - [x] Testado com sucesso: movido 50 unidades de EXTENSOFIX 60 CM (lote 22D14LA124) de H01-01-01 para H01-03-02 (que já continha 280 unidades do mesmo item-lote)
   - [x] Consolidação funcionando: H01-03-02 agora tem 330 unidades (280 + 50)
   - [x] Teste manual completo: interface exibe endereços ocupados com mesmo item-lote, movimentação registrada com sucesso, estoque consolidado corretamente
+
+
+## Tarefa - 21/01/2026 (14:58) - Limpeza de Base de Recebimentos
+
+- [x] Limpar completamente a base de dados de recebimentos - CONCLUÍDO:
+  - [x] Identificadas 5 tabelas relacionadas: receivingDivergences, receivingConferences, receivingPreallocations, receivingOrderItems, receivingOrders
+  - [x] Executado DELETE em todas as tabelas respeitando ordem de dependências (filhas primeiro, pai por último)
+  - [x] Estrutura das tabelas mantida intacta (apenas dados removidos)
+  - [x] Confirmado via interface: tela de Recebimentos mostra "0 ordem(ns) encontrada(s)" e tabela vazia
