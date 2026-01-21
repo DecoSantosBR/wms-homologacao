@@ -418,3 +418,8 @@
 ## Bug Reportado - 21/01/2026 (08:15)
 
 - [x] Botão "Reimprimir Etiquetas" desapareceu da lista de pedidos - RESOLVIDO: Botão estava configurado apenas para status 'staged', mas pedidos separados ficam com status 'picked'. Ajustada condição na linha 1111 para exibir botão tanto para 'picked' quanto 'staged'. Arquivo: client/src/pages/PickingOrders.tsx.
+
+
+## Melhoria Solicitada - 21/01/2026 (08:20)
+
+- [x] Aumentar tamanho da fonte de Destinatário e Cliente nas etiquetas - CONCLUÍDO: Fonte aumentada de 10pt para 12pt e alterada para Helvetica-Bold para melhor legibilidade. Campos "Destinatário:" (linha 93) e "Cliente:" (linha 103) agora mais visíveis. Arquivo: server/volumeLabels.ts.

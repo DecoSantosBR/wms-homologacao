@@ -90,7 +90,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
         currentY += 20;
 
         // Destinatário
-        doc.fontSize(10).font("Helvetica").text(
+        doc.fontSize(12).font("Helvetica-Bold").text(
           `Destinatário: ${label.customerName}`,
           10,
           currentY,
@@ -100,7 +100,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
         currentY += 15;
 
         // Cliente (Tenant)
-        doc.fontSize(10).font("Helvetica").text(
+        doc.fontSize(12).font("Helvetica-Bold").text(
           `Cliente: ${label.tenantName}`,
           10,
           currentY,
