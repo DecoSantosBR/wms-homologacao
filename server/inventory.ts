@@ -315,7 +315,8 @@ export async function getDestinationLocations(params: {
 
   // Para TRANSFERÊNCIA: filtrar por regras de armazenagem
   if (movementType === "transfer") {
-    // Buscar todos os endereços
+    // Buscar todos os endereços (vazios E ocupados)
+    // Endereços ocupados podem ser destino se contiverem o mesmo item-lote
     const allLocations = await dbConn
       .select({
         id: warehouseLocations.id,
@@ -326,7 +327,6 @@ export async function getDestinationLocations(params: {
       })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-      .where(eq(warehouseLocations.status, "available"))
       .orderBy(warehouseLocations.code);
 
     // Buscar estoque atual de cada endereço

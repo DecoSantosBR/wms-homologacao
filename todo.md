@@ -489,3 +489,15 @@
   - [x] Handler já suportava array de roleIds, sem necessidade de alteração no backend
   - [x] Testado com sucesso: criado usuário Maria Silva Teste Multi com 3 perfis (Gerente Recebimento, Operador Recebimento, Analista Estoque)
   - [x] Verificado na tela de Perfis: 3 perfis corretamente atribuídos via userRoles
+
+
+## Bug Report - 21/01/2026 (14:45) - Movimentação de Estoque
+
+- [x] Permitir movimentação de item-lote para endereços com mesmo item-lote - RESOLVIDO:
+  - [x] Problema identificado: query getDestinationLocations filtrava apenas endereços com status "available" (vazios)
+  - [x] Solução implementada: removido filtro de status na query (linha 330 de server/inventory.ts), permitindo buscar todos os endereços
+  - [x] Lógica de filtragem mantida: linhas 356-373 já validavam corretamente storageRule (single: vazio OU mesmo item-lote; multi: vazio OU qualquer produto)
+  - [x] Frontend: nenhuma modificação necessária, consome lista retornada pela procedure
+  - [x] Testado com sucesso: movido 50 unidades de EXTENSOFIX 60 CM (lote 22D14LA124) de H01-01-01 para H01-03-02 (que já continha 280 unidades do mesmo item-lote)
+  - [x] Consolidação funcionando: H01-03-02 agora tem 330 unidades (280 + 50)
+  - [x] Teste manual completo: interface exibe endereços ocupados com mesmo item-lote, movimentação registrada com sucesso, estoque consolidado corretamente
