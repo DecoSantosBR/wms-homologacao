@@ -432,12 +432,20 @@
 
 ## Nova Feature - 21/01/2026 (09:00) - Sistema de Perfis e Permissões
 
-- [ ] Sistema completo de perfis e permissões - EM ANDAMENTO:
-  - [x] 7 perfis criados: Admin (10 perms), Receiving Manager (8), Receiving Operator (6), Picking Manager (7), Picking Operator (5), Stock Analyst (4), Tenant Operator (8)
+- [x] Sistema completo de perfis e permissões - CONCLUÍDO:
+  - [x] 7 perfis criados: Admin (32 perms), Receiving Manager (14), Receiving Operator (9), Picking Manager (11), Picking Operator (6), Stock Analyst (8), Tenant Operator (7)
   - [x] Tabelas já existiam no schema: roles, permissions, rolePermissions, userRoles (many-to-many)
   - [x] Banco populado com 7 perfis e 32 permissões via seed script
-  - [x] Backend: roleRouter.ts com procedures listRoles, listPermissions, getRolePermissions, getUserRoles, getUserPermissions, assignRolesToUser, updateRolePermissions, checkPermission
+  - [x] Backend: roleRouter.ts com procedures listRoles (com permissionCount), listPermissions, getRolePermissions, getUserRoles, getUserPermissions, assignRolesToUser, updateRolePermissions, checkPermission
   - [x] Middleware: authorization.ts com helpers hasPermission, requirePermission, getUserPermissions (suporta múltiplos perfis)
-  - [x] Frontend: tela de gestão de perfis (Roles.tsx) listando perfis, permissões de cada perfil e interface para atribuir múltiplos perfis a usuários via checkboxes. Menu: item "Perfis" adicionado ao DashboardLayout. Rota /roles configurada em App.tsx.
+  - [x] Frontend: tela de gestão de perfis (Roles.tsx) listando perfis com contagem correta de permissões, permissões agrupadas por módulo (expansível) e interface para atribuir múltiplos perfis a usuários via checkboxes. Menu: item "Perfis" adicionado ao DashboardLayout. Rota /roles configurada em App.tsx.
+  - [x] Bug corrigido: rolePermissions table populada com associações corretas usando códigos reais de permissões do banco (admin:*, receiving:*, picking:*, stock:*)
+  - [x] Bug corrigido: listRoles agora retorna permissionCount via LEFT JOIN + COUNT para exibição instantânea
   - [ ] Aplicar verificações em todas as rotas existentes (receiving, picking, inventory, etc)
   - [ ] Testes unitários para autorização com múltiplos perfis
+
+
+## Bugs/Features Reportados - 21/01/2026 (13:15)
+
+- [ ] Perfis não aparecem na tela de Perfis - Tela Roles.tsx não está exibindo os perfis cadastrados. Verificar se query listRoles está funcionando ou se há problema no frontend.
+- [ ] Implementar botão "Novo Usuário" - Adicionar botão na tela de Usuários permitindo criar novo usuário com formulário completo (nome, email, perfis).

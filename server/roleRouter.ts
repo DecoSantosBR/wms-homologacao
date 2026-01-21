@@ -28,13 +28,25 @@ export const roleRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const query = db.select().from(roles);
-      
-      if (!input.includeInactive) {
-        query.where(eq(roles.active, true));
-      }
+      // Buscar perfis com contagem de permissões
+      const rolesData = await db
+        .select({
+          id: roles.id,
+          code: roles.code,
+          name: roles.name,
+          description: roles.description,
+          isSystemRole: roles.isSystemRole,
+          active: roles.active,
+          createdAt: roles.createdAt,
+          updatedAt: roles.updatedAt,
+          permissionCount: sql<number>`CAST(COUNT(DISTINCT ${rolePermissions.permissionId}) AS UNSIGNED)`,
+        })
+        .from(roles)
+        .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
+        .where(input.includeInactive ? undefined : eq(roles.active, true))
+        .groupBy(roles.id);
 
-      return await query;
+      return rolesData;
     }),
 
   /**

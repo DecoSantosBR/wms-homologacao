@@ -1,0 +1,80 @@
+{
+  "query": "SELECT * FROM roles LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT * FROM roles LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "code": "ADMIN",
+      "name": "Administrador",
+      "description": "Acesso total ao sistema. Gerencia usuários, configurações e dados.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "2",
+      "code": "RECEIVING_MANAGER",
+      "name": "Gerente de Recebimento",
+      "description": "Gerencia operações de recebimento e conferência.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "3",
+      "code": "RECEIVING_OPERATOR",
+      "name": "Operador de Recebimento",
+      "description": "Executa operações de recebimento e conferência.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "4",
+      "code": "PICKING_MANAGER",
+      "name": "Gerente de Separação",
+      "description": "Gerencia operações de separação e picking.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "5",
+      "code": "PICKING_OPERATOR",
+      "name": "Operador de Separação",
+      "description": "Executa operações de separação e picking.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "6",
+      "code": "STOCK_ANALYST",
+      "name": "Analista de Estoque",
+      "description": "Analisa e relata sobre estoque.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    },
+    {
+      "id": "7",
+      "code": "TENANT_OPERATOR",
+      "name": "Cliente",
+      "description": "Cria pedidos de separação e picking e visualiza estoque.",
+      "isSystemRole": "1",
+      "active": "1",
+      "createdAt": "2026-01-21 12:56:45",
+      "updatedAt": "2026-01-21 12:56:45"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tname\tdescription\tisSystemRole\tactive\tcreatedAt\tupdatedAt\n1\tADMIN\tAdministrador\tAcesso total ao sistema. Gerencia usuários, configurações e dados.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n2\tRECEIVING_MANAGER\tGerente de Recebimento\tGerencia operações de recebimento e conferência.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n3\tRECEIVING_OPERATOR\tOperador de Recebimento\tExecuta operações de recebimento e conferência.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n4\tPICKING_MANAGER\tGerente de Separação\tGerencia operações de separação e picking.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n5\tPICKING_OPERATOR\tOperador de Separação\tExecuta operações de separação e picking.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n6\tSTOCK_ANALYST\tAnalista de Estoque\tAnalisa e relata sobre estoque.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n7\tTENANT_OPERATOR\tCliente\tCria pedidos de separação e picking e visualiza estoque.\t1\t1\t2026-01-21 12:56:45\t2026-01-21 12:56:45\n",
+  "stderr": "",
+  "execution_time_ms": 366
+}

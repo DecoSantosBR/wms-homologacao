@@ -289,7 +289,7 @@ function RoleCard({
               <CardDescription className="mt-1">{role.description}</CardDescription>
             </div>
           </div>
-          <Badge variant="secondary">{permissions.length} permissões</Badge>
+          <Badge variant="secondary">{role.permissionCount || 0} permissões</Badge>
         </div>
       </CardHeader>
 
