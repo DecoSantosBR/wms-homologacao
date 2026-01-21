@@ -210,4 +210,72 @@ export const stockRouter = router({
   getOptimizationSuggestions: protectedProcedure.query(async () => {
     return await getOptimizationSuggestions();
   }),
+
+  // ============================================================================
+  // EXPORTAÇÃO
+  // ============================================================================
+
+  /**
+   * Exporta estoque para Excel
+   */
+  exportToExcel: protectedProcedure
+    .input(inventoryFiltersSchema)
+    .mutation(async ({ input }) => {
+      const ExcelJS = (await import('exceljs')).default;
+      const positions = await getInventoryPositions(input);
+      
+      // Criar workbook e worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Estoque');
+      
+      // Definir colunas
+      worksheet.columns = [
+        { header: 'SKU', key: 'sku', width: 15 },
+        { header: 'Produto', key: 'product', width: 40 },
+        { header: 'Lote', key: 'batch', width: 15 },
+        { header: 'Quantidade', key: 'quantity', width: 12 },
+        { header: 'Unidade', key: 'unit', width: 10 },
+        { header: 'Endereço', key: 'location', width: 15 },
+        { header: 'Zona', key: 'zone', width: 10 },
+        { header: 'Status', key: 'status', width: 12 },
+        { header: 'Validade', key: 'expiry', width: 12 },
+      ];
+      
+      // Estilizar cabeçalho
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4472C4' },
+      };
+      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      
+      // Adicionar dados
+      positions.forEach((pos: any) => {
+        worksheet.addRow({
+          sku: pos.productSku,
+          product: pos.productDescription,
+          batch: pos.batch || 'N/A',
+          quantity: pos.quantity,
+          unit: 'UN',
+          location: pos.locationCode,
+          zone: pos.zoneName || 'N/A',
+          status: pos.status === 'available' ? 'Disponível' : 
+                  pos.status === 'quarantine' ? 'Quarentena' :
+                  pos.status === 'blocked' ? 'Bloqueado' :
+                  pos.status === 'damaged' ? 'Danificado' : 'Expirado',
+          expiry: pos.expiryDate ? new Date(pos.expiryDate).toLocaleDateString('pt-BR') : 'N/A',
+        });
+      });
+      
+      // Gerar buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      
+      return {
+        success: true,
+        filename: `estoque_${new Date().toISOString().split('T')[0]}.xlsx`,
+        data: base64,
+      };
+    }),
 });

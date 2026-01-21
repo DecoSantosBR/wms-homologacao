@@ -72,9 +72,39 @@ export default function StockPositions() {
     setLocationFilter("");
   };
 
-  // Exportar para Excel (placeholder - implementar com biblioteca)
+  // Mutation para exportar Excel
+  const exportMutation = trpc.stock.exportToExcel.useMutation({
+    onSuccess: (result) => {
+      // Converter base64 para blob e fazer download
+      const blob = new Blob(
+        [Uint8Array.from(atob(result.data), c => c.charCodeAt(0))],
+        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Arquivo Excel exportado com sucesso!');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao exportar: ${error.message}`);
+    },
+  });
+
+  // Exportar para Excel
   const handleExportExcel = () => {
-    toast.info("Funcionalidade de exportação em desenvolvimento");
+    exportMutation.mutate({
+      tenantId: clientFilter === "all" ? undefined : clientFilter === "shared" ? null : Number(clientFilter),
+      search: searchTerm || undefined,
+      zoneId: zoneFilter === "all" ? undefined : Number(zoneFilter),
+      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      batch: batchFilter || undefined,
+      locationCode: locationFilter || undefined,
+    });
   };
 
   return (
@@ -249,8 +279,9 @@ export default function StockPositions() {
                 <Button variant="outline" onClick={handleClearFilters}>
                   Limpar Filtros
                 </Button>
-                <Button onClick={handleExportExcel} disabled={positions.length === 0}>
-                  <Download className="w-4 h-4 mr-2" /> Exportar Excel
+                <Button onClick={handleExportExcel} disabled={positions.length === 0 || exportMutation.isPending}>
+                  <Download className="w-4 h-4 mr-2" /> 
+                  {exportMutation.isPending ? 'Exportando...' : 'Exportar Excel'}
                 </Button>
               </div>
             </div>

@@ -690,3 +690,14 @@
 - [x] Aumentar tamanho do código de barras (^BCN,100) e fontes (35pt e 28pt)
 - [x] Testar com testes unitários (3/3 passando em 1623ms)
 - [x] Validar dimensões: 812 x 406 pontos a 203 DPI = 10cm x 5cm exatos
+
+
+## 📊 EXPORTAÇÃO EXCEL EM /STOCK - 21/01/2026
+
+- [x] Criar procedure backend exportToExcel no stockRouter
+- [x] Gerar arquivo Excel com colunas: SKU, Produto, Lote, Quantidade, Unidade, Endereço, Zona, Status, Validade
+- [x] Botão "Exportar Excel" já existia no cabeçalho da página /stock (atualizado)
+- [x] Implementar download automático do arquivo .xlsx (base64 -> blob)
+- [x] Testar exportação com dados reais (8 posições, 4.050 unidades)
+- [x] Adicionar estado de loading no botão ("Exportando...")
+- [x] Formatação profissional: cabeçalho azul, larguras otimizadas
