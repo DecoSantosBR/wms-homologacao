@@ -462,3 +462,18 @@
   - [x] Atualização automática da lista e estatísticas após criação via invalidate
   - [x] Testado com sucesso: criado usuário João Silva Teste com perfil Operador de Recebimento
   - [x] Testes unitários para procedure create (5/5 passando): criação básica, atribuição RBAC, validação email, admin, sem perfil
+
+
+## Nova Feature - 21/01/2026 (14:05) - Exclusão de Usuários
+
+- [x] Implementar funcionalidade completa de exclusão de usuários - CONCLUÍDO:
+  - [x] Backend: procedure delete em userRouter.ts com validações completas
+  - [x] Cascade delete: remove associações em userRoles antes de excluir usuário
+  - [x] Validação: impede exclusão do próprio usuário logado (ctx.user.id === id)
+  - [x] Validação: impede exclusão do owner do sistema (via OWNER_OPEN_ID)
+  - [x] Frontend: botão de exclusão (ícone Trash2 vermelho) na coluna Ações ao lado do botão de edição
+  - [x] Frontend: AlertDialog de confirmação mostrando nome do usuário e aviso de ação irreversível
+  - [x] Feedback: toast com mensagem "Usuário [nome] excluído com sucesso" ou erro
+  - [x] Atualização automática da lista e estatísticas após exclusão via invalidate
+  - [x] Testes unitários para procedure delete (5/5 passando): exclusão básica, cascade delete, usuário inexistente, proteção owner, sem perfis
+  - [x] Testado manualmente: usuário Juan excluído com sucesso, estatísticas atualizadas (7→6, admins 3→2)

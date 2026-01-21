@@ -248,6 +248,61 @@ export const userRouter = router({
     }),
 
   /**
+   * Delete user by ID
+   * Includes cascade delete of userRoles associations
+   */
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id } = input;
+
+      // Prevent self-deletion
+      if (ctx.user.id === id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Você não pode excluir sua própria conta",
+        });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if user exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+
+      if (!existingUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        });
+      }
+
+      // Prevent deletion of system owner
+      const ownerOpenId = process.env.OWNER_OPEN_ID;
+      if (ownerOpenId && existingUser.openId === ownerOpenId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Não é possível excluir o proprietário do sistema",
+        });
+      }
+
+      // Cascade delete: remove user role associations first
+      await db.delete(userRoles).where(eq(userRoles.userId, id));
+
+      // Delete user
+      await db.delete(users).where(eq(users.id, id));
+
+      return { 
+        success: true, 
+        message: `Usuário ${existingUser.name} excluído com sucesso` 
+      };
+    }),
+
+  /**
    * Get user statistics
    */
   stats: adminProcedure.query(async () => {
