@@ -635,3 +635,11 @@
 - [x] Testar geração de etiqueta com logo (teste unitário passando em 403ms)
 - [x] Validar exibição visual da etiqueta no navegador
 - [x] Etiquetas agora incluem logo Med@x + código de barras Code-128
+
+
+## 🐛 ERRO DE DEPLOY - CANVAS - 21/01/2026
+
+- [x] Remover dependência canvas do package.json (causa erro de build no deploy)
+- [x] Verificar se há imports de canvas no código (nenhum encontrado)
+- [x] Testar geração de etiquetas após remoção (teste passando em 406ms)
+- [x] Confirmar que PDFKit sozinho é suficiente para gerar etiquetas com logo
