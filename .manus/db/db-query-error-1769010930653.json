@@ -1,0 +1,8 @@
+{
+  "query": "-- Obter IDs dos produtos existentes\nSET @product1Id = (SELECT id FROM products WHERE sku = '401460P');\nSET @product2Id = (SELECT id FROM products WHERE sku = '834207');\n\n-- Atualizar receivingOrderItems com os IDs corretos\nUPDATE receivingOrderItems SET productId = @product1Id WHERE batch = '22D08LB109';\nUPDATE receivingOrderItems SET productId = @product2Id WHERE batch = '22D08LA129';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute -- Obter IDs dos produtos existentes\nSET @product1Id = (SELECT id FROM products WHERE sku = '401460P');\nSET @product2Id = (SELECT id FROM products WHERE sku = '834207');\n\n-- Atualizar receivingOrderItems com os IDs corretos\nUPDATE receivingOrderItems SET productId = @product1Id WHERE batch = '22D08LB109';\nUPDATE receivingOrderItems SET productId = @product2Id WHERE batch = '22D08LA129';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1242 (21000) at line 2: Subquery returns more than 1 row"
+  ]
+}

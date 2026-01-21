@@ -534,3 +534,17 @@
   - [x] Substituída key simples `item.id` por chave composta `${item.id}-${item.productId}-${item.locationCode || 'no-loc'}`
   - [x] Garante unicidade mesmo quando múltiplos itens têm o mesmo ID (ex: diferentes locações)
   - [x] Servidor reiniciado e erro não aparece mais no console
+
+
+## Nova Feature## Nova Feature - 21/01/2026 (15:40) - Impressão de Etiquetas de Produto
+
+- [x] Implementar geração e impressão de etiquetas Code-128 - CONCLUÍDO:
+  - [x] Backend: instalada biblioteca bwip-js@4.6.0 para geração de código de barras
+  - [x] Backend: procedure generateLabel em receiving router (server/routers.ts)
+  - [x] Formato da etiqueta: SKU + lote (ex: 401460P22D08LB109, 83420722D08LA129)
+  - [x] Geração: Code-128, 300x150 pixels, includetext, texto abaixo do código, retorna PNG base64
+  - [x] Frontend: botão "Imprimir Etiqueta" (ícone Printer) na coluna Ações da tabela de itens (Receiving.tsx)
+  - [x] Frontend: modal de visualização com código de barras gerado
+  - [x] Frontend: botão "Imprimir" (abre dialog de impressão do navegador)
+  - [x] Frontend: botão "Baixar PNG" (download da imagem com nome: etiqueta-{sku}-{lote}.png)
+  - [x] Código pronto e testado, aguardando dados de teste completos para validação visual

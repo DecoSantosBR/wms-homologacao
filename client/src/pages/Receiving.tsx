@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { BlindCheckModal } from "@/components/BlindCheckModal";
 import { ImportPreallocationDialog } from "@/components/ImportPreallocationDialog";
 import { PageHeader } from "@/components/PageHeader";
-import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet } from "lucide-react";
+import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useBusinessError } from "@/hooks/useBusinessError";
 import { format } from "date-fns";
@@ -44,6 +44,8 @@ export default function Receiving() {
   const [scheduledDate, setScheduledDate] = useState("");
   const [checkOrderId, setCheckOrderId] = useState<number | null>(null);
   const [importPreallocationOrderId, setImportPreallocationOrderId] = useState<number | null>(null);
+  const [labelItem, setLabelItem] = useState<{ productSku: string; batch: string } | null>(null);
+  const [labelQuantity, setLabelQuantity] = useState(1);
   
   // Hook de erros de negócio
   const businessError = useBusinessError();
@@ -89,6 +91,46 @@ export default function Receiving() {
       } else {
         businessError.showGenericError(message);
       }
+    },
+  });
+
+  const generateLabelMutation = trpc.receiving.generateLabel.useMutation({
+    onSuccess: (data) => {
+      // Abrir janela de impressão com a etiqueta
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        const labels = Array(labelQuantity).fill(data.image).map((img, i) => 
+          `<div style="page-break-after: ${i < labelQuantity - 1 ? 'always' : 'auto'}; text-align: center; padding: 20px;">
+            <img src="${img}" style="max-width: 100%;" />
+          </div>`
+        ).join('');
+        
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Etiqueta - ${data.labelCode}</title>
+              <style>
+                @media print {
+                  body { margin: 0; }
+                  @page { margin: 0.5cm; }
+                }
+              </style>
+            </head>
+            <body>
+              ${labels}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      
+      toast.success(`${labelQuantity} etiqueta(s) gerada(s) com sucesso`);
+      setLabelItem(null);
+      setLabelQuantity(1);
+    },
+    onError: (error) => {
+      toast.error("Erro ao gerar etiqueta: " + error.message);
     },
   });
 
@@ -456,16 +498,18 @@ export default function Receiving() {
                   <TableRow>
                     <TableHead>Produto</TableHead>
                     <TableHead>SKU</TableHead>
+                    <TableHead>Lote</TableHead>
                     <TableHead className="text-right">Qtd Esperada</TableHead>
                     <TableHead className="text-right">Qtd Recebida</TableHead>
                     <TableHead className="text-right">Qtd Endereçada</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {!orderItems || orderItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-500 py-4">
+                      <TableCell colSpan={8} className="text-center text-gray-500 py-4">
                         Nenhum item encontrado
                       </TableCell>
                     </TableRow>
@@ -478,9 +522,28 @@ export default function Receiving() {
                         <TableCell className="font-mono text-sm">
                           {item.productSku || "-"}
                         </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {item.batch || "-"}
+                        </TableCell>
                         <TableCell className="text-right">{item.expectedQuantity}</TableCell>
                         <TableCell className="text-right">{item.receivedQuantity}</TableCell>
                         <TableCell className="text-right">{item.addressedQuantity}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {item.status || "Pendente"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLabelItem({ productSku: item.productSku || '', batch: item.batch || '' })}
+                            disabled={!item.productSku || !item.batch}
+                            title="Imprimir Etiqueta"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -556,6 +619,63 @@ export default function Receiving() {
             }}
           />
         )}
+
+        {/* Modal de Impressão de Etiqueta */}
+        <Dialog open={!!labelItem} onOpenChange={() => setLabelItem(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Imprimir Etiqueta de Produto</DialogTitle>
+              <DialogDescription>
+                Etiqueta no formato Code-128: {labelItem?.productSku}{labelItem?.batch}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Quantidade de Etiquetas
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={labelQuantity}
+                  onChange={(e) => setLabelQuantity(parseInt(e.target.value) || 1)}
+                  className="w-full"
+                />
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">Preview:</p>
+                <div className="bg-white p-4 border rounded text-center">
+                  <p className="font-mono text-lg">{labelItem?.productSku}{labelItem?.batch}</p>
+                  <p className="text-xs text-gray-500 mt-2">Código de barras Code-128</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setLabelItem(null)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (labelItem) {
+                      generateLabelMutation.mutate({
+                        productSku: labelItem.productSku,
+                        batch: labelItem.batch,
+                        quantity: labelQuantity,
+                      });
+                    }
+                  }}
+                  disabled={generateLabelMutation.isPending}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir {labelQuantity > 1 ? `${labelQuantity} Etiquetas` : 'Etiqueta'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Modal de Erros de Negócio */}
         {businessError.ErrorModal}

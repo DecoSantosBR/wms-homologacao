@@ -781,6 +781,43 @@ export const appRouter = router({
         
         return itemsWithProducts;
       }),
+
+    generateLabel: protectedProcedure
+      .input(z.object({ 
+        productSku: z.string(),
+        batch: z.string(),
+        quantity: z.number().default(1),
+      }))
+      .mutation(async ({ input }) => {
+        const bwipjs = await import('bwip-js');
+        
+        // Formato: código do produto + lote
+        const labelCode = `${input.productSku}${input.batch}`;
+        
+        try {
+          // Gerar código de barras Code-128
+          const png = await bwipjs.default.toBuffer({
+            bcid: 'code128',
+            text: labelCode,
+            scale: 3,
+            height: 10,
+            includetext: true,
+            textxalign: 'center',
+          });
+          
+          // Retornar base64 para o frontend
+          const base64 = png.toString('base64');
+          return {
+            success: true,
+            labelCode,
+            image: `data:image/png;base64,${base64}`,
+            quantity: input.quantity,
+          };
+        } catch (error) {
+          console.error('Erro ao gerar etiqueta:', error);
+          throw new Error('Falha ao gerar etiqueta');
+        }
+      }),
   }),
 
   inventory: router({
