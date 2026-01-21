@@ -64,6 +64,9 @@ export async function getInventoryPositions(
     }
   }
 
+  // Filtrar apenas posições com quantidade > 0 (ocultar registros zerados)
+  conditions.push(gt(inventory.quantity, 0));
+
   // Filtros adicionais
   if (filters.productId) {
     conditions.push(eq(inventory.productId, filters.productId));

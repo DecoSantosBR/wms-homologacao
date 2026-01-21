@@ -378,3 +378,8 @@
 - [x] Estoque disponível negativo em tela de Posições de Estoque - RESOLVIDO: função getInventoryPositions em inventory.ts agora calcula reservedQuantity dinamicamente usando LEFT JOIN com pickingReservations + GROUP BY. Antes usava campo estático inventory.reservedQuantity que não era atualizado. Agora calcula: reservedQuantity = COALESCE(SUM(pickingReservations.quantity), 0)
 
 - [x] Status da onda permanece "Pendente" após separação completa - RESOLVIDO: adicionado status "completed" ao mapeamento de badges em PickingOrders.tsx (linha 523). Frontend não reconhecia o status "completed" do banco de dados e usava fallback "pending". Agora exibe badge "Completo" com ícone CheckCircle2.
+
+
+## Bug Reportado - 21/01/2026 (06:35)
+
+- [x] Posições de estoque com quantidade zero aparecem na listagem - RESOLVIDO: Adicionado filtro gt(inventory.quantity, 0) na linha 68 de inventory.ts para ocultar automaticamente registros zerados da tela de Posições de Estoque.
