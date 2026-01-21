@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO productLabels (labelCode, productId, productSku, batch, expiryDate, createdBy, createdAt) \nVALUES ('401460PTEST001', 1, '401460P', 'TEST001', '2026-12-31', 1, NOW())\nON DUPLICATE KEY UPDATE productId = productId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute INSERT INTO productLabels (labelCode, productId, productSku, batch, expiryDate, createdBy, createdAt) \nVALUES ('401460PTEST001', 1, '401460P', 'TEST001', '2026-12-31', 1, NOW())\nON DUPLICATE KEY UPDATE productId = productId;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 369
+}

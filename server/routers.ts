@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -786,15 +786,51 @@ export const appRouter = router({
       .input(z.object({ 
         productSku: z.string(),
         batch: z.string(),
+        productId: z.number().optional(),
+        expiryDate: z.string().optional(),
         quantity: z.number().default(1),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const bwipjs = await import('bwip-js');
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         
         // Formato: código do produto + lote
         const labelCode = `${input.productSku}${input.batch}`;
         
         try {
+          // Buscar produto se productId não foi fornecido
+          let productId = input.productId;
+          if (!productId) {
+            const [product] = await db.select({ id: products.id })
+              .from(products)
+              .where(eq(products.sku, input.productSku))
+              .limit(1);
+            
+            if (!product) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: `Produto com SKU ${input.productSku} não encontrado`,
+              });
+            }
+            productId = product.id;
+          }
+          
+          // Criar ou atualizar registro em productLabels
+          await db.insert(productLabels).values({
+            labelCode,
+            productId,
+            productSku: input.productSku,
+            batch: input.batch,
+            expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            createdBy: ctx.user!.id,
+          }).onDuplicateKeyUpdate({
+            set: {
+              productId,
+              expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            },
+          });
+          
           // Gerar código de barras Code-128
           const png = await bwipjs.default.toBuffer({
             bcid: 'code128',
@@ -816,7 +852,7 @@ export const appRouter = router({
         } catch (error: any) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: `Erro ao gerar etiquetas em lote: ${error.message}`,
+            message: `Erro ao gerar etiqueta: ${error.message}`,
           });
         }
       }),
@@ -826,10 +862,14 @@ export const appRouter = router({
         items: z.array(z.object({
           productSku: z.string(),
           batch: z.string(),
+          productId: z.number().optional(),
+          expiryDate: z.string().optional(),
           quantity: z.number(),
         })),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         const PDFDocument = (await import('pdfkit')).default;
         const bwipjs = await import('bwip-js');
         const fs = await import('fs');
@@ -855,6 +895,36 @@ export const appRouter = router({
           // Gerar etiquetas para cada item
           for (const item of input.items) {
             const labelCode = `${item.productSku}${item.batch}`;
+            
+            // Buscar produto se productId não foi fornecido
+            let productId = item.productId;
+            if (!productId) {
+              const [product] = await db.select({ id: products.id })
+                .from(products)
+                .where(eq(products.sku, item.productSku))
+                .limit(1);
+              
+              if (product) {
+                productId = product.id;
+              }
+            }
+            
+            // Criar ou atualizar registro em productLabels (apenas se productId foi encontrado)
+            if (productId) {
+              await db.insert(productLabels).values({
+                labelCode,
+                productId,
+                productSku: item.productSku,
+                batch: item.batch,
+                expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+                createdBy: ctx.user!.id,
+              }).onDuplicateKeyUpdate({
+                set: {
+                  productId,
+                  expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+                },
+              });
+            }
             
             // Gerar múltiplas cópias
             for (let copy = 0; copy < item.quantity; copy++) {
@@ -907,6 +977,46 @@ export const appRouter = router({
           console.error('Erro ao gerar etiqueta:', error);
           throw new Error('Falha ao gerar etiqueta');
         }
+      }),
+
+    lookupProductByLabel: protectedProcedure
+      .input(z.object({
+        labelCode: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        
+        // Buscar etiqueta no banco
+        const [label] = await db
+          .select({
+            labelCode: productLabels.labelCode,
+            productId: productLabels.productId,
+            productSku: productLabels.productSku,
+            batch: productLabels.batch,
+            expiryDate: productLabels.expiryDate,
+            productName: products.description,
+          })
+          .from(productLabels)
+          .leftJoin(products, eq(productLabels.productId, products.id))
+          .where(eq(productLabels.labelCode, input.labelCode))
+          .limit(1);
+        
+        if (!label) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Etiqueta ${input.labelCode} não encontrada no sistema`,
+          });
+        }
+        
+        return {
+          labelCode: label.labelCode,
+          productId: label.productId,
+          productSku: label.productSku,
+          productName: label.productName,
+          batch: label.batch,
+          expiryDate: label.expiryDate,
+        };
       }),
   }),
 

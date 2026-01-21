@@ -565,3 +565,63 @@
   - [x] Layout 2 colunas implementado no PDF para otimização de folha A4
   - [x] Destaque visual: linhas selecionadas com bg-blue-50
   - [x] Código pronto, aguardando dados de teste completos para validação visual do PDF
+
+
+## Bug - 21/01/2026 (16:20) - Scanneamento de Etiquetas Code-128
+
+- [ ] Etiquetas geradas pelo sistema não são reconhecidas quando lidas com leitor de código de barras dedicado:
+  - [ ] Problema: leitor lê a etiqueta corretamente (aparece no bloco de notas), mas sistema não reconhece
+  - [ ] Verificar formato da etiqueta gerada (SKU + Lote)
+  - [ ] Verificar se há caracteres especiais ou espaços indesejados
+  - [ ] Testar etiqueta real com exemplo: 401460P22D08LB109
+  - [ ] Verificar se sistema está buscando por código correto nas telas (Recebimento, Picking, Stage)
+  - [ ] Implementar busca por etiqueta em todas as telas relevantes
+
+
+## 📱 INTEGRAÇÃO DE SCANNER COM SISTEMA - 21/01/2026
+
+### Backend - Tabela productLabels
+- [x] Criar tabela productLabels para mapear códigos de barras a produto+lote
+- [x] Campos: labelCode, productId, productSku, batch, expiryDate, createdBy, createdAt
+- [x] Índice único em labelCode para busca rápida
+
+### Backend - Procedures de Geração de Etiquetas
+- [x] Modificar generateLabel para inserir registro em productLabels
+- [x] Modificar generateBatchLabels para inserir registro em productLabels para cada etiqueta
+- [x] Buscar productId automaticamente via SKU se não fornecido
+- [x] Suporte a onDuplicateKeyUpdate para evitar erros
+
+### Backend - Procedure de Lookup
+- [x] Criar lookupProductByLabel em receiving router
+- [x] Input: labelCode (string)
+- [x] Output: labelCode, productId, productSku, productName, batch, expiryDate
+- [x] LEFT JOIN com tabela products para trazer description
+- [x] Lançar NOT_FOUND se etiqueta não existir
+
+### Testes
+- [x] Criar label.lookup.test.ts com 3 testes
+- [x] Teste: buscar etiqueta existente com sucesso
+- [x] Teste: erro NOT_FOUND para etiqueta inexistente
+- [x] Teste: verificar todos os campos retornados
+- [x] Todos os testes passando (3/3)
+
+### Frontend - Página de Teste
+- [x] Criar ScannerTest.tsx para testar integração
+- [x] Input para digitar/escanear código
+- [x] Botão "Buscar" e suporte a Enter
+- [x] Alert verde com sucesso mostrando todos os dados
+- [x] Alert vermelho com erro se etiqueta não encontrada
+- [x] Rota /scanner-test adicionada ao App.tsx
+
+### Validação End-to-End
+- [x] Inserir etiqueta de teste manualmente (401460PTEST001)
+- [x] Testar busca via interface web
+- [x] Verificar exibição correta de: código, SKU, produto, lote, validade
+- [x] Sistema reconhece códigos de barras com sucesso! ✅
+
+### Próximos Passos (Não Implementados)
+- [ ] Integrar lookupProductByLabel na tela de conferência cega
+- [ ] Adicionar campo de scanner na tela de recebimento
+- [ ] Auto-preencher produto e lote quando código for scaneado
+- [ ] Testar com scanner físico de mão (handheld)
+- [ ] Adicionar feedback sonoro ao reconhecer código

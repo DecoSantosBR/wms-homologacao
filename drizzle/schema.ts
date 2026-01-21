@@ -821,6 +821,26 @@ export const stageCheckItems = mysqlTable("stageCheckItems", {
   productIdx: index("stage_item_product_idx").on(table.productId),
 }));
 
+/**
+ * Tabela global de etiquetas de produtos
+ * Mapeia códigos de etiqueta (SKU+Lote) para produtos e lotes de forma permanente
+ * Permite reconhecimento de etiquetas em qualquer módulo do sistema
+ */
+export const productLabels = mysqlTable("productLabels", {
+  id: int("id").autoincrement().primaryKey(),
+  labelCode: varchar("labelCode", { length: 200 }).notNull().unique(), // SKU + Lote (ex: 401460P22D08LB109)
+  productId: int("productId").notNull(),
+  productSku: varchar("productSku", { length: 100 }).notNull(),
+  batch: varchar("batch", { length: 100 }).notNull(),
+  expiryDate: date("expiryDate"), // Data de validade do lote
+  createdBy: int("createdBy").notNull(), // userId que gerou a etiqueta
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  labelCodeIdx: index("product_label_code_idx").on(table.labelCode),
+  productIdx: index("product_label_product_idx").on(table.productId),
+  skuBatchIdx: index("product_label_sku_batch_idx").on(table.productSku, table.batch),
+}));
+
 // ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
@@ -863,3 +883,5 @@ export type StageCheck = typeof stageChecks.$inferSelect;
 export type InsertStageCheck = typeof stageChecks.$inferInsert;
 export type StageCheckItem = typeof stageCheckItems.$inferSelect;
 export type InsertStageCheckItem = typeof stageCheckItems.$inferInsert;
+export type ProductLabel = typeof productLabels.$inferSelect;
+export type InsertProductLabel = typeof productLabels.$inferInsert;

@@ -162,6 +162,13 @@
       "when": 1768979334749,
       "tag": "0022_outgoing_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1769013281869,
+      "tag": "0023_burly_iron_monger",
+      "breakpoints": true
     }
   ]
 }
