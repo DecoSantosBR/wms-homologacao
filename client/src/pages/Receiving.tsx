@@ -99,33 +99,25 @@ export default function Receiving() {
 
   const generateLabelMutation = trpc.receiving.generateLabel.useMutation({
     onSuccess: (data) => {
-      // Abrir janela de impressão com a etiqueta
+      // Abrir PDF em nova aba para impressão
       const printWindow = window.open('', '_blank');
       if (printWindow) {
-        const labels = Array(labelQuantity).fill(data.image).map((img, i) => 
-          `<div style="page-break-after: ${i < labelQuantity - 1 ? 'always' : 'auto'}; text-align: center; padding: 20px;">
-            <img src="${img}" style="max-width: 100%;" />
-          </div>`
-        ).join('');
+        // Criar um blob do PDF e abrir
+        const byteCharacters = atob(data.image.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
         
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Etiqueta - ${data.labelCode}</title>
-              <style>
-                @media print {
-                  body { margin: 0; }
-                  @page { margin: 0.5cm; }
-                }
-              </style>
-            </head>
-            <body>
-              ${labels}
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
+        printWindow.location.href = blobUrl;
+        
+        // Aguardar carregar e imprimir
+        printWindow.onload = () => {
+          printWindow.print();
+        };
       }
       
       toast.success(`${labelQuantity} etiqueta(s) gerada(s) com sucesso`);

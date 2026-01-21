@@ -792,8 +792,16 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const bwipjs = await import('bwip-js');
+        const PDFDocument = (await import('pdfkit')).default;
+        const fs = await import('fs');
+        const path = await import('path');
+        const { fileURLToPath } = await import('url');
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const logoPath = path.join(__dirname, 'assets', 'medax-logo.png');
         
         // Formato: código do produto + lote
         const labelCode = `${input.productSku}${input.batch}`;
@@ -832,21 +840,44 @@ export const appRouter = router({
           });
           
           // Gerar código de barras Code-128
-          const png = await bwipjs.default.toBuffer({
+          const barcodeBuffer = await bwipjs.default.toBuffer({
             bcid: 'code128',
             text: labelCode,
-            scale: 3,
-            height: 10,
+            scale: 2,
+            height: 8,
             includetext: true,
             textxalign: 'center',
           });
           
-          // Retornar base64 para o frontend
-          const base64 = png.toString('base64');
+          // Criar PDF com logo + código de barras (10cm x 5cm)
+          const doc = new PDFDocument({
+            size: [283.46, 141.73], // 10cm x 5cm em pontos
+            margins: { top: 5, bottom: 5, left: 5, right: 5 },
+          });
+          
+          const chunks: Buffer[] = [];
+          doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+          
+          // Adicionar logo Med@x no topo (se existir)
+          if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 5, 5, { width: 80 });
+          }
+          
+          // Adicionar código de barras
+          doc.image(barcodeBuffer, 50, 50, { width: 180 });
+          
+          doc.end();
+          
+          // Aguardar conclusão do PDF
+          const pdfBuffer = await new Promise<Buffer>((resolve) => {
+            doc.on('end', () => resolve(Buffer.concat(chunks)));
+          });
+          
+          const base64 = pdfBuffer.toString('base64');
           return {
             success: true,
             labelCode,
-            image: `data:image/png;base64,${base64}`,
+            image: `data:application/pdf;base64,${base64}`,
             quantity: input.quantity,
           };
         } catch (error: any) {

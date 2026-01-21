@@ -625,3 +625,13 @@
 - [ ] Auto-preencher produto e lote quando código for scaneado
 - [ ] Testar com scanner físico de mão (handheld)
 - [ ] Adicionar feedback sonoro ao reconhecer código
+
+
+## 🎨 LOGO MED@X NAS ETIQUETAS - 21/01/2026
+
+- [x] Adicionar logo Med@x no diretório server/assets/
+- [x] Atualizar procedure generateLabel para incluir logo
+- [x] Corrigir renderização de PDF no frontend (blob URL)
+- [x] Testar geração de etiqueta com logo (teste unitário passando em 403ms)
+- [x] Validar exibição visual da etiqueta no navegador
+- [x] Etiquetas agora incluem logo Med@x + código de barras Code-128

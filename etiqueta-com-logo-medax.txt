@@ -1,0 +1,12 @@
+✅ ETIQUETA GERADA COM SUCESSO!
+
+A etiqueta foi gerada corretamente em formato PDF e está sendo exibida no navegador.
+
+Elementos visíveis na etiqueta:
+1. **Logo Med@x** - Aparece no topo da etiqueta (azul e cinza)
+2. **Código de barras Code-128** - Código: 401460P22D08LB109
+3. **Texto legível** - Abaixo do código de barras
+
+A etiqueta está pronta para impressão e pode ser escaneada por leitores de código de barras.
+
+Screenshot salvo em: /home/ubuntu/screenshots/5f81379e-a8bb-4e32-a_2026-01-21_12-08-39_6034.webp
