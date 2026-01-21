@@ -347,3 +347,12 @@
 
 - [x] Após finalizar separação da onda, status da onda permanece "pendente" - RESOLVIDO: criada procedure `completeWave` que verifica se todos os itens estão separados e atualiza status da onda para "completed". Adicionado botão "Finalizar Separação" na interface de execução da onda. Testes passando (2/2).
 - [x] Após finalizar separação da onda, status dos pedidos permanecem "pendente" - RESOLVIDO: procedure `completeWave` também atualiza status dos pedidos associados para "picked" e registra pickedBy e pickedAt. Testes validam atualização de ambos (onda e pedidos).
+
+
+## Feature - 21/01/2026 (04:50) - Finalização Automática de Onda
+
+- [x] Modificar `registerPickedItem` em `waveRouter.ts` para chamar automaticamente lógica de finalização quando último item for separado - CONCLUÍDO: adicionado ctx ao registerPickedItem e atualizado código para registrar pickedBy e pickedAt
+- [x] Atualizar status da onda para "completed" automaticamente - CONCLUÍDO: lógica já existia, apenas faltava registrar pickedBy/pickedAt
+- [x] Atualizar status dos pedidos associados para "picked" automaticamente - CONCLUÍDO: atualização automática implementada
+- [x] Criar teste vitest validando finalização automática - CONCLUÍDO: 2 testes passando (finalização automática e validação de itens pendentes)
+- [x] Remover necessidade de botão manual "Finalizar Separação" (manter apenas como fallback) - CONCLUÍDO: botão permanece como fallback para casos excepcionais

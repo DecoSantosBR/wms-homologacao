@@ -159,7 +159,7 @@ export const waveRouter = router({
       scannedCode: z.string(), // Código escaneado (etiqueta)
       quantity: z.number().min(1),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -266,17 +266,25 @@ export const waveRouter = router({
           : item.status === "picked"
       );
 
-      // 7. Atualizar status da onda se todos os itens foram completados
+      // 7. Atualizar status da onda se todos os itens foram completados (FINALIZAÇÃO AUTOMÁTICA)
       if (allCompleted) {
         await db
           .update(pickingWaves)
-          .set({ status: "completed" })
+          .set({ 
+            status: "completed",
+            pickedBy: ctx.user.id,
+            pickedAt: new Date(),
+          })
           .where(eq(pickingWaves.id, input.waveId));
 
         // Atualizar status dos pedidos associados
         await db
           .update(pickingOrders)
-          .set({ status: "picked" })
+          .set({ 
+            status: "picked",
+            pickedBy: ctx.user.id,
+            pickedAt: new Date(),
+          })
           .where(eq(pickingOrders.waveId, input.waveId));
       } else {
         // Atualizar status da onda para "picking" se ainda não estiver
