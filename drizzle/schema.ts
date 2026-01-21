@@ -422,7 +422,7 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   customerName: varchar("customerName", { length: 255 }),
   deliveryAddress: text("deliveryAddress"),
   priority: mysqlEnum("priority", ["emergency", "urgent", "normal", "low"]).default("normal").notNull(),
-  status: mysqlEnum("status", ["pending", "validated", "in_wave", "picking", "picked", "checking", "packed", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "validated", "in_wave", "picking", "picked", "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
   totalItems: int("totalItems").default(0).notNull(), // Total de linhas de itens
   totalQuantity: int("totalQuantity").default(0).notNull(), // Quantidade total de unidades
   scheduledDate: timestamp("scheduledDate"), // Data agendada para separação
@@ -775,6 +775,53 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
 }));
 
 // ============================================================================
+// MÓDULO 10: STAGE (CONFERÊNCIA DE EXPEDIÇÃO)
+// ============================================================================
+
+/**
+ * Tabela de conferências de expedição (Stage)
+ * Registra conferências cegas de pedidos antes da expedição
+ */
+export const stageChecks = mysqlTable("stageChecks", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  pickingOrderId: int("pickingOrderId").notNull(),
+  customerOrderNumber: varchar("customerOrderNumber", { length: 100 }).notNull(),
+  operatorId: int("operatorId").notNull(), // Usuário que fez a conferência
+  status: mysqlEnum("status", ["in_progress", "completed", "divergent"]).default("in_progress").notNull(),
+  hasDivergence: boolean("hasDivergence").default(false).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  tenantIdx: index("stage_check_tenant_idx").on(table.tenantId),
+  orderIdx: index("stage_check_order_idx").on(table.pickingOrderId),
+  statusIdx: index("stage_check_status_idx").on(table.status),
+}));
+
+/**
+ * Tabela de itens conferidos no Stage
+ * Registra cada produto conferido com quantidade esperada vs conferida
+ */
+export const stageCheckItems = mysqlTable("stageCheckItems", {
+  id: int("id").autoincrement().primaryKey(),
+  stageCheckId: int("stageCheckId").notNull(),
+  productId: int("productId").notNull(),
+  productSku: varchar("productSku", { length: 100 }).notNull(),
+  productName: varchar("productName", { length: 255 }).notNull(),
+  expectedQuantity: int("expectedQuantity").notNull(), // Quantidade separada
+  checkedQuantity: int("checkedQuantity").default(0).notNull(), // Quantidade conferida
+  divergence: int("divergence").default(0).notNull(), // Diferença (conferido - esperado)
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  checkIdx: index("stage_item_check_idx").on(table.stageCheckId),
+  productIdx: index("stage_item_product_idx").on(table.productId),
+}));
+
+// ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
 
@@ -812,3 +859,7 @@ export type PickingWave = typeof pickingWaves.$inferSelect;
 export type InsertPickingWave = typeof pickingWaves.$inferInsert;
 export type PickingWaveItem = typeof pickingWaveItems.$inferSelect;
 export type InsertPickingWaveItem = typeof pickingWaveItems.$inferInsert;
+export type StageCheck = typeof stageChecks.$inferSelect;
+export type InsertStageCheck = typeof stageChecks.$inferInsert;
+export type StageCheckItem = typeof stageCheckItems.$inferSelect;
+export type InsertStageCheckItem = typeof stageCheckItems.$inferInsert;

@@ -14,6 +14,7 @@ import { blindConferenceRouter } from "./blindConferenceRouter";
 import { stockRouter } from "./stockRouter";
 import { preallocationRouter } from "./preallocationRouter";
 import { waveRouter } from "./waveRouter";
+import { stageRouter } from "./stageRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +22,7 @@ export const appRouter = router({
   stock: stockRouter,
   preallocation: preallocationRouter,
   wave: waveRouter,
+  stage: stageRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

@@ -303,3 +303,31 @@
 ## Bug - 17/01/2026 (09:37)
 
 - [x] Lista de "Endereço Origem" exibe endereços com estoque TOTAL, mas deveria exibir apenas endereços com saldo DISPONÍVEL (descontando reservas) - RESOLVIDO: modificada função getLocationsWithStock em inventory.ts para calcular saldo disponível por endereço (SUM total - SUM reservado) e filtrar apenas endereços com saldo > 0. Agora a lista exibe apenas endereços que realmente podem ter produtos movimentados
+
+
+## Nova Feature - 17/01/2026 (09:45) - Módulo de Stage (Conferência de Expedição)
+
+### Backend
+- [x] Criar tabela stageChecks (id, pickingOrderId, operatorId, status, startedAt, completedAt, notes)
+- [x] Criar tabela stageCheckItems (id, stageCheckId, productId, expectedQuantity, checkedQuantity, divergence, scannedAt)
+- [x] Criar procedure getOrderForStage (busca pedido por customerOrderNumber com status 'completed')
+- [x] Criar procedure startStageCheck (inicia conferência e retorna itens sem quantidades)
+- [x] Criar procedure recordStageItem (registra item conferido)
+- [x] Criar procedure completeStageCheck (finaliza, valida divergências, baixa estoque)
+- [x] Implementar lógica de baixa de estoque (subtrai quantidade expedida das reservas)
+
+### Frontend
+- [x] Criar página StageCheck.tsx
+- [x] Implementar busca por customerOrderNumber (input + scanner)
+- [x] Criar interface de conferência cega (scanner de produtos)
+- [x] Exibir lista de itens conferidos (sem mostrar quantidade esperada)
+- [x] Implementar botão "Finalizar Conferência"
+- [x] Criar modal de divergências (se houver)
+- [x] Adicionar card "Stage" na Home com link para /stage/check
+
+### Regras de Negócio
+- [x] Apenas pedidos com status 'completed' podem ser conferidos
+- [x] Conferência é cega: não mostra quantidades esperadas durante scan
+- [x] Ao finalizar: compara conferido vs esperado
+- [x] Se OK: baixa estoque e muda status para 'staged'
+- [x] Se divergência: exibe modal e aguarda decisão (aceitar/rejeitar)

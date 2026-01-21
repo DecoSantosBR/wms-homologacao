@@ -148,6 +148,20 @@
       "when": 1768652601577,
       "tag": "0020_cultured_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1768979159762,
+      "tag": "0021_good_major_mapleleaf",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1768979334749,
+      "tag": "0022_outgoing_hulk",
+      "breakpoints": true
     }
   ]
 }

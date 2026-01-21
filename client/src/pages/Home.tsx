@@ -10,7 +10,8 @@ import {
   Upload,
   BarChart3,
   Warehouse,
-  Shield
+  Shield,
+  CheckSquare
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -81,6 +82,19 @@ export default function Home() {
         "Confirmar picking"
       ],
       href: "/picking"
+    },
+    {
+      title: "Stage",
+      description: "Conferência de expedição com validação cega",
+      icon: CheckSquare,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      features: [
+        "Conferir pedidos",
+        "Validar quantidades",
+        "Baixar estoque"
+      ],
+      href: "/stage/check"
     },
     {
       title: "Expedição",
