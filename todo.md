@@ -371,3 +371,10 @@
 ## Bug Crítico - 21/01/2026 (05:20)
 
 - [ ] Após finalização da onda, status da onda e pedidos não são atualizados corretamente no banco de dados - Lista mostra "Pendente" e pedidos permanecem com status antigo ao invés de "picked"
+
+
+## Bugs Resolvidos - 21/01/2026 (06:30)
+
+- [x] Estoque disponível negativo em tela de Posições de Estoque - RESOLVIDO: função getInventoryPositions em inventory.ts agora calcula reservedQuantity dinamicamente usando LEFT JOIN com pickingReservations + GROUP BY. Antes usava campo estático inventory.reservedQuantity que não era atualizado. Agora calcula: reservedQuantity = COALESCE(SUM(pickingReservations.quantity), 0)
+
+- [x] Status da onda permanece "Pendente" após separação completa - RESOLVIDO: adicionado status "completed" ao mapeamento de badges em PickingOrders.tsx (linha 523). Frontend não reconhecia o status "completed" do banco de dados e usava fallback "pending". Agora exibe badge "Completo" com ícone CheckCircle2.
