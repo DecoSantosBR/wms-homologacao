@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq, like, or, and, isNull, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
-import { users, tenants } from "../drizzle/schema";
+import { users, tenants, userRoles } from "../drizzle/schema";
 import { protectedProcedure, router } from "./_core/trpc";
 
 /**
@@ -84,6 +84,69 @@ export const userRouter = router({
         .orderBy(desc(users.createdAt));
 
       return userList;
+    }),
+
+  /**
+   * Create new user
+   */
+  create: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1, "Nome é obrigatório"),
+        email: z.string().email("Email inválido"),
+        role: z.enum(["admin", "user"]).default("user"),
+        tenantId: z.number().nullable().optional(),
+        roleIds: z.array(z.number()).optional(), // Perfis RBAC a serem atribuídos
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { name, email, role, tenantId, roleIds } = input;
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Check if email already exists
+      const [emailExists] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (emailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Este email já está em uso",
+        });
+      }
+
+      // Create user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          name,
+          email,
+          role,
+          tenantId: tenantId || null,
+          loginMethod: "manual", // Usuário criado manualmente pelo admin
+          openId: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // OpenID temporário
+        });
+
+      const userId = newUser.insertId;
+
+      // Assign RBAC roles if provided
+      if (roleIds && roleIds.length > 0) {
+        const roleAssignments = roleIds.map(roleId => ({
+          userId,
+          roleId,
+        }));
+        await db.insert(userRoles).values(roleAssignments);
+      }
+
+      return { 
+        success: true, 
+        message: "Usuário criado com sucesso",
+        userId,
+      };
     }),
 
   /**

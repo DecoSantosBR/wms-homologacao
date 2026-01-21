@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users as UsersIcon, Pencil, Shield, User as UserIcon, Building2, Search } from "lucide-react";
+import { Users as UsersIcon, Pencil, Shield, User as UserIcon, Building2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -36,12 +36,20 @@ export default function Users() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"admin" | "user" | undefined>(undefined);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     role: "user" as "admin" | "user",
     tenantId: null as number | null,
+  });
+  const [createFormData, setCreateFormData] = useState({
+    name: "",
+    email: "",
+    role: "user" as "admin" | "user",
+    tenantId: null as number | null,
+    roleIds: [] as number[],
   });
 
   const utils = trpc.useUtils();
@@ -54,8 +62,28 @@ export default function Users() {
 
   const { data: tenants } = trpc.tenants.list.useQuery();
   const { data: stats } = trpc.users.stats.useQuery();
+  const { data: roles } = trpc.roles.listRoles.useQuery({ includeInactive: false });
 
   // Mutations
+  const createUserMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      toast.success("Usuário criado com sucesso");
+      utils.users.list.invalidate();
+      utils.users.stats.invalidate();
+      setCreateDialogOpen(false);
+      setCreateFormData({
+        name: "",
+        email: "",
+        role: "user",
+        tenantId: null,
+        roleIds: [],
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const updateUserMutation = trpc.users.update.useMutation({
     onSuccess: () => {
       toast.success("Usuário atualizado com sucesso");
@@ -77,6 +105,15 @@ export default function Users() {
       tenantId: user.tenantId,
     });
     setEditDialogOpen(true);
+  };
+
+  const handleCreateSubmit = () => {
+    if (!createFormData.name || !createFormData.email) {
+      toast.error("Nome e email são obrigatórios");
+      return;
+    }
+
+    createUserMutation.mutate(createFormData);
   };
 
   const handleUpdateSubmit = () => {
@@ -166,7 +203,7 @@ export default function Users() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Filters and Actions */}
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex gap-4">
@@ -192,6 +229,10 @@ export default function Users() {
                   <SelectItem value="user">Usuários</SelectItem>
                 </SelectContent>
               </Select>
+              <Button onClick={() => setCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Novo Usuário
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -282,6 +323,114 @@ export default function Users() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Create Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Usuário</DialogTitle>
+            <DialogDescription>
+              Preencha as informações para criar um novo usuário no sistema
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-name">Nome *</Label>
+              <Input
+                id="create-name"
+                placeholder="Nome completo do usuário"
+                value={createFormData.name}
+                onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-email">Email *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={createFormData.email}
+                onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-role">Tipo de Usuário</Label>
+              <Select
+                value={createFormData.role}
+                onValueChange={(value) => setCreateFormData({ ...createFormData, role: value as "admin" | "user" })}
+              >
+                <SelectTrigger id="create-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-tenant">Cliente</Label>
+              <Select
+                value={createFormData.tenantId?.toString() ?? "none"}
+                onValueChange={(value) =>
+                  setCreateFormData({ ...createFormData, tenantId: value === "none" ? null : parseInt(value) })
+                }
+              >
+                <SelectTrigger id="create-tenant">
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem cliente</SelectItem>
+                  {tenants?.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-roles">Perfis de Acesso (RBAC)</Label>
+              <Select
+                value={createFormData.roleIds[0]?.toString() ?? "none"}
+                onValueChange={(value) =>
+                  setCreateFormData({ 
+                    ...createFormData, 
+                    roleIds: value === "none" ? [] : [parseInt(value)] 
+                  })
+                }
+              >
+                <SelectTrigger id="create-roles">
+                  <SelectValue placeholder="Selecione um perfil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem perfil</SelectItem>
+                  {roles?.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name} ({role.permissionCount} permissões)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Você poderá atribuir múltiplos perfis após a criação na tela de Perfis
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateSubmit} disabled={createUserMutation.isPending}>
+              {createUserMutation.isPending ? "Criando..." : "Criar Usuário"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

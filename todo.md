@@ -447,5 +447,18 @@
 
 ## Bugs/Features Reportados - 21/01/2026 (13:15)
 
-- [ ] Perfis não aparecem na tela de Perfis - Tela Roles.tsx não está exibindo os perfis cadastrados. Verificar se query listRoles está funcionando ou se há problema no frontend.
-- [ ] Implementar botão "Novo Usuário" - Adicionar botão na tela de Usuários permitindo criar novo usuário com formulário completo (nome, email, perfis).
+- [x] Perfis não aparecem na tela de Perfis - RESOLVIDO: rolePermissions table populada + listRoles retorna permissionCount + frontend usa role.permissionCount
+- [x] Implementar botão "Novo Usuário" - CONCLUÍDO: Botão + modal com formulário completo + backend create procedure + testes unitários
+
+
+## Nova Feature - 21/01/2026 (13:50) - Formulário de Criação de Usuário
+
+- [x] Implementar formulário completo de criação de usuário - CONCLUÍDO:
+  - [x] Backend: procedure create em userRouter.ts (validação de email único, criação de usuário com openId temporário, atribuição de perfis RBAC via userRoles)
+  - [x] Frontend: botão "Novo Usuário" em Users.tsx com ícone UserPlus
+  - [x] Frontend: modal com campos nome*, email*, tipo de usuário (admin/user), cliente (dropdown com tenants), perfis RBAC (dropdown com contagem de permissões)
+  - [x] Validação de campos obrigatórios (nome e email)
+  - [x] Feedback de sucesso/erro com toast (sonner)
+  - [x] Atualização automática da lista e estatísticas após criação via invalidate
+  - [x] Testado com sucesso: criado usuário João Silva Teste com perfil Operador de Recebimento
+  - [x] Testes unitários para procedure create (5/5 passando): criação básica, atribuição RBAC, validação email, admin, sem perfil
