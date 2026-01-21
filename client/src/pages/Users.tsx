@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Users as UsersIcon, Pencil, Shield, User as UserIcon, Building2, Search, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -439,32 +440,58 @@ export default function Users() {
               </Select>
             </div>
 
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="create-roles">Perfis de Acesso (RBAC)</Label>
-              <Select
-                value={createFormData.roleIds[0]?.toString() ?? "none"}
-                onValueChange={(value) =>
-                  setCreateFormData({ 
-                    ...createFormData, 
-                    roleIds: value === "none" ? [] : [parseInt(value)] 
-                  })
-                }
-              >
-                <SelectTrigger id="create-roles">
-                  <SelectValue placeholder="Selecione um perfil" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem perfil</SelectItem>
-                  {roles?.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name} ({role.permissionCount} permissões)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Você poderá atribuir múltiplos perfis após a criação na tela de Perfis
-              </p>
+            <div className="col-span-2 space-y-3">
+              <div>
+                <Label>Perfis de Acesso (RBAC)</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selecione um ou mais perfis para atribuir ao usuário
+                </p>
+              </div>
+              <div className="border rounded-lg p-4 space-y-3 max-h-64 overflow-y-auto">
+                {roles && roles.length > 0 ? (
+                  roles.map((role) => (
+                    <div key={role.id} className="flex items-start space-x-3">
+                      <Checkbox
+                        id={`role-${role.id}`}
+                        checked={createFormData.roleIds.includes(role.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setCreateFormData({
+                              ...createFormData,
+                              roleIds: [...createFormData.roleIds, role.id],
+                            });
+                          } else {
+                            setCreateFormData({
+                              ...createFormData,
+                              roleIds: createFormData.roleIds.filter((id) => id !== role.id),
+                            });
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <label
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {role.name}
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {role.permissionCount} permissões
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum perfil disponível
+                  </p>
+                )}
+              </div>
+              {createFormData.roleIds.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>{createFormData.roleIds.length}</strong> perfil(is) selecionado(s)
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

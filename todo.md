@@ -477,3 +477,15 @@
   - [x] Atualização automática da lista e estatísticas após exclusão via invalidate
   - [x] Testes unitários para procedure delete (5/5 passando): exclusão básica, cascade delete, usuário inexistente, proteção owner, sem perfis
   - [x] Testado manualmente: usuário Juan excluído com sucesso, estatísticas atualizadas (7→6, admins 3→2)
+
+
+## Melhoria - 21/01/2026 (14:30) - Seleção Múltipla de Perfis
+
+- [x] Implementar seleção múltipla de perfis RBAC no modal de criação - CONCLUÍDO:
+  - [x] Substituir Select simples por lista de Checkboxes com scroll (max-height: 256px)
+  - [x] Permitir seleção de múltiplos perfis simultaneamente via checkboxes
+  - [x] Exibir contagem de permissões de cada perfil abaixo do nome
+  - [x] Mostrar contador dinâmico: "X perfil(is) selecionado(s)"
+  - [x] Handler já suportava array de roleIds, sem necessidade de alteração no backend
+  - [x] Testado com sucesso: criado usuário Maria Silva Teste Multi com 3 perfis (Gerente Recebimento, Operador Recebimento, Analista Estoque)
+  - [x] Verificado na tela de Perfis: 3 perfis corretamente atribuídos via userRoles
