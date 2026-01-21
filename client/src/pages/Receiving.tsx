@@ -46,6 +46,9 @@ export default function Receiving() {
   const [importPreallocationOrderId, setImportPreallocationOrderId] = useState<number | null>(null);
   const [labelItem, setLabelItem] = useState<{ productSku: string; batch: string } | null>(null);
   const [labelQuantity, setLabelQuantity] = useState(1);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [batchLabelConfig, setBatchLabelConfig] = useState<{ [key: number]: number }>({});
+  const [showBatchLabelModal, setShowBatchLabelModal] = useState(false);
   
   // Hook de erros de negócio
   const businessError = useBusinessError();
@@ -130,7 +133,35 @@ export default function Receiving() {
       setLabelQuantity(1);
     },
     onError: (error) => {
-      toast.error("Erro ao gerar etiqueta: " + error.message);
+      toast.error(`Erro ao gerar etiqueta: ${error.message}`);
+    },
+  });
+
+  const generateBatchLabelsMutation = trpc.receiving.generateBatchLabels.useMutation({
+    onSuccess: (data) => {
+      // Abrir PDF em nova aba
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Etiquetas - Med@x</title>
+            </head>
+            <body style="margin: 0; padding: 0;">
+              <embed src="${data.pdf}" type="application/pdf" width="100%" height="100%" />
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+      toast.success(`${data.totalLabels} etiqueta(s) gerada(s) com sucesso!`);
+      setShowBatchLabelModal(false);
+      setSelectedItems([]);
+      setBatchLabelConfig({});
+    },
+    onError: (error) => {
+      toast.error(`Erro ao gerar etiquetas em lote: ${error.message}`);
     },
   });
 
@@ -490,12 +521,42 @@ export default function Receiving() {
               <DialogTitle>Itens da Ordem</DialogTitle>
               <DialogDescription>
                 Visualize os produtos desta ordem de recebimento
+                {selectedItems.length > 0 && (
+                  <span className="ml-2 text-blue-600 font-medium">
+                    • {selectedItems.length} item(ns) selecionado(s)
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
+            {selectedItems.length > 0 && (
+              <div className="flex justify-end mt-2">
+                <Button
+                  size="sm"
+                  onClick={() => setShowBatchLabelModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Selecionadas ({selectedItems.length})
+                </Button>
+              </div>
+            )}
             <div className="mt-4">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={(orderItems?.length || 0) > 0 && selectedItems.length === (orderItems?.filter(i => i.productSku && i.batch).length || 0)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedItems(orderItems?.filter(i => i.productSku && i.batch).map(i => i.id) || []);
+                          } else {
+                            setSelectedItems([]);
+                          }
+                        }}
+                        title="Selecionar todos os itens"
+                      />
+                    </TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Lote</TableHead>
@@ -509,13 +570,30 @@ export default function Receiving() {
                 <TableBody>
                   {!orderItems || orderItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-gray-500 py-4">
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-4">
                         Nenhum item encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
                     orderItems.map((item, index) => (
-                      <TableRow key={`${item.id}-${index}`}>
+                      <TableRow 
+                        key={`${item.id}-${index}`}
+                        className={selectedItems.includes(item.id) ? "bg-blue-50" : ""}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedItems.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedItems([...selectedItems, item.id]);
+                              } else {
+                                setSelectedItems(selectedItems.filter(id => id !== item.id));
+                              }
+                            }}
+                            disabled={!item.productSku || !item.batch}
+                            title={`Selecionar item ${item.productSku}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {item.productDescription || "-"}
                         </TableCell>
@@ -668,6 +746,75 @@ export default function Receiving() {
                     }
                   }}
                   disabled={generateLabelMutation.isPending}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  {generateLabelMutation.isPending ? "Gerando..." : "Imprimir"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Configuração de Impressão em Lote */}
+        <Dialog open={showBatchLabelModal} onOpenChange={() => setShowBatchLabelModal(false)}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Configurar Impressão em Lote</DialogTitle>
+              <DialogDescription>
+                Configure a quantidade de cópias para cada item selecionado
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {orderItems?.filter(item => selectedItems.includes(item.id)).map(item => (
+                <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{item.productDescription || "Produto"}</p>
+                    <p className="text-sm text-gray-600 font-mono">
+                      SKU: {item.productSku} | Lote: {item.batch}
+                    </p>
+                  </div>
+                  <div className="w-32">
+                    <label className="text-xs text-gray-600 block mb-1">Cópias</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={batchLabelConfig[item.id] || 1}
+                      onChange={(e) => {
+                        const quantity = parseInt(e.target.value) || 1;
+                        setBatchLabelConfig({ ...batchLabelConfig, [item.id]: quantity });
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">
+                  Total de etiquetas: {Object.values(batchLabelConfig).reduce((sum, qty) => sum + qty, selectedItems.length)}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBatchLabelModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    const items = orderItems?.filter(item => selectedItems.includes(item.id)).map(item => ({
+                      productSku: item.productSku || '',
+                      batch: item.batch || '',
+                      quantity: batchLabelConfig[item.id] || 1,
+                    })) || [];
+                    
+                    if (items.length > 0) {
+                      generateBatchLabelsMutation.mutate({ items });
+                    }
+                  }}
+                  disabled={generateBatchLabelsMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Printer className="h-4 w-4 mr-2" />
                   Imprimir {labelQuantity > 1 ? `${labelQuantity} Etiquetas` : 'Etiqueta'}

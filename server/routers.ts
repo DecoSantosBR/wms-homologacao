@@ -813,6 +813,96 @@ export const appRouter = router({
             image: `data:image/png;base64,${base64}`,
             quantity: input.quantity,
           };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Erro ao gerar etiquetas em lote: ${error.message}`,
+          });
+        }
+      }),
+
+    generateBatchLabels: protectedProcedure
+      .input(z.object({
+        items: z.array(z.object({
+          productSku: z.string(),
+          batch: z.string(),
+          quantity: z.number(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const PDFDocument = (await import('pdfkit')).default;
+        const bwipjs = await import('bwip-js');
+        const fs = await import('fs');
+        const path = await import('path');
+        const { fileURLToPath } = await import('url');
+        
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const logoPath = path.join(__dirname, 'assets', 'medax-logo.png');
+        
+        try {
+          // Criar PDF com tamanho de etiqueta 10cm x 5cm (283x142 pontos)
+          const doc = new PDFDocument({
+            size: [283, 142],
+            margins: { top: 5, bottom: 5, left: 5, right: 5 },
+          });
+          
+          const chunks: Buffer[] = [];
+          doc.on('data', (chunk) => chunks.push(chunk));
+          
+          let isFirstLabel = true;
+          
+          // Gerar etiquetas para cada item
+          for (const item of input.items) {
+            const labelCode = `${item.productSku}${item.batch}`;
+            
+            // Gerar múltiplas cópias
+            for (let copy = 0; copy < item.quantity; copy++) {
+              if (!isFirstLabel) {
+                doc.addPage();
+              }
+              isFirstLabel = false;
+              
+              // Adicionar logo Med@x no topo
+              if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, 5, 5, { width: 80 });
+              }
+              
+              // Gerar código de barras
+              const barcodeBuffer = await bwipjs.default.toBuffer({
+                bcid: 'code128',
+                text: labelCode,
+                scale: 2,
+                height: 8,
+                includetext: true,
+                textxalign: 'center',
+              });
+              
+              // Adicionar código de barras centralizado
+              doc.image(barcodeBuffer, 41, 50, { width: 200, align: 'center' });
+              
+              // Adicionar informações do produto
+              doc.fontSize(8)
+                 .text(`SKU: ${item.productSku}`, 5, 110, { width: 273, align: 'left' })
+                 .text(`Lote: ${item.batch}`, 5, 122, { width: 273, align: 'left' });
+            }
+          }
+          
+          doc.end();
+          
+          // Aguardar finalização do PDF
+          await new Promise<void>((resolve) => {
+            doc.on('end', () => resolve());
+          });
+          
+          const pdfBuffer = Buffer.concat(chunks);
+          const base64 = pdfBuffer.toString('base64');
+          
+          return {
+            success: true,
+            pdf: `data:application/pdf;base64,${base64}`,
+            totalLabels: input.items.reduce((sum, item) => sum + item.quantity, 0),
+          };
         } catch (error) {
           console.error('Erro ao gerar etiqueta:', error);
           throw new Error('Falha ao gerar etiqueta');

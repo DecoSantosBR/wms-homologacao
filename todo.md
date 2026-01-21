@@ -548,3 +548,20 @@
   - [x] Frontend: botão "Imprimir" (abre dialog de impressão do navegador)
   - [x] Frontend: botão "Baixar PNG" (download da imagem com nome: etiqueta-{sku}-{lote}.png)
   - [x] Código pronto e testado, aguardando dados de teste completos para validação visual
+
+
+## Melhorias - 21/01/2026 (16:00) - Sistema de Etiquetas Avançado
+
+- [x] Implementar impressão em lote de etiquetas - CONCLUÍDO:
+  - [x] Backend: procedure generateBatchLabels criada em server/routers.ts com PDFKit
+  - [x] Layout otimizado: etiquetas 10cm x 5cm (283x142 pontos) para impressoras térmicas
+  - [x] Logo Med@x: adicionado no topo de cada etiqueta (copiado de /home/ubuntu/upload/LogoMed@x(altaresolução).png para /home/ubuntu/wms-medax/medax-logo.png)
+  - [x] Suporte a quantidade de cópias: modal com input 1-100 por produto
+  - [x] Frontend: checkboxes na tabela (header "selecionar todos" + individual por linha)
+  - [x] Frontend: botão "Imprimir Selecionadas (X)" condicional (só aparece quando selectedItems.length > 0)
+  - [x] Frontend: modal de configuração mostrando SKU+Lote de cada item com input de cópias
+  - [x] Frontend: contador total dinâmico de etiquetas (Object.values(batchLabelConfig).reduce())
+  - [x] PDF abre em nova aba com embed para preview automático
+  - [x] Layout 2 colunas implementado no PDF para otimização de folha A4
+  - [x] Destaque visual: linhas selecionadas com bg-blue-50
+  - [x] Código pronto, aguardando dados de teste completos para validação visual do PDF
