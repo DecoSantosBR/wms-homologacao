@@ -7,6 +7,7 @@ describe("Volume Labels Generation", () => {
       {
         customerOrderNumber: "PED-001",
         customerName: "Cliente Teste",
+        tenantName: "Tenant Teste",
         volumeNumber: 1,
         totalVolumes: 1,
       },
@@ -24,6 +25,7 @@ describe("Volume Labels Generation", () => {
     const labels = Array.from({ length: 3 }, (_, i) => ({
       customerOrderNumber: "PED-002",
       customerName: "Cliente Multi-Volume",
+      tenantName: "Tenant Multi",
       volumeNumber: i + 1,
       totalVolumes: 3,
     }));
@@ -40,6 +42,7 @@ describe("Volume Labels Generation", () => {
       {
         customerOrderNumber: "PED-003",
         customerName: "Cliente Ação & Cia Ltda",
+        tenantName: "Tenant Especial",
         volumeNumber: 1,
         totalVolumes: 1,
       },
@@ -55,6 +58,7 @@ describe("Volume Labels Generation", () => {
     const labels = Array.from({ length: 5 }, (_, i) => ({
       customerOrderNumber: "PED-004",
       customerName: "Cliente Teste",
+      tenantName: "Tenant Grande",
       volumeNumber: i + 1,
       totalVolumes: 5,
     }));

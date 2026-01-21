@@ -111,6 +111,7 @@ export const stageRouter = {
     .input(z.object({
       customerOrderNumber: z.string(),
       customerName: z.string(),
+      tenantName: z.string(),
       totalVolumes: z.number().min(1),
     }))
     .mutation(async ({ input }) => {
@@ -119,6 +120,7 @@ export const stageRouter = {
       const labels = Array.from({ length: input.totalVolumes }, (_, i) => ({
         customerOrderNumber: input.customerOrderNumber,
         customerName: input.customerName,
+        tenantName: input.tenantName,
         volumeNumber: i + 1,
         totalVolumes: input.totalVolumes,
       }));

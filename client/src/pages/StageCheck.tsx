@@ -181,6 +181,7 @@ export default function StageCheck() {
       const result = await generateLabelsMutation.mutateAsync({
         customerOrderNumber,
         customerName: orderInfo?.order?.customerName || "N/A",
+        tenantName: orderInfo?.tenantName || "N/A",
         totalVolumes: qty,
       });
 

@@ -393,3 +393,8 @@
 ## Bug Reportado - 21/01/2026 (07:15)
 
 - [x] Etiquetas de volumes mostram "Destinatário: N/A" - RESOLVIDO: Corrigido acesso ao customerName em StageCheck.tsx linha 183. Antes: orderInfo?.customerName (incorreto). Depois: orderInfo?.order?.customerName (correto, pois getOrderForStage retorna { order, items }).
+
+
+## Melhoria Solicitada - 21/01/2026 (07:25)
+
+- [x] Adicionar logo Med@x e nome do cliente (tenant) às etiquetas de volumes - CONCLUÍDO: Logo Med@x posicionado no canto superior esquerdo (60x20pt), código de barras ao lado. Campo "Cliente:" adicionado abaixo do destinatário. Backend modificado para incluir tenantName via JOIN com tabela tenants. Arquivos: server/volumeLabels.ts, server/stage.ts, server/stageRouter.ts, client/src/pages/StageCheck.tsx. Testes: 4/4 passando.

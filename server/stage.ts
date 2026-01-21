@@ -9,6 +9,7 @@ import {
   inventory,
   pickingReservations,
   labelAssociations,
+  tenants,
 } from "../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 
@@ -30,8 +31,12 @@ export async function getOrderForStage(customerOrderNumber: string, tenantId: nu
   }
 
   const orders = await dbConn
-    .select()
+    .select({
+      order: pickingOrders,
+      tenantName: tenants.name,
+    })
     .from(pickingOrders)
+    .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
     .where(and(...conditions))
     .limit(1);
 
@@ -42,7 +47,7 @@ export async function getOrderForStage(customerOrderNumber: string, tenantId: nu
     });
   }
 
-  const order = orders[0];
+  const { order, tenantName } = orders[0];
 
   // Buscar itens do pedido
   const items = await dbConn
@@ -61,6 +66,7 @@ export async function getOrderForStage(customerOrderNumber: string, tenantId: nu
   return {
     order,
     items,
+    tenantName: tenantName || "N/A",
   };
 }
 
