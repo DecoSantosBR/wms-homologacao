@@ -50,13 +50,13 @@ export const stageRouter = {
   recordStageItem: protectedProcedure
     .input(z.object({
       stageCheckId: z.number(),
-      productSku: z.string(),
+      labelCode: z.string(),
       quantity: z.number().positive(),
     }))
     .mutation(async ({ input, ctx }) => {
       return await recordStageItem({
         stageCheckId: input.stageCheckId,
-        productSku: input.productSku,
+        labelCode: input.labelCode,
         quantity: input.quantity,
         tenantId: ctx.user.tenantId,
       });

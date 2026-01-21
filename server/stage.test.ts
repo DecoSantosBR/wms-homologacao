@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getDb } from "./db";
-import { pickingOrders, pickingOrderItems, products, stageChecks, stageCheckItems, inventory, pickingReservations, tenants } from "../drizzle/schema";
+import { pickingOrders, pickingOrderItems, products, stageChecks, stageCheckItems, inventory, pickingReservations, tenants, labelAssociations } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrderForStage, startStageCheck, recordStageItem, completeStageCheck } from "./stage";
 
@@ -9,6 +9,7 @@ describe("Stage (Conferência de Expedição)", () => {
   let testProductId: number;
   let testPickingOrderId: number;
   let testCustomerOrderNumber: string;
+  let testLabelCode: string;
 
   beforeAll(async () => {
     const db = await getDb();
@@ -47,6 +48,19 @@ describe("Stage (Conferência de Expedição)", () => {
       requestedQuantity: 100,
       requestedUM: "unit",
       status: "picked",
+    });
+
+    // Criar etiqueta de teste (labelAssociation)
+    testLabelCode = `TEST-LABEL-${Date.now()}`;
+    await db.insert(labelAssociations).values({
+      sessionId: 1, // Session ID fictício para teste
+      labelCode: testLabelCode,
+      productId: testProductId,
+      batch: "LOTE-TEST-001",
+      unitsPerPackage: 1, // 1 unidade por embalagem para teste
+      packagesRead: 100, // 100 embalagens lidas
+      totalUnits: 100, // Total de 100 unidades
+      associatedBy: 1,
     });
   });
 
@@ -117,20 +131,16 @@ describe("Stage (Conferência de Expedição)", () => {
 
     const stageCheckId = activeChecks[0].id;
 
-    // Buscar produto
-    const product = await db.select().from(products).where(eq(products.id, testProductId)).limit(1);
-    const productSku = product[0].sku;
-
-    // Registrar item
+    // Registrar item usando etiqueta de teste
     const result = await recordStageItem({
       stageCheckId,
-      productSku,
+      labelCode: testLabelCode,
       quantity: 50,
       tenantId: testTenantId,
     });
 
     expect(result).toBeDefined();
-    expect(result.productSku).toBe(productSku);
+    expect(result.labelCode).toBe(testLabelCode);
     expect(result.checkedQuantity).toBe(50);
     expect(result.message).toContain("registrada");
 
@@ -249,14 +259,10 @@ describe("Stage (Conferência de Expedição)", () => {
       tenantId: testTenantId,
     });
 
-    // Buscar produto
-    const product = await db.select().from(products).where(eq(products.id, testProductId)).limit(1);
-    const productSku = product[0].sku;
-
-    // Registrar quantidade correta
+    // Registrar quantidade correta usando etiqueta de teste
     await recordStageItem({
       stageCheckId: checkResult.stageCheckId,
-      productSku,
+      labelCode: testLabelCode,
       quantity: 50,
       tenantId: testTenantId,
     });

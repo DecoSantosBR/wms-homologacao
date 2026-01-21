@@ -336,3 +336,8 @@
 ## Bug - 21/01/2026 (04:19)
 
 - [x] Erro ao iniciar conferência de Stage: tenantId null - RESOLVIDO: modificada função startStageCheck para buscar tenantId do pedido (pickingOrders.tenantId) ao invés de usar tenantId do usuário. Agora usuários admin (tenantId null) podem iniciar conferências normalmente. Todos os testes passando.
+
+
+## Bug - 21/01/2026 (04:21)
+
+- [x] Erro ao registrar item no Stage: "Produto 401460P22D08LB108 não encontrado" - RESOLVIDO: modificada função recordStageItem para buscar produto por labelAssociations.labelCode ao invés de products.gtin. Agora o sistema busca pela etiqueta de lote gerada no recebimento (mesma usada na separação). Frontend atualizado para exibir "Etiqueta do Produto" ao invés de "SKU". Testes atualizados e passando (5/5).

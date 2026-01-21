@@ -8,6 +8,7 @@ import {
   products,
   inventory,
   pickingReservations,
+  labelAssociations,
 } from "../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 
@@ -156,27 +157,42 @@ export async function startStageCheck(params: {
 /**
  * Registra item conferido (produto bipado + quantidade informada)
  * Atualiza quantidade conferida do item
+ * Busca produto pela etiqueta de lote (labelCode) gerada no recebimento
  */
 export async function recordStageItem(params: {
   stageCheckId: number;
-  productSku: string;
+  labelCode: string;
   quantity: number;
   tenantId: number | null;
 }) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
-  // Verificar se o produto existe no pedido
-  const conditions = [eq(products.sku, params.productSku)];
+  // Buscar produto pela etiqueta de lote (labelAssociations)
+  const labelResult = await dbConn
+    .select({
+      productId: labelAssociations.productId,
+      batch: labelAssociations.batch,
+      expiryDate: labelAssociations.expiryDate,
+    })
+    .from(labelAssociations)
+    .where(eq(labelAssociations.labelCode, params.labelCode))
+    .limit(1);
 
-  if (params.tenantId !== null) {
-    conditions.push(eq(products.tenantId, params.tenantId));
+  const label = labelResult[0];
+
+  if (!label) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `Etiqueta ${params.labelCode} não encontrada. Verifique se o produto foi recebido corretamente.`,
+    });
   }
 
+  // Buscar dados do produto
   const productsResult = await dbConn
     .select()
     .from(products)
-    .where(and(...conditions))
+    .where(eq(products.id, label.productId))
     .limit(1);
 
   const product = productsResult[0];
@@ -184,7 +200,15 @@ export async function recordStageItem(params: {
   if (!product) {
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: `Produto ${params.productSku} não encontrado`,
+      message: `Produto associado à etiqueta ${params.labelCode} não encontrado`,
+    });
+  }
+
+  // Validar tenantId se necessário
+  if (params.tenantId !== null && product.tenantId !== params.tenantId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: `Produto não pertence ao tenant atual`,
     });
   }
 
@@ -205,7 +229,7 @@ export async function recordStageItem(params: {
   if (!item) {
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: `Produto ${params.productSku} não faz parte deste pedido`,
+      message: `Produto ${product.sku} (etiqueta: ${params.labelCode}) não faz parte deste pedido`,
     });
   }
 
@@ -222,10 +246,12 @@ export async function recordStageItem(params: {
     .where(eq(stageCheckItems.id, item.id));
 
   return {
-    productSku: params.productSku,
+    productSku: product.sku,
+    labelCode: params.labelCode,
+    batch: label.batch,
     productName: product.description,
     checkedQuantity: newCheckedQuantity,
-    message: `${params.quantity} unidade(s) registrada(s)`,
+    message: `Quantidade registrada: ${params.quantity}. Total conferido: ${newCheckedQuantity}`,
   };
 }
 

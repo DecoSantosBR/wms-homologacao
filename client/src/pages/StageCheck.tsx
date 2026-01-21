@@ -92,7 +92,7 @@ export default function StageCheck() {
     e.preventDefault();
 
     if (!currentSku.trim() || !currentQuantity.trim()) {
-      toast.error("Informe o SKU e a quantidade");
+      toast.error("Informe a etiqueta e a quantidade");
       return;
     }
 
@@ -105,7 +105,7 @@ export default function StageCheck() {
     try {
       const result = await recordItemMutation.mutateAsync({
         stageCheckId: stageCheckId!,
-        productSku: currentSku.trim(),
+        labelCode: currentSku.trim(),
         quantity,
       });
 
@@ -247,12 +247,12 @@ export default function StageCheck() {
           </h2>
           <form onSubmit={handleRecordItem} className="space-y-4">
             <div>
-              <Label htmlFor="sku">SKU do Produto</Label>
+              <Label htmlFor="sku">Etiqueta do Produto</Label>
               <Input
                 id="sku"
                 value={currentSku}
                 onChange={(e) => setCurrentSku(e.target.value)}
-                placeholder="Bipe ou digite o SKU"
+                placeholder="Bipe a etiqueta do lote"
                 autoFocus
               />
             </div>
