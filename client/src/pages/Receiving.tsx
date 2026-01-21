@@ -49,6 +49,7 @@ export default function Receiving() {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [batchLabelConfig, setBatchLabelConfig] = useState<{ [key: number]: number }>({});
   const [showBatchLabelModal, setShowBatchLabelModal] = useState(false);
+  const [zplPreviewImage, setZplPreviewImage] = useState<string>('');
   
   // Hook de erros de negócio
   const businessError = useBusinessError();
@@ -131,6 +132,11 @@ export default function Receiving() {
 
   const generateLabelZPLMutation = trpc.receiving.generateLabelZPL.useMutation({
     onSuccess: (data) => {
+      // Armazenar preview para exibição
+      if (data.previewImage) {
+        setZplPreviewImage(data.previewImage);
+      }
+      
       // Criar arquivo ZPL para download
       const zplBlob = new Blob([data.zplCode], { type: 'text/plain' });
       const url = URL.createObjectURL(zplBlob);
@@ -143,8 +149,6 @@ export default function Receiving() {
       URL.revokeObjectURL(url);
       
       toast.success(`Arquivo ZPL gerado! Envie para a impressora Zebra.`);
-      setLabelItem(null);
-      setLabelQuantity(1);
     },
     onError: (error) => {
       toast.error(`Erro ao gerar etiqueta ZPL: ${error.message}`);
@@ -713,7 +717,10 @@ export default function Receiving() {
         )}
 
         {/* Modal de Impressão de Etiqueta */}
-        <Dialog open={!!labelItem} onOpenChange={() => setLabelItem(null)}>
+        <Dialog open={!!labelItem} onOpenChange={() => {
+          setLabelItem(null);
+          setZplPreviewImage('');
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Imprimir Etiqueta de Produto</DialogTitle>
@@ -738,8 +745,21 @@ export default function Receiving() {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Preview:</p>
                 <div className="bg-white p-4 border rounded text-center">
-                  <p className="font-mono text-lg">{labelItem?.productSku}{labelItem?.batch}</p>
-                  <p className="text-xs text-gray-500 mt-2">Código de barras Code-128</p>
+                  {zplPreviewImage ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <img 
+                        src={zplPreviewImage} 
+                        alt="Preview da etiqueta ZPL" 
+                        className="max-w-full h-auto border-2 border-blue-200 rounded"
+                      />
+                      <p className="text-xs text-blue-600 font-medium">Preview Zebra (ZPL)</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-mono text-lg">{labelItem?.productSku}{labelItem?.batch}</p>
+                      <p className="text-xs text-gray-500 mt-2">Código de barras Code-128</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">

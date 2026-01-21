@@ -954,10 +954,35 @@ export const appRouter = router({
 ^FO50,200^BCN,80,Y,N,N^FD${labelCode}^FS
 ^XZ`;
           
+          // Gerar preview via Labelary API
+          let previewImage = '';
+          try {
+            const labelaryResponse = await fetch(
+              'http://api.labelary.com/v1/printers/8dpmm/labels/4x2/0/',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'Accept': 'image/png',
+                },
+                body: zplCode,
+              }
+            );
+            
+            if (labelaryResponse.ok) {
+              const imageBuffer = await labelaryResponse.arrayBuffer();
+              previewImage = `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
+            }
+          } catch (error) {
+            console.error('Erro ao gerar preview Labelary:', error);
+            // Não falhar se preview não funcionar
+          }
+          
           return {
             success: true,
             labelCode,
             zplCode,
+            previewImage,
             quantity: input.quantity,
           };
         } catch (error: any) {

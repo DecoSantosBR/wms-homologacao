@@ -654,3 +654,12 @@
 - [x] Gerar arquivo .zpl para download (envio manual para impressora)
 - [x] Criar testes unitários para geração ZPL (3/3 passando)
 - [x] Documentar formato da etiqueta e comandos ZPL utilizados (IMPRESSAO_ZEBRA_ZPL.md)
+
+
+## 🖼️ PREVIEW VISUAL ZPL COM LABELARY - 21/01/2026
+
+- [x] Criar procedure backend para gerar preview via API Labelary (http://api.labelary.com)
+- [x] Atualizar modal de impressão para exibir preview da etiqueta ZPL
+- [x] Adicionar estado de loading durante geração do preview (automático)
+- [x] Testar preview com diferentes produtos e lotes (401460P22D08LB109)
+- [x] Validar qualidade da imagem gerada (resolução 203 DPI - 8dpmm)
