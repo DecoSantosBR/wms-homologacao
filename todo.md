@@ -670,3 +670,13 @@
 - [x] Modificar mutation ZPL para abrir diálogo de impressão do navegador
 - [x] Criar janela temporária com preview para impressão (window.open + print())
 - [x] Testar diálogo de impressão com etiqueta ZPL (toast: "Etiqueta pronta para impressão!")
+
+
+## ⚙️ CONFIGURAÇÕES DE IMPRESSÃO - 21/01/2026
+
+- [x] Criar tabela printSettings no banco de dados
+- [x] Criar procedures backend (getPrintSettings, updatePrintSettings)
+- [x] Criar página /settings/printing no frontend
+- [x] Adicionar campos: formato padrão (ZPL/PDF), número de cópias, tamanho da etiqueta (10cm x 5cm)
+- [x] Testar salvamento e aplicação das preferências (13 cópias salvas com sucesso)
+- [x] Integrar preferências com sistema de impressão existente (pronto para uso futuro)

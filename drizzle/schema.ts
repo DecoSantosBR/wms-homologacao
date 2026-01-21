@@ -842,6 +842,28 @@ export const productLabels = mysqlTable("productLabels", {
 }));
 
 // ============================================================================
+// PREFERÊNCIAS DE IMPRESSÃO
+// ============================================================================
+
+/**
+ * Tabela de preferências de impressão por usuário
+ * Armazena configurações personalizadas para impressão de etiquetas
+ */
+export const printSettings = mysqlTable("printSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // Relacionamento com users.id
+  defaultFormat: mysqlEnum("defaultFormat", ["zpl", "pdf"]).default("zpl").notNull(),
+  defaultCopies: int("defaultCopies").default(1).notNull(),
+  labelSize: varchar("labelSize", { length: 50 }).default("4x2").notNull(), // 4x2 polegadas
+  printerDpi: int("printerDpi").default(203).notNull(), // 203 DPI (8dpmm)
+  autoPrint: boolean("autoPrint").default(true).notNull(), // Abrir diálogo automaticamente
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdx: unique().on(table.userId), // Um registro por usuário
+}));
+
+// ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
 
@@ -885,3 +907,5 @@ export type StageCheckItem = typeof stageCheckItems.$inferSelect;
 export type InsertStageCheckItem = typeof stageCheckItems.$inferInsert;
 export type ProductLabel = typeof productLabels.$inferSelect;
 export type InsertProductLabel = typeof productLabels.$inferInsert;
+export type PrintSettings = typeof printSettings.$inferSelect;
+export type InsertPrintSettings = typeof printSettings.$inferInsert;

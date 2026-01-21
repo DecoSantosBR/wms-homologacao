@@ -23,6 +23,7 @@ import StockMovements from "./pages/StockMovements";
 import OccupancyDashboard from "./pages/OccupancyDashboard";
 import StageCheck from "./pages/StageCheck";
 import ScannerTest from "./pages/ScannerTest";
+import PrintSettings from "./pages/PrintSettings";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
       <Route path={"/stock/occupancy"} component={OccupancyDashboard} />
       <Route path={"/stage/check"} component={StageCheck} />
       <Route path={"/scanner-test"} component={ScannerTest} />
+      <Route path={"/settings/printing"} component={PrintSettings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels, printSettings } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -2714,6 +2714,80 @@ export const appRouter = router({
             message: error.message || "Erro ao processar arquivo Excel",
           });
         }
+      }),
+  }),
+
+  // ============================================================================
+  // CONFIGURAÇÕES
+  // ============================================================================
+
+  settings: router({
+    /**
+     * Buscar preferências de impressão do usuário atual
+     */
+    getPrintSettings: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      
+      const settings = await db
+        .select()
+        .from(printSettings)
+        .where(eq(printSettings.userId, ctx.user.id))
+        .limit(1);
+
+      // Se não existir, retornar valores padrão
+      if (settings.length === 0) {
+        return {
+          defaultFormat: "zpl" as const,
+          defaultCopies: 1,
+          labelSize: "4x2",
+          printerDpi: 203,
+          autoPrint: true,
+        };
+      }
+
+      return settings[0];
+    }),
+
+    /**
+     * Atualizar preferências de impressão do usuário atual
+     */
+    updatePrintSettings: protectedProcedure
+      .input(
+        z.object({
+          defaultFormat: z.enum(["zpl", "pdf"]),
+          defaultCopies: z.number().min(1).max(100),
+          labelSize: z.string(),
+          printerDpi: z.number(),
+          autoPrint: z.boolean(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        
+        // Verificar se já existe configuração
+        const existing = await db
+          .select()
+          .from(printSettings)
+          .where(eq(printSettings.userId, ctx.user.id))
+          .limit(1);
+
+        if (existing.length === 0) {
+          // Criar nova configuração
+          await db.insert(printSettings).values({
+            userId: ctx.user.id,
+            ...input,
+          });
+        } else {
+          // Atualizar existente
+          await db
+            .update(printSettings)
+            .set(input)
+            .where(eq(printSettings.userId, ctx.user.id));
+        }
+
+        return { success: true };
       }),
   }),
 });
