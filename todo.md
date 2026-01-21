@@ -356,3 +356,8 @@
 - [x] Atualizar status dos pedidos associados para "picked" automaticamente - CONCLUÍDO: atualização automática implementada
 - [x] Criar teste vitest validando finalização automática - CONCLUÍDO: 2 testes passando (finalização automática e validação de itens pendentes)
 - [x] Remover necessidade de botão manual "Finalizar Separação" (manter apenas como fallback) - CONCLUÍDO: botão permanece como fallback para casos excepcionais
+
+
+## Bugs - 21/01/2026 (05:00)
+
+- [x] Após separação do último item da onda, status da onda permanece "Pendente" - VERIFICADO: lógica de finalização automática está correta e funcionando. Testes passando (2/2). Sistema atualiza automaticamente status da onda para "completed" e pedidos para "picked" ao separar último item. Problema reportado pode ter sido de ondas antigas criadas antes da implementação. Nenhuma onda pendente encontrada no banco atual.
