@@ -383,3 +383,8 @@
 ## Bug Reportado - 21/01/2026 (06:35)
 
 - [x] Posições de estoque com quantidade zero aparecem na listagem - RESOLVIDO: Adicionado filtro gt(inventory.quantity, 0) na linha 68 de inventory.ts para ocultar automaticamente registros zerados da tela de Posições de Estoque.
+
+
+## Nova Feature - 21/01/2026 (06:45)
+
+- [x] Etiquetas de volumes no Stage - CONCLUÍDO: Implementado sistema completo de geração de etiquetas após finalizar conferência. Modal solicita quantidade de volumes, backend gera PDF com etiquetas 10cm x 5cm contendo código de barras Code-128, número do pedido, destinatário e numeração de volumes. Download automático do PDF para impressão. Arquivos: server/volumeLabels.ts, server/stageRouter.ts, client/src/pages/StageCheck.tsx. Testes: 4/4 passando.

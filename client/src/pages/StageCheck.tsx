@@ -27,6 +27,8 @@ export default function StageCheck() {
   const [currentQuantity, setCurrentQuantity] = useState("");
   const [showDivergenceModal, setShowDivergenceModal] = useState(false);
   const [divergentItems, setDivergentItems] = useState<any[]>([]);
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [volumeQuantity, setVolumeQuantity] = useState("");
 
   const utils = trpc.useUtils();
   const getOrderQuery = trpc.stage.getOrderForStage.useQuery(
@@ -36,6 +38,7 @@ export default function StageCheck() {
   const startCheckMutation = trpc.stage.startStageCheck.useMutation();
   const recordItemMutation = trpc.stage.recordStageItem.useMutation();
   const completeCheckMutation = trpc.stage.completeStageCheck.useMutation();
+  const generateLabelsMutation = trpc.stage.generateVolumeLabels.useMutation();
 
   // Buscar conferência ativa ao carregar
   const { data: activeCheck } = trpc.stage.getActiveStageCheck.useQuery();
@@ -154,12 +157,8 @@ export default function StageCheck() {
 
       toast.success(result.message);
 
-      // Resetar estado
-      setStep("search");
-      setCustomerOrderNumber("");
-      setStageCheckId(null);
-      setOrderInfo(null);
-      setScannedItems([]);
+      // Abrir modal para solicitar quantidade de volumes
+      setShowVolumeModal(true);
     } catch (error: any) {
       // Verificar se é erro de divergência
       if (error.data?.cause?.divergentItems) {
@@ -168,6 +167,54 @@ export default function StageCheck() {
       } else {
         toast.error(error.message || "Erro ao finalizar conferência");
       }
+    }
+  };
+
+  const handleGenerateLabels = async () => {
+    const qty = parseInt(volumeQuantity);
+    if (isNaN(qty) || qty < 1) {
+      toast.error("Informe uma quantidade válida de volumes");
+      return;
+    }
+
+    try {
+      const result = await generateLabelsMutation.mutateAsync({
+        customerOrderNumber,
+        customerName: orderInfo?.customerName || "N/A",
+        totalVolumes: qty,
+      });
+
+      // Converter base64 para blob e baixar
+      const byteCharacters = atob(result.pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Criar link de download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Etiquetas geradas com sucesso! (${qty} volumes)`);
+
+      // Resetar estado
+      setShowVolumeModal(false);
+      setVolumeQuantity("");
+      setStep("search");
+      setCustomerOrderNumber("");
+      setStageCheckId(null);
+      setOrderInfo(null);
+      setScannedItems([]);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar etiquetas");
     }
   };
 
@@ -357,6 +404,46 @@ export default function StageCheck() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDivergenceModal(false)}>
               Voltar e Corrigir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Quantidade de Volumes */}
+      <Dialog open={showVolumeModal} onOpenChange={setShowVolumeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Package className="mr-2 h-5 w-5" />
+              Quantidade de Volumes
+            </DialogTitle>
+            <DialogDescription>
+              Informe quantos volumes foram conferidos para gerar as etiquetas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="volumeQty">Quantidade de Volumes</Label>
+              <Input
+                id="volumeQty"
+                type="number"
+                min="1"
+                value={volumeQuantity}
+                onChange={(e) => setVolumeQuantity(e.target.value)}
+                placeholder="Ex: 3"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowVolumeModal(false);
+              setVolumeQuantity("");
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGenerateLabels} disabled={generateLabelsMutation.isPending}>
+              {generateLabelsMutation.isPending ? "Gerando..." : "Gerar Etiquetas"}
             </Button>
           </DialogFooter>
         </DialogContent>

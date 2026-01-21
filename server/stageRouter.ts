@@ -102,4 +102,33 @@ export const stageRouter = {
         offset: input.offset,
       });
     }),
+
+  /**
+   * Gera etiquetas de volumes em PDF
+   * Retorna PDF em base64 para impressão automática
+   */
+  generateVolumeLabels: protectedProcedure
+    .input(z.object({
+      customerOrderNumber: z.string(),
+      customerName: z.string(),
+      totalVolumes: z.number().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const { generateVolumeLabels } = await import("./volumeLabels");
+      
+      const labels = Array.from({ length: input.totalVolumes }, (_, i) => ({
+        customerOrderNumber: input.customerOrderNumber,
+        customerName: input.customerName,
+        volumeNumber: i + 1,
+        totalVolumes: input.totalVolumes,
+      }));
+
+      const pdfBuffer = await generateVolumeLabels(labels);
+      
+      return {
+        success: true,
+        pdfBase64: pdfBuffer.toString("base64"),
+        filename: `etiquetas-${input.customerOrderNumber}.pdf`,
+      };
+    }),
 };
