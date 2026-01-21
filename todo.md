@@ -398,3 +398,8 @@
 ## Melhoria Solicitada - 21/01/2026 (07:25)
 
 - [x] Adicionar logo Med@x e nome do cliente (tenant) às etiquetas de volumes - CONCLUÍDO: Logo Med@x posicionado no canto superior esquerdo (60x20pt), código de barras ao lado. Campo "Cliente:" adicionado abaixo do destinatário. Backend modificado para incluir tenantName via JOIN com tabela tenants. Arquivos: server/volumeLabels.ts, server/stage.ts, server/stageRouter.ts, client/src/pages/StageCheck.tsx. Testes: 4/4 passando.
+
+
+## Bug Reportado - 21/01/2026 (07:30)
+
+- [x] Erro "__dirname is not defined" em volumeLabels.ts - RESOLVIDO: Adicionado import de fileURLToPath e dirname. Criadas constantes __filename e __dirname usando import.meta.url (padrão ES modules). Arquivo: server/volumeLabels.ts linhas 5-9. Testes: 4/4 passando.
