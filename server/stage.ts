@@ -76,6 +76,22 @@ export async function startStageCheck(params: {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
+  // Buscar pedido para obter tenantId
+  const order = await dbConn
+    .select()
+    .from(pickingOrders)
+    .where(eq(pickingOrders.id, params.pickingOrderId))
+    .limit(1);
+
+  if (order.length === 0) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Pedido não encontrado",
+    });
+  }
+
+  const orderTenantId = order[0].tenantId;
+
   // Verificar se já existe conferência ativa para este pedido
   const existingChecks = await dbConn
     .select()
@@ -95,9 +111,9 @@ export async function startStageCheck(params: {
     });
   }
 
-  // Criar registro de conferência
+  // Criar registro de conferência usando tenantId do pedido
   const [stageCheck] = await dbConn.insert(stageChecks).values({
-    tenantId: params.tenantId!,
+    tenantId: orderTenantId,
     pickingOrderId: params.pickingOrderId,
     customerOrderNumber: params.customerOrderNumber,
     operatorId: params.operatorId,

@@ -331,3 +331,8 @@
 - [x] Ao finalizar: compara conferido vs esperado
 - [x] Se OK: baixa estoque e muda status para 'staged'
 - [x] Se divergência: exibe modal e aguarda decisão (aceitar/rejeitar)
+
+
+## Bug - 21/01/2026 (04:19)
+
+- [x] Erro ao iniciar conferência de Stage: tenantId null - RESOLVIDO: modificada função startStageCheck para buscar tenantId do pedido (pickingOrders.tenantId) ao invés de usar tenantId do usuário. Agora usuários admin (tenantId null) podem iniciar conferências normalmente. Todos os testes passando.
