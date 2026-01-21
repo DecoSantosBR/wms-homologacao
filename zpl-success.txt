@@ -1,0 +1,40 @@
+✅ IMPRESSÃO ZEBRA ZPL IMPLEMENTADA COM SUCESSO!
+
+O sistema agora oferece duas opções de impressão de etiquetas:
+
+1. **PDF** - Impressão tradicional com logo Med@x e código de barras
+2. **Zebra (ZPL)** - Arquivo ZPL para impressoras térmicas Zebra
+
+## Teste Realizado
+
+- Modal exibe dois botões: "Zebra (ZPL)" e "PDF"
+- Ao clicar em "Zebra (ZPL)", o sistema gera arquivo .zpl para download
+- Toast de sucesso: "Arquivo ZPL gerado! Envie para a impressora Zebra."
+- Arquivo contém código ZPL completo com:
+  * Logo Med@x (formato GRF compactado)
+  * Nome do produto
+  * SKU
+  * Lote
+  * Data de validade
+  * Código de barras Code-128
+
+## Formato da Etiqueta
+
+- Tamanho: 10cm x 5cm (283 x 142 pontos a 203 DPI)
+- Código de barras: Code-128
+- Fonte: Zebra 0 (padrão)
+- Comandos ZPL utilizados:
+  * ^XA / ^XZ - Início/fim do documento
+  * ^GFA - Imagem gráfica (logo)
+  * ^FO - Posicionamento de campo
+  * ^A0N - Fonte padrão
+  * ^BCN - Código de barras Code-128
+
+## Testes Unitários
+
+✅ 3/3 testes passando:
+- Geração de código ZPL com sucesso
+- Registro em productLabels
+- Tratamento de produto não encontrado
+
+Screenshot: /home/ubuntu/screenshots/3000-it08o7wygsihnhh_2026-01-21_12-26-53_8475.webp

@@ -129,6 +129,28 @@ export default function Receiving() {
     },
   });
 
+  const generateLabelZPLMutation = trpc.receiving.generateLabelZPL.useMutation({
+    onSuccess: (data) => {
+      // Criar arquivo ZPL para download
+      const zplBlob = new Blob([data.zplCode], { type: 'text/plain' });
+      const url = URL.createObjectURL(zplBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `etiqueta-${data.labelCode}.zpl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Arquivo ZPL gerado! Envie para a impressora Zebra.`);
+      setLabelItem(null);
+      setLabelQuantity(1);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao gerar etiqueta ZPL: ${error.message}`);
+    },
+  });
+
   const generateBatchLabelsMutation = trpc.receiving.generateBatchLabels.useMutation({
     onSuccess: (data) => {
       // Abrir PDF em nova aba
@@ -728,6 +750,23 @@ export default function Receiving() {
                   Cancelar
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (labelItem) {
+                      generateLabelZPLMutation.mutate({
+                        productSku: labelItem.productSku,
+                        batch: labelItem.batch,
+                        quantity: labelQuantity,
+                      });
+                    }
+                  }}
+                  disabled={generateLabelZPLMutation.isPending}
+                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  {generateLabelZPLMutation.isPending ? "Gerando..." : "Zebra (ZPL)"}
+                </Button>
+                <Button
                   onClick={() => {
                     if (labelItem) {
                       generateLabelMutation.mutate({
@@ -740,7 +779,7 @@ export default function Receiving() {
                   disabled={generateLabelMutation.isPending}
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  {generateLabelMutation.isPending ? "Gerando..." : "Imprimir"}
+                  {generateLabelMutation.isPending ? "Gerando..." : "PDF"}
                 </Button>
               </div>
             </div>

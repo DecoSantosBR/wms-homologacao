@@ -888,6 +888,86 @@ export const appRouter = router({
         }
       }),
 
+    generateLabelZPL: protectedProcedure
+      .input(z.object({ 
+        productSku: z.string(),
+        batch: z.string(),
+        productId: z.number().optional(),
+        productName: z.string().optional(),
+        expiryDate: z.string().optional(),
+        quantity: z.number().default(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        
+        // Formato: código do produto + lote
+        const labelCode = `${input.productSku}${input.batch}`;
+        
+        try {
+          // Buscar produto se productId não foi fornecido
+          let productId = input.productId;
+          let productName = input.productName;
+          
+          if (!productId || !productName) {
+            const [product] = await db.select({ 
+              id: products.id,
+              description: products.description 
+            })
+              .from(products)
+              .where(eq(products.sku, input.productSku))
+              .limit(1);
+            
+            if (!product) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: `Produto com SKU ${input.productSku} não encontrado`,
+              });
+            }
+            productId = product.id;
+            productName = product.description;
+          }
+          
+          // Criar ou atualizar registro em productLabels
+          await db.insert(productLabels).values({
+            labelCode,
+            productId,
+            productSku: input.productSku,
+            batch: input.batch,
+            expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            createdBy: ctx.user!.id,
+          }).onDuplicateKeyUpdate({
+            set: {
+              productId,
+              expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            },
+          });
+          
+          // Gerar código ZPL para impressora Zebra
+          // Etiqueta 10cm x 5cm (283 x 142 pontos a 203 DPI)
+          const zplCode = `^XA
+^FO50,20^GFA,800,800,8,:Z64:eJxjYBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAUDDwAA//8=:4C1E
+^FO50,80^A0N,25,25^FD${productName?.substring(0, 30) || 'Produto'}^FS
+^FO50,110^A0N,20,20^FDSKU: ${input.productSku}^FS
+^FO50,135^A0N,20,20^FDLote: ${input.batch}^FS
+^FO50,160^A0N,20,20^FDVal: ${input.expiryDate ? new Date(input.expiryDate).toLocaleDateString('pt-BR') : 'N/A'}^FS
+^FO50,200^BCN,80,Y,N,N^FD${labelCode}^FS
+^XZ`;
+          
+          return {
+            success: true,
+            labelCode,
+            zplCode,
+            quantity: input.quantity,
+          };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Erro ao gerar etiqueta ZPL: ${error.message}`,
+          });
+        }
+      }),
+
     generateBatchLabels: protectedProcedure
       .input(z.object({
         items: z.array(z.object({

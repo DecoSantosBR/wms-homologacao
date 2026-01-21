@@ -643,3 +643,14 @@
 - [x] Verificar se há imports de canvas no código (nenhum encontrado)
 - [x] Testar geração de etiquetas após remoção (teste passando em 406ms)
 - [x] Confirmar que PDFKit sozinho é suficiente para gerar etiquetas com logo
+
+
+## 🖨️ IMPRESSÃO DIRETA ZEBRA ZPL - 21/01/2026
+
+- [x] Criar procedure generateLabelZPL no backend
+- [x] Converter logo Med@x para formato GRF (Zebra Graphics)
+- [x] Implementar geração de código ZPL com logo + código de barras + informações
+- [x] Adicionar opção "Imprimir Zebra" no frontend (botão azul claro)
+- [x] Gerar arquivo .zpl para download (envio manual para impressora)
+- [x] Criar testes unitários para geração ZPL (3/3 passando)
+- [x] Documentar formato da etiqueta e comandos ZPL utilizados (IMPRESSAO_ZEBRA_ZPL.md)
