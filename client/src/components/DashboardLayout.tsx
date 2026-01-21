@@ -35,6 +35,7 @@ const menuItems = [
   { icon: TruckIcon, label: "Recebimento", path: "/receiving" },
   { icon: ClipboardList, label: "Picking", path: "/picking" },
   { icon: Package, label: "Estoque", path: "/inventory" },
+  { icon: Users, label: "Usuários", path: "/users" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -423,3 +423,8 @@
 ## Melhoria Solicitada - 21/01/2026 (08:20)
 
 - [x] Aumentar tamanho da fonte de Destinatário e Cliente nas etiquetas - CONCLUÍDO: Fonte aumentada de 10pt para 12pt e alterada para Helvetica-Bold para melhor legibilidade. Campos "Destinatário:" (linha 93) e "Cliente:" (linha 103) agora mais visíveis. Arquivo: server/volumeLabels.ts.
+
+
+## Nova Feature - 21/01/2026 (08:30)
+
+- [x] Módulo de Gerenciamento de Usuários - CONCLUÍDO: Implementado CRUD completo com listagem (filtros por nome/email/role), estatísticas (total, admins, usuários comuns, com/sem cliente), edição (nome, email, role, tenant). Backend: userRouter.ts com procedures list, getById, update, stats. Frontend: Users.tsx com tabela, filtros e modal de edição. Menu: item "Usuários" adicionado ao DashboardLayout. Testes: 11/11 passando. Apenas administradores podem acessar.
