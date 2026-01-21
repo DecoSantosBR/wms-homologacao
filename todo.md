@@ -663,3 +663,10 @@
 - [x] Adicionar estado de loading durante geração do preview (automático)
 - [x] Testar preview com diferentes produtos e lotes (401460P22D08LB109)
 - [x] Validar qualidade da imagem gerada (resolução 203 DPI - 8dpmm)
+
+
+## 🖨️ DIÁLOGO DE IMPRESSÃO ZPL - 21/01/2026
+
+- [x] Modificar mutation ZPL para abrir diálogo de impressão do navegador
+- [x] Criar janela temporária com preview para impressão (window.open + print())
+- [x] Testar diálogo de impressão com etiqueta ZPL (toast: "Etiqueta pronta para impressão!")

@@ -137,18 +137,52 @@ export default function Receiving() {
         setZplPreviewImage(data.previewImage);
       }
       
-      // Criar arquivo ZPL para download
-      const zplBlob = new Blob([data.zplCode], { type: 'text/plain' });
-      const url = URL.createObjectURL(zplBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `etiqueta-${data.labelCode}.zpl`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Abrir diálogo de impressão com preview
+      if (data.previewImage) {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Etiqueta ${data.labelCode}</title>
+                <style>
+                  body {
+                    margin: 0;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    background: #f5f5f5;
+                  }
+                  img {
+                    max-width: 100%;
+                    height: auto;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  }
+                  @media print {
+                    body { background: white; }
+                    img { box-shadow: none; }
+                  }
+                </style>
+              </head>
+              <body>
+                <img src="${data.previewImage}" alt="Etiqueta ${data.labelCode}" />
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          
+          // Aguardar imagem carregar e abrir diálogo de impressão
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 250);
+          };
+        }
+      }
       
-      toast.success(`Arquivo ZPL gerado! Envie para a impressora Zebra.`);
+      toast.success(`Etiqueta pronta para impressão!`);
     },
     onError: (error) => {
       toast.error(`Erro ao gerar etiqueta ZPL: ${error.message}`);
