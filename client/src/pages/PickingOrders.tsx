@@ -1108,7 +1108,7 @@ export default function PickingOrders() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        {order.status === "staged" && (
+                        {(order.status === "picked" || order.status === "staged") && (
                           <Button 
                             variant="outline" 
                             size="sm"

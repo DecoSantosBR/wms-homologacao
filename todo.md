@@ -413,3 +413,8 @@
 ## Bug Reportado - 21/01/2026 (07:45)
 
 - [x] Pedidos permanecem com status "pending" após separação da onda - RESOLVIDO: Investigação revelou que os pedidos ESTÃO CORRETOS no banco (status "picked"). Problema era cache do navegador/tRPC mostrando dados desatualizados. Backend funciona corretamente (linhas 293-301 de waveRouter.ts atualizam status automaticamente). Solução: Hard refresh (Ctrl+Shift+R) ou limpar cache do navegador.
+
+
+## Bug Reportado - 21/01/2026 (08:15)
+
+- [x] Botão "Reimprimir Etiquetas" desapareceu da lista de pedidos - RESOLVIDO: Botão estava configurado apenas para status 'staged', mas pedidos separados ficam com status 'picked'. Ajustada condição na linha 1111 para exibir botão tanto para 'picked' quanto 'staged'. Arquivo: client/src/pages/PickingOrders.tsx.
