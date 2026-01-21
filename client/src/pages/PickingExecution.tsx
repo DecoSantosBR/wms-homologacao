@@ -281,7 +281,7 @@ export default function PickingExecution() {
           <div className="space-y-3">
             {order.items.map((item: any) => (
               <div
-                key={item.id}
+                key={`${item.id}-${item.productId}-${item.locationCode || 'no-loc'}`}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                   selectedItemId === item.id
                     ? "border-blue-500 bg-blue-50"

@@ -525,3 +525,12 @@
   - [x] Handlers: handleToggleZoneSelection, handleToggleAllZones, handleBulkDeleteZones, handleBulkDeleteZonesConfirm
   - [x] Mutation: deleteMultipleZonesMutation com invalidate e limpeza de seleção no onSuccess
   - [x] Testado manualmente: selecionadas 3 zonas (TEST-CONSOL, TEST-ZONE, ZONE-PICK), contador atualizado (1→2→3), botão apareceu, dialog exibido corretamente
+
+
+## Bug - 21/01/2026 (15:35) - Chaves Duplicadas em Execução de Picking
+
+- [x] Corrigir erro "Encountered two children with the same key, `10`" na página /picking/execute/:id - RESOLVIDO:
+  - [x] Identificado componente: PickingExecution.tsx linha 284 (lista de itens do pedido)
+  - [x] Substituída key simples `item.id` por chave composta `${item.id}-${item.productId}-${item.locationCode || 'no-loc'}`
+  - [x] Garante unicidade mesmo quando múltiplos itens têm o mesmo ID (ex: diferentes locações)
+  - [x] Servidor reiniciado e erro não aparece mais no console
