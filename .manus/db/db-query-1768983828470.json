@@ -1,0 +1,62 @@
+{
+  "query": "SELECT \n  pw.id,\n  pw.waveNumber,\n  pw.status as wave_status,\n  pw.pickedBy,\n  pw.pickedAt,\n  po.id as order_id,\n  po.orderNumber,\n  po.customerOrderNumber,\n  po.status as order_status,\n  po.pickedBy as order_pickedBy,\n  po.pickedAt as order_pickedAt\nFROM pickingWaves pw\nLEFT JOIN pickingOrders po ON pw.id = po.waveId\nWHERE pw.waveNumber = 'OS-20260121-0001'\nORDER BY po.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  pw.id,\n  pw.waveNumber,\n  pw.status as wave_status,\n  pw.pickedBy,\n  pw.pickedAt,\n  po.id as order_id,\n  po.orderNumber,\n  po.customerOrderNumber,\n  po.status as order_status,\n  po.pickedBy as order_pickedBy,\n  po.pickedAt as order_pickedAt\nFROM pickingWaves pw\nLEFT JOIN pickingOrders po ON pw.id = po.waveId\nWHERE pw.waveNumber = 'OS-20260121-0001'\nORDER BY po.id;",
+  "rows": [
+    {
+      "id": "60007",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed",
+      "pickedBy": "NULL",
+      "pickedAt": "NULL",
+      "order_id": "90017",
+      "orderNumber": "PK1768982751874",
+      "customerOrderNumber": "PED-001",
+      "order_status": "staged",
+      "order_pickedBy": "NULL",
+      "order_pickedAt": "NULL"
+    },
+    {
+      "id": "60007",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed",
+      "pickedBy": "NULL",
+      "pickedAt": "NULL",
+      "order_id": "90018",
+      "orderNumber": "PK1768982752600",
+      "customerOrderNumber": "PED-002",
+      "order_status": "picked",
+      "order_pickedBy": "NULL",
+      "order_pickedAt": "NULL"
+    },
+    {
+      "id": "60007",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed",
+      "pickedBy": "NULL",
+      "pickedAt": "NULL",
+      "order_id": "90019",
+      "orderNumber": "PK1768982753098",
+      "customerOrderNumber": "PED-003",
+      "order_status": "picked",
+      "order_pickedBy": "NULL",
+      "order_pickedAt": "NULL"
+    },
+    {
+      "id": "60007",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed",
+      "pickedBy": "NULL",
+      "pickedAt": "NULL",
+      "order_id": "90020",
+      "orderNumber": "PK1768982753601",
+      "customerOrderNumber": "PED-004",
+      "order_status": "picked",
+      "order_pickedBy": "NULL",
+      "order_pickedAt": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twaveNumber\twave_status\tpickedBy\tpickedAt\torder_id\torderNumber\tcustomerOrderNumber\torder_status\torder_pickedBy\torder_pickedAt\n60007\tOS-20260121-0001\tcompleted\tNULL\tNULL\t90017\tPK1768982751874\tPED-001\tstaged\tNULL\tNULL\n60007\tOS-20260121-0001\tcompleted\tNULL\tNULL\t90018\tPK1768982752600\tPED-002\tpicked\tNULL\tNULL\n60007\tOS-20260121-0001\tcompleted\tNULL\tNULL\t90019\tPK1768982753098\tPED-003\tpicked\tNULL\tNULL\n60007\tOS-20260121-0001\tcompleted\tNULL\tNULL\t90020\tPK1768982753601\tPED-004\tpicked\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 392
+}

@@ -360,4 +360,14 @@
 
 ## Bugs - 21/01/2026 (05:00)
 
-- [x] Após separação do último item da onda, status da onda permanece "Pendente" - VERIFICADO: lógica de finalização automática está correta e funcionando. Testes passando (2/2). Sistema atualiza automaticamente status da onda para "completed" e pedidos para "picked" ao separar último item. Problema reportado pode ter sido de ondas antigas criadas antes da implementação. Nenhuma onda pendente encontrada no banco atual.
+- [x] Após separação do último item da onda, status da onda permanece "Pendente" - RESOLVIDO: lógica de finalização automática funcionando corretamente no backend (onda OS-20260121-0001 confirmada como "completed" no banco). Problema era cache do frontend - lista de ondas não invalidava após registrar item. Adicionado `utils.wave.list.invalidate()` no onSuccess de registerPickedItem em WaveExecution.tsx para atualizar lista automaticamente. Logs de debug adicionados para troubleshooting futuro.
+
+
+## Bug Crítico - 21/01/2026 (05:20)
+
+- [ ] Lista de ondas exibe status "Pendente" para onda já concluída (OS-20260121-0001) - Tela de execução mostra "Onda Concluída!" mas lista não atualiza. Possível problema: query da lista não busca status atualizado do banco OU cache do frontend não invalida após conclusão.
+
+
+## Bug Crítico - 21/01/2026 (05:20)
+
+- [ ] Após finalização da onda, status da onda e pedidos não são atualizados corretamente no banco de dados - Lista mostra "Pendente" e pedidos permanecem com status antigo ao invés de "picked"

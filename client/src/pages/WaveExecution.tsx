@@ -68,6 +68,8 @@ export default function WaveExecution() {
     },
   });
 
+  const utils = trpc.useUtils();
+  
   const registerMutation = trpc.picking.registerPickedItem.useMutation({
     onSuccess: (result) => {
       setFeedback({
@@ -75,6 +77,8 @@ export default function WaveExecution() {
         message: `✓ Item registrado! ${result.pickedQuantity}/${result.totalQuantity} separados`,
       });
       refetch();
+      // Invalidar lista de ondas para atualizar status
+      utils.wave.list.invalidate();
       setScannedCode("");
       
       // Limpar feedback após 3 segundos
