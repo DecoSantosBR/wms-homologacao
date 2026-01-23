@@ -64,6 +64,7 @@ export default function Locations() {
     position: "",
     locationType: "whole" as "whole" | "fraction",
     storageRule: "single" as "single" | "multi",
+    isBlocked: false,
   });
 
   // Zone states
@@ -205,6 +206,7 @@ export default function Locations() {
       position: location.position || "",
       locationType: location.locationType || "whole",
       storageRule: location.storageRule || "single",
+      isBlocked: location.status === "blocked",
     });
     setEditDialogOpen(true);
   };
@@ -983,6 +985,19 @@ export default function Locations() {
                   <SelectItem value="multi">Multi Item</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-4 border-t">
+              <Checkbox
+                id="edit-isBlocked"
+                checked={editForm.isBlocked}
+                onCheckedChange={(checked) =>
+                  setEditForm({ ...editForm, isBlocked: checked === true })
+                }
+              />
+              <Label htmlFor="edit-isBlocked" className="text-sm font-normal cursor-pointer">
+                Endereço bloqueado (não disponível para uso)
+              </Label>
             </div>
           </div>
           <DialogFooter>

@@ -485,14 +485,40 @@ export const appRouter = router({
         position: z.string().optional(),
         locationType: z.enum(["whole", "fraction"]).default("whole"),
         storageRule: z.enum(["single", "multi"]).default("single"),
+        isBlocked: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        const { id, ...updateData } = input;
+        const { id, isBlocked, ...updateData } = input;
+        
+        // Determinar status baseado em isBlocked e estoque
+        let status: "available" | "occupied" | "blocked" | "counting";
+        
+        if (isBlocked === true) {
+          // Usuário marcou como bloqueado
+          status = "blocked";
+        } else if (isBlocked === false) {
+          // Usuário desmarcou bloqueado - verificar estoque
+          const [stockCheck] = await db
+            .select({ total: sql<number>`COALESCE(SUM(${inventory.quantity}), 0)` })
+            .from(inventory)
+            .where(eq(inventory.locationId, id));
+          
+          status = (stockCheck?.total || 0) > 0 ? "occupied" : "available";
+        } else {
+          // isBlocked não fornecido - manter status atual
+          const [current] = await db
+            .select({ status: warehouseLocations.status })
+            .from(warehouseLocations)
+            .where(eq(warehouseLocations.id, id))
+            .limit(1);
+          status = current?.status || "available";
+        }
+        
         await db.update(warehouseLocations)
-          .set(updateData)
+          .set({ ...updateData, status })
           .where(eq(warehouseLocations.id, id));
         
         return { success: true };
@@ -504,8 +530,35 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        await db.update(warehouseLocations)
-          .set({ status: 'blocked' })
+        // Buscar código do endereço
+        const [location] = await db
+          .select({ code: warehouseLocations.code })
+          .from(warehouseLocations)
+          .where(eq(warehouseLocations.id, input.id))
+          .limit(1);
+        
+        if (!location) {
+          throw new TRPCError({ 
+            code: "NOT_FOUND", 
+            message: "Endereço não encontrado" 
+          });
+        }
+        
+        // Verificar se há estoque alocado
+        const [stockCheck] = await db
+          .select({ total: sql<number>`COALESCE(SUM(${inventory.quantity}), 0)` })
+          .from(inventory)
+          .where(eq(inventory.locationId, input.id));
+        
+        if ((stockCheck?.total || 0) > 0) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: `Não é possível excluir o endereço ${location.code} pois há ${stockCheck?.total} unidades alocadas. Movimente o estoque antes de excluir.` 
+          });
+        }
+        
+        // Se não há estoque, deletar realmente
+        await db.delete(warehouseLocations)
           .where(eq(warehouseLocations.id, input.id));
         
         return { success: true };

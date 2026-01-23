@@ -775,3 +775,35 @@
 - [ ] Localizar origem das chaves duplicadas (key `5-`)
 - [ ] Corrigir geração de chaves para garantir unicidade
 - [ ] Testar página sem warnings do React
+
+
+## 🐛 BUG: GERENCIAMENTO DE ENDEREÇOS - 23/01/2026 ✅ RESOLVIDO
+
+### Problema Reportado
+- Endereço H01-01-02 marcado como ocupado sem itens alocados
+- Exclusão de endereço apenas bloqueia ao invés de deletar
+- Falta opção para alterar status de bloqueado para disponível
+
+### Backend (server/routers.ts)
+- [x] Adicionar campo isBlocked (boolean) ao input da procedure locations.update
+- [x] Implementar lógica automática de status:
+  - Se isBlocked=true → status="blocked"
+  - Se isBlocked=false → verificar estoque e definir "available" ou "occupied"
+- [x] Corrigir procedure locations.delete:
+  - Verificar se há estoque alocado no endereço (query em inventory)
+  - Se vazio → DELETE real (db.delete)
+  - Se ocupado → retornar erro TRPCError com mensagem descritiva
+
+### Frontend (client/src/pages/Locations.tsx)
+- [x] Adicionar campo isBlocked ao editForm state (linha 57)
+- [x] Popular isBlocked no handleEdit baseado em status atual (linha 198)
+  - blocked → isBlocked=true
+  - available/occupied → isBlocked=false
+- [x] Adicionar checkbox "Bloqueado" no modal de edição (após linha 950)
+- [x] Enviar isBlocked para backend ao salvar (linha 222)
+
+### Teste
+- [x] Testar com endereço H01-01-02 (reportado como problemático)
+- [x] Validar que endereço vazio pode ser deletado
+- [x] Validar que checkbox "Bloqueado" altera status corretamente
+- [x] Validar que desmarcar checkbox restaura status automático (available/occupied)
