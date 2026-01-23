@@ -64,7 +64,10 @@ export default function PickingOrders() {
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
-  const { data: products } = trpc.products.list.useQuery();
+  const { data: products } = trpc.products.list.useQuery(
+    selectedTenantId ? { tenantId: parseInt(selectedTenantId) } : undefined,
+    { enabled: !!selectedTenantId } // Só buscar quando tenant estiver selecionado
+  );
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
   const { data: editOrderDetails } = trpc.picking.getById.useQuery(
@@ -650,7 +653,11 @@ export default function PickingOrders() {
 
                 <div>
                   <Label>Cliente (Tenant) *</Label>
-                  <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                  <Select value={selectedTenantId} onValueChange={(value) => {
+                    setSelectedTenantId(value);
+                    setSelectedProducts([]); // Limpar produtos ao trocar cliente
+                    setSelectedProductId("");
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o cliente" />
                     </SelectTrigger>
@@ -696,9 +703,9 @@ export default function PickingOrders() {
                 <div className="space-y-3">
                   <div>
                     <Label>Produto</Label>
-                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId} disabled={!selectedTenantId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o produto" />
+                        <SelectValue placeholder={!selectedTenantId ? "Selecione um cliente primeiro" : products?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"} />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.map((product) => (

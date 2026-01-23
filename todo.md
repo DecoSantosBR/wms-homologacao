@@ -754,3 +754,11 @@
 - [x] Backend já aceita quantidade variável via unitsPerPackage
 - [x] Campo Unidades por Caixa adicionado no formulário de edição
 - [ ] Testar fluxo: caixa fechada + caixa aberta
+
+## 🔍 FILTRO DE PRODUTOS POR CLIENTE NO PICKING - 23/01/2026
+
+- [x] Localizar componente PickingOrders.tsx
+- [x] Query products.list modificada para aceitar tenantId opcional
+- [x] Frontend recarrega produtos automaticamente ao selecionar cliente
+- [x] Produtos selecionados são limpos ao trocar cliente
+- [ ] Testar filtro com diferentes clientes

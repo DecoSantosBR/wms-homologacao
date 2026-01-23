@@ -206,11 +206,21 @@ export const appRouter = router({
   }),
 
   products: router({
-    list: protectedProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) return [];
-      return db.select().from(products).orderBy(desc(products.createdAt)).limit(100);
-    }),
+    list: protectedProcedure
+      .input(z.object({ tenantId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        
+        let query = db.select().from(products);
+        
+        // Filtrar por tenantId se fornecido
+        if (input?.tenantId) {
+          query = query.where(eq(products.tenantId, input.tenantId)) as any;
+        }
+        
+        return query.orderBy(desc(products.createdAt)).limit(100);
+      }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
