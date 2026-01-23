@@ -176,6 +176,13 @@
       "when": 1769033940135,
       "tag": "0024_light_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1769197810230,
+      "tag": "0025_optimal_firebrand",
+      "breakpoints": true
     }
   ]
 }

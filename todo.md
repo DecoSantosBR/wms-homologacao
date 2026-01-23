@@ -701,3 +701,32 @@
 - [x] Testar exportação com dados reais (8 posições, 4.050 unidades)
 - [x] Adicionar estado de loading no botão ("Exportando...")
 - [x] Formatação profissional: cabeçalho azul, larguras otimizadas
+
+
+## 📖 DOCUMENTAÇÃO MÓDULOS DO SISTEMA - 23/01/2026
+
+- [x] Capturar screenshots do módulo Recebimento (3 telas)
+- [x] Capturar screenshots do módulo Cadastros (1 tela)
+- [x] Capturar screenshots do módulo Picking (Separação) (1 tela)
+- [x] Capturar screenshots do módulo Estoques (1 tela)
+- [x] Criar documento markdown com descrições detalhadas (DOCUMENTACAO_MODULOS_WMS.md)
+- [x] Converter para PDF profissional (DOCUMENTACAO_MODULOS_WMS.pdf)
+- [x] Entregar documentação completa ao usuário
+
+## 🎓 ROTEIRO DE TREINAMENTO RECEBIMENTO - 23/01/2026
+
+- [ ] Estruturar conteúdo do treinamento (teoria + prática)
+- [ ] Criar documento com roteiro detalhado de 1 hora
+- [ ] Incluir exercícios práticos e casos de uso
+- [ ] Gerar slides de apresentação
+- [ ] Converter para PDF e entregar ao usuário
+
+## 📦 MOVIMENTAÇÃO AUTOMÁTICA PARA EXPEDIÇÃO - 23/01/2026
+
+- [x] Analisar fluxo atual de finalização de picking
+- [x] Adicionar campo shippingAddress em tenants
+- [x] Associar clientes a endereços de expedição (campo shippingAddress) (ex: EXP-01-A)
+- [x] Modificar completeStageCheck para movimentar para expedição
+- [x] Criar movimentação automática com registro em inventoryMovements
+- [ ] Testar fluxo completo com pedido real
+- [ ] Validar saldo em endereço de expedição

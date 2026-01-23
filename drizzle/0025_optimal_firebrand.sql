@@ -1,0 +1,1 @@
+ALTER TABLE `tenants` ADD `shippingAddress` varchar(50);
