@@ -276,9 +276,9 @@ export default function StockMovements() {
                     {locationProducts.length === 0 ? (
                       <SelectItem value="none" disabled>Nenhum produto disponível</SelectItem>
                     ) : (
-                      locationProducts.map((prod) => (
+                      locationProducts.map((prod, index) => (
                         <SelectItem 
-                          key={`${prod.productId}-${prod.batch || ""}`} 
+                          key={`${prod.productId}-${prod.batch || "NOBATCH"}-${index}`} 
                           value={`${prod.productId}-${prod.batch || ""}`}
                         >
                           {prod.productSku} - {prod.productDescription} | Lote: {prod.batch || "SEM LOTE"} | Saldo: {prod.quantity}

@@ -769,3 +769,9 @@
 - [x] Select atualizado para usar editProducts_available
 - [x] Campo desabilitado quando editTenantId vazio
 - [ ] Testar filtro na edição de pedidos existentes
+
+## 🐛 BUG: CHAVES DUPLICADAS EM /STOCK/MOVEMENTS - 23/01/2026
+
+- [ ] Localizar origem das chaves duplicadas (key `5-`)
+- [ ] Corrigir geração de chaves para garantir unicidade
+- [ ] Testar página sem warnings do React
