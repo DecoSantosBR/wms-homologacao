@@ -762,3 +762,10 @@
 - [x] Frontend recarrega produtos automaticamente ao selecionar cliente
 - [x] Produtos selecionados são limpos ao trocar cliente
 - [ ] Testar filtro com diferentes clientes
+
+## 🔄 FILTRO DE PRODUTOS NA EDIÇÃO DE PEDIDOS - 23/01/2026
+
+- [x] Query editProducts_available criada com filtro por editTenantId
+- [x] Select atualizado para usar editProducts_available
+- [x] Campo desabilitado quando editTenantId vazio
+- [ ] Testar filtro na edição de pedidos existentes

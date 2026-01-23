@@ -68,6 +68,10 @@ export default function PickingOrders() {
     selectedTenantId ? { tenantId: parseInt(selectedTenantId) } : undefined,
     { enabled: !!selectedTenantId } // Só buscar quando tenant estiver selecionado
   );
+  const { data: editProducts_available } = trpc.products.list.useQuery(
+    editTenantId ? { tenantId: parseInt(editTenantId) } : undefined,
+    { enabled: !!editTenantId } // Só buscar quando tenant estiver selecionado na edição
+  );
   const { data: inventory } = trpc.stock.getPositions.useQuery({});
   const { data: tenants } = trpc.tenants.list.useQuery(); // Buscar lista de clientes
   const { data: editOrderDetails } = trpc.picking.getById.useQuery(
@@ -870,12 +874,12 @@ export default function PickingOrders() {
                 <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-5">
                     <Label>Produto</Label>
-                    <Select value={editSelectedProductId} onValueChange={setEditSelectedProductId}>
+                    <Select value={editSelectedProductId} onValueChange={setEditSelectedProductId} disabled={!editTenantId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o produto" />
+                        <SelectValue placeholder={!editTenantId ? "Cliente não definido" : editProducts_available?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {products?.map((product) => (
+                        {editProducts_available?.map((product) => (
                           <SelectItem key={product.id} value={String(product.id)}>
                             {product.sku} - {product.description}
                           </SelectItem>
