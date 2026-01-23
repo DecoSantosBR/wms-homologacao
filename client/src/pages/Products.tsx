@@ -61,7 +61,25 @@ export default function Products() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<{
+    tenantId: number;
+    sku: string;
+    description: string;
+    category: string;
+    gtin: string;
+    anvisaRegistry: string;
+    therapeuticClass: string;
+    manufacturer: string;
+    unitOfMeasure: string;
+    unitsPerBox?: number;
+    minQuantity: number;
+    dispensingQuantity: number;
+    storageCondition: "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled";
+    requiresBatchControl: boolean;
+    requiresExpiryControl: boolean;
+    isControlledSubstance: boolean;
+    status: "active" | "inactive" | "discontinued";
+  }>({
     tenantId: 0,
     sku: "",
     description: "",
@@ -71,14 +89,14 @@ export default function Products() {
     therapeuticClass: "",
     manufacturer: "",
     unitOfMeasure: "UN",
-    unitsPerBox: 0,
+    unitsPerBox: undefined,
     minQuantity: 0,
     dispensingQuantity: 1,
-    storageCondition: "ambient" as "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled",
+    storageCondition: "ambient",
     requiresBatchControl: true,
     requiresExpiryControl: true,
     isControlledSubstance: false,
-    status: "active" as "active" | "inactive" | "discontinued",
+    status: "active",
   });
 
   const updateMutation = trpc.products.update.useMutation({
@@ -464,6 +482,17 @@ export default function Products() {
                 value={editForm.dispensingQuantity}
                 onChange={(e) => setEditForm({ ...editForm, dispensingQuantity: parseInt(e.target.value) || 1 })}
                 placeholder="Qtd. mínima de separação"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-unitsPerBox">Unidades por Caixa</Label>
+              <Input
+                id="edit-unitsPerBox"
+                type="number"
+                min="1"
+                value={editForm.unitsPerBox || ''}
+                onChange={(e) => setEditForm({ ...editForm, unitsPerBox: parseInt(e.target.value) || undefined })}
+                placeholder="Ex: 10"
               />
             </div>
 

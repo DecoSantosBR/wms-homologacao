@@ -730,3 +730,27 @@
 - [x] Criar movimentação automática com registro em inventoryMovements
 - [ ] Testar fluxo completo com pedido real
 - [ ] Validar saldo em endereço de expedição
+
+## 🐛 BUG: QUANTIDADE POR CAIXA OBRIGATÓRIA - 23/01/2026
+
+- [ ] Localizar origem do erro em /picking
+- [ ] Identificar mutation que valida quantidade por caixa
+- [ ] Tornar campo quantityPerBox opcional ou fornecer valor padrão
+- [ ] Testar correção com produto 834207
+
+## 🔧 CORREÇÃO: QUANTIDADE POR CAIXA - 23/01/2026
+
+- [ ] Verificar se campo quantityPerBox existe no schema de products
+- [ ] Modificar procedure de recebimento para salvar quantidade por caixa no produto
+- [ ] Adicionar campo quantidade por caixa no formulário de edição de produtos
+- [ ] Garantir que picking use valor do cadastro quando disponível
+- [ ] Testar fluxo completo: recebimento → cadastro → picking
+
+## 📦 CAMPO DE QUANTIDADE EDITÁVEL NA CONFERÊNCIA - 23/01/2026
+
+- [x] Localizar componente BlindCheckModal.tsx
+- [x] Campo unitsPerPackage já existe e auto-preenche corretamente
+- [x] Campo já é editável e permite ajuste manual
+- [x] Backend já aceita quantidade variável via unitsPerPackage
+- [x] Campo Unidades por Caixa adicionado no formulário de edição
+- [ ] Testar fluxo: caixa fechada + caixa aberta
