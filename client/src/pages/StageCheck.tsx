@@ -39,6 +39,7 @@ export default function StageCheck() {
   const recordItemMutation = trpc.stage.recordStageItem.useMutation();
   const completeCheckMutation = trpc.stage.completeStageCheck.useMutation();
   const generateLabelsMutation = trpc.stage.generateVolumeLabels.useMutation();
+  const cancelCheckMutation = trpc.stage.cancelStageCheck.useMutation();
 
   // Buscar conferência ativa ao carregar
   const { data: activeCheck } = trpc.stage.getActiveStageCheck.useQuery();
@@ -141,6 +142,49 @@ export default function StageCheck() {
       setCurrentQuantity("");
     } catch (error: any) {
       toast.error(error.message || "Erro ao registrar item");
+    }
+  };
+
+  const handleCancelCheck = async () => {
+    if (!stageCheckId) {
+      toast.error("Nenhuma conferência ativa");
+      return;
+    }
+
+    try {
+      const result = await cancelCheckMutation.mutateAsync({
+        stageCheckId: stageCheckId,
+      });
+
+      toast.success(result.message);
+      
+      // Resetar estado
+      setStep("search");
+      setCustomerOrderNumber("");
+      setStageCheckId(null);
+      setOrderInfo(null);
+      setScannedItems([]);
+      setCurrentSku("");
+      setCurrentQuantity("");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao cancelar conferência");
+    }
+  };
+
+  const handleForceComplete = async () => {
+    try {
+      const result = await completeCheckMutation.mutateAsync({
+        stageCheckId: stageCheckId!,
+        force: true,
+      });
+
+      setShowDivergenceModal(false);
+      setVolumeQuantity("");
+      setShowVolumeModal(true);
+      
+      toast.success(result.message);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao forçar finalização");
     }
   };
 
@@ -355,7 +399,16 @@ export default function StageCheck() {
         </Card>
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex justify-between">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleCancelCheck}
+          disabled={cancelCheckMutation.isPending}
+        >
+          <XCircle className="mr-2 h-5 w-5" />
+          Cancelar Conferência
+        </Button>
         <Button
           size="lg"
           onClick={handleCompleteCheck}
@@ -402,9 +455,16 @@ export default function StageCheck() {
               </div>
             ))}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
             <Button variant="outline" onClick={() => setShowDivergenceModal(false)}>
               Voltar e Corrigir
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleForceComplete}
+              disabled={completeCheckMutation.isPending}
+            >
+              Forçar Finalização
             </Button>
           </DialogFooter>
         </DialogContent>

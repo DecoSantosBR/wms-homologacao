@@ -941,3 +941,29 @@ Implementar módulo completo de Expedição com 3 abas funcionais: Pedidos, Nota
 - [ ] Testar vinculação de NF a pedido
 - [ ] Testar criação de romaneio
 - [ ] Testar finalização de expedição
+
+
+## 🐛 BUG: CONFERÊNCIA DO STAGE - 25/01/2026
+
+### Problemas Reportados
+1. Erro: "Divergências encontradas em 3 item(ns)" - sistema detecta divergências incorretamente
+2. Erro: "Conferência já foi finalizada" - tentativa de finalização duplicada
+
+### Investigação
+- [x] Analisar lógica de detecção de divergências em stage.ts (completeStageCheck)
+- [x] Verificar critérios de comparação (quantidade separada vs quantidade conferida)
+- [x] Investigar proteção contra finalização duplicada
+- [x] Verificar se há problema de concorrência ou estado inconsistente
+- [x] Identificar cenários que causam os erros
+
+### Causa Raiz Identificada
+Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam itens de conferência duplicados, causando divergências falsas.
+
+### Correção
+- [x] Ajustar lógica de startStageCheck para agrupar itens por produto
+- [x] Somar quantidades de linhas duplicadas antes de criar registros
+- [x] Implementar procedure cancelStageCheck no backend
+- [x] Adicionar botão "Cancelar Conferência" na interface
+- [x] Adicionar parâmetro force para permitir finalização com divergências
+- [x] Adicionar botão "Forçar Finalização" no modal de divergências
+- [x] Testar cancelamento e nova conferência com lógica corrigida

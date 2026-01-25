@@ -172,13 +172,30 @@ export async function startStageCheck(params: {
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
     .where(eq(pickingOrderItems.pickingOrderId, params.pickingOrderId));
 
+  // Agrupar itens por produto e somar quantidades
+  // (pedidos podem ter múltiplas linhas do mesmo produto em endereços diferentes)
+  const groupedItems = orderItems.reduce((acc, item) => {
+    const existing = acc.find(i => i.productId === item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      acc.push({
+        productId: item.productId!,
+        productSku: item.productSku!,
+        productDescription: item.productDescription!,
+        quantity: item.quantity,
+      });
+    }
+    return acc;
+  }, [] as Array<{ productId: number; productSku: string; productDescription: string; quantity: number }>);
+
   // Criar registros de itens esperados (para comparação posterior)
-  for (const item of orderItems) {
+  for (const item of groupedItems) {
     await dbConn.insert(stageCheckItems).values({
       stageCheckId: Number(stageCheck.insertId),
-      productId: item.productId!,
-      productSku: item.productSku!,
-      productName: item.productDescription!,
+      productId: item.productId,
+      productSku: item.productSku,
+      productName: item.productDescription,
       expectedQuantity: item.quantity,
       checkedQuantity: 0,
       divergence: 0,
@@ -300,6 +317,7 @@ export async function recordStageItem(params: {
 export async function completeStageCheck(params: {
   stageCheckId: number;
   notes?: string;
+  force?: boolean;
   tenantId: number | null;
 }) {
   const dbConn = await getDb();
@@ -336,7 +354,7 @@ export async function completeStageCheck(params: {
   const hasDivergence = items.some(item => item.divergence !== 0);
   const divergentItems = items.filter(item => item.divergence !== 0);
 
-  if (hasDivergence) {
+  if (hasDivergence && !params.force) {
     // Atualizar status para divergent
     await dbConn
       .update(stageChecks)
@@ -628,4 +646,60 @@ export async function getStageCheckHistory(params: {
     .offset(params.offset);
 
   return checks;
+}
+
+/**
+ * Cancela conferência de Stage em andamento
+ * Deleta registros de stageCheck e stageCheckItems
+ */
+export async function cancelStageCheck(params: {
+  stageCheckId: number;
+  tenantId: number | null;
+}) {
+  const dbConn = await getDb();
+  if (!dbConn) throw new Error("Database connection failed");
+
+  // Buscar conferência
+  const [stageCheck] = await dbConn
+    .select()
+    .from(stageChecks)
+    .where(eq(stageChecks.id, params.stageCheckId))
+    .limit(1);
+
+  if (!stageCheck) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Conferência não encontrada",
+    });
+  }
+
+  // Validar tenantId
+  if (params.tenantId !== null && stageCheck.tenantId !== params.tenantId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Você não tem permissão para cancelar esta conferência",
+    });
+  }
+
+  if (stageCheck.status !== "in_progress") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Apenas conferências em andamento podem ser canceladas",
+    });
+  }
+
+  // Deletar itens da conferência
+  await dbConn
+    .delete(stageCheckItems)
+    .where(eq(stageCheckItems.stageCheckId, params.stageCheckId));
+
+  // Deletar conferência
+  await dbConn
+    .delete(stageChecks)
+    .where(eq(stageChecks.id, params.stageCheckId));
+
+  return {
+    success: true,
+    message: `Conferência do pedido ${stageCheck.customerOrderNumber} cancelada com sucesso`,
+  };
 }

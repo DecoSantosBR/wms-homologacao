@@ -70,11 +70,13 @@ export const stageRouter = {
     .input(z.object({
       stageCheckId: z.number(),
       notes: z.string().optional(),
+      force: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       return await completeStageCheck({
         stageCheckId: input.stageCheckId,
         notes: input.notes,
+        force: input.force,
         tenantId: ctx.user.tenantId,
       });
     }),
@@ -132,5 +134,21 @@ export const stageRouter = {
         pdfBase64: pdfBuffer.toString("base64"),
         filename: `etiquetas-${input.customerOrderNumber}.pdf`,
       };
+    }),
+
+  /**
+   * Cancela conferência de Stage em andamento
+   * Deleta registros de stageCheck e stageCheckItems
+   */
+  cancelStageCheck: protectedProcedure
+    .input(z.object({
+      stageCheckId: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { cancelStageCheck } = await import("./stage");
+      return await cancelStageCheck({
+        stageCheckId: input.stageCheckId,
+        tenantId: ctx.user.tenantId,
+      });
     }),
 };
