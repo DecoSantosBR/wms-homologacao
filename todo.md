@@ -845,3 +845,23 @@
 - [x] Melhorar mensagem de erro com feedback específico sobre status do pedido
 - [x] Implementar verificação de status atual e mensagens contextuais
 - [x] Testar mensagem de erro melhorada na página de Stage
+
+
+## 🐛 BUG: STATUS DE PEDIDO APÓS PICKING - 25/01/2026 ✅ RESOLVIDO
+
+### Problema Reportado
+- Pedido PED-001 foi separado com 100% de progresso em todos os itens
+- Status do pedido permanece como "Pendente" ao invés de "Separado" ou "Picked"
+- Picking está completo mas status não foi atualizado automaticamente
+
+### Investigação
+- [x] Verificar lógica de atualização de status no backend após conclusão de item
+- [x] Verificar procedure que atualiza status do pedido quando todos os itens estão completos
+- [x] Identificar se falta trigger ou verificação de conclusão
+- [x] Verificar se há procedure específica para finalizar picking
+- [x] Identificar que problema é no frontend (mapeamento de status)
+
+### Correção
+- [x] Adicionar mapeamento para status "staged" na função getStatusBadge
+- [x] Configurar label "Conferido" com variant "default" e icon CheckCircle2
+- [x] Testar exibição de status na interface (pedido PED-001)

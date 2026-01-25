@@ -579,6 +579,7 @@ export default function PickingOrders() {
       pending: { label: "Pendente", variant: "secondary", icon: Clock },
       picking: { label: "Separando", variant: "default", icon: Package },
       picked: { label: "Separado", variant: "outline", icon: CheckCircle2 },
+      staged: { label: "Conferido", variant: "default", icon: CheckCircle2 },
       completed: { label: "Completo", variant: "outline", icon: CheckCircle2 },
       checking: { label: "Conferindo", variant: "default", icon: AlertCircle },
       packed: { label: "Embalado", variant: "outline", icon: Package },
