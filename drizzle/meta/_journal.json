@@ -183,6 +183,13 @@
       "when": 1769197810230,
       "tag": "0025_optimal_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1769356307046,
+      "tag": "0026_condemned_mandarin",
+      "breakpoints": true
     }
   ]
 }

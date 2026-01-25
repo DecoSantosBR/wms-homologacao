@@ -12,6 +12,7 @@ import Receiving from "./pages/Receiving";
 import Picking from "./pages/Picking";
 import PickingOrders from "./pages/PickingOrders";
 import PickingExecution from "./pages/PickingExecution";
+import ShippingTest from "./pages/ShippingTest";
 import WaveExecution from "./pages/WaveExecution";
 import Inventory from "./pages/Inventory";
 import Cadastros from "./pages/Cadastros";
@@ -37,6 +38,7 @@ function Router() {
       <Route path={"/picking"} component={PickingOrders} />
       <Route path={"/picking/:id"} component={PickingExecution} />
       <Route path={"/picking/execute/:id"} component={WaveExecution} />
+      <Route path={"/shipping-test"} component={ShippingTest} />
       <Route path={"/separacao"} component={Picking} />
       <Route path={"/inventory"} component={Inventory} />
       <Route path={"/cadastros"} component={Cadastros} />

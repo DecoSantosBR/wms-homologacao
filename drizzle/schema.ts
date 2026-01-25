@@ -424,6 +424,7 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   deliveryAddress: text("deliveryAddress"),
   priority: mysqlEnum("priority", ["emergency", "urgent", "normal", "low"]).default("normal").notNull(),
   status: mysqlEnum("status", ["pending", "validated", "in_wave", "picking", "picked", "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
+  shippingStatus: mysqlEnum("shippingStatus", ["awaiting_invoice", "invoice_linked", "in_manifest", "shipped"]), // Status de expedição
   totalItems: int("totalItems").default(0).notNull(), // Total de linhas de itens
   totalQuantity: int("totalQuantity").default(0).notNull(), // Quantidade total de unidades
   scheduledDate: timestamp("scheduledDate"), // Data agendada para separação
@@ -865,6 +866,71 @@ export const printSettings = mysqlTable("printSettings", {
 }));
 
 // ============================================================================
+// MÓDULO DE EXPEDIÇÃO (SHIPPING)
+// ============================================================================
+
+/**
+ * Notas Fiscais (Invoices)
+ * Armazena XMLs de NF-e importados e vinculação com pedidos
+ */
+export const invoices = mysqlTable("invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  invoiceNumber: varchar("invoiceNumber", { length: 20 }).notNull(), // Número da NF
+  series: varchar("series", { length: 5 }).notNull(), // Série da NF
+  invoiceKey: varchar("invoiceKey", { length: 44 }).notNull().unique(), // Chave de acesso (44 dígitos)
+  customerId: int("customerId").notNull(), // Cliente (tenant)
+  customerName: varchar("customerName", { length: 255 }),
+  pickingOrderId: int("pickingOrderId"), // Pedido vinculado
+  xmlData: json("xmlData"), // Dados completos do XML
+  volumes: int("volumes"), // Quantidade de volumes
+  totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total da NF
+  issueDate: timestamp("issueDate"), // Data de emissão
+  status: mysqlEnum("status", ["imported", "linked", "in_manifest", "shipped"]).default("imported").notNull(),
+  importedBy: int("importedBy").notNull(),
+  importedAt: timestamp("importedAt").defaultNow().notNull(),
+  linkedAt: timestamp("linkedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Romaneios de Transporte (Shipment Manifests)
+ * Consolida múltiplos pedidos e NFs para uma transportadora
+ */
+export const shipmentManifests = mysqlTable("shipmentManifests", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  manifestNumber: varchar("manifestNumber", { length: 50 }).notNull().unique(),
+  carrierId: int("carrierId"), // Transportadora (relacionamento futuro)
+  carrierName: varchar("carrierName", { length: 255 }),
+  totalOrders: int("totalOrders").default(0).notNull(),
+  totalInvoices: int("totalInvoices").default(0).notNull(),
+  totalVolumes: int("totalVolumes").default(0).notNull(),
+  status: mysqlEnum("status", ["draft", "ready", "collected", "shipped"]).default("draft").notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  collectedAt: timestamp("collectedAt"),
+  shippedAt: timestamp("shippedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Itens do Romaneio
+ * Relaciona pedidos e NFs a um romaneio específico
+ */
+export const shipmentManifestItems = mysqlTable("shipmentManifestItems", {
+  id: int("id").autoincrement().primaryKey(),
+  manifestId: int("manifestId").notNull(),
+  pickingOrderId: int("pickingOrderId").notNull(),
+  invoiceId: int("invoiceId").notNull(),
+  volumes: int("volumes"),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+}, (table) => ({
+  manifestOrderIdx: unique().on(table.manifestId, table.pickingOrderId), // Pedido não pode estar em mais de um romaneio
+}));
+
+// ============================================================================
 // TIPOS EXPORTADOS
 // ============================================================================
 
@@ -910,3 +976,9 @@ export type ProductLabel = typeof productLabels.$inferSelect;
 export type InsertProductLabel = typeof productLabels.$inferInsert;
 export type PrintSettings = typeof printSettings.$inferSelect;
 export type InsertPrintSettings = typeof printSettings.$inferInsert;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+export type ShipmentManifest = typeof shipmentManifests.$inferSelect;
+export type InsertShipmentManifest = typeof shipmentManifests.$inferInsert;
+export type ShipmentManifestItem = typeof shipmentManifestItems.$inferSelect;
+export type InsertShipmentManifestItem = typeof shipmentManifestItems.$inferInsert;

@@ -14,7 +14,8 @@ import { blindConferenceRouter } from "./blindConferenceRouter";
 import { stockRouter } from "./stockRouter";
 import { preallocationRouter } from "./preallocationRouter";
 import { waveRouter } from "./waveRouter";
-import { stageRouter } from "./stageRouter";
+import { stageRouter } from "./stageRouter.js";
+import { shippingRouter } from "./shippingRouter.js";
 import { userRouter } from "./userRouter";
 import { roleRouter } from "./roleRouter";
 
@@ -25,6 +26,7 @@ export const appRouter = router({
   preallocation: preallocationRouter,
   wave: waveRouter,
   stage: stageRouter,
+  shipping: shippingRouter,
   users: userRouter,
   roles: roleRouter,
   

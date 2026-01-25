@@ -865,3 +865,79 @@
 - [x] Adicionar mapeamento para status "staged" na função getStatusBadge
 - [x] Configurar label "Conferido" com variant "default" e icon CheckCircle2
 - [x] Testar exibição de status na interface (pedido PED-001)
+
+
+## 🔍 INVESTIGAÇÃO: STATUS INCONSISTENTE APÓS ERRO NO STAGE - 25/01/2026
+
+### Contexto Reportado
+- Tentativa de finalizar conferência no Stage para pedido PED-001
+- Sistema retornou erro: "não há endereço de expedição disponível para o cliente"
+- Após o erro, pedido ficou com status inconsistente ("staged" no banco, mas operação não completou)
+
+### Investigação
+- [ ] Verificar estado atual do pedido PED-001 no banco de dados
+- [ ] Verificar registros na tabela stageChecks
+- [ ] Verificar movimentação de estoque (se houve baixa parcial)
+- [ ] Identificar em que ponto da transação o erro ocorreu
+- [ ] Verificar se há rollback adequado em caso de erro
+
+### Correção Necessária
+- [ ] Implementar transação atômica na finalização do Stage
+- [ ] Garantir rollback completo em caso de erro
+- [ ] Evitar mudança de status antes de validar todos os pré-requisitos
+- [ ] Testar cenário de erro e verificar consistência
+
+
+## 📦 FEATURE: MÓDULO DE EXPEDIÇÃO - 25/01/2026
+
+### Objetivo
+Implementar módulo completo de Expedição com 3 abas funcionais: Pedidos, Notas Fiscais e Romaneios
+
+### Banco de Dados
+- [x] Criar tabela `invoices` (notas fiscais)
+  - id, tenantId, invoiceNumber, series, customerId, pickingOrderId
+  - xmlData (JSON), volumes, status, importedBy, importedAt
+- [x] Criar tabela `shipmentManifests` (romaneios)
+  - id, tenantId, shipmentNumber, carrierId, status
+  - totalOrders, totalInvoices, totalVolumes, createdBy, createdAt
+- [x] Criar tabela `shipmentManifestItems` (itens do romaneio)
+  - id, shipmentId, pickingOrderId, invoiceId
+- [x] Adicionar campo `shippingStatus` em pickingOrders
+  - Valores: awaiting_invoice, invoice_linked, in_shipment, shipped
+
+### Backend (server/shippingRouter.ts)
+- [x] Router `shipping` com procedures:
+  - importInvoice: importar e validar XML de NF
+  - listInvoices: listar NFs com filtros
+  - linkInvoiceToOrder: vincular NF a pedido
+  - createManifest: criar romaneio
+  - listManifests: listar romaneios
+  - finalizeManifest: finalizar expedição
+  - listOrders: listar pedidos prontos para expedição
+
+### Frontend (client/src/pages/)
+- [x] Criar página ShippingTest.tsx com 3 abas (página de testes)
+- [x] Aba "Pedidos":
+  - Listar pedidos com status "staged"
+  - Exibir: nº pedido, cliente, volumes, endereço EXP, status expedição
+  - Status: Aguardando NF, NF Vinculada, Em Romaneio, Expedido
+- [x] Aba "Notas Fiscais":
+  - Botão "Importar XML"
+  - Listar NFs: nº NF, série, cliente, pedido vinculado, volumes, status
+  - Ação: vincular a pedido
+- [x] Aba "Romaneios":
+  - Botão "Novo Romaneio"
+  - Listar romaneios: nº, transportadora, qtd pedidos/NFs, volumes, status
+  - Ações: visualizar, imprimir, finalizar
+
+### Regras de Negócio
+- [ ] Pedido só entra em romaneio se tiver NF vinculada
+- [ ] NF só pode ser vinculada a um pedido
+- [ ] Pedido não pode estar em mais de um romaneio ativo
+- [ ] Ao finalizar romaneio: status → Expedido (romaneio, pedidos, NFs)
+
+### Testes
+- [ ] Testar importação de XML
+- [ ] Testar vinculação de NF a pedido
+- [ ] Testar criação de romaneio
+- [ ] Testar finalização de expedição
