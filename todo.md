@@ -826,3 +826,22 @@
 - [x] Ajustar lógica de busca de endereço de expedição
 - [x] Garantir que endereços EXP sejam encontrados independente do cliente
 - [x] Testar finalização de conferência com sucesso
+
+## 🐛 BUG: STATUS DE PEDIDO NA PÁGINA DE PICKING - 25/01/2026 ✅ RESOLVIDO
+## 🐛 BUG: STATUS DE PEDIDO NA PÁGINA DE PICKING - 25/01/2026
+
+### Problema Reportado
+- Erro na página /picking: "Pedido PED-001 não encontrado ou não está pronto para conferência (status deve ser 'completed')"
+- Pedido PED-001 está com status 'staged' (após conferência do Stage)
+- Página de Picking está buscando pedidos com status 'completed'
+
+### Investigação
+- [x] Verificar lógica de busca de pedidos no frontend (client/src/pages/Picking.tsx)
+- [x] Verificar procedure no backend que busca pedidos para picking
+- [x] Entender fluxo correto de status: pending → completed → picked → staged → shipped
+- [x] Identificar se erro é no filtro de status ou na navegação do usuário
+
+### Correção
+- [x] Melhorar mensagem de erro com feedback específico sobre status do pedido
+- [x] Implementar verificação de status atual e mensagens contextuais
+- [x] Testar mensagem de erro melhorada na página de Stage

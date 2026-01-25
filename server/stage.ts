@@ -43,9 +43,39 @@ export async function getOrderForStage(customerOrderNumber: string, tenantId: nu
     .limit(1);
 
   if (orders.length === 0) {
+    // Verificar se pedido existe com outro status para dar feedback específico
+    const existingOrderConditions: any[] = [
+      eq(pickingOrders.customerOrderNumber, customerOrderNumber),
+    ];
+    
+    if (tenantId !== null) {
+      existingOrderConditions.push(eq(pickingOrders.tenantId, tenantId));
+    }
+    
+    const [existingOrder] = await dbConn
+      .select({ status: pickingOrders.status })
+      .from(pickingOrders)
+      .where(and(...existingOrderConditions))
+      .limit(1);
+      
+    if (existingOrder) {
+      const statusMessages: Record<string, string> = {
+        pending: 'ainda não foi confirmado para separação. Aguardando confirmação no módulo de Separação',
+        completed: 'está pronto para picking. Acesse o módulo de Separação para realizar o picking',
+        picked: 'já foi separado e está aguardando conferência no Stage',
+        staged: 'já foi conferido no Stage e está aguardando expedição. Acesse o módulo de Expedição',
+        shipped: 'já foi expedido e não pode ser conferido novamente',
+      };
+      
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Pedido ${customerOrderNumber} ${statusMessages[existingOrder.status] || 'não está disponível para conferência'}`,
+      });
+    }
+    
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: `Pedido ${customerOrderNumber} não encontrado ou não está pronto para conferência (status deve ser 'completed')`,
+      message: `Pedido ${customerOrderNumber} não encontrado`,
     });
   }
 
