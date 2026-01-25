@@ -807,3 +807,22 @@
 - [x] Validar que endereço vazio pode ser deletado
 - [x] Validar que checkbox "Bloqueado" altera status corretamente
 - [x] Validar que desmarcar checkbox restaura status automático (available/occupied)
+
+
+## 🐛 BUG: ENDEREÇO DE EXPEDIÇÃO NO STAGE - 23/01/2026 ✅ RESOLVIDO
+
+### Problema Reportado
+- Ao finalizar conferência no Stage, sistema informa "não há endereço de expedição configurado para o cliente"
+- Endereços EXP (EXP-01-A, EXP-01-B, EXP-01-C) existem e estão disponíveis no sistema
+- Baixa de estoque não é realizada devido a este erro
+
+### Investigação
+- [x] Verificar lógica de busca de endereço de expedição em stageRouter.ts
+- [x] Verificar filtros aplicados na query (tenantId, zoneId, status)
+- [x] Verificar se endereços EXP estão corretamente configurados no banco
+- [x] Identificar causa raiz do problema
+
+### Correção
+- [x] Ajustar lógica de busca de endereço de expedição
+- [x] Garantir que endereços EXP sejam encontrados independente do cliente
+- [x] Testar finalização de conferência com sucesso

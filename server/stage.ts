@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, like } from "drizzle-orm";
 import { getDb } from "./db";
 import {
   pickingOrders,
@@ -354,30 +354,51 @@ export async function completeStageCheck(params: {
     .where(eq(tenants.id, pickingOrder.tenantId))
     .limit(1);
 
+  let shippingLocation;
+
+  // Se cliente não tem shippingAddress configurado, buscar automaticamente endereço EXP disponível
   if (!tenant || !tenant.shippingAddress) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Cliente não possui endereço de expedição configurado",
-    });
-  }
-
-  // Buscar endereço de expedição no sistema
-  const [shippingLocation] = await dbConn
-    .select()
-    .from(warehouseLocations)
-    .where(
-      and(
-        eq(warehouseLocations.code, tenant.shippingAddress),
-        eq(warehouseLocations.tenantId, pickingOrder.tenantId)
+    const [autoShippingLocation] = await dbConn
+      .select()
+      .from(warehouseLocations)
+      .where(
+        and(
+          like(warehouseLocations.code, 'EXP%'),
+          eq(warehouseLocations.tenantId, pickingOrder.tenantId),
+          eq(warehouseLocations.status, 'available')
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (!shippingLocation) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: `Endereço de expedição ${tenant.shippingAddress} não encontrado no sistema`,
-    });
+    if (!autoShippingLocation) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Nenhum endereço de expedição disponível encontrado para este cliente",
+      });
+    }
+
+    shippingLocation = autoShippingLocation;
+  } else {
+    // Buscar endereço de expedição configurado no sistema
+    const [configuredLocation] = await dbConn
+      .select()
+      .from(warehouseLocations)
+      .where(
+        and(
+          eq(warehouseLocations.code, tenant.shippingAddress),
+          eq(warehouseLocations.tenantId, pickingOrder.tenantId)
+        )
+      )
+      .limit(1);
+
+    if (!configuredLocation) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Endereço de expedição ${tenant.shippingAddress} não encontrado no sistema`,
+      });
+    }
+
+    shippingLocation = configuredLocation;
   }
 
   // Sem divergências: movimentar para expedição
