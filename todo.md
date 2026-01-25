@@ -967,3 +967,8 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Adicionar parâmetro force para permitir finalização com divergências
 - [x] Adicionar botão "Forçar Finalização" no modal de divergências
 - [x] Testar cancelamento e nova conferência com lógica corrigida
+
+## 🐛 Bug Módulo Expedição - 25/01/2026 17:08
+
+- [x] Corrigir erro de tenantId vazio na criação de romaneio (createManifest)
+- [x] Verificar status do PED-005 (pedido não existe no banco de dados)

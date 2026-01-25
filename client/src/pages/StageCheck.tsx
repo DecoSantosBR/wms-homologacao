@@ -400,19 +400,22 @@ export default function StageCheck() {
       </div>
 
       <div className="mt-6 flex justify-between">
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={handleCancelCheck}
-          disabled={cancelCheckMutation.isPending}
-        >
-          <XCircle className="mr-2 h-5 w-5" />
-          Cancelar Conferência
-        </Button>
+        {stageCheckId && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleCancelCheck}
+            disabled={cancelCheckMutation.isPending}
+          >
+            <XCircle className="mr-2 h-5 w-5" />
+            Cancelar Conferência
+          </Button>
+        )}
         <Button
           size="lg"
           onClick={handleCompleteCheck}
           disabled={completeCheckMutation.isPending || scannedItems.length === 0}
+          className={!stageCheckId ? "ml-auto" : ""}
         >
           <CheckCircle2 className="mr-2 h-5 w-5" />
           Finalizar Conferência

@@ -174,6 +174,12 @@ export async function startStageCheck(params: {
 
   // Agrupar itens por produto e somar quantidades
   // (pedidos podem ter múltiplas linhas do mesmo produto em endereços diferentes)
+  console.log('[DEBUG startStageCheck] orderItems BEFORE grouping:', orderItems.map(i => ({
+    productId: i.productId,
+    sku: i.productSku,
+    qty: i.quantity
+  })));
+  
   const groupedItems = orderItems.reduce((acc, item) => {
     const existing = acc.find(i => i.productId === item.productId);
     if (existing) {
@@ -188,6 +194,12 @@ export async function startStageCheck(params: {
     }
     return acc;
   }, [] as Array<{ productId: number; productSku: string; productDescription: string; quantity: number }>);
+
+  console.log('[DEBUG startStageCheck] groupedItems AFTER grouping:', groupedItems.map(i => ({
+    productId: i.productId,
+    sku: i.productSku,
+    qty: i.quantity
+  })));
 
   // Criar registros de itens esperados (para comparação posterior)
   for (const item of groupedItems) {
@@ -351,8 +363,18 @@ export async function completeStageCheck(params: {
     .where(eq(stageCheckItems.stageCheckId, params.stageCheckId));
 
   // Verificar divergências
+  console.log('[DEBUG] Items before divergence check:', items.map(i => ({
+    sku: i.productSku,
+    expected: i.expectedQuantity,
+    checked: i.checkedQuantity,
+    divergence: i.divergence
+  })));
+  
   const hasDivergence = items.some(item => item.divergence !== 0);
   const divergentItems = items.filter(item => item.divergence !== 0);
+  
+  console.log('[DEBUG] hasDivergence:', hasDivergence);
+  console.log('[DEBUG] divergentItems count:', divergentItems.length);
 
   if (hasDivergence && !params.force) {
     // Atualizar status para divergent

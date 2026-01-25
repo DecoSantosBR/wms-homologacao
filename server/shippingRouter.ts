@@ -270,21 +270,17 @@ export const shippingRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId!;
-
       // Validar pedidos
       const orders = await db
         .select({
           id: pickingOrders.id,
           customerOrderNumber: pickingOrders.customerOrderNumber,
           shippingStatus: pickingOrders.shippingStatus,
+          tenantId: pickingOrders.tenantId,
         })
         .from(pickingOrders)
         .where(
-          and(
-            sql`${pickingOrders.id} IN (${sql.join(input.orderIds.map(id => sql`${id}`), sql`, `)})`,
-            tenantId !== null ? eq(pickingOrders.tenantId, tenantId) : undefined
-          )
+          sql`${pickingOrders.id} IN (${sql.join(input.orderIds.map(id => sql`${id}`), sql`, `)})`
         );
 
       if (orders.length !== input.orderIds.length) {
@@ -310,12 +306,15 @@ export const shippingRouter = router({
 
       const totalVolumes = invoicesList.reduce((sum, inv) => sum + (inv.volumes || 0), 0);
 
+      // Usar tenantId do primeiro pedido (todos devem ser do mesmo cliente)
+      const manifestTenantId = orders[0].tenantId;
+
       // Gerar número do romaneio
       const manifestNumber = `ROM-${Date.now()}`;
 
       // Criar romaneio
       const [manifest] = await db.insert(shipmentManifests).values({
-        tenantId: tenantId!,
+        tenantId: manifestTenantId,
         manifestNumber,
         carrierName: input.carrierName,
         totalOrders: input.orderIds.length,
