@@ -69,6 +69,27 @@ export default function ShippingTest() {
     },
   });
 
+  const unlinkInvoice = trpc.shipping.unlinkInvoice.useMutation({
+    onSuccess: (data) => {
+      toast({ title: "Sucesso", description: data.message });
+      refetchInvoices();
+      refetchOrders();
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteInvoice = trpc.shipping.deleteInvoice.useMutation({
+    onSuccess: (data) => {
+      toast({ title: "Sucesso", description: data.message });
+      refetchInvoices();
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({
     xmlContent: '',
@@ -116,6 +137,18 @@ export default function ShippingTest() {
         ? prev.filter(id => id !== orderId)
         : [...prev, orderId]
     );
+  };
+
+  const handleUnlinkInvoice = (invoiceNumber: string) => {
+    if (confirm(`Deseja realmente desvincular a NF ${invoiceNumber}?`)) {
+      unlinkInvoice.mutate({ invoiceNumber });
+    }
+  };
+
+  const handleDeleteInvoice = (invoiceNumber: string) => {
+    if (confirm(`Deseja realmente excluir a NF ${invoiceNumber}? Esta ação não pode ser desfeita.`)) {
+      deleteInvoice.mutate({ invoiceNumber });
+    }
   };
 
   const getShippingStatusBadge = (status: string | null) => {
@@ -359,16 +392,36 @@ export default function ShippingTest() {
                 <div className="space-y-2">
                   {invoices.map((invoice) => (
                     <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">NF {invoice.invoiceNumber}-{invoice.series}</p>
                         <p className="text-sm text-muted-foreground">
-                          {invoice.customerName} • Pedido: {invoice.orderNumber || 'Não vinculado'} • ID: {invoice.id}
+                          {invoice.customerName} • Pedido: {invoice.orderNumber || 'Não vinculado'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Volumes: {invoice.volumes} • Valor: R$ {invoice.totalValue}
                         </p>
                       </div>
-                      {getInvoiceStatusBadge(invoice.status)}
+                      <div className="flex items-center gap-2">
+                        {getInvoiceStatusBadge(invoice.status)}
+                        {invoice.status === 'linked' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUnlinkInvoice(invoice.invoiceNumber)}
+                          >
+                            Desvincular
+                          </Button>
+                        )}
+                        {invoice.status === 'imported' && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteInvoice(invoice.invoiceNumber)}
+                          >
+                            Excluir
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -992,3 +992,9 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Usar números ao invés de IDs nos campos de vinculação
 - [x] Corrigir cliente (usar destinatário ao invés de fornecedor)
 - [x] Importação de saída apenas vincula NF (não cria pedido)
+
+## 🚀 Nova Funcionalidade - 26/01/2026 12:15
+
+- [x] Implementar backend para excluir NF importada
+- [x] Implementar backend para desvincular NF de pedido
+- [x] Adicionar botões na interface de teste

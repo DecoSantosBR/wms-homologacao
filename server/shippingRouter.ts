@@ -259,6 +259,118 @@ export const shippingRouter = router({
       };
     }),
 
+  /**
+   * Desvincular NF de Pedido
+   */
+  unlinkInvoice: protectedProcedure
+    .input(
+      z.object({
+        invoiceNumber: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar NF pelo número
+      const [invoice] = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.invoiceNumber, input.invoiceNumber))
+        .limit(1);
+
+      if (!invoice) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `NF ${input.invoiceNumber} não encontrada`,
+        });
+      }
+
+      if (!invoice.pickingOrderId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nota Fiscal não está vinculada a nenhum pedido",
+        });
+      }
+
+      const orderId = invoice.pickingOrderId;
+
+      // Desvincular NF do pedido
+      await db
+        .update(invoices)
+        .set({
+          pickingOrderId: null,
+          status: "imported",
+          linkedAt: null,
+        })
+        .where(eq(invoices.id, invoice.id));
+
+      // Atualizar status de expedição do pedido para awaiting_invoice
+      await db
+        .update(pickingOrders)
+        .set({
+          shippingStatus: "awaiting_invoice",
+        })
+        .where(eq(pickingOrders.id, orderId));
+
+      return {
+        success: true,
+        message: "Nota Fiscal desvinculada do pedido com sucesso",
+      };
+    }),
+
+  /**
+   * Excluir NF Importada
+   */
+  deleteInvoice: protectedProcedure
+    .input(
+      z.object({
+        invoiceNumber: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar NF pelo número
+      const [invoice] = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.invoiceNumber, input.invoiceNumber))
+        .limit(1);
+
+      if (!invoice) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `NF ${input.invoiceNumber} não encontrada`,
+        });
+      }
+
+      if (invoice.pickingOrderId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Não é possível excluir NF vinculada a um pedido. Desvincule primeiro.",
+        });
+      }
+
+      if (invoice.status !== "imported") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Não é possível excluir NF com status '${invoice.status}'`,
+        });
+      }
+
+      // Excluir NF
+      await db
+        .delete(invoices)
+        .where(eq(invoices.id, invoice.id));
+
+      return {
+        success: true,
+        message: "Nota Fiscal excluída com sucesso",
+      };
+    }),
+
   // ============================================================================
   // ROMANEIOS
   // ============================================================================
