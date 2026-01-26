@@ -507,6 +507,9 @@ export async function completeStageCheck(params: {
     shippingLocation = configuredLocation;
   }
 
+  // BAIXA DE ESTOQUE REMOVIDA - Agora ocorre ao finalizar romaneio
+  // TODO: Mover esta lógica para shippingRouter.finalizeManifest
+  /*
   // Sem divergências: movimentar para expedição
   // Para cada item, movimentar quantidade expedida das reservas para endereço de expedição
   for (const item of items) {
@@ -611,6 +614,7 @@ export async function completeStageCheck(params: {
       remainingToShip -= quantityToShip;
     }
   }
+  */
 
   // Atualizar status da conferência
   await dbConn

@@ -1011,3 +1011,9 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ## 🚀 Nova Funcionalidade - 26/01/2026 13:23
 
 - [x] Renomear /shipping-test para /shipping
+
+## 🔄 Mudança de Fluxo - 26/01/2026 13:27
+
+- [x] Remover baixa de estoque do completeStageCheck
+- [x] Implementar baixa de estoque ao finalizar romaneio
+- [x] Adicionar interface de finalização de romaneio

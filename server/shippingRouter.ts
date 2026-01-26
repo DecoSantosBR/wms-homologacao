@@ -12,7 +12,13 @@ import {
   pickingOrders,
   pickingOrderItems,
   products,
-  tenants 
+  tenants,
+  inventory,
+  inventoryMovements,
+  pickingReservations,
+  warehouseLocations,
+  stageCheckItems,
+  stageChecks
 } from "../drizzle/schema.js";
 import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
@@ -610,6 +616,206 @@ export const shippingRouter = router({
         .where(eq(shipmentManifestItems.manifestId, input.manifestId));
 
       const orderIds = items.map(item => item.pickingOrderId);
+
+      // ===== BAIXA DE ESTOQUE =====
+      // Para cada pedido do romaneio, executar baixa de estoque
+      for (const orderItem of items) {
+        const orderId = orderItem.pickingOrderId;
+
+        // Buscar pedido para obter tenantId
+        const [pickingOrder] = await db
+          .select()
+          .from(pickingOrders)
+          .where(eq(pickingOrders.id, orderId))
+          .limit(1);
+
+        if (!pickingOrder) continue;
+
+        // Buscar endereço de expedição do cliente
+        const [tenant] = await db
+          .select({ shippingAddress: tenants.shippingAddress })
+          .from(tenants)
+          .where(eq(tenants.id, pickingOrder.tenantId))
+          .limit(1);
+
+        let shippingLocation;
+
+        // Se cliente não tem shippingAddress configurado, buscar automaticamente endereço EXP disponível
+        if (!tenant || !tenant.shippingAddress) {
+          const [autoShippingLocation] = await db
+            .select()
+            .from(warehouseLocations)
+            .where(
+              and(
+                sql`${warehouseLocations.code} LIKE 'EXP%'`,
+                eq(warehouseLocations.tenantId, pickingOrder.tenantId),
+                eq(warehouseLocations.status, 'available')
+              )
+            )
+            .limit(1);
+
+          if (!autoShippingLocation) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Nenhum endereço de expedição disponível encontrado para o pedido ${pickingOrder.customerOrderNumber}`,
+            });
+          }
+
+          shippingLocation = autoShippingLocation;
+        } else {
+          // Buscar endereço de expedição configurado no sistema
+          const [configuredLocation] = await db
+            .select()
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.code, tenant.shippingAddress),
+                eq(warehouseLocations.tenantId, pickingOrder.tenantId)
+              )
+            )
+            .limit(1);
+
+          if (!configuredLocation) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Endereço de expedição ${tenant.shippingAddress} não encontrado no sistema`,
+            });
+          }
+
+          shippingLocation = configuredLocation;
+        }
+
+        // Buscar itens conferidos no Stage para este pedido
+        const [stageCheck] = await db
+          .select()
+          .from(stageChecks)
+          .where(
+            and(
+              eq(stageChecks.pickingOrderId, orderId),
+              eq(stageChecks.status, 'completed')
+            )
+          )
+          .orderBy(desc(stageChecks.completedAt))
+          .limit(1);
+
+        if (!stageCheck) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Pedido ${pickingOrder.customerOrderNumber} não possui conferência Stage concluída`,
+          });
+        }
+
+        // Buscar itens conferidos
+        const checkedItems = await db
+          .select()
+          .from(stageCheckItems)
+          .where(eq(stageCheckItems.stageCheckId, stageCheck.id));
+
+        // Para cada item conferido, executar baixa de estoque
+        for (const item of checkedItems) {
+          // Buscar reservas do produto para este pedido
+          const reservations = await db
+            .select({
+              id: pickingReservations.id,
+              inventoryId: pickingReservations.inventoryId,
+              quantity: pickingReservations.quantity,
+            })
+            .from(pickingReservations)
+            .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
+            .where(
+              and(
+                eq(pickingReservations.pickingOrderId, orderId),
+                eq(inventory.productId, item.productId)
+              )
+            );
+
+          let remainingToShip = item.checkedQuantity;
+
+          for (const reservation of reservations) {
+            if (remainingToShip <= 0) break;
+
+            const quantityToShip = Math.min(remainingToShip, reservation.quantity);
+
+            // Buscar estoque origem
+            const [sourceInventory] = await db
+              .select()
+              .from(inventory)
+              .where(eq(inventory.id, reservation.inventoryId))
+              .limit(1);
+
+            if (!sourceInventory) continue;
+
+            // Subtrair do estoque origem
+            await db
+              .update(inventory)
+              .set({
+                quantity: sourceInventory.quantity - quantityToShip,
+              })
+              .where(eq(inventory.id, reservation.inventoryId));
+
+            // Verificar se já existe estoque no endereço de expedição para este produto/lote
+            const conditions = [
+              eq(inventory.locationId, shippingLocation.id),
+              eq(inventory.productId, sourceInventory.productId),
+              eq(inventory.tenantId, pickingOrder.tenantId),
+            ];
+            
+            if (sourceInventory.batch) {
+              conditions.push(eq(inventory.batch, sourceInventory.batch));
+            }
+
+            const [existingShippingInventory] = await db
+              .select()
+              .from(inventory)
+              .where(and(...conditions))
+              .limit(1);
+
+            if (existingShippingInventory) {
+              // Adicionar ao estoque existente
+              await db
+                .update(inventory)
+                .set({
+                  quantity: existingShippingInventory.quantity + quantityToShip,
+                })
+                .where(eq(inventory.id, existingShippingInventory.id));
+            } else {
+              // Criar novo registro de estoque no endereço de expedição
+              await db.insert(inventory).values({
+                locationId: shippingLocation.id,
+                productId: sourceInventory.productId,
+                batch: sourceInventory.batch,
+                expiryDate: sourceInventory.expiryDate,
+                quantity: quantityToShip,
+                tenantId: pickingOrder.tenantId,
+                status: "available",
+              });
+            }
+
+            // Registrar movimentação
+            await db.insert(inventoryMovements).values({
+              productId: sourceInventory.productId,
+              batch: sourceInventory.batch,
+              fromLocationId: sourceInventory.locationId,
+              toLocationId: shippingLocation.id,
+              quantity: quantityToShip,
+              movementType: "picking",
+              referenceType: "shipment_manifest",
+              referenceId: input.manifestId,
+              performedBy: ctx.user.id,
+              notes: `Baixa de estoque ao finalizar romaneio ${manifest.manifestNumber} - Pedido ${pickingOrder.customerOrderNumber}`,
+              tenantId: pickingOrder.tenantId,
+            });
+
+            // Remover reserva
+            await db
+              .delete(pickingReservations)
+              .where(eq(pickingReservations.id, reservation.id));
+
+            remainingToShip -= quantityToShip;
+          }
+        }
+      }
+      // ===== FIM DA BAIXA DE ESTOQUE =====
 
       // Atualizar status do romaneio
       await db
