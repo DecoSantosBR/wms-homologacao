@@ -238,13 +238,15 @@ export const shippingRouter = router({
         });
       }
 
-      // Buscar itens do pedido
+      // Buscar itens do pedido com dados do produto
       const orderItems = await db
         .select({
           productId: pickingOrderItems.productId,
           sku: products.sku,
           supplierCode: products.supplierCode,
           requestedQuantity: pickingOrderItems.requestedQuantity,
+          requestedUM: pickingOrderItems.requestedUM,
+          unitsPerBox: products.unitsPerBox,
           batch: pickingOrderItems.batch,
         })
         .from(pickingOrderItems)
@@ -274,11 +276,17 @@ export const shippingRouter = router({
 
         if (!orderItem) continue;
 
-        // Validar quantidade
-        if (orderItem.requestedQuantity !== nfeProd.quantidade) {
+        // Normalizar quantidade do pedido para unidades
+        let expectedQuantity = orderItem.requestedQuantity;
+        if (orderItem.requestedUM === 'box' && orderItem.unitsPerBox) {
+          expectedQuantity = orderItem.requestedQuantity * orderItem.unitsPerBox;
+        }
+
+        // Validar quantidade (NF sempre vem em unidades)
+        if (expectedQuantity !== nfeProd.quantidade) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Quantidade divergente para SKU ${nfeProd.codigo}: Pedido=${orderItem.requestedQuantity}, NF=${nfeProd.quantidade}`,
+            message: `Quantidade divergente para SKU ${nfeProd.codigo}: Pedido=${expectedQuantity} unidades, NF=${nfeProd.quantidade} unidades`,
           });
         }
 

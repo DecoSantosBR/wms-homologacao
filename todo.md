@@ -1003,3 +1003,7 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 
 - [x] Corrigir busca de tenant ao importar XML de saída
 - [x] Implementar validação de SKUs, lotes, quantidades e volumes no linkInvoiceToOrder
+
+## 🐛 Correção - 26/01/2026 12:33
+
+- [x] Converter caixas em unidades no linkInvoiceToOrder antes de validar quantidade
