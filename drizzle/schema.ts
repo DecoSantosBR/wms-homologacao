@@ -881,6 +881,8 @@ export const invoices = mysqlTable("invoices", {
   invoiceKey: varchar("invoiceKey", { length: 44 }).notNull().unique(), // Chave de acesso (44 dígitos)
   customerId: int("customerId").notNull(), // Cliente (tenant)
   customerName: varchar("customerName", { length: 255 }),
+  customerCity: varchar("customerCity", { length: 100 }), // Município do destinatário
+  customerState: varchar("customerState", { length: 2 }), // UF do destinatário
   pickingOrderId: int("pickingOrderId"), // Pedido vinculado
   xmlData: json("xmlData"), // Dados completos do XML
   volumes: int("volumes"), // Quantidade de volumes

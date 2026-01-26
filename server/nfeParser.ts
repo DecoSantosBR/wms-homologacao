@@ -33,6 +33,8 @@ export interface NFEData {
     cnpj: string;
     razaoSocial: string;
     nomeFantasia: string | null;
+    municipio: string | null;
+    uf: string | null;
   } | null;
   volumes: number; // Quantidade de volumes transportados
   pesoB: number; // Peso bruto em kg
@@ -105,10 +107,13 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
 
     // Extrair dados do destinatário
     const dest = Array.isArray(infNFe.dest) ? infNFe.dest[0] : infNFe.dest;
+    const enderDest = dest?.enderDest;
     const destinatario = dest ? {
       cnpj: extractValue(dest?.CNPJ, ""),
       razaoSocial: extractValue(dest?.xNome, ""),
       nomeFantasia: extractValue(dest?.xFant, null),
+      municipio: extractValue(enderDest?.xMun, null),
+      uf: extractValue(enderDest?.UF, null),
     } : null;
 
     // Extrair volumes transportados e peso bruto

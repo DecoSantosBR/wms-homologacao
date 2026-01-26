@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +18,21 @@ export default function Shipping() {
   };
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [printManifestId, setPrintManifestId] = useState<number | null>(null);
+  const printRef = useRef<{ print: () => void }>(null);
   
   // Query para dados de impressão
   const { data: printData } = trpc.shipping.generateManifestPDF.useQuery(
     { manifestId: printManifestId! },
     { enabled: printManifestId !== null }
   );
+  
+  // Disparar impressão quando dados estiverem prontos
+  useEffect(() => {
+    if (printData && printRef.current) {
+      printRef.current.print();
+      setPrintManifestId(null); // Limpar após imprimir
+    }
+  }, [printData]);
   
   // Queries
   const { data: orders, refetch: refetchOrders, isLoading: loadingOrders } = trpc.shipping.listOrders.useQuery();
@@ -537,7 +546,7 @@ export default function Shipping() {
       {/* Componente de impressão (oculto) */}
       {printData && (
         <div style={{ display: 'none' }}>
-          <ManifestPrint data={printData} />
+          <ManifestPrint ref={printRef} data={printData} />
         </div>
       )}
     </div>

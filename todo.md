@@ -1023,3 +1023,9 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Implementar template HTML/CSS seguindo modelo oficial Med@x
 - [x] Adicionar botão de impressão na interface
 - [x] Extrair peso bruto (pesoB) do XML da NF para preencher coluna Peso (kg) no romaneio
+
+## 🐛 Correções e Melhorias - 26/01/2026 14:12
+
+- [ ] Corrigir botão Imprimir do romaneio (não está funcionando)
+- [ ] Adicionar totalizador Peso Total (kg) no rodapé do romaneio
+- [ ] Extrair município/UF do destinatário do XML para preencher tabela do romaneio

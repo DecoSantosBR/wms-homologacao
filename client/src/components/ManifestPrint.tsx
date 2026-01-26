@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 
@@ -20,13 +20,16 @@ interface ManifestPrintProps {
       orderNumber: string | null;
       invoiceNumber: string;
       customerName: string;
+      customerCity: string;
+      customerState: string;
       volumes: number;
       weight: number;
     }>;
   };
 }
 
-export function ManifestPrint({ data }: ManifestPrintProps) {
+export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProps>(
+  ({ data }, ref) => {
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -206,6 +209,11 @@ export function ManifestPrint({ data }: ManifestPrintProps) {
 
   const totalWeight = data.items.reduce((sum, item) => sum + item.weight, 0);
 
+  // Expor função de impressão via ref
+  useImperativeHandle(ref, () => ({
+    print: handlePrint
+  }));
+
   return (
     <div>
       <Button onClick={handlePrint} size="sm" variant="outline">
@@ -298,13 +306,14 @@ export function ManifestPrint({ data }: ManifestPrintProps) {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((item, index) => (
-              <tr key={index}>
+            {data.items.map((item, idx) => (
+              <tr key={idx}>
+                <td>{idx + 1}</td>
                 <td>{item.orderNumber || "N/A"}</td>
                 <td>{item.invoiceNumber}</td>
                 <td>{item.customerName}</td>
-                <td></td>
-                <td></td>
+                <td>{item.customerCity}</td>
+                <td>{item.customerState}</td>
                 <td>{item.volumes}</td>
                 <td>{item.weight.toFixed(2)}</td>
               </tr>
@@ -345,4 +354,6 @@ export function ManifestPrint({ data }: ManifestPrintProps) {
       </div>
     </div>
   );
-}
+});
+
+ManifestPrint.displayName = "ManifestPrint";

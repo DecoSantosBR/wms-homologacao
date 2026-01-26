@@ -1317,6 +1317,8 @@ export const appRouter = router({
             invoiceKey: nfeData.chaveAcesso,
             customerId: input.tenantId,
             customerName: clienteName,
+            customerCity: nfeData.destinatario?.municipio || null,
+            customerState: nfeData.destinatario?.uf || null,
             pickingOrderId: null, // Será vinculado manualmente
             xmlData: { raw: input.xmlContent },
             volumes: nfeData.volumes,

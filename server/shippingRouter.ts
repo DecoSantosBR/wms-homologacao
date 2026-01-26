@@ -888,6 +888,8 @@ export const shippingRouter = router({
           invoiceId: invoices.id,
           invoiceNumber: invoices.invoiceNumber,
           customerName: invoices.customerName,
+          customerCity: invoices.customerCity,
+          customerState: invoices.customerState,
           volumes: invoices.volumes,
           pesoB: invoices.pesoB,
           totalValue: invoices.totalValue,
@@ -915,6 +917,8 @@ export const shippingRouter = router({
           orderNumber: item.orderNumber,
           invoiceNumber: item.invoiceNumber || "N/A",
           customerName: item.customerName || "N/A",
+          customerCity: item.customerCity || "",
+          customerState: item.customerState || "",
           volumes: item.volumes || 0,
           weight: parseFloat(item.pesoB || "0")
         })),
