@@ -1,0 +1,120 @@
+{
+  "query": "SELECT \n  sc.id as checkId,\n  sc.customerOrderNumber,\n  sc.pickingOrderId,\n  sci.id as itemId,\n  sci.productId,\n  sci.productSku,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence\nFROM stageChecks sc\nLEFT JOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status = 'divergent'\nORDER BY sc.id DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  sc.id as checkId,\n  sc.customerOrderNumber,\n  sc.pickingOrderId,\n  sci.id as itemId,\n  sci.productId,\n  sci.productSku,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence\nFROM stageChecks sc\nLEFT JOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status = 'divergent'\nORDER BY sc.id DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "240001",
+      "productId": "4",
+      "productSku": "443060",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278"
+    },
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "240002",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158"
+    },
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "240003",
+      "productId": "6",
+      "productSku": "834207",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139"
+    },
+    {
+      "checkId": "210001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "210001",
+      "productId": "4",
+      "productSku": "443060",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278"
+    },
+    {
+      "checkId": "210001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "210002",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158"
+    },
+    {
+      "checkId": "210001",
+      "customerOrderNumber": "PED-005",
+      "pickingOrderId": "210005",
+      "itemId": "210003",
+      "productId": "6",
+      "productSku": "834207",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139"
+    },
+    {
+      "checkId": "14",
+      "customerOrderNumber": "TEST-STAGE-1768986337622",
+      "pickingOrderId": "90025",
+      "itemId": "16",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "100",
+      "checkedQuantity": "50",
+      "divergence": "-50"
+    },
+    {
+      "checkId": "8",
+      "customerOrderNumber": "TEST-STAGE-1768980744070",
+      "pickingOrderId": "90012",
+      "itemId": "9",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "100",
+      "checkedQuantity": "50",
+      "divergence": "-50"
+    },
+    {
+      "checkId": "5",
+      "customerOrderNumber": "TEST-STAGE-1768980006447",
+      "pickingOrderId": "90009",
+      "itemId": "5",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "100",
+      "checkedQuantity": "50",
+      "divergence": "-50"
+    },
+    {
+      "checkId": "3",
+      "customerOrderNumber": "TEST-STAGE-1768979720083",
+      "pickingOrderId": "90007",
+      "itemId": "3",
+      "productId": "5",
+      "productSku": "401460P",
+      "expectedQuantity": "100",
+      "checkedQuantity": "50",
+      "divergence": "-50"
+    }
+  ],
+  "messages": [],
+  "stdout": "checkId\tcustomerOrderNumber\tpickingOrderId\titemId\tproductId\tproductSku\texpectedQuantity\tcheckedQuantity\tdivergence\n240001\tPED-005\t210005\t240001\t4\t443060\t2\t280\t278\n240001\tPED-005\t210005\t240002\t5\t401460P\t2\t160\t158\n240001\tPED-005\t210005\t240003\t6\t834207\t1\t140\t139\n210001\tPED-005\t210005\t210001\t4\t443060\t2\t280\t278\n210001\tPED-005\t210005\t210002\t5\t401460P\t2\t160\t158\n210001\tPED-005\t210005\t210003\t6\t834207\t1\t140\t139\n14\tTEST-STAGE-1768986337622\t90025\t16\t5\t401460P\t100\t50\t-50\n8\tTEST-STAGE-1768980744070\t90012\t9\t5\t401460P\t100\t50\t-50\n5\tTEST-STAGE-1768980006447\t90009\t5\t5\t401460P\t100\t50\t-50\n3\tTEST-STAGE-1768979720083\t90007\t3\t5\t401460P\t100\t50\t-50\n",
+  "stderr": "",
+  "execution_time_ms": 350
+}

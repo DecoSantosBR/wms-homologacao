@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels, printSettings } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels, printSettings, invoices } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -1315,6 +1315,7 @@ export const appRouter = router({
             nfeKey: nfeData.chaveAcesso,
             priority: 'normal',
             status: 'pending',
+            shippingStatus: 'invoice_linked', // NF já vinculada automaticamente
             totalItems: 0, // Será atualizado após processar produtos
             totalQuantity: 0,
             createdBy: ctx.user?.id || 1,
@@ -1325,6 +1326,24 @@ export const appRouter = router({
             .where(eq(pickingOrders.orderNumber, orderNumber))
             .limit(1);
           orderId = pickingOrder.id;
+
+          // Criar registro de invoice (Nota Fiscal) para expedição
+          await db.insert(invoices).values({
+            tenantId: input.tenantId,
+            invoiceNumber: nfeData.numero,
+            series: nfeData.serie,
+            invoiceKey: nfeData.chaveAcesso,
+            customerId: input.tenantId,
+            customerName: nfeData.fornecedor.razaoSocial,
+            pickingOrderId: orderId,
+            xmlData: { raw: input.xmlContent },
+            volumes: 1, // Valor padrão, pode ser ajustado depois
+            totalValue: "0.00", // Valor padrão, pode ser extraído do XML se necessário
+            issueDate: new Date(),
+            status: "linked",
+            importedBy: ctx.user?.id || 1,
+            linkedAt: new Date(),
+          });
         }
 
         // Resultados da importação

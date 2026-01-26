@@ -167,6 +167,8 @@ export async function startStageCheck(params: {
       productSku: products.sku,
       productDescription: products.description,
       quantity: pickingOrderItems.requestedQuantity,
+      unit: pickingOrderItems.requestedUM,
+      unitsPerBox: products.unitsPerBox,
     })
     .from(pickingOrderItems)
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
@@ -181,15 +183,22 @@ export async function startStageCheck(params: {
   })));
   
   const groupedItems = orderItems.reduce((acc, item) => {
+    // Normalizar quantidade para unidades
+    let quantityInUnits = item.quantity;
+    if (item.unit === 'box' && item.unitsPerBox) {
+      quantityInUnits = item.quantity * item.unitsPerBox;
+      console.log(`[DEBUG] Convertendo ${item.productSku}: ${item.quantity} caixas x ${item.unitsPerBox} = ${quantityInUnits} unidades`);
+    }
+    
     const existing = acc.find(i => i.productId === item.productId);
     if (existing) {
-      existing.quantity += item.quantity;
+      existing.quantity += quantityInUnits;
     } else {
       acc.push({
         productId: item.productId!,
         productSku: item.productSku!,
         productDescription: item.productDescription!,
-        quantity: item.quantity,
+        quantity: quantityInUnits,
       });
     }
     return acc;
@@ -363,18 +372,45 @@ export async function completeStageCheck(params: {
     .where(eq(stageCheckItems.stageCheckId, params.stageCheckId));
 
   // Verificar divergências
-  console.log('[DEBUG] Items before divergence check:', items.map(i => ({
-    sku: i.productSku,
-    expected: i.expectedQuantity,
-    checked: i.checkedQuantity,
-    divergence: i.divergence
-  })));
+  console.log('[DEBUG] ===== COMPLETE STAGE CHECK DEBUG =====');
+  console.log('[DEBUG] stageCheckId:', params.stageCheckId);
+  console.log('[DEBUG] Items before divergence check:');
+  items.forEach((item, index) => {
+    console.log(`[DEBUG]   Item ${index + 1}:`, {
+      id: item.id,
+      sku: item.productSku,
+      name: item.productName,
+      expected: item.expectedQuantity,
+      checked: item.checkedQuantity,
+      divergence: item.divergence,
+      calculated_divergence: item.checkedQuantity - item.expectedQuantity
+    });
+  });
   
+  // Verificar se há itens não conferidos (checkedQuantity = 0)
+  const uncheckedItems = items.filter(item => item.checkedQuantity === 0);
+  
+  if (uncheckedItems.length > 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Conferência incompleta: ${uncheckedItems.length} item(ns) não foram conferidos`,
+      cause: {
+        uncheckedItems: uncheckedItems.map(item => ({
+          productSku: item.productSku,
+          productName: item.productName,
+          expectedQuantity: item.expectedQuantity,
+        })),
+      },
+    });
+  }
+  
+  // Verificar divergências reais (quantidade conferida diferente da esperada)
   const hasDivergence = items.some(item => item.divergence !== 0);
   const divergentItems = items.filter(item => item.divergence !== 0);
   
   console.log('[DEBUG] hasDivergence:', hasDivergence);
   console.log('[DEBUG] divergentItems count:', divergentItems.length);
+  console.log('[DEBUG] uncheckedItems count:', uncheckedItems.length);
 
   if (hasDivergence && !params.force) {
     // Atualizar status para divergent

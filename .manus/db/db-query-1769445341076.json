@@ -1,0 +1,100 @@
+{
+  "query": "SELECT \n  sci.id,\n  sci.productSku,\n  sci.productName,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence,\n  (sci.checkedQuantity - sci.expectedQuantity) as calculated_div\nFROM stageChecks sc\nJOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status = 'divergent'\nORDER BY sc.id DESC, sci.id\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  sci.id,\n  sci.productSku,\n  sci.productName,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence,\n  (sci.checkedQuantity - sci.expectedQuantity) as calculated_div\nFROM stageChecks sc\nJOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status = 'divergent'\nORDER BY sc.id DESC, sci.id\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "240013",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "calculated_div": "278"
+    },
+    {
+      "id": "240014",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "calculated_div": "158"
+    },
+    {
+      "id": "240015",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "calculated_div": "139"
+    },
+    {
+      "id": "240010",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "calculated_div": "278"
+    },
+    {
+      "id": "240011",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "calculated_div": "158"
+    },
+    {
+      "id": "240012",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "calculated_div": "139"
+    },
+    {
+      "id": "240004",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "calculated_div": "278"
+    },
+    {
+      "id": "240005",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "calculated_div": "158"
+    },
+    {
+      "id": "240006",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "calculated_div": "139"
+    },
+    {
+      "id": "240001",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "calculated_div": "278"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductSku\tproductName\texpectedQuantity\tcheckedQuantity\tdivergence\tcalculated_div\n240013\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t278\n240014\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t158\n240015\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t139\n240010\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t278\n240011\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t158\n240012\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t139\n240004\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t278\n240005\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t158\n240006\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t139\n240001\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t278\n",
+  "stderr": "",
+  "execution_time_ms": 357
+}

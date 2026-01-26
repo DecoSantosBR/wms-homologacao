@@ -972,3 +972,16 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 
 - [x] Corrigir erro de tenantId vazio na criação de romaneio (createManifest)
 - [x] Verificar status do PED-005 (pedido não existe no banco de dados)
+
+## 🐛 Bug Stage - Divergências Falsas - 26/01/2026 11:25
+
+- [x] Identificado: Problema de conversão de unidades (caixas vs unidades)
+- [ ] Implementar normalização de unidades no Stage (converter caixas para unidades antes de comparar)
+
+## 🚀 Nova Feature - Importação XML Expedição - 26/01/2026 11:47
+
+- [x] XML já implementado, mas falta criar invoice
+- [ ] Adicionar tipo de movimento 'Saída' no módulo Importar XML
+- [ ] Vincular NF importada automaticamente ao pedido correspondente
+- [x] Modificar nfe.import para criar invoice quando tipo=saida
+- [x] Vincular automaticamente invoice ao pedido criado

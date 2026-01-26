@@ -1,0 +1,120 @@
+{
+  "query": "SELECT \n  sc.id as checkId,\n  sc.customerOrderNumber,\n  sc.status,\n  sci.productSku,\n  sci.productName,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence,\n  sc.createdAt\nFROM stageChecks sc\nLEFT JOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status IN ('divergent', 'in_progress')\nORDER BY sc.id DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  sc.id as checkId,\n  sc.customerOrderNumber,\n  sc.status,\n  sci.productSku,\n  sci.productName,\n  sci.expectedQuantity,\n  sci.checkedQuantity,\n  sci.divergence,\n  sc.createdAt\nFROM stageChecks sc\nLEFT JOIN stageCheckItems sci ON sc.id = sci.stageCheckId\nWHERE sc.status IN ('divergent', 'in_progress')\nORDER BY sc.id DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "checkId": "240004",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "createdAt": "2026-01-26 16:32:22"
+    },
+    {
+      "checkId": "240004",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "createdAt": "2026-01-26 16:32:22"
+    },
+    {
+      "checkId": "240004",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "createdAt": "2026-01-26 16:32:22"
+    },
+    {
+      "checkId": "240002",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "createdAt": "2026-01-26 16:31:31"
+    },
+    {
+      "checkId": "240002",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "createdAt": "2026-01-26 16:31:31"
+    },
+    {
+      "checkId": "240002",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "createdAt": "2026-01-26 16:31:31"
+    },
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "createdAt": "2026-01-26 16:24:48"
+    },
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "expectedQuantity": "2",
+      "checkedQuantity": "160",
+      "divergence": "158",
+      "createdAt": "2026-01-26 16:24:48"
+    },
+    {
+      "checkId": "240001",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "expectedQuantity": "1",
+      "checkedQuantity": "140",
+      "divergence": "139",
+      "createdAt": "2026-01-26 16:24:48"
+    },
+    {
+      "checkId": "210001",
+      "customerOrderNumber": "PED-005",
+      "status": "divergent",
+      "productSku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "expectedQuantity": "2",
+      "checkedQuantity": "280",
+      "divergence": "278",
+      "createdAt": "2026-01-25 21:50:21"
+    }
+  ],
+  "messages": [],
+  "stdout": "checkId\tcustomerOrderNumber\tstatus\tproductSku\tproductName\texpectedQuantity\tcheckedQuantity\tdivergence\tcreatedAt\n240004\tPED-005\tdivergent\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t2026-01-26 16:32:22\n240004\tPED-005\tdivergent\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t2026-01-26 16:32:22\n240004\tPED-005\tdivergent\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t2026-01-26 16:32:22\n240002\tPED-005\tdivergent\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t2026-01-26 16:31:31\n240002\tPED-005\tdivergent\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t2026-01-26 16:31:31\n240002\tPED-005\tdivergent\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t2026-01-26 16:31:31\n240001\tPED-005\tdivergent\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t2026-01-26 16:24:48\n240001\tPED-005\tdivergent\t401460P\tINTRAFIX PRIMELINE AIR\t2\t160\t158\t2026-01-26 16:24:48\n240001\tPED-005\tdivergent\t834207\tPERFUSOR SET 60 CM\t1\t140\t139\t2026-01-26 16:24:48\n210001\tPED-005\tdivergent\t443060\tEXTENSOFIX 60 CM\t2\t280\t278\t2026-01-25 21:50:21\n",
+  "stderr": "",
+  "execution_time_ms": 359
+}
