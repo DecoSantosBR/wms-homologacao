@@ -1304,46 +1304,36 @@ export const appRouter = router({
             .limit(1);
           orderId = receivingOrder.id;
         } else {
-          // Criar pedido de separação
-          orderNumber = `PK-${nfeData.numero}-${Date.now()}`;
-          await db.insert(pickingOrders).values({
-            tenantId: input.tenantId,
-            orderNumber,
-            customerName: nfeData.fornecedor.razaoSocial, // Usar fornecedor como cliente por padrão
-            deliveryAddress: null,
-            nfeNumber: nfeData.numero,
-            nfeKey: nfeData.chaveAcesso,
-            priority: 'normal',
-            status: 'pending',
-            shippingStatus: 'invoice_linked', // NF já vinculada automaticamente
-            totalItems: 0, // Será atualizado após processar produtos
-            totalQuantity: 0,
-            createdBy: ctx.user?.id || 1,
-          });
-
-          const [pickingOrder] = await db.select()
-            .from(pickingOrders)
-            .where(eq(pickingOrders.orderNumber, orderNumber))
-            .limit(1);
-          orderId = pickingOrder.id;
-
+          // Para saída: apenas criar invoice (não criar pedido novo)
+          // O pedido já deve existir e ser vinculado manualmente
+          
           // Criar registro de invoice (Nota Fiscal) para expedição
+          const clienteName = nfeData.destinatario?.razaoSocial || nfeData.fornecedor.razaoSocial;
+          
           await db.insert(invoices).values({
             tenantId: input.tenantId,
             invoiceNumber: nfeData.numero,
             series: nfeData.serie,
             invoiceKey: nfeData.chaveAcesso,
             customerId: input.tenantId,
-            customerName: nfeData.fornecedor.razaoSocial,
-            pickingOrderId: orderId,
+            customerName: clienteName,
+            pickingOrderId: null, // Será vinculado manualmente
             xmlData: { raw: input.xmlContent },
-            volumes: 1, // Valor padrão, pode ser ajustado depois
-            totalValue: "0.00", // Valor padrão, pode ser extraído do XML se necessário
-            issueDate: new Date(),
-            status: "linked",
+            volumes: nfeData.volumes,
+            totalValue: nfeData.valorTotal.toFixed(2),
+            issueDate: new Date(nfeData.dataEmissao),
+            status: "imported", // Aguardando vinculação manual
             importedBy: ctx.user?.id || 1,
-            linkedAt: new Date(),
           });
+
+          // Buscar invoice criada para retornar ID
+          const [invoice] = await db.select()
+            .from(invoices)
+            .where(eq(invoices.invoiceKey, nfeData.chaveAcesso))
+            .limit(1);
+          
+          orderId = invoice.id;
+          orderNumber = invoice.invoiceNumber;
         }
 
         // Resultados da importação
@@ -1360,7 +1350,8 @@ export const appRouter = router({
           erros: [] as string[],
         };
 
-        // Processar cada produto da NF-e
+        // Processar cada produto da NF-e (apenas para entrada)
+        if (input.tipo === "entrada") {
         for (const produtoNFE of nfeData.produtos) {
           try {
             // Buscar produto existente por supplierCode, GTIN ou SKU
@@ -1431,17 +1422,6 @@ export const appRouter = router({
                 expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
                 expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
               });
-            } else {
-              await db.insert(pickingOrderItems).values({
-                pickingOrderId: orderId,
-                productId: productId,
-                requestedQuantity: produtoNFE.quantidade,
-                requestedUM: "unit", // Assumir unidade por padrão
-                pickedQuantity: 0,
-                batch: produtoNFE.lote || null,
-                expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
-                status: "pending",
-              });
             }
           } catch (error: any) {
             result.erros.push(
@@ -1449,6 +1429,7 @@ export const appRouter = router({
             );
           }
         }
+        } // Fim do if tipo === "entrada"
 
         return result;
       }),

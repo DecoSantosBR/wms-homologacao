@@ -29,6 +29,13 @@ export interface NFEData {
     razaoSocial: string;
     nomeFantasia: string | null;
   };
+  destinatario: {
+    cnpj: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+  } | null;
+  volumes: number; // Quantidade de volumes transportados
+  valorTotal: number; // Valor total da NF-e
   produtos: NFEProduct[];
 }
 
@@ -95,6 +102,24 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
       nomeFantasia: extractValue(emit?.xFant, null),
     };
 
+    // Extrair dados do destinatário
+    const dest = Array.isArray(infNFe.dest) ? infNFe.dest[0] : infNFe.dest;
+    const destinatario = dest ? {
+      cnpj: extractValue(dest?.CNPJ, ""),
+      razaoSocial: extractValue(dest?.xNome, ""),
+      nomeFantasia: extractValue(dest?.xFant, null),
+    } : null;
+
+    // Extrair volumes transportados
+    const transp = Array.isArray(infNFe.transp) ? infNFe.transp[0] : infNFe.transp;
+    const vol = transp?.vol;
+    const volumes = vol ? parseInt(extractValue(vol?.qVol, "1")) : 1;
+
+    // Extrair valor total da NF-e
+    const total = Array.isArray(infNFe.total) ? infNFe.total[0] : infNFe.total;
+    const ICMSTot = Array.isArray(total?.ICMSTot) ? total.ICMSTot[0] : total?.ICMSTot;
+    const valorTotal = parseFloat(extractValue(ICMSTot?.vNF, "0"));
+
     // Extrair produtos (detalhes da nota)
     const detalhes = Array.isArray(infNFe.det) ? infNFe.det : (infNFe.det ? [infNFe.det] : []);
     console.log('[NFE Parser] Total de produtos encontrados:', detalhes.length);
@@ -145,6 +170,9 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
       serie,
       dataEmissao,
       fornecedor,
+      destinatario,
+      volumes,
+      valorTotal,
       produtos,
     };
   } catch (error) {

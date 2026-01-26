@@ -83,8 +83,8 @@ export default function ShippingTest() {
   });
 
   const [linkForm, setLinkForm] = useState({
-    invoiceId: 0,
-    pickingOrderId: 0,
+    invoiceNumber: '',
+    orderNumber: '',
   });
 
   const [manifestForm, setManifestForm] = useState({
@@ -320,21 +320,21 @@ export default function ShippingTest() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>ID da NF</Label>
+                  <Label>Nº da NF</Label>
                   <Input
-                    type="number"
-                    value={linkForm.invoiceId || ''}
-                    onChange={(e) => setLinkForm({ ...linkForm, invoiceId: parseInt(e.target.value) })}
-                    placeholder="1"
+                    type="text"
+                    value={linkForm.invoiceNumber}
+                    onChange={(e) => setLinkForm({ ...linkForm, invoiceNumber: e.target.value })}
+                    placeholder="12345"
                   />
                 </div>
                 <div>
-                  <Label>ID do Pedido</Label>
+                  <Label>Nº do Pedido</Label>
                   <Input
-                    type="number"
-                    value={linkForm.pickingOrderId || ''}
-                    onChange={(e) => setLinkForm({ ...linkForm, pickingOrderId: parseInt(e.target.value) })}
-                    placeholder="210001"
+                    type="text"
+                    value={linkForm.orderNumber}
+                    onChange={(e) => setLinkForm({ ...linkForm, orderNumber: e.target.value })}
+                    placeholder="PED-001"
                   />
                 </div>
               </div>

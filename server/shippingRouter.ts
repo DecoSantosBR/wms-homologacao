@@ -184,41 +184,48 @@ export const shippingRouter = router({
   linkInvoiceToOrder: protectedProcedure
     .input(
       z.object({
-        invoiceId: z.number(),
-        pickingOrderId: z.number(),
+        invoiceNumber: z.string(),
+        orderNumber: z.string(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Verificar se NF já está vinculada
+      // Buscar NF pelo número
       const [invoice] = await db
         .select()
         .from(invoices)
-        .where(eq(invoices.id, input.invoiceId))
+        .where(eq(invoices.invoiceNumber, input.invoiceNumber))
         .limit(1);
 
       if (!invoice) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Nota Fiscal não encontrada" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `NF ${input.invoiceNumber} não encontrada`,
+        });
       }
 
+      // Buscar pedido pelo número do cliente
+      const [order] = await db
+        .select()
+        .from(pickingOrders)
+        .where(eq(pickingOrders.customerOrderNumber, input.orderNumber))
+        .limit(1);
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Pedido ${input.orderNumber} não encontrado`,
+        });
+      }
+
+      // Verificar se NF já está vinculada
       if (invoice.pickingOrderId) {
         throw new TRPCError({ 
           code: "BAD_REQUEST", 
           message: "Nota Fiscal já está vinculada a outro pedido" 
         });
-      }
-
-      // Verificar se pedido existe e está no status correto
-      const [order] = await db
-        .select()
-        .from(pickingOrders)
-        .where(eq(pickingOrders.id, input.pickingOrderId))
-        .limit(1);
-
-      if (!order) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
       }
 
       if (order.status !== "staged") {
@@ -232,11 +239,11 @@ export const shippingRouter = router({
       await db
         .update(invoices)
         .set({
-          pickingOrderId: input.pickingOrderId,
+          pickingOrderId: order.id,
           status: "linked",
           linkedAt: new Date(),
         })
-        .where(eq(invoices.id, input.invoiceId));
+        .where(eq(invoices.id, invoice.id));
 
       // Atualizar status de expedição do pedido
       await db
@@ -244,7 +251,7 @@ export const shippingRouter = router({
         .set({
           shippingStatus: "invoice_linked",
         })
-        .where(eq(pickingOrders.id, input.pickingOrderId));
+        .where(eq(pickingOrders.id, order.id));
 
       return { 
         success: true, 

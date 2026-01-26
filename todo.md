@@ -985,3 +985,10 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Vincular NF importada automaticamente ao pedido correspondente
 - [x] Modificar nfe.import para criar invoice quando tipo=saida
 - [x] Vincular automaticamente invoice ao pedido criado
+
+## 🐛 Correções Importação XML - 26/01/2026 12:05
+
+- [x] Extrair volumes corretos do XML
+- [x] Usar números ao invés de IDs nos campos de vinculação
+- [x] Corrigir cliente (usar destinatário ao invés de fornecedor)
+- [x] Importação de saída apenas vincula NF (não cria pedido)
