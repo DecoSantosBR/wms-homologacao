@@ -1320,6 +1320,7 @@ export const appRouter = router({
             pickingOrderId: null, // Será vinculado manualmente
             xmlData: { raw: input.xmlContent },
             volumes: nfeData.volumes,
+            pesoB: nfeData.pesoB.toFixed(3),
             totalValue: nfeData.valorTotal.toFixed(2),
             issueDate: new Date(nfeData.dataEmissao),
             status: "imported", // Aguardando vinculação manual

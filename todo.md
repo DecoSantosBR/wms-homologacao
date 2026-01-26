@@ -1022,4 +1022,4 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Criar endpoint backend para gerar PDF do romaneio
 - [x] Implementar template HTML/CSS seguindo modelo oficial Med@x
 - [x] Adicionar botão de impressão na interface
-- [ ] Extrair peso total do XML da NF para preencher no romaneio
+- [x] Extrair peso bruto (pesoB) do XML da NF para preencher coluna Peso (kg) no romaneio

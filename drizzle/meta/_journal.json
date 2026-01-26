@@ -190,6 +190,13 @@
       "when": 1769356307046,
       "tag": "0026_condemned_mandarin",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1769454316846,
+      "tag": "0027_shiny_tomorrow_man",
+      "breakpoints": true
     }
   ]
 }

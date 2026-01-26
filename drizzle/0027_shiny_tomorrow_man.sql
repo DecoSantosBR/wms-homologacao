@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` ADD `pesoB` decimal(10,3);

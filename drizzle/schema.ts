@@ -884,6 +884,7 @@ export const invoices = mysqlTable("invoices", {
   pickingOrderId: int("pickingOrderId"), // Pedido vinculado
   xmlData: json("xmlData"), // Dados completos do XML
   volumes: int("volumes"), // Quantidade de volumes
+  pesoB: decimal("pesoB", { precision: 10, scale: 3 }), // Peso bruto em kg
   totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total da NF
   issueDate: timestamp("issueDate"), // Data de emissão
   status: mysqlEnum("status", ["imported", "linked", "in_manifest", "shipped"]).default("imported").notNull(),

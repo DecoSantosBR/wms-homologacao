@@ -35,6 +35,7 @@ export interface NFEData {
     nomeFantasia: string | null;
   } | null;
   volumes: number; // Quantidade de volumes transportados
+  pesoB: number; // Peso bruto em kg
   valorTotal: number; // Valor total da NF-e
   produtos: NFEProduct[];
 }
@@ -110,10 +111,11 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
       nomeFantasia: extractValue(dest?.xFant, null),
     } : null;
 
-    // Extrair volumes transportados
+    // Extrair volumes transportados e peso bruto
     const transp = Array.isArray(infNFe.transp) ? infNFe.transp[0] : infNFe.transp;
     const vol = transp?.vol;
     const volumes = vol ? parseInt(extractValue(vol?.qVol, "1")) : 1;
+    const pesoB = vol ? parseFloat(extractValue(vol?.pesoB, "0")) : 0;
 
     // Extrair valor total da NF-e
     const total = Array.isArray(infNFe.total) ? infNFe.total[0] : infNFe.total;
@@ -172,6 +174,7 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
       fornecedor,
       destinatario,
       volumes,
+      pesoB,
       valorTotal,
       produtos,
     };

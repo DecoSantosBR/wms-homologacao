@@ -889,6 +889,7 @@ export const shippingRouter = router({
           invoiceNumber: invoices.invoiceNumber,
           customerName: invoices.customerName,
           volumes: invoices.volumes,
+          pesoB: invoices.pesoB,
           totalValue: invoices.totalValue,
         })
         .from(shipmentManifestItems)
@@ -915,7 +916,7 @@ export const shippingRouter = router({
           invoiceNumber: item.invoiceNumber || "N/A",
           customerName: item.customerName || "N/A",
           volumes: item.volumes || 0,
-          weight: 0, // TODO: Extrair do XML
+          weight: parseFloat(item.pesoB || "0")
         })),
       };
     }),
