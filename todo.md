@@ -1007,3 +1007,7 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ## 🐛 Correção - 26/01/2026 12:33
 
 - [x] Converter caixas em unidades no linkInvoiceToOrder antes de validar quantidade
+
+## 🚀 Nova Funcionalidade - 26/01/2026 13:23
+
+- [x] Renomear /shipping-test para /shipping

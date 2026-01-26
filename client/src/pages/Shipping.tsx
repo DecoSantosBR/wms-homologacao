@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Package, FileText, Truck, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
-export default function ShippingTest() {
+export default function Shipping() {
   const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) => {
     alert(`${title}${description ? '\n' + description : ''}`);
   };
