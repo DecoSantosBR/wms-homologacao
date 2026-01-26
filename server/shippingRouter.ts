@@ -851,4 +851,72 @@ export const shippingRouter = router({
         message: `Romaneio ${manifest.manifestNumber} expedido com sucesso` 
       };
     }),
+
+  // Gerar PDF do romaneio
+  generateManifestPDF: protectedProcedure
+    .input(z.object({ manifestId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar romaneio
+      const [manifest] = await db
+        .select()
+        .from(shipmentManifests)
+        .where(eq(shipmentManifests.id, input.manifestId))
+        .limit(1);
+
+      if (!manifest) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Romaneio não encontrado",
+        });
+      }
+
+      // Buscar tenant (remetente)
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, manifest.tenantId))
+        .limit(1);
+
+      // Buscar itens do romaneio com pedidos e NFs
+      const items = await db
+        .select({
+          orderId: shipmentManifestItems.pickingOrderId,
+          orderNumber: pickingOrders.customerOrderNumber,
+          invoiceId: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: invoices.customerName,
+          volumes: invoices.volumes,
+          totalValue: invoices.totalValue,
+        })
+        .from(shipmentManifestItems)
+        .innerJoin(pickingOrders, eq(shipmentManifestItems.pickingOrderId, pickingOrders.id))
+        .leftJoin(invoices, eq(invoices.pickingOrderId, pickingOrders.id))
+        .where(eq(shipmentManifestItems.manifestId, input.manifestId));
+
+      // Retornar dados para geração de PDF
+      return {
+        manifest: {
+          number: manifest.manifestNumber,
+          createdAt: manifest.createdAt,
+          carrierName: manifest.carrierName,
+          totalOrders: manifest.totalOrders,
+          totalInvoices: manifest.totalInvoices,
+          totalVolumes: manifest.totalVolumes,
+        },
+        tenant: {
+          name: tenant?.name || "N/A",
+          cnpj: tenant?.cnpj || "N/A",
+        },
+        items: items.map(item => ({
+          orderNumber: item.orderNumber,
+          invoiceNumber: item.invoiceNumber || "N/A",
+          customerName: item.customerName || "N/A",
+          volumes: item.volumes || 0,
+          weight: 0, // TODO: Extrair do XML
+        })),
+      };
+    }),
 });

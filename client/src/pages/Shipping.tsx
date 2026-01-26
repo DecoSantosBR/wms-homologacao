@@ -10,12 +10,20 @@ import { Badge } from "@/components/ui/badge";
 
 import { Loader2, Package, FileText, Truck, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { ManifestPrint } from "@/components/ManifestPrint";
 
 export default function Shipping() {
   const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) => {
     alert(`${title}${description ? '\n' + description : ''}`);
   };
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
+  const [printManifestId, setPrintManifestId] = useState<number | null>(null);
+  
+  // Query para dados de impressão
+  const { data: printData } = trpc.shipping.generateManifestPDF.useQuery(
+    { manifestId: printManifestId! },
+    { enabled: printManifestId !== null }
+  );
   
   // Queries
   const { data: orders, refetch: refetchOrders, isLoading: loadingOrders } = trpc.shipping.listOrders.useQuery();
@@ -495,6 +503,13 @@ export default function Shipping() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getManifestStatusBadge(manifest.status)}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPrintManifestId(manifest.id)}
+                        >
+                          Imprimir
+                        </Button>
                         {manifest.status === 'draft' && (
                           <Button
                             size="sm"
@@ -518,6 +533,13 @@ export default function Shipping() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Componente de impressão (oculto) */}
+      {printData && (
+        <div style={{ display: 'none' }}>
+          <ManifestPrint data={printData} />
+        </div>
+      )}
     </div>
   );
 }

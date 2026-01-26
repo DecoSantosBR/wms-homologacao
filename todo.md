@@ -1017,3 +1017,9 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Remover baixa de estoque do completeStageCheck
 - [x] Implementar baixa de estoque ao finalizar romaneio
 - [x] Adicionar interface de finalização de romaneio
+
+## 🖨️ Impressão de Romaneio
+- [x] Criar endpoint backend para gerar PDF do romaneio
+- [x] Implementar template HTML/CSS seguindo modelo oficial Med@x
+- [x] Adicionar botão de impressão na interface
+- [ ] Extrair peso total do XML da NF para preencher no romaneio
