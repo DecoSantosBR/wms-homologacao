@@ -1029,3 +1029,8 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Corrigir botão Imprimir do romaneio (não está funcionando)
 - [ ] Adicionar totalizador Peso Total (kg) no rodapé do romaneio
 - [ ] Extrair município/UF do destinatário do XML para preencher tabela do romaneio
+
+## 🎨 Ajustes de Layout do Romaneio - 26/01/2026 14:49
+- [x] Deixar campo Transportadora em branco (remover preenchimento automático)
+- [x] Verificar extração de Município e UF do XML (<dest>/<enderDest>/<xMun> e <UF>)
+- [x] Ajustar layout visual do romaneio para corresponder ao modelo oficial

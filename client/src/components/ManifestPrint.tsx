@@ -1,4 +1,5 @@
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 
@@ -30,7 +31,16 @@ interface ManifestPrintProps {
 
 export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProps>(
   ({ data }, ref) => {
-  const printRef = useRef<HTMLDivElement>(null);
+    const printRef = useRef<HTMLDivElement>(null);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+
+    useEffect(() => {
+      // Gerar QR Code com número do romaneio
+      QRCode.toDataURL(`ROM-${data.manifest.number}`, {
+        width: 100,
+        margin: 1,
+      }).then(setQrCodeUrl).catch(console.error);
+    }, [data.manifest.number]);
 
   const handlePrint = () => {
     const printContent = printRef.current;
@@ -64,8 +74,15 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             
             .header {
               display: flex;
-              align-items: center;
+              justify-content: space-between;
+              align-items: flex-start;
               margin-bottom: 30px;
+            }
+            
+            .qrcode {
+              width: 100px;
+              height: 100px;
+              border: 2px solid #000;
             }
             
             .logo {
@@ -227,6 +244,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             <div className="logo">Med@x</div>
             <div className="logo-subtitle">Soluções Logísticas Para Saúde</div>
           </div>
+          {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="qrcode" />}
         </div>
 
         <div className="title">ROMANEIO DE CARGA</div>
@@ -274,7 +292,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Transportadora:</span>
-            <span className="info-value">{data.manifest.carrierName || "_________________________"}</span>
+            <span className="info-value">_________________________</span>
           </div>
           <div className="info-field">
             <span className="info-label">Placa:</span>
