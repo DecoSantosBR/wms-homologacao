@@ -998,3 +998,8 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Implementar backend para excluir NF importada
 - [x] Implementar backend para desvincular NF de pedido
 - [x] Adicionar botões na interface de teste
+
+## 🐛 Correção - 26/01/2026 12:18
+
+- [x] Corrigir busca de tenant ao importar XML de saída
+- [x] Implementar validação de SKUs, lotes, quantidades e volumes no linkInvoiceToOrder

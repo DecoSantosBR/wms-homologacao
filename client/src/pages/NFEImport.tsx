@@ -113,8 +113,13 @@ export default function NFEImport() {
             {/* Seleção de Cliente */}
             <div className="grid gap-2">
               <Label htmlFor="tenant">
-                Cliente <span className="text-red-500">*</span>
+                {tipo === "entrada" ? "Fornecedor" : "Armazém/Cliente"} <span className="text-red-500">*</span>
               </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                {tipo === "entrada" 
+                  ? "Selecione o fornecedor que está enviando a mercadoria" 
+                  : "Selecione o armazém/cliente que está expedindo (ex: Hapvida)"}
+              </p>
               <Select value={tenantId} onValueChange={setTenantId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o cliente" />

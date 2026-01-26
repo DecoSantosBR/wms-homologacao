@@ -10,8 +10,11 @@ import {
   shipmentManifests, 
   shipmentManifestItems,
   pickingOrders,
+  pickingOrderItems,
+  products,
   tenants 
 } from "../drizzle/schema.js";
+import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -234,6 +237,63 @@ export const shippingRouter = router({
           message: "Pedido deve estar com status 'staged' para receber NF" 
         });
       }
+
+      // Buscar itens do pedido
+      const orderItems = await db
+        .select({
+          productId: pickingOrderItems.productId,
+          sku: products.sku,
+          supplierCode: products.supplierCode,
+          requestedQuantity: pickingOrderItems.requestedQuantity,
+          batch: pickingOrderItems.batch,
+        })
+        .from(pickingOrderItems)
+        .leftJoin(products, eq(pickingOrderItems.productId, products.id))
+        .where(eq(pickingOrderItems.pickingOrderId, order.id));
+
+      // Parse XML da NF para validar
+      const nfeData = await parseNFE((invoice.xmlData as any).raw);
+
+      // Validar SKUs
+      const orderSkus = new Set(orderItems.map(item => item.sku || item.supplierCode));
+      const nfeSkus = new Set(nfeData.produtos.map(p => p.codigo));
+      
+      const missingSkus = Array.from(nfeSkus).filter(sku => !orderSkus.has(sku));
+      if (missingSkus.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `SKUs da NF não encontrados no pedido: ${missingSkus.join(", ")}`,
+        });
+      }
+
+      // Validar quantidades e lotes
+      for (const nfeProd of nfeData.produtos) {
+        const orderItem = orderItems.find(item => 
+          item.sku === nfeProd.codigo || item.supplierCode === nfeProd.codigo
+        );
+
+        if (!orderItem) continue;
+
+        // Validar quantidade
+        if (orderItem.requestedQuantity !== nfeProd.quantidade) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Quantidade divergente para SKU ${nfeProd.codigo}: Pedido=${orderItem.requestedQuantity}, NF=${nfeProd.quantidade}`,
+          });
+        }
+
+        // Validar lote
+        if (orderItem.batch && nfeProd.lote && orderItem.batch !== nfeProd.lote) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Lote divergente para SKU ${nfeProd.codigo}: Pedido=${orderItem.batch}, NF=${nfeProd.lote}`,
+          });
+        }
+      }
+
+      // Validar volumes (comparar com total esperado do pedido)
+      // Por enquanto apenas log, pode adicionar validação se necessário
+      console.log(`[Shipping] Volumes da NF: ${nfeData.volumes}`);
 
       // Vincular NF ao pedido
       await db
