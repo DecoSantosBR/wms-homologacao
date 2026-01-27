@@ -1124,3 +1124,18 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - Logo, pickingWaveItems.totalQuantity está SEMPRE em unidades
 - Campo unit deve ser sempre "unit", nunca "box"
 - Campo unitsPerBox é mantido apenas para referência histórica
+
+
+## 📝 AGRUPAR QUANTIDADES NO DOCUMENTO DE IMPRESSÃO - 27/01/2026
+
+### Problema
+- [x] Documento de impressão da onda mostrava cada linha de endereço separadamente
+- [x] Exemplo: INTRAFIX aparecia 3 vezes (70 + 70 + 20 uns) ao invés de mostrar total agrupado (160 uns)
+
+### Implementação
+- [x] Agrupado itens por SKU no documento de impressão automática (WaveExecution.tsx)
+- [x] Agrupado itens por SKU no documento PDF (waveDocument.ts)
+- [x] Somadas quantidades de todos os endereços do mesmo produto
+- [x] Removida coluna "Endereço" do documento agrupado
+- [x] Mantidas colunas: Produto, SKU, Lote, Validade, Quantidade Total
+- [x] Ajustado layout do PDF para melhor distribuição sem coluna Endereço

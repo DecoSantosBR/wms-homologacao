@@ -20,7 +20,6 @@ interface WaveDocumentData {
     items: Array<{
       productName: string;
       sku: string;
-      locationCode: string;
       batch: string | null;
       expiryDate: Date | null;
       quantity: number;
@@ -88,17 +87,34 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
           )
         );
 
+      // Agrupar itens por SKU, somando quantidades
+      const skuMap = new Map<string, {
+        productName: string;
+        sku: string;
+        batch: string | null;
+        expiryDate: Date | null;
+        quantity: number;
+      }>();
+
+      orderItems.forEach((item) => {
+        const key = item.sku;
+        if (!skuMap.has(key)) {
+          skuMap.set(key, {
+            productName: item.productName,
+            sku: item.sku,
+            batch: item.batch,
+            expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+            quantity: 0,
+          });
+        }
+        const group = skuMap.get(key)!;
+        group.quantity += item.quantity;
+      });
+
       return {
         orderNumber: order.orderNumber || "N/A",
         destination: order.customerName || "N/A",
-        items: orderItems.map((item) => ({
-          productName: item.productName,
-          sku: item.sku,
-          locationCode: item.locationCode,
-          batch: item.batch,
-          expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
-          quantity: item.quantity,
-        })),
+        items: Array.from(skuMap.values()),
       };
     })
   );
@@ -171,12 +187,11 @@ export async function generateWaveDocument(waveId: number): Promise<Buffer> {
 
     doc.fillColor("#000000");
     doc.font("Helvetica-Bold");
-    doc.text("Produto", 45, currentY + 5, { width: 150 });
-    doc.text("SKU", 200, currentY + 5, { width: 60 });
-    doc.text("Endereço", 265, currentY + 5, { width: 70 });
-    doc.text("Lote", 340, currentY + 5, { width: 70 });
-    doc.text("Validade", 415, currentY + 5, { width: 60 });
-    doc.text("Quantidade", 480, currentY + 5, { width: 70, align: "right" });
+    doc.text("Produto", 45, currentY + 5, { width: 180 });
+    doc.text("SKU", 230, currentY + 5, { width: 80 });
+    doc.text("Lote", 315, currentY + 5, { width: 90 });
+    doc.text("Validade", 410, currentY + 5, { width: 70 });
+    doc.text("Quantidade", 485, currentY + 5, { width: 70, align: "right" });
 
     currentY += 25;
 
@@ -191,17 +206,16 @@ export async function generateWaveDocument(waveId: number): Promise<Buffer> {
         currentY = 40;
       }
 
-      doc.text(item.productName || "N/A", 45, currentY, { width: 150 });
-      doc.text(item.sku || "N/A", 200, currentY, { width: 60 });
-      doc.text(item.locationCode || "N/A", 265, currentY, { width: 70 });
-      doc.text(item.batch || "N/A", 340, currentY, { width: 70 });
+      doc.text(item.productName || "N/A", 45, currentY, { width: 180 });
+      doc.text(item.sku || "N/A", 230, currentY, { width: 80 });
+      doc.text(item.batch || "N/A", 315, currentY, { width: 90 });
       doc.text(
         item.expiryDate ? item.expiryDate.toLocaleDateString("pt-BR") : "N/A",
-        415,
+        410,
         currentY,
-        { width: 60 }
+        { width: 70 }
       );
-      doc.text(item.quantity?.toString() || "0", 480, currentY, { width: 70, align: "right" });
+      doc.text(`${item.quantity} un${item.quantity !== 1 ? 's' : ''}`, 485, currentY, { width: 70, align: "right" });
 
       currentY += 20;
     }

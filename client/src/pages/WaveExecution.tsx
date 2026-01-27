@@ -155,6 +155,30 @@ export default function WaveExecution() {
             }
             isFirst = false;
 
+            // Agrupar itens por SKU, somando quantidades
+            const skuGroups = new Map<string, {
+              productName: string;
+              productSku: string;
+              totalQuantity: number;
+              batch: string | null;
+              expiryDate: any;
+            }>();
+
+            items.forEach((item: any) => {
+              const key = item.productSku;
+              if (!skuGroups.has(key)) {
+                skuGroups.set(key, {
+                  productName: item.productName,
+                  productSku: item.productSku,
+                  totalQuantity: 0,
+                  batch: item.batch,
+                  expiryDate: item.expiryDate,
+                });
+              }
+              const group = skuGroups.get(key)!;
+              group.totalQuantity += item.totalQuantity;
+            });
+
             printContent += `
               <div class="order-header">
                 <div class="order-title">Onda ${data.wave.waveNumber}</div>
@@ -165,7 +189,6 @@ export default function WaveExecution() {
                   <tr>
                     <th>Produto</th>
                     <th>SKU</th>
-                    <th>Endereço</th>
                     <th>Lote</th>
                     <th>Validade</th>
                     <th>Quantidade</th>
@@ -174,20 +197,19 @@ export default function WaveExecution() {
                 <tbody>
             `;
 
-            items.forEach((item: any) => {
-              const expiryDate = item.expiryDate 
-                ? new Date(item.expiryDate).toLocaleDateString("pt-BR")
+            skuGroups.forEach((group) => {
+              const expiryDate = group.expiryDate 
+                ? new Date(group.expiryDate).toLocaleDateString("pt-BR")
                 : "-";
               
               // Formatar quantidade: SEMPRE em unidades
-              const quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
+              const quantityDisplay = `${group.totalQuantity} ${group.totalQuantity === 1 ? 'un' : 'uns'}`;
               
               printContent += `
                 <tr>
-                  <td>${item.productName}</td>
-                  <td>${item.productSku}</td>
-                  <td><strong>${item.locationCode}</strong></td>
-                  <td>${item.batch || "-"}</td>
+                  <td>${group.productName}</td>
+                  <td>${group.productSku}</td>
+                  <td>${group.batch || "-"}</td>
                   <td>${expiryDate}</td>
                   <td><strong>${quantityDisplay}</strong></td>
                 </tr>
