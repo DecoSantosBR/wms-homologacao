@@ -179,14 +179,8 @@ export default function WaveExecution() {
                 ? new Date(item.expiryDate).toLocaleDateString("pt-BR")
                 : "-";
               
-              // Formatar quantidade com unidade
-              let quantityDisplay;
-              if (item.unit === "box" && item.unitsPerBox && item.unitsPerBox > 0) {
-                const boxes = item.totalQuantity / item.unitsPerBox;
-                quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'} / ${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
-              } else {
-                quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
-              }
+              // Formatar quantidade: SEMPRE em unidades
+              const quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
               
               printContent += `
                 <tr>
@@ -341,14 +335,8 @@ export default function WaveExecution() {
           ? new Date(item.expiryDate).toLocaleDateString("pt-BR")
           : "-";
         
-        // Formatar quantidade com unidade
-        let quantityDisplay;
-        if (item.unit === "box" && item.unitsPerBox && item.unitsPerBox > 0) {
-          const boxes = item.totalQuantity / item.unitsPerBox;
-          quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'} / ${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
-        } else {
-          quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
-        }
+        // Formatar quantidade: SEMPRE em unidades
+        const quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
         
         printContent += `
           <tr>
@@ -420,14 +408,8 @@ export default function WaveExecution() {
     return a.locationCode.localeCompare(b.locationCode, 'pt-BR', { numeric: true });
   });
 
-  // Função auxiliar para formatar quantidade: sempre em unidades, mas mostra caixas quando aplicável
-  const formatQuantityWithUnit = (quantityInUnits: number, unit: string, unitsPerBox?: number | null) => {
-    // Se o pedido original foi em caixas, mostrar "X caixas / Y unidades"
-    if (unit === "box" && unitsPerBox && unitsPerBox > 0) {
-      const boxes = quantityInUnits / unitsPerBox;
-      return `${boxes} ${boxes === 1 ? 'caixa' : 'caixas'} / ${quantityInUnits} ${quantityInUnits === 1 ? 'unidade' : 'unidades'}`;
-    }
-    // Se foi em unidades, mostrar apenas unidades
+  // Função auxiliar para formatar quantidade: SEMPRE mostrar apenas em unidades
+  const formatQuantityWithUnit = (quantityInUnits: number) => {
     return `${quantityInUnits} ${quantityInUnits === 1 ? 'unidade' : 'unidades'}`;
   };
 
@@ -611,7 +593,7 @@ export default function WaveExecution() {
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Progresso: {formatQuantityWithUnit(item.pickedQuantity, item.unit || "unit", item.unitsPerBox)} / {formatQuantityWithUnit(item.totalQuantity, item.unit || "unit", item.unitsPerBox)}
+                          Progresso: {formatQuantityWithUnit(item.pickedQuantity)} / {formatQuantityWithUnit(item.totalQuantity)}
                         </span>
                         <span className="font-semibold">{progressPercent}%</span>
                       </div>

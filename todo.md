@@ -1101,3 +1101,26 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Corrigida exibição para mostrar "X caixas / Y unidades" ao invés de converter
 - [x] Atualizada função formatQuantityWithUnit() em WaveExecution.tsx
 - [x] Atualizada impressão de documentos para mostrar formato correto
+
+
+## 🚨 CORREÇÃO URGENTE: EXIBIR APENAS UNIDADES - 27/01/2026
+
+### Requisito
+- [x] Exibir APENAS unidades em toda a interface
+- [x] NUNCA mostrar caixas
+- [x] totalQuantity deve estar sempre em UNIDADES no banco
+- [x] Remover toda lógica de conversão/exibição de caixas
+
+### Ações Implementadas
+- [x] Corrigido waveLogic.ts: forçar unit="unit" ao criar pickingWaveItems (totalQuantity já está em unidades)
+- [x] Atualizado banco: alterado unit='box' → unit='unit' em 9 itens de pickingWaveItems
+- [x] Simplificado formatQuantityWithUnit() para mostrar apenas "X unidades"
+- [x] Removida exibição de caixas da impressão
+- [x] Removidos parâmetros unit e unitsPerBox da função formatQuantityWithUnit
+
+### Explicação Técnica
+- pickingReservations.quantity está SEMPRE em unidades
+- pickingWaveItems.totalQuantity vem de pickingReservations.quantity
+- Logo, pickingWaveItems.totalQuantity está SEMPRE em unidades
+- Campo unit deve ser sempre "unit", nunca "box"
+- Campo unitsPerBox é mantido apenas para referência histórica

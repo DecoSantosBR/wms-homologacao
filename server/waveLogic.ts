@@ -297,10 +297,10 @@ export async function createWave(params: CreateWaveParams) {
     productId: item.productId,
     productSku: item.productSku,
     productName: item.productName,
-    totalQuantity: item.allocatedQuantity, // Usar quantidade alocada DESTE lote
+    totalQuantity: item.allocatedQuantity, // Sempre em UNIDADES (vem das reservas)
     pickedQuantity: 0,
-    unit: item.unit, // Unidade do pedido original
-    unitsPerBox: item.unitsPerBox, // Unidades por caixa
+    unit: "unit" as const, // SEMPRE "unit" porque totalQuantity está em unidades
+    unitsPerBox: item.unitsPerBox, // Mantido apenas para referência
     locationId: item.locationId,
     locationCode: item.locationCode,
     batch: item.batch,
