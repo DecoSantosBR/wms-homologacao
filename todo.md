@@ -1034,3 +1034,6 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Deixar campo Transportadora em branco (remover preenchimento automático)
 - [x] Verificar extração de Município e UF do XML (<dest>/<enderDest>/<xMun> e <UF>)
 - [x] Ajustar layout visual do romaneio para corresponder ao modelo oficial
+
+## 🐛 Correção de Geração de Ondas
+- [x] Filtrar zonas especiais (EXP, REC, NCG, DEV) da geração de ondas

@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, tenants, pickingReservations } from "../drizzle/schema";
+import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, warehouseZones, tenants, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
 
 /**
@@ -236,7 +236,14 @@ export async function createWave(params: CreateWaveParams) {
     .leftJoin(products, eq(pickingReservations.productId, products.id))
     .leftJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
     .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
-    .where(inArray(pickingReservations.pickingOrderId, params.orderIds));
+    .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(
+      and(
+        inArray(pickingReservations.pickingOrderId, params.orderIds),
+        // Excluir zonas especiais (Expedição, Recebimento, Não Conformidades, Devoluções)
+        sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+      )
+    );
 
   if (reservations.length === 0) {
     throw new Error("Nenhuma reserva encontrada para os pedidos selecionados");
