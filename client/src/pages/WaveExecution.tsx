@@ -180,10 +180,10 @@ export default function WaveExecution() {
                 : "-";
               
               // Formatar quantidade com unidade
-              let quantityDisplay = item.totalQuantity;
+              let quantityDisplay;
               if (item.unit === "box" && item.unitsPerBox && item.unitsPerBox > 0) {
                 const boxes = item.totalQuantity / item.unitsPerBox;
-                quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'}`;
+                quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'} / ${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
               } else {
                 quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
               }
@@ -342,10 +342,10 @@ export default function WaveExecution() {
           : "-";
         
         // Formatar quantidade com unidade
-        let quantityDisplay = item.totalQuantity;
+        let quantityDisplay;
         if (item.unit === "box" && item.unitsPerBox && item.unitsPerBox > 0) {
           const boxes = item.totalQuantity / item.unitsPerBox;
-          quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'}`;
+          quantityDisplay = `${boxes} ${boxes === 1 ? 'cx' : 'cxs'} / ${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
         } else {
           quantityDisplay = `${item.totalQuantity} ${item.totalQuantity === 1 ? 'un' : 'uns'}`;
         }
@@ -420,12 +420,14 @@ export default function WaveExecution() {
     return a.locationCode.localeCompare(b.locationCode, 'pt-BR', { numeric: true });
   });
 
-  // Função auxiliar para converter quantidade de unidades para a unidade original
+  // Função auxiliar para formatar quantidade: sempre em unidades, mas mostra caixas quando aplicável
   const formatQuantityWithUnit = (quantityInUnits: number, unit: string, unitsPerBox?: number | null) => {
+    // Se o pedido original foi em caixas, mostrar "X caixas / Y unidades"
     if (unit === "box" && unitsPerBox && unitsPerBox > 0) {
       const boxes = quantityInUnits / unitsPerBox;
-      return `${boxes} ${boxes === 1 ? 'caixa' : 'caixas'}`;
+      return `${boxes} ${boxes === 1 ? 'caixa' : 'caixas'} / ${quantityInUnits} ${quantityInUnits === 1 ? 'unidade' : 'unidades'}`;
     }
+    // Se foi em unidades, mostrar apenas unidades
     return `${quantityInUnits} ${quantityInUnits === 1 ? 'unidade' : 'unidades'}`;
   };
 

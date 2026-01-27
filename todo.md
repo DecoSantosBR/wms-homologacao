@@ -1080,3 +1080,24 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Quantidades são sempre exibidas na unidade original do pedido
 - [x] Conversão automática: se pedido foi em caixas, exibe caixas; se foi em unidades, exibe unidades
 - [x] Documentos impressos também refletem unidade original
+
+
+## 🐛 BUG: RESERVAS EM ENDEREÇOS DE EXPEDIÇÃO - 27/01/2026
+
+### Problema Real Identificado
+- [x] Sistema estava reservando estoque em endereços de Expedição (EXP-01-A) durante criação de pedidos
+- [x] Filtro de zonas especiais existia apenas na geração de onda, mas não na criação de pedido
+- [x] Reservas em EXP não apareciam na onda, causando divergência entre quantidade do pedido e quantidade na onda
+- [x] Exemplo: Pedido de 160 unidades reservava 70 em EXP + 90 em armazenagem, mas onda mostrava apenas 90
+
+### Causa Raiz
+- [x] routers.ts (create picking order) buscava estoque disponível SEM filtrar zonas especiais
+- [x] waveLogic.ts filtrava zonas ao gerar onda, mas reservas já haviam sido feitas incorretamente
+
+### Correção Implementada
+- [x] Adicionado filtro de zonas (NOT IN 'EXP', 'REC', 'NCG', 'DEV') na query de estoque disponível em routers.ts
+- [x] Adicionado JOIN com warehouseZones na query de estoque
+- [x] Revertidas 3 reservas incorretas em EXP-01-A (70 + 20 + 20 unidades)
+- [x] Corrigida exibição para mostrar "X caixas / Y unidades" ao invés de converter
+- [x] Atualizada função formatQuantityWithUnit() em WaveExecution.tsx
+- [x] Atualizada impressão de documentos para mostrar formato correto

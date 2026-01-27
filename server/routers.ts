@@ -1638,12 +1638,15 @@ export const appRouter = router({
             })
             .from(inventory)
             .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
             .where(
               and(
                 eq(inventory.tenantId, input.tenantId), // ← CORRIGIDO: usar cliente selecionado
                 eq(inventory.productId, item.productId),
                 eq(inventory.status, "available"),
-                sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`
+                sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+                // Excluir zonas especiais (Expedição, Recebimento, Não Conformidades, Devoluções)
+                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
               )
             )
             .orderBy(inventory.expiryDate); // FEFO por padrão
