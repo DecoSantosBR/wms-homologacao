@@ -1139,3 +1139,23 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Removida coluna "Endereço" do documento agrupado
 - [x] Mantidas colunas: Produto, SKU, Lote, Validade, Quantidade Total
 - [x] Ajustado layout do PDF para melhor distribuição sem coluna Endereço
+
+
+## 📄 MODIFICAR DOCUMENTO DE IMPRESSÃO DO ROMANEIO - 27/01/2026
+
+### Requisitos
+- [x] Remover underlines dos campos: Romaneio nº, Temperatura, Empresa, CNPJ, Transportadora, Placa, Motorista, CNH
+- [x] Preencher campo "Transportadora" automaticamente com valor informado pelo usuário ao criar romaneio
+- [x] Otimizar layout para caber em apenas uma página A4
+- [x] Corrigir tabela de Relação Pedidos/Notas Fiscais: remover coluna extra abaixo do cabeçalho
+
+### Implementação
+- [x] Localizado código de geração do romaneio em client/src/components/ManifestPrint.tsx
+- [x] Removidos underlines (_______) dos campos Temperatura, Transportadora, Placa, Motorista, CNH
+- [x] Adicionado valor da transportadora: {data.manifest.carrierName}
+- [x] Reduzidas margens de 20mm para 10mm
+- [x] Reduzidos tamanhos de fonte: body 12pt→10pt, title 24px→18px, logo 48px→36px
+- [x] Reduzidos espaçamentos: header margin 30px→15px, info-row gap 30px→20px
+- [x] Otimizada tabela: padding 10px→6px (th) e 8px→4px (td)
+- [x] Reduzido QR code de 100px para 70px
+- [x] Corrigida tabela: removida coluna extra (idx + 1) que não tinha cabeçalho

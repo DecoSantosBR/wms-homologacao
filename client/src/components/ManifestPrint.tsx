@@ -57,7 +57,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
           <style>
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 10mm;
             }
             
             * {
@@ -68,25 +68,25 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             
             body {
               font-family: Arial, sans-serif;
-              font-size: 12pt;
-              line-height: 1.4;
+              font-size: 10pt;
+              line-height: 1.2;
             }
             
             .header {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              margin-bottom: 30px;
+              margin-bottom: 15px;
             }
             
             .qrcode {
-              width: 100px;
-              height: 100px;
+              width: 70px;
+              height: 70px;
               border: 2px solid #000;
             }
             
             .logo {
-              font-size: 48px;
+              font-size: 36px;
               font-weight: bold;
               color: #1e40af;
               margin-right: 10px;
@@ -99,17 +99,17 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             
             .title {
               text-align: center;
-              font-size: 24px;
+              font-size: 18px;
               font-weight: bold;
               color: #1e40af;
-              margin: 30px 0;
+              margin: 10px 0;
               letter-spacing: 2px;
             }
             
             .info-row {
               display: flex;
-              gap: 30px;
-              margin-bottom: 15px;
+              gap: 20px;
+              margin-bottom: 8px;
             }
             
             .info-field {
@@ -130,35 +130,38 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             }
             
             .section-title {
-              font-size: 16px;
+              font-size: 13px;
               font-weight: bold;
               color: #1e40af;
-              margin: 25px 0 15px 0;
+              margin: 12px 0 8px 0;
             }
             
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 20px 0;
+              margin: 10px 0;
             }
             
             th {
               background-color: #1e40af;
               color: white;
-              padding: 10px;
+              padding: 6px;
               text-align: left;
               font-weight: bold;
+              font-size: 9pt;
             }
             
             td {
               border: 1px solid #000;
-              padding: 8px;
+              padding: 4px;
+              font-size: 9pt;
             }
             
             .totals {
-              margin: 20px 0;
+              margin: 10px 0;
               display: flex;
-              gap: 30px;
+              gap: 20px;
+              font-size: 9pt;
             }
             
             .total-item {
@@ -166,13 +169,13 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             }
             
             .signatures {
-              margin-top: 50px;
+              margin-top: 20px;
             }
             
             .signature-row {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 40px;
+              margin-bottom: 20px;
             }
             
             .signature-field {
@@ -182,7 +185,8 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             
             .signature-label {
               font-weight: bold;
-              margin-bottom: 30px;
+              margin-bottom: 15px;
+              font-size: 9pt;
             }
             
             .signature-line {
@@ -267,7 +271,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Temperatura do Baú (°C):</span>
-            <span className="info-value">______</span>
+            <span className="info-value"></span>
           </div>
         </div>
 
@@ -292,22 +296,22 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Transportadora:</span>
-            <span className="info-value">_________________________</span>
+            <span className="info-value">{data.manifest.carrierName || ''}</span>
           </div>
           <div className="info-field">
             <span className="info-label">Placa:</span>
-            <span className="info-value">_____________</span>
+            <span className="info-value"></span>
           </div>
         </div>
 
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Motorista:</span>
-            <span className="info-value">______________________________</span>
+            <span className="info-value"></span>
           </div>
           <div className="info-field">
             <span className="info-label">CNH:</span>
-            <span className="info-value">_______________</span>
+            <span className="info-value"></span>
           </div>
         </div>
 
@@ -326,7 +330,6 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
           <tbody>
             {data.items.map((item, idx) => (
               <tr key={idx}>
-                <td>{idx + 1}</td>
                 <td>{item.orderNumber || "N/A"}</td>
                 <td>{item.invoiceNumber}</td>
                 <td>{item.customerName}</td>
