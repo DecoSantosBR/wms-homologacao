@@ -451,6 +451,8 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   productId: int("productId").notNull(),
   requestedQuantity: int("requestedQuantity").notNull(),
   requestedUM: mysqlEnum("requestedUM", ["unit", "box", "pallet"]).default("unit").notNull(), // Unidade de Medida solicitada
+  unit: mysqlEnum("unit", ["unit", "box"]).default("unit").notNull(), // Unidade do pedido original (para rastreabilidade)
+  unitsPerBox: int("unitsPerBox"), // Unidades por caixa (quando unit=box)
   pickedQuantity: int("pickedQuantity").default(0).notNull(),
   pickedUM: mysqlEnum("pickedUM", ["unit", "box", "pallet"]).default("unit").notNull(),
   batch: varchar("batch", { length: 50 }), // Lote separado (FEFO)
@@ -762,6 +764,8 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   productName: varchar("productName", { length: 255 }).notNull(),
   totalQuantity: int("totalQuantity").notNull(), // Quantidade consolidada
   pickedQuantity: int("pickedQuantity").default(0).notNull(), // Quantidade já separada
+  unit: mysqlEnum("unit", ["unit", "box"]).default("unit").notNull(), // Unidade do pedido original
+  unitsPerBox: int("unitsPerBox"),
   locationId: int("locationId").notNull(), // Endereço alocado (FIFO/FEFO)
   locationCode: varchar("locationCode", { length: 50 }).notNull(), // Código do endereço (ex: H01-08-02)
   batch: varchar("batch", { length: 100 }), // Lote sugerido

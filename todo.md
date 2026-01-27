@@ -1037,3 +1037,46 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 
 ## 🐛 Correção de Geração de Ondas
 - [x] Filtrar zonas especiais (EXP, REC, NCG, DEV) da geração de ondas
+
+## 🐛 Correção de Unidades
+- [ ] Corrigir exibição de quantidades na onda de separação para manter unidade original do pedido
+
+
+## 🔧 CORREÇÃO DE EXIBIÇÃO DE UNIDADES NA EXECUÇÃO DE ONDA - 27/01/2026
+
+### Problema Identificado
+- [x] Wave execution mostrava todas as quantidades em "unidades"
+- [x] Order details preservavam unidade original (caixas ou unidades)
+- [x] Inconsistência causava confusão: mesmo item com quantidades diferentes em telas diferentes
+
+### Causa Raiz
+- [x] Tabela `pickingWaveItems` armazenava apenas `totalQuantity` (normalizado em unidades)
+- [x] Campos `unit` e `unitsPerBox` não existiam, impedindo conversão reversa
+
+### Solução Implementada
+
+#### Backend - Schema e Migrações
+- [x] Adicionado campo `unit` (enum: "unit" | "box") em `pickingWaveItems`
+- [x] Adicionado campo `unitsPerBox` (int nullable) em `pickingWaveItems`
+- [x] Adicionado campo `unit` (enum: "unit" | "box") em `pickingOrderItems`
+- [x] Adicionado campo `unitsPerBox` (int nullable) em `pickingOrderItems`
+- [x] Criadas migrações 0029 e 0030 e aplicadas ao banco de dados
+
+#### Backend - Lógica de Negócio
+- [x] Modificado `waveLogic.ts` para copiar `unit` e `unitsPerBox` de `pickingOrderItems` ao criar `pickingWaveItems`
+- [x] Adicionado JOIN com `pickingOrderItems` na query de reservas
+- [x] Modificado `routers.ts` (create) para preencher `unit` e `unitsPerBox` ao criar pedidos
+- [x] Modificado `routers.ts` (update) para buscar produtos e preencher `unit` e `unitsPerBox` ao editar pedidos
+- [x] Modificado `waveRouter.ts` (getPickingProgress) para retornar `unit` e `unitsPerBox` nos itens da onda
+
+#### Frontend - WaveExecution.tsx
+- [x] Criada função `formatQuantityWithUnit()` para converter unidades para display original
+- [x] Atualizado progresso geral para exibir "itens" ao invés de "unidades"
+- [x] Atualizado progresso de cada item para exibir quantidade na unidade original (ex: "2 caixas" ou "80 unidades")
+- [x] Atualizado impressão de documentos para exibir quantidades na unidade original (ex: "2 cx" ou "80 un")
+
+### Resultado
+- [x] Sistema agora mantém consistência entre tela de detalhes do pedido e execução de onda
+- [x] Quantidades são sempre exibidas na unidade original do pedido
+- [x] Conversão automática: se pedido foi em caixas, exibe caixas; se foi em unidades, exibe unidades
+- [x] Documentos impressos também refletem unidade original

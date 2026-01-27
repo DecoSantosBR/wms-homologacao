@@ -204,6 +204,20 @@
       "when": 1769454982867,
       "tag": "0028_open_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1769480124338,
+      "tag": "0029_wealthy_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1769480250801,
+      "tag": "0030_awesome_sentinels",
+      "breakpoints": true
     }
   ]
 }

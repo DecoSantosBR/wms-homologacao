@@ -92,6 +92,8 @@ export const waveRouter = router({
           productSku: pickingWaveItems.productSku,
           totalQuantity: pickingWaveItems.totalQuantity,
           pickedQuantity: pickingWaveItems.pickedQuantity,
+          unit: pickingWaveItems.unit, // Unidade do pedido original
+          unitsPerBox: pickingWaveItems.unitsPerBox, // Unidades por caixa
           locationId: pickingWaveItems.locationId,
           locationCode: pickingWaveItems.locationCode,
           batch: pickingWaveItems.batch,

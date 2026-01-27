@@ -231,12 +231,18 @@ export async function createWave(params: CreateWaveParams) {
       locationCode: warehouseLocations.code,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
+      unit: pickingOrderItems.unit, // Unidade do pedido original
+      unitsPerBox: pickingOrderItems.unitsPerBox, // Unidades por caixa
     })
     .from(pickingReservations)
     .leftJoin(products, eq(pickingReservations.productId, products.id))
     .leftJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
     .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .leftJoin(pickingOrderItems, and(
+      eq(pickingReservations.pickingOrderId, pickingOrderItems.pickingOrderId),
+      eq(pickingReservations.productId, pickingOrderItems.productId)
+    ))
     .where(
       and(
         inArray(pickingReservations.pickingOrderId, params.orderIds),
@@ -263,6 +269,8 @@ export async function createWave(params: CreateWaveParams) {
     locationCode: r.locationCode!,
     batch: r.batch || undefined,
     expiryDate: r.expiryDate || undefined,
+    unit: r.unit || "unit", // Unidade do pedido original
+    unitsPerBox: r.unitsPerBox || undefined, // Unidades por caixa
   }));
 
   // 5. Gerar número da onda
@@ -291,6 +299,8 @@ export async function createWave(params: CreateWaveParams) {
     productName: item.productName,
     totalQuantity: item.allocatedQuantity, // Usar quantidade alocada DESTE lote
     pickedQuantity: 0,
+    unit: item.unit, // Unidade do pedido original
+    unitsPerBox: item.unitsPerBox, // Unidades por caixa
     locationId: item.locationId,
     locationCode: item.locationCode,
     batch: item.batch,

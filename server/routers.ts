@@ -1755,6 +1755,8 @@ export const appRouter = router({
             productId: item.productId,
             requestedQuantity: item.requestedQuantity,
             requestedUM: item.requestedUnit,
+            unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade original do pedido
+            unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined, // Unidades por caixa
             pickedQuantity: 0,
             status: "pending",
           });
@@ -1937,15 +1939,32 @@ export const appRouter = router({
 
         // Inserir novos itens
         if (input.items.length > 0) {
+          // Buscar dados dos produtos para preencher unit e unitsPerBox
+          const productIds = input.items.map(item => item.productId);
+          const productsData = await db
+            .select({
+              id: products.id,
+              unitsPerBox: products.unitsPerBox,
+            })
+            .from(products)
+            .where(inArray(products.id, productIds));
+          
+          const productsMap = new Map(productsData.map(p => [p.id, p]));
+
           await db.insert(pickingOrderItems).values(
-            input.items.map((item) => ({
-              pickingOrderId: input.id,
-              productId: item.productId,
-              requestedQuantity: item.requestedQuantity,
-              requestedUM: item.requestedUnit,
-              pickedQuantity: 0,
-              status: "pending" as const,
-            }))
+            input.items.map((item) => {
+              const product = productsMap.get(item.productId);
+              return {
+                pickingOrderId: input.id,
+                productId: item.productId,
+                requestedQuantity: item.requestedQuantity,
+                requestedUM: item.requestedUnit,
+                unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+                unitsPerBox: item.requestedUnit === "box" && product ? product.unitsPerBox : undefined,
+                pickedQuantity: 0,
+                status: "pending" as const,
+              };
+            })
           );
         }
 
