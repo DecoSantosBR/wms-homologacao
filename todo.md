@@ -1284,3 +1284,34 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Testar em navegador sem extensões (modo anônimo)
 - [ ] Verificar se erro persiste após reiniciar servidor
 - [ ] Adicionar tratamento de timeout mais robusto
+
+
+## ✨ NOVA FUNCIONALIDADE: VALIDAÇÃO DE ESTOQUE AO ADICIONAR PRODUTO - 28/01/2026
+
+### Requisito
+- [x] Ao adicionar produto em pedido, verificar se há estoque disponível para aquele tenant
+- [x] Mostrar mensagem clara se não houver estoque suficiente
+- [x] Mensagens detalhadas: produto indisponível, quantidade insuficiente, etc
+- [x] Excluir zonas especiais (EXP, REC, NCG, DEV) da verificação de disponibilidade
+
+### Implementação
+- [x] Criar procedure tRPC `products.checkAvailability` para verificar disponibilidade de estoque
+- [x] Filtrar zonas especiais (EXP, REC, NCG, DEV) na consulta de estoque
+- [x] Detectar quando há estoque apenas em zonas especiais
+- [x] Integrar validação no frontend (handleAddProduct e handleAddEditProduct)
+- [x] Exibir alert com mensagem detalhada conforme situação:
+  - [x] "Produto não cadastrado no sistema"
+  - [x] "Produto sem estoque disponível para este cliente"
+  - [x] "Produto disponível apenas em zonas especiais (expedição, recebimento, avaria ou devolução)"
+  - [x] "Quantidade insuficiente" com detalhes (Disponível X / Solicitado Y)
+- [x] Mostrar quantidade disponível quando insuficiente
+- [x] Converter corretamente entre caixas e unidades
+- [x] Criar testes unitários (6 cenários cobertos)
+
+### Testes Implementados
+- [x] Produto não cadastrado
+- [x] Estoque suficiente
+- [x] Estoque insuficiente
+- [x] Exclusão de zonas especiais (EXP)
+- [x] Conversão caixas para unidades
+- [x] Consideração de quantidade reservada

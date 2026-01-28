@@ -373,6 +373,98 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    // Verificar disponibilidade de estoque para um produto
+    checkAvailability: protectedProcedure
+      .input(z.object({
+        productId: z.number(),
+        tenantId: z.number(),
+        requestedQuantity: z.number().min(1),
+        unit: z.enum(["unit", "box"]),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        // 1. Verificar se o produto existe
+        const product = await db
+          .select()
+          .from(products)
+          .where(eq(products.id, input.productId))
+          .limit(1);
+
+        if (product.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Produto não cadastrado no sistema"
+          });
+        }
+
+        // 2. Converter quantidade solicitada para unidades
+        const requestedUnits = input.unit === "box" && product[0].unitsPerBox
+          ? input.requestedQuantity * product[0].unitsPerBox
+          : input.requestedQuantity;
+
+        // 3. Buscar estoque disponível (excluindo zonas especiais: EXP, REC, NCG, DEV)
+        const availableStock = await db
+          .select({
+            locationId: inventory.locationId,
+            locationCode: warehouseLocations.code,
+            zoneCode: warehouseZones.code,
+            quantity: inventory.quantity,
+            reservedQuantity: inventory.reservedQuantity,
+            availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
+          })
+          .from(inventory)
+          .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+          .where(
+            and(
+              eq(inventory.productId, input.productId),
+              eq(inventory.tenantId, input.tenantId),
+              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+              sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')` // Excluir zonas especiais
+            )
+          );
+
+        // 4. Calcular total disponível
+        const totalAvailable = availableStock.reduce(
+          (sum, item) => sum + Number(item.availableQuantity),
+          0
+        );
+
+        // 5. Verificar se há estoque apenas em zonas especiais
+        const stockInSpecialZones = await db
+          .select({
+            quantity: sql<number>`SUM(${inventory.quantity} - ${inventory.reservedQuantity})`,
+          })
+          .from(inventory)
+          .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+          .where(
+            and(
+              eq(inventory.productId, input.productId),
+              eq(inventory.tenantId, input.tenantId),
+              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+              sql`${warehouseZones.code} IN ('EXP', 'REC', 'NCG', 'DEV')` // Apenas zonas especiais
+            )
+          );
+
+        const hasStockInSpecialZonesOnly = 
+          totalAvailable === 0 && 
+          stockInSpecialZones.length > 0 && 
+          Number(stockInSpecialZones[0].quantity) > 0;
+
+        // 6. Retornar resultado da verificação
+        return {
+          available: totalAvailable >= requestedUnits,
+          totalAvailable,
+          requestedUnits,
+          hasStockInSpecialZonesOnly,
+          product: product[0],
+          locations: availableStock,
+        };
+      }),
   }),
 
   zones: router({
@@ -1992,14 +2084,20 @@ export const appRouter = router({
           );
 
           // Criar novas reservas de estoque
+          console.log('[UPDATE ORDER] Criando reservas para items:', input.items);
+          console.log('[UPDATE ORDER] ProductsMap contém:', Array.from(productsMap.keys()));
           for (const item of input.items) {
+            console.log(`[UPDATE ORDER] Buscando produto ID ${item.productId} no map`);
             const product = productsMap.get(item.productId);
             if (!product) {
+              console.error(`[UPDATE ORDER] Produto ID ${item.productId} NÃO ENCONTRADO no map!`);
+              console.error('[UPDATE ORDER] Todos os produtos disponíveis:', productsData);
               throw new TRPCError({
                 code: "NOT_FOUND",
                 message: `Produto ID ${item.productId} não encontrado`
               });
             }
+            console.log(`[UPDATE ORDER] Produto ID ${item.productId} encontrado:`, product);
 
             // Converter quantidade para unidades se solicitado em caixa
             let quantityInUnits = item.requestedQuantity;

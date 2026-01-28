@@ -51,6 +51,9 @@ export default function PickingOrders() {
   
   // Hook de erros de negócio
   const businessError = useBusinessError();
+  
+  // Utils para chamadas imperativas
+  const utils = trpc.useUtils();
 
   // Estados para edição de onda
   const [isEditWaveDialogOpen, setIsEditWaveDialogOpen] = useState(false);
@@ -416,9 +419,14 @@ export default function PickingOrders() {
     },
   });
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!selectedProductId || quantity <= 0) {
       alert("Selecione um produto e informe a quantidade.");
+      return;
+    }
+
+    if (!selectedTenantId) {
+      alert("Selecione o cliente primeiro.");
       return;
     }
 
@@ -428,43 +436,66 @@ export default function PickingOrders() {
       return;
     }
 
-    // Verificar estoque disponível
-    const availableStock = inventory?.filter(
-      (inv: any) => inv.productId === product.id && inv.status === "available"
-    );
-    const totalAvailable = availableStock?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0;
-
-    console.log("Product:", product);
-    console.log("Available stock:", totalAvailable);
-    console.log("Requested:", quantity, unit);
-
-    // NOTA: Por enquanto, não validar estoque pois não temos conversão de UM implementada
-    // TODO: Implementar conversão de unidades (caixa -> unidade) usando product.unitsPerBox
-    // if (totalAvailable < quantity) {
-    //   alert(`Estoque insuficiente. Disponível: ${totalAvailable} ${unit === "box" ? "caixas" : "unidades"}. Solicitado: ${quantity}.`);
-    //   return;
-    // }
-
     // Verificar se produto já foi adicionado
     if (selectedProducts.some((p) => p.productId === product.id)) {
       alert("Produto já adicionado. Remova-o para adicionar novamente.");
       return;
     }
 
-    setSelectedProducts([
-      ...selectedProducts,
-      {
+    try {
+      // Verificar disponibilidade de estoque via tRPC
+      const availability = await utils.products.checkAvailability.fetch({
         productId: product.id,
-        productName: product.description,
-        quantity,
-        unit,
-      },
-    ]);
+        tenantId: parseInt(selectedTenantId),
+        requestedQuantity: quantity,
+        unit: unit,
+      });
 
-    // Limpar campos
-    setSelectedProductId("");
-    setQuantity(1);
-    setUnit("box");
+      if (!availability.available) {
+        if (availability.hasStockInSpecialZonesOnly) {
+          alert(
+            `Produto disponível apenas em zonas especiais (expedição, recebimento, avaria ou devolução).\n\n` +
+            `Não é possível reservar estoque dessas zonas para novos pedidos.`
+          );
+        } else if (availability.totalAvailable === 0) {
+          alert(`Produto sem estoque disponível para este cliente.`);
+        } else {
+          const unitLabel = unit === "box" ? "caixas" : "unidades";
+          const availableInUnit = unit === "box" && product.unitsPerBox
+            ? Math.floor(availability.totalAvailable / product.unitsPerBox)
+            : availability.totalAvailable;
+          
+          alert(
+            `Quantidade insuficiente.\n\n` +
+            `Disponível: ${availableInUnit} ${unitLabel}\n` +
+            `Solicitado: ${quantity} ${unitLabel}`
+          );
+        }
+        return;
+      }
+
+      // Estoque suficiente - adicionar produto
+      setSelectedProducts([
+        ...selectedProducts,
+        {
+          productId: product.id,
+          productName: product.description,
+          quantity,
+          unit,
+        },
+      ]);
+
+      // Limpar campos
+      setSelectedProductId("");
+      setQuantity(1);
+      setUnit("box");
+    } catch (error: any) {
+      if (error.message?.includes("Produto não cadastrado")) {
+        alert("Produto não cadastrado no sistema.");
+      } else {
+        alert(`Erro ao verificar disponibilidade: ${error.message || "Erro desconhecido"}`);
+      }
+    }
   };
 
   const handleRemoveProduct = (productId: number) => {
@@ -509,13 +540,18 @@ export default function PickingOrders() {
     setIsEditDialogOpen(true);
   };
 
-  const handleAddEditProduct = () => {
+  const handleAddEditProduct = async () => {
     if (!editSelectedProductId || editQuantity <= 0) {
       alert("Selecione um produto e informe a quantidade.");
       return;
     }
 
-    const product = products?.find((p) => p.id === parseInt(editSelectedProductId));
+    if (!editTenantId) {
+      alert("Selecione o cliente primeiro.");
+      return;
+    }
+
+    const product = editProducts_available?.find((p) => p.id === parseInt(editSelectedProductId));
     if (!product) {
       alert("Produto não encontrado.");
       return;
@@ -526,19 +562,59 @@ export default function PickingOrders() {
       return;
     }
 
-    setEditProducts([
-      ...editProducts,
-      {
+    try {
+      // Verificar disponibilidade de estoque via tRPC
+      const availability = await utils.products.checkAvailability.fetch({
         productId: product.id,
-        productName: product.description,
-        quantity: editQuantity,
+        tenantId: parseInt(editTenantId),
+        requestedQuantity: editQuantity,
         unit: editUnit,
-      },
-    ]);
+      });
 
-    setEditSelectedProductId("");
-    setEditQuantity(1);
-    setEditUnit("box");
+      if (!availability.available) {
+        if (availability.hasStockInSpecialZonesOnly) {
+          alert(
+            `Produto disponível apenas em zonas especiais (expedição, recebimento, avaria ou devolução).\n\n` +
+            `Não é possível reservar estoque dessas zonas para novos pedidos.`
+          );
+        } else if (availability.totalAvailable === 0) {
+          alert(`Produto sem estoque disponível para este cliente.`);
+        } else {
+          const unitLabel = editUnit === "box" ? "caixas" : "unidades";
+          const availableInUnit = editUnit === "box" && product.unitsPerBox
+            ? Math.floor(availability.totalAvailable / product.unitsPerBox)
+            : availability.totalAvailable;
+          
+          alert(
+            `Quantidade insuficiente.\n\n` +
+            `Disponível: ${availableInUnit} ${unitLabel}\n` +
+            `Solicitado: ${editQuantity} ${unitLabel}`
+          );
+        }
+        return;
+      }
+
+      // Estoque suficiente - adicionar produto
+      setEditProducts([
+        ...editProducts,
+        {
+          productId: product.id,
+          productName: product.description,
+          quantity: editQuantity,
+          unit: editUnit,
+        },
+      ]);
+
+      setEditSelectedProductId("");
+      setEditQuantity(1);
+      setEditUnit("box");
+    } catch (error: any) {
+      if (error.message?.includes("Produto não cadastrado")) {
+        alert("Produto não cadastrado no sistema.");
+      } else {
+        alert(`Erro ao verificar disponibilidade: ${error.message || "Erro desconhecido"}`);
+      }
+    }
   };
 
   const handleRemoveEditProduct = (productId: number) => {
