@@ -1422,3 +1422,56 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] **Produto 443060** (endereço H01-01-01): 560 reservadas → 0 reservadas
 - [x] **Estoque disponível corrigido**: 280 unidades agora disponíveis para novos pedidos
 - [x] Sistema validando corretamente disponibilidade de estoque
+
+
+## 🐛 BUG: CAMPO "NÚMERO DO PEDIDO" NÃO PERMITE DIGITAÇÃO EM /stage/check - 28/01/2026 [RESOLVIDO]
+
+### Problema Reportado
+- [x] Campo "Número do Pedido" na tela /stage/check não permite digitação
+- [x] Usuário não consegue inserir texto no input
+
+### Investigação
+- [x] Verificar se campo está com atributo `disabled` ou `readOnly`
+- [x] Verificar se há evento que bloqueia input
+- [x] Verificar se estado está sendo gerenciado corretamente
+
+### Causa Provável
+- [x] Conferência ativa em segundo plano estava mudando automaticamente para step="checking"
+- [x] useEffect detectava conferência ativa e escondia formulário de busca
+
+### Resolução
+- [x] Problema resolvido automaticamente (conferência anterior foi finalizada/cancelada)
+- [x] Campo funcionando normalmente após limpeza de estado
+
+
+## 🧪 CONFIGURAÇÃO DE TESTES E2E (END-TO-END) - 28/01/2026
+
+### Objetivo
+- [x] Configurar infraestrutura de testes E2E com Playwright
+- [x] Criar testes de exemplo para fluxos principais do sistema
+- [x] Documentar processo de execução de testes
+
+### Implementação
+- [x] Instalar Playwright e dependências (@playwright/test, playwright)
+- [x] Criar arquivo de configuração playwright.config.ts
+- [x] Criar estrutura de pastas para testes E2E (e2e/, e2e/fixtures/)
+- [x] Criar testes de exemplo:
+  - [x] Navegação básica entre módulos (navigation.spec.ts)
+  - [x] Criação de pedido de separação (picking-order.spec.ts)
+  - [x] Conferência de pedido Stage (stage-check.spec.ts)
+  - [ ] Movimentação de estoque (futuro)
+- [x] Criar helpers e fixtures reutilizáveis (auth.ts)
+- [x] Documentar comandos e boas práticas em README-E2E.md
+- [x] Adicionar scripts npm para execução de testes (test:e2e, test:e2e:ui, test:e2e:debug, test:e2e:report)
+
+### Comandos Disponíveis
+- \`pnpm test:e2e\` - Executar todos os testes E2E
+- \`pnpm test:e2e:ui\` - Executar em modo interativo
+- \`pnpm test:e2e:debug\` - Executar em modo debug
+- \`pnpm test:e2e:report\` - Ver relatório HTML
+
+### Próximos Passos
+- [ ] Instalar navegadores: \`pnpm exec playwright install\`
+- [ ] Criar fixtures de dados de teste para habilitar testes marcados com .skip()
+- [ ] Implementar autenticação automática em e2e/fixtures/auth.ts
+- [ ] Integrar testes E2E com CI/CD
