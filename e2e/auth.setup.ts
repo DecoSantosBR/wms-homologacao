@@ -1,5 +1,9 @@
 import { test as setup, expect } from '@playwright/test';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Setup Global de Autenticação
@@ -10,7 +14,7 @@ import path from 'path';
  * Os testes subsequentes reutilizam este estado, evitando login repetido.
  */
 
-const authFile = path.join(__dirname, '../.auth/user.json');
+const authFile = path.join(__dirname, '..', '.auth', 'user.json');
 
 setup('authenticate', async ({ page }) => {
   console.log('🔐 Iniciando autenticação para testes E2E...');

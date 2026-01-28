@@ -61,6 +61,9 @@ export function useAuth(options?: UseAuthOptions) {
   ]);
 
   useEffect(() => {
+    // Desabilitar redirecionamento durante testes E2E
+    if (import.meta.env.VITE_E2E_TESTING === 'true') return;
+    
     if (!redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;

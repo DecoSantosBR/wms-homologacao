@@ -85,12 +85,14 @@ export default defineConfig({
     // },
   ],
 
-  // Servidor de desenvolvimento (opcional)
+  // Servidor de desenvolvimento
   // Inicia o servidor automaticamente antes dos testes
   webServer: {
-    command: 'pnpm dev',
+    command: './start-e2e-server.sh',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
