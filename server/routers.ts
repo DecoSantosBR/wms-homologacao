@@ -1935,6 +1935,27 @@ export const appRouter = router({
           })
           .where(eq(pickingOrders.id, input.id));
 
+        // Liberar reservas antigas antes de excluir itens
+        const oldReservations = await db
+          .select()
+          .from(pickingReservations)
+          .where(eq(pickingReservations.pickingOrderId, input.id));
+
+        for (const reservation of oldReservations) {
+          // Decrementar reservedQuantity no inventory
+          await db
+            .update(inventory)
+            .set({
+              reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
+            })
+            .where(eq(inventory.id, reservation.inventoryId));
+        }
+
+        // Excluir registros de reserva
+        await db
+          .delete(pickingReservations)
+          .where(eq(pickingReservations.pickingOrderId, input.id));
+
         // Excluir itens antigos
         await db
           .delete(pickingOrderItems)
@@ -1969,6 +1990,82 @@ export const appRouter = router({
               };
             })
           );
+
+          // Criar novas reservas de estoque
+          for (const item of input.items) {
+            const product = productsMap.get(item.productId);
+            if (!product) continue;
+
+            // Converter quantidade para unidades se solicitado em caixa
+            let quantityInUnits = item.requestedQuantity;
+            if (item.requestedUnit === "box") {
+              if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message: `Produto ID ${item.productId} não possui quantidade por caixa configurada`
+                });
+              }
+              quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+            }
+
+            // Buscar estoque disponível (FIFO/FEFO)
+            const availableStock = await db
+              .select({
+                id: inventory.id,
+                quantity: inventory.quantity,
+                reservedQuantity: inventory.reservedQuantity,
+                availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+              })
+              .from(inventory)
+              .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+              .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+              .where(
+                and(
+                  eq(inventory.tenantId, input.tenantId),
+                  eq(inventory.productId, item.productId),
+                  eq(inventory.status, "available"),
+                  sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+                  sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                )
+              )
+              .orderBy(inventory.expiryDate);
+
+            // Calcular total disponível
+            const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+
+            if (totalAvailable < quantityInUnits) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Estoque insuficiente para produto ID ${item.productId}. Disponível: ${totalAvailable}, Solicitado: ${quantityInUnits}`
+              });
+            }
+
+            // Reservar estoque
+            let remainingToReserve = quantityInUnits;
+            for (const stock of availableStock) {
+              if (remainingToReserve <= 0) break;
+
+              const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
+
+              // Incrementar reservedQuantity no inventory
+              await db
+                .update(inventory)
+                .set({
+                  reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+                })
+                .where(eq(inventory.id, stock.id));
+
+              // Registrar reserva na tabela pickingReservations
+              await db.insert(pickingReservations).values({
+                pickingOrderId: input.id,
+                productId: item.productId,
+                inventoryId: stock.id,
+                quantity: toReserve,
+              });
+
+              remainingToReserve -= toReserve;
+            }
+          }
         }
 
         return { success: true };

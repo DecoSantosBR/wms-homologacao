@@ -1220,3 +1220,26 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Corrigida validação em movements.ts: adicionado filtro `quantity > 0` na linha 126
 - [x] Limpados 11 registros fantasma do banco de dados (quantity=0 e reservedQuantity=0)
 - [x] Endereço H01-01-01 agora está completamente limpo e disponível para uso
+
+
+## 🐛 BUG: RESERVAS NÃO ATUALIZAM AO EDITAR PEDIDO - 28/01/2026 [✅ RESOLVIDO]
+
+### Problema Reportado
+- [x] Ao editar quantidades em um pedido, as reservas de estoque não eram alteradas
+- [x] Reservas antigas permaneciam mesmo após mudança de quantidade
+- [x] Causava divergência entre quantidade do pedido e quantidade reservada
+
+### Investigação Realizada
+- [x] Localizado código de edição de pedidos (routers.ts - pickingOrders.update, linhas 1860-1975)
+- [x] Confirmado: NÃO havia lógica de atualização de reservas
+- [x] Entendido: reservas são criadas no create (linhas 1729-1750) mas não no update
+
+### Correção Implementada
+- [x] Adicionada liberação de reservas antigas antes de deletar itens (linhas 1938-1962)
+- [x] Adicionada criação de novas reservas após inserir novos itens (linhas 1994-2066)
+- [x] Lógica de reserva reutilizada do create: busca estoque disponível (FIFO/FEFO), valida quantidade, reserva
+- [x] Validação de estoque insuficiente implementada: lança erro se não houver estoque suficiente
+
+### Detalhes da Implementação
+1. **Liberar reservas antigas:** Busca todas as reservas do pedido, decrementa reservedQuantity no inventory, deleta registros de pickingReservations
+2. **Criar novas reservas:** Para cada item novo, converte quantidade para unidades, busca estoque disponível (excluindo zonas EXP/REC/NCG/DEV), reserva estoque usando FIFO/FEFO, incrementa reservedQuantity, cria registros em pickingReservations
