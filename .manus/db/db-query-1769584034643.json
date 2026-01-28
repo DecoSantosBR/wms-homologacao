@@ -1,0 +1,22 @@
+{
+  "query": "SELECT \n  i.productId,\n  i.locationId,\n  i.tenantId,\n  i.quantity,\n  i.reservedQuantity,\n  (i.quantity - i.reservedQuantity) as available,\n  wl.code as locationCode,\n  wz.code as zoneCode,\n  p.sku as productSku,\n  p.description\nFROM inventory i\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nINNER JOIN warehouseZones wz ON wl.zoneId = wz.id\nINNER JOIN products p ON i.productId = p.id\nWHERE p.sku = '443060' AND wl.code = 'H01-01-01';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  i.productId,\n  i.locationId,\n  i.tenantId,\n  i.quantity,\n  i.reservedQuantity,\n  (i.quantity - i.reservedQuantity) as available,\n  wl.code as locationCode,\n  wz.code as zoneCode,\n  p.sku as productSku,\n  p.description\nFROM inventory i\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nINNER JOIN warehouseZones wz ON wl.zoneId = wz.id\nINNER JOIN products p ON i.productId = p.id\nWHERE p.sku = '443060' AND wl.code = 'H01-01-01';",
+  "rows": [
+    {
+      "productId": "4",
+      "locationId": "1",
+      "tenantId": "1",
+      "quantity": "280",
+      "reservedQuantity": "0",
+      "available": "280",
+      "locationCode": "H01-01-01",
+      "zoneCode": "002",
+      "productSku": "443060",
+      "description": "EXTENSOFIX 60 CM"
+    }
+  ],
+  "messages": [],
+  "stdout": "productId\tlocationId\ttenantId\tquantity\treservedQuantity\tavailable\tlocationCode\tzoneCode\tproductSku\tdescription\n4\t1\t1\t280\t0\t280\tH01-01-01\t002\t443060\tEXTENSOFIX 60 CM\n",
+  "stderr": "",
+  "execution_time_ms": 350
+}

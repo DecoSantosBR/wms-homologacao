@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, name FROM tenants WHERE name LIKE '%Hapvida%';\n\nSELECT id, sku, description, tenantId FROM products WHERE sku = '443060';\n\nSELECT id, code, tenantId, zoneId FROM warehouseLocations WHERE code = 'H01-01-01';\n\nSELECT \n  i.productId,\n  i.locationId,\n  i.tenantId,\n  i.quantity,\n  i.reservedQuantity,\n  (i.quantity - i.reservedQuantity) as available,\n  wl.code as locationCode,\n  wz.code as zoneCode,\n  p.sku as productSku\nFROM inventory i\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nINNER JOIN warehouseZones wz ON wl.zoneId = wz.id\nINNER JOIN products p ON i.productId = p.id\nWHERE p.sku = '443060' AND wl.code = 'H01-01-01';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT id, name FROM tenants WHERE name LIKE '%Hapvida%';\n\nSELECT id, sku, description, tenantId FROM products WHERE sku = '443060';\n\nSELECT id, code, tenantId, zoneId FROM warehouseLocations WHERE code = 'H01-01-01';\n\nSELECT \n  i.productId,\n  i.locationId,\n  i.tenantId,\n  i.quantity,\n  i.reservedQuantity,\n  (i.quantity - i.reservedQuantity) as available,\n  wl.code as locationCode,\n  wz.code as zoneCode,\n  p.sku as productSku\nFROM inventory i\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nINNER JOIN warehouseZones wz ON wl.zoneId = wz.id\nINNER JOIN products p ON i.productId = p.id\nWHERE p.sku = '443060' AND wl.code = 'H01-01-01';",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Hapvida"
+    }
+  ],
+  "messages": [
+    "id\tsku\tdescription\ttenantId",
+    "4\t443060\tEXTENSOFIX 60 CM\t1",
+    "1029003\t443060\tEXTENSOFIX 60 CM\t1029002",
+    "id\tcode\ttenantId\tzoneId",
+    "1\tH01-01-01\t1\t4",
+    "productId\tlocationId\ttenantId\tquantity\treservedQuantity\tavailable\tlocationCode\tzoneCode\tproductSku",
+    "4\t1\t1\t280\t560\t-280\tH01-01-01\t002\t443060"
+  ],
+  "stdout": "id\tname\n1\tHapvida\nid\tsku\tdescription\ttenantId\n4\t443060\tEXTENSOFIX 60 CM\t1\n1029003\t443060\tEXTENSOFIX 60 CM\t1029002\nid\tcode\ttenantId\tzoneId\n1\tH01-01-01\t1\t4\nproductId\tlocationId\ttenantId\tquantity\treservedQuantity\tavailable\tlocationCode\tzoneCode\tproductSku\n4\t1\t1\t280\t560\t-280\tH01-01-01\t002\t443060\n",
+  "stderr": "",
+  "execution_time_ms": 520
+}

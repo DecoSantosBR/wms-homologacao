@@ -1322,6 +1322,16 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(inventory).orderBy(desc(inventory.createdAt)).limit(100);
     }),
+
+    /**
+     * Sincroniza reservas de estoque com pedidos ativos
+     * Recalcula reservedQuantity baseado em pedidos pending/in_progress/separated
+     * Corrige reservas órfãs de pedidos finalizados/cancelados
+     */
+    syncReservations: protectedProcedure.mutation(async () => {
+      const { syncInventoryReservations } = await import("./syncReservations");
+      return await syncInventoryReservations();
+    }),
   }),
 
   nfe: router({

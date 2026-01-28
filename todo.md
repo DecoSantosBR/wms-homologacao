@@ -1391,3 +1391,34 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
   - [x] **Adjustment/Disposal**: Agora filtra endereços com estoque por tenant
 - [x] Filtrado também o estoque consultado internamente pela função (para validação de regras de armazenagem)
 - [x] Garantido isolamento completo entre clientes em todas as operações de movimentação
+
+
+## 🐛 BUG: RESERVAS ÓRFÃS CAUSANDO ESTOQUE NEGATIVO - CAUSA RAIZ IDENTIFICADA - 28/01/2026
+
+### Problema Reportado
+- [x] Sistema reporta "Produto sem estoque disponível para esse cliente" ao tentar adicionar produto 443060 ao pedido
+- [x] Cliente: Hapvida (tenantId: 1)
+- [x] Quantidade solicitada: 280 unidades (2 caixas)
+- [x] Estoque físico: 280 unidades no endereço H01-01-01
+
+### Causa Raiz Identificada
+- [x] **Reservas órfãs**: 560 unidades reservadas sem pedidos ativos correspondentes
+- [x] **Estoque disponível negativo**: 280 (físico) - 560 (reservado) = -280
+- [x] **Origem do problema**: Pedidos finalizados/cancelados/expedidos não liberaram as reservas no estoque
+- [x] **Impacto**: Sistema corretamente recusa novos pedidos pois calcula disponibilidade como negativa
+
+### Solução Implementada
+- [x] Criar função `syncInventoryReservations()` que recalcula reservas baseado em pedidos ativos
+- [x] Adicionar endpoint tRPC `inventory.syncReservations` para execução manual
+- [x] Implementar lógica que:
+  - [x] Busca todos os registros de estoque
+  - [x] Para cada registro, calcula reservas reais somando pedidos ativos (pending, in_progress, separated)
+  - [x] Atualiza `reservedQuantity` com valor correto quando houver diferença
+  - [x] Retorna relatório detalhado de correções aplicadas
+- [x] Testar com produto 443060 e validar correção
+
+### Resultado da Sincronização
+- [x] **6 correções aplicadas** em registros de estoque com reservas órfãs
+- [x] **Produto 443060** (endereço H01-01-01): 560 reservadas → 0 reservadas
+- [x] **Estoque disponível corrigido**: 280 unidades agora disponíveis para novos pedidos
+- [x] Sistema validando corretamente disponibilidade de estoque
