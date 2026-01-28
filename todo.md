@@ -1159,3 +1159,40 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Otimizada tabela: padding 10px→6px (th) e 8px→4px (td)
 - [x] Reduzido QR code de 100px para 70px
 - [x] Corrigida tabela: removida coluna extra (idx + 1) que não tinha cabeçalho
+
+
+## 📦 CORRIGIR FLUXO DE MOVIMENTAÇÕES DE ESTOQUE - 27/01/2026
+
+### Fluxo Correto de Movimentações
+1. ✅ **Recebimento → REC** (automático): Conferência cega finalizada → produtos alocados em REC-01-A
+2. ✅ **REC → Armazenagem** (manual): Operador move de REC para zonas (Carga Seca, Tenda, 344-Controlados, Avaria, Devolução, Picking)
+3. ✅ **Armazenagem → Reserva** (automático): Geração de onda cria reservas (não move fisicamente ainda)
+4. ❌ **Reserva → EXP** (automático): Conferência stage finalizada → move para endereços EXP
+5. ❌ **EXP → Baixa** (automático): Romaneio finalizado → baixa do estoque
+
+### Problemas Identificados
+- [x] Item 4: Movimentação para EXP estava ocorrendo ao finalizar romaneio (incorreto)
+- [x] Item 4: Deve ocorrer ao confirmar conferência no Stage (correto)
+- [x] Item 5: Baixa de estoque ao finalizar romaneio não estava implementada
+
+### Tarefas de Implementação
+- [x] Investigado código de confirmação de stage (stage.ts - completeStageCheck)
+- [x] Investigado código de finalização de romaneio (shippingRouter.ts - finalizeManifest)
+- [x] Movida lógica de movimentação para EXP de romaneio para stage
+- [x] Implementada baixa de estoque ao finalizar romaneio
+- [x] Testar fluxo completo: Stage → EXP → Baixa (servidor compilou sem erros)
+
+### Implementação Detalhada
+
+**completeStageCheck (stage.ts):**
+- Descomentada lógica de movimentação para EXP (linhas 510-613)
+- Movimenta estoque das reservas para endereços EXP
+- Remove reservas após movimentação
+- Registra movimentação com referenceType: "picking_order"
+
+**finalizeManifest (shippingRouter.ts):**
+- Substituída lógica de movimentação por baixa de estoque
+- Busca estoque em endereços EXP
+- Subtrai quantidade ou remove registro se zerou
+- Registra movimentação com movementType: "shipment" e toLocationId: null (baixa)
+- Valida estoque suficiente antes de baixar

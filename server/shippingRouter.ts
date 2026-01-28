@@ -711,92 +711,49 @@ export const shippingRouter = router({
           .from(stageCheckItems)
           .where(eq(stageCheckItems.stageCheckId, stageCheck.id));
 
-        // Para cada item conferido, executar baixa de estoque
+        // Para cada item conferido, executar baixa de estoque do endereço EXP
         for (const item of checkedItems) {
-          // Buscar reservas do produto para este pedido
-          const reservations = await db
-            .select({
-              id: pickingReservations.id,
-              inventoryId: pickingReservations.inventoryId,
-              quantity: pickingReservations.quantity,
-            })
-            .from(pickingReservations)
-            .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
+          // Buscar estoque no endereço de expedição para este produto
+          const expInventory = await db
+            .select()
+            .from(inventory)
             .where(
               and(
-                eq(pickingReservations.pickingOrderId, orderId),
-                eq(inventory.productId, item.productId)
+                eq(inventory.locationId, shippingLocation.id),
+                eq(inventory.productId, item.productId),
+                eq(inventory.tenantId, pickingOrder.tenantId)
               )
             );
 
           let remainingToShip = item.checkedQuantity;
 
-          for (const reservation of reservations) {
+          for (const inv of expInventory) {
             if (remainingToShip <= 0) break;
 
-            const quantityToShip = Math.min(remainingToShip, reservation.quantity);
+            const quantityToShip = Math.min(remainingToShip, inv.quantity);
 
-            // Buscar estoque origem
-            const [sourceInventory] = await db
-              .select()
-              .from(inventory)
-              .where(eq(inventory.id, reservation.inventoryId))
-              .limit(1);
-
-            if (!sourceInventory) continue;
-
-            // Subtrair do estoque origem
-            await db
-              .update(inventory)
-              .set({
-                quantity: sourceInventory.quantity - quantityToShip,
-              })
-              .where(eq(inventory.id, reservation.inventoryId));
-
-            // Verificar se já existe estoque no endereço de expedição para este produto/lote
-            const conditions = [
-              eq(inventory.locationId, shippingLocation.id),
-              eq(inventory.productId, sourceInventory.productId),
-              eq(inventory.tenantId, pickingOrder.tenantId),
-            ];
+            // Subtrair do estoque de expedição (baixa)
+            const newQuantity = inv.quantity - quantityToShip;
             
-            if (sourceInventory.batch) {
-              conditions.push(eq(inventory.batch, sourceInventory.batch));
-            }
-
-            const [existingShippingInventory] = await db
-              .select()
-              .from(inventory)
-              .where(and(...conditions))
-              .limit(1);
-
-            if (existingShippingInventory) {
-              // Adicionar ao estoque existente
+            if (newQuantity > 0) {
+              // Atualizar quantidade
               await db
                 .update(inventory)
-                .set({
-                  quantity: existingShippingInventory.quantity + quantityToShip,
-                })
-                .where(eq(inventory.id, existingShippingInventory.id));
+                .set({ quantity: newQuantity })
+                .where(eq(inventory.id, inv.id));
             } else {
-              // Criar novo registro de estoque no endereço de expedição
-              await db.insert(inventory).values({
-                locationId: shippingLocation.id,
-                productId: sourceInventory.productId,
-                batch: sourceInventory.batch,
-                expiryDate: sourceInventory.expiryDate,
-                quantity: quantityToShip,
-                tenantId: pickingOrder.tenantId,
-                status: "available",
-              });
+              // Remover registro se quantidade zerou
+              await db
+                .delete(inventory)
+                .where(eq(inventory.id, inv.id));
             }
 
-            // Registrar movimentação
+            // Registrar movimentação de baixa (saída)
             await db.insert(inventoryMovements).values({
-              productId: sourceInventory.productId,
-              batch: sourceInventory.batch,
-              fromLocationId: sourceInventory.locationId,
-              toLocationId: shippingLocation.id,
+              productId: inv.productId,
+              batch: inv.batch,
+              fromLocationId: shippingLocation.id,
+              toLocationId: null, // Baixa de estoque (saída)
               quantity: quantityToShip,
               movementType: "picking",
               referenceType: "shipment_manifest",
@@ -806,12 +763,15 @@ export const shippingRouter = router({
               tenantId: pickingOrder.tenantId,
             });
 
-            // Remover reserva
-            await db
-              .delete(pickingReservations)
-              .where(eq(pickingReservations.id, reservation.id));
-
             remainingToShip -= quantityToShip;
+          }
+
+          // Verificar se conseguiu baixar toda a quantidade
+          if (remainingToShip > 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Estoque insuficiente no endereço de expedição para o produto ${item.productSku}. Faltam ${remainingToShip} unidades.`,
+            });
           }
         }
       }
