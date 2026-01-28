@@ -1243,3 +1243,20 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ### Detalhes da Implementação
 1. **Liberar reservas antigas:** Busca todas as reservas do pedido, decrementa reservedQuantity no inventory, deleta registros de pickingReservations
 2. **Criar novas reservas:** Para cada item novo, converte quantidade para unidades, busca estoque disponível (excluindo zonas EXP/REC/NCG/DEV), reserva estoque usando FIFO/FEFO, incrementa reservedQuantity, cria registros em pickingReservations
+
+
+## 🐛 BUG: ERRO AO ADICIONAR PRODUTO DE VOLTA NO PEDIDO - 28/01/2026
+
+### Problema Reportado
+- [ ] Ao excluir um SKU do pedido e tentar incluí-lo novamente, sistema apresenta erro "Produto não encontrado"
+- [ ] Cenário: 1) Criar pedido com 3 SKUs → OK, 2) Excluir 1 SKU → OK, 3) Adicionar SKU excluído de volta → ERRO
+
+### Causa Identificada
+- [x] productsMap é criado corretamente com productIds dos novos itens (linha 1967-1976)
+- [x] Problema: quando produto não é encontrado, código fazia `continue` sem erro claro (linha 1997)
+- [x] Isso causava pedido sem reservas ao invés de erro visível
+
+### Correção Implementada
+- [x] Substituído `continue` por erro claro: throw TRPCError com código NOT_FOUND
+- [x] Mensagem de erro agora é explícita: "Produto ID X não encontrado"
+- [x] Isso previne criação de pedido sem reservas (inconsistência)

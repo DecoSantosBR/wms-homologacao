@@ -1994,7 +1994,12 @@ export const appRouter = router({
           // Criar novas reservas de estoque
           for (const item of input.items) {
             const product = productsMap.get(item.productId);
-            if (!product) continue;
+            if (!product) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: `Produto ID ${item.productId} não encontrado`
+              });
+            }
 
             // Converter quantidade para unidades se solicitado em caixa
             let quantityInUnits = item.requestedQuantity;
