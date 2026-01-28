@@ -23,7 +23,7 @@ import {
 import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 export const shippingRouter = router({
   // ============================================================================
@@ -882,6 +882,66 @@ export const shippingRouter = router({
           volumes: item.volumes || 0,
           weight: parseFloat(item.pesoB || "0")
         })),
+      };
+    }),
+
+  /**
+   * Excluir múltiplos romaneios
+   */
+  deleteMany: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).min(1, "Selecione pelo menos um romaneio"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se algum romaneio está finalizado
+      const manifests = await db
+        .select({ id: shipmentManifests.id, status: shipmentManifests.status })
+        .from(shipmentManifests)
+        .where(inArray(shipmentManifests.id, input.ids));
+
+      const shippedManifests = manifests.filter(m => m.status === "shipped");
+      if (shippedManifests.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Não é possível excluir romaneios já expedidos. ${shippedManifests.length} romaneio(s) já foram expedidos.`,
+        });
+      }
+
+      // Buscar itens dos romaneios para liberar pedidos
+      const manifestItems = await db
+        .select({ pickingOrderId: shipmentManifestItems.pickingOrderId })
+        .from(shipmentManifestItems)
+        .where(inArray(shipmentManifestItems.manifestId, input.ids));
+
+      const orderIds = Array.from(new Set(manifestItems.map(item => item.pickingOrderId)));
+
+      // Excluir itens dos romaneios
+      await db
+        .delete(shipmentManifestItems)
+        .where(inArray(shipmentManifestItems.manifestId, input.ids));
+
+      // Excluir romaneios
+      await db
+        .delete(shipmentManifests)
+        .where(inArray(shipmentManifests.id, input.ids));
+
+      // Atualizar status dos pedidos para "awaiting_invoice" (volta para fila de expedição)
+      if (orderIds.length > 0) {
+        await db
+          .update(pickingOrders)
+          .set({ shippingStatus: "awaiting_invoice" })
+          .where(inArray(pickingOrders.id, orderIds));
+      }
+
+      return {
+        success: true,
+        deletedCount: input.ids.length,
+        releasedOrders: orderIds.length,
       };
     }),
 });

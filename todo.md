@@ -1315,3 +1315,36 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Exclusão de zonas especiais (EXP)
 - [x] Conversão caixas para unidades
 - [x] Consideração de quantidade reservada
+
+## 🗑️ EXCLUSÃO EM LOTE DE ROMANEIOS - 28/01/2026
+
+### Backend
+- [ ] Criar endpoint `shipping.deleteMany` para exclusão em lote
+- [ ] Validar que romaneios não estão finalizados antes de excluir
+- [ ] Retornar contagem de romaneios excluídos
+
+### Frontend
+- [ ] Adicionar checkboxes de seleção na listagem de romaneios
+- [ ] Adicionar checkbox "Selecionar Todos" no cabeçalho
+- [ ] Criar botão "Excluir Selecionados" (visível apenas quando há seleção)
+- [ ] Implementar modal de confirmação antes de excluir
+- [ ] Mostrar quantidade de romaneios selecionados
+- [ ] Atualizar listagem após exclusão bem-sucedida
+
+
+## ✅ EXCLUSÃO EM LOTE DE ROMANEIOS - CONCLUÍDO - 28/01/2026
+
+### Backend
+- [x] Criar endpoint `shipping.deleteMany` para exclusão em lote
+- [x] Validar que romaneios não estão expedidos (shipped) antes de excluir
+- [x] Retornar contagem de romaneios excluídos e pedidos liberados
+- [x] Liberar pedidos (voltar para awaiting_invoice) ao excluir romaneios
+
+### Frontend
+- [x] Adicionar checkboxes de seleção na listagem de romaneios
+- [x] Adicionar checkbox "Selecionar Todos" no cabeçalho
+- [x] Criar botão "Excluir Selecionados" (visível apenas quando há seleção)
+- [x] Implementar modal de confirmação antes de excluir
+- [x] Mostrar quantidade de romaneios selecionados no botão
+- [x] Atualizar listagem após exclusão bem-sucedida
+- [x] Desabilitar seleção de romaneios já expedidos (shipped)

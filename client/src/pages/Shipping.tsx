@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-import { Loader2, Package, FileText, Truck, ArrowLeft } from "lucide-react";
+import { Loader2, Package, FileText, Truck, ArrowLeft, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { ManifestPrint } from "@/components/ManifestPrint";
 
@@ -17,6 +17,7 @@ export default function Shipping() {
     alert(`${title}${description ? '\n' + description : ''}`);
   };
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
+  const [selectedManifests, setSelectedManifests] = useState<number[]>([]);
   const [printManifestId, setPrintManifestId] = useState<number | null>(null);
   const printRef = useRef<{ print: () => void }>(null);
   
@@ -107,6 +108,21 @@ export default function Shipping() {
     },
   });
 
+  const deleteManifests = trpc.shipping.deleteMany.useMutation({
+    onSuccess: (data) => {
+      toast({ 
+        title: "Sucesso", 
+        description: `${data.deletedCount} romaneio(s) excluído(s). ${data.releasedOrders} pedido(s) liberado(s).` 
+      });
+      refetchManifests();
+      refetchOrders();
+      setSelectedManifests([]);
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({
     xmlContent: '',
@@ -146,6 +162,43 @@ export default function Shipping() {
       carrierName: manifestForm.carrierName,
       orderIds: selectedOrders,
     });
+  };
+
+  const handleDeleteManifests = () => {
+    if (selectedManifests.length === 0) {
+      toast({ title: "Erro", description: "Selecione pelo menos um romaneio", variant: "destructive" });
+      return;
+    }
+    
+    const confirmed = confirm(
+      `Tem certeza que deseja excluir ${selectedManifests.length} romaneio(s)?\n\n` +
+      `Os pedidos serão liberados e voltarão para a fila de expedição.`
+    );
+    
+    if (confirmed) {
+      deleteManifests.mutate({ ids: selectedManifests });
+    }
+  };
+
+  const handleToggleManifest = (manifestId: number) => {
+    setSelectedManifests(prev => 
+      prev.includes(manifestId)
+        ? prev.filter(id => id !== manifestId)
+        : [...prev, manifestId]
+    );
+  };
+
+  const handleToggleAllManifests = () => {
+    if (!manifests) return;
+    
+    // Filtrar apenas romaneios que não foram expedidos
+    const selectableManifests = manifests.filter(m => m.status !== "shipped");
+    
+    if (selectedManifests.length === selectableManifests.length) {
+      setSelectedManifests([]);
+    } else {
+      setSelectedManifests(selectableManifests.map(m => m.id));
+    }
   };
 
   const toggleOrderSelection = (orderId: number) => {
@@ -489,8 +542,27 @@ export default function Shipping() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Romaneios Criados</CardTitle>
-              <CardDescription>Listagem de todos os romaneios</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Romaneios Criados</CardTitle>
+                  <CardDescription>Listagem de todos os romaneios</CardDescription>
+                </div>
+                {selectedManifests.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteManifests}
+                    disabled={deleteManifests.isPending}
+                  >
+                    {deleteManifests.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    Excluir Selecionados ({selectedManifests.length})
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {loadingManifests ? (
@@ -499,9 +571,30 @@ export default function Shipping() {
                 </div>
               ) : manifests && manifests.length > 0 ? (
                 <div className="space-y-2">
+                  {/* Checkbox Selecionar Todos */}
+                  <div className="flex items-center gap-2 p-2 border-b">
+                    <input
+                      type="checkbox"
+                      checked={selectedManifests.length === manifests.filter(m => m.status !== "shipped").length && manifests.filter(m => m.status !== "shipped").length > 0}
+                      onChange={handleToggleAllManifests}
+                      className="h-4 w-4 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium">Selecionar Todos</span>
+                  </div>
+                  
                   {manifests.map((manifest) => (
-                    <div key={manifest.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
+                    <div key={manifest.id} className="flex items-center gap-3 p-4 border rounded-lg">
+                      {/* Checkbox de seleção */}
+                      {manifest.status !== "shipped" && (
+                        <input
+                          type="checkbox"
+                          checked={selectedManifests.includes(manifest.id)}
+                          onChange={() => handleToggleManifest(manifest.id)}
+                          className="h-4 w-4 cursor-pointer"
+                        />
+                      )}
+                      
+                      <div className="flex-1">
                         <p className="font-medium">{manifest.manifestNumber}</p>
                         <p className="text-sm text-muted-foreground">
                           {manifest.carrierName} • {manifest.totalOrders} pedido(s) • {manifest.totalVolumes} volume(s)
