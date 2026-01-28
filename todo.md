@@ -1475,3 +1475,32 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Criar fixtures de dados de teste para habilitar testes marcados com .skip()
 - [ ] Implementar autenticação automática em e2e/fixtures/auth.ts
 - [ ] Integrar testes E2E com CI/CD
+
+
+## 🔐 AUTENTICAÇÃO AUTOMÁTICA EM TESTES E2E - 28/01/2026
+
+### Objetivo
+- [x] Implementar login automático nos testes E2E
+- [x] Salvar estado de autenticação para reutilização
+- [x] Evitar login manual repetido em cada teste
+
+### Implementação
+- [x] Criar setup global de autenticação (e2e/auth.setup.ts)
+- [x] Configurar projeto de setup no playwright.config.ts com dependencies
+- [x] Salvar cookies/tokens em arquivo .auth/user.json
+- [x] Criar diretório .auth/ com .gitignore
+- [x] Atualizar fixture de autenticação para usar estado salvo
+- [x] Criar teste de exemplo (e2e/authenticated.spec.ts)
+- [x] Criar arquivo .env.e2e.example com variáveis de ambiente
+- [x] Documentar processo completo em README-E2E.md com 3 opções de autenticação
+
+### Como Usar
+1. Editar `e2e/auth.setup.ts` para implementar login (3 opções disponíveis)
+2. Executar `pnpm test:e2e` - setup executa automaticamente antes dos testes
+3. Estado de autenticação é reutilizado em todos os testes subsequentes
+
+### Recursos Adicionados
+- Setup global que executa UMA VEZ antes de todos os testes
+- Suporte a múltiplos usuários (admin, user comum) via múltiplos setups
+- Variáveis de ambiente para credenciais de teste
+- Teste de exemplo validando autenticação automática

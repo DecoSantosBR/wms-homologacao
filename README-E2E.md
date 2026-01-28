@@ -244,31 +244,138 @@ pnpm exec playwright test --last-failed
 pnpm exec playwright show-trace trace.zip
 ```
 
-## 🔐 Autenticação
+## 🔐 Autenticação Automática
 
-O arquivo `e2e/fixtures/auth.ts` contém helpers para autenticação. Para implementar:
+### Como Funciona
 
-1. Faça login programaticamente
-2. Salve cookies/tokens em arquivo
-3. Reutilize em todos os testes
+O sistema usa **setup global** para autenticação:
 
-Exemplo:
+1. **Setup executa UMA VEZ** antes de todos os testes (`e2e/auth.setup.ts`)
+2. Faz login e salva estado em `.auth/user.json`
+3. Todos os testes reutilizam este estado automaticamente
+4. **Sem login manual repetido!** ✅
+
+### Arquivos Envolvidos
+
+```
+e2e/
+├── auth.setup.ts          # Setup global (executa 1x)
+├── fixtures/
+│   └── auth.ts            # Fixture de autenticação
+└── authenticated.spec.ts  # Exemplo de teste autenticado
+
+.auth/
+└── user.json              # Estado salvo (cookies, localStorage)
+```
+
+### Configuração
+
+O `playwright.config.ts` está configurado para:
+
 ```typescript
-// e2e/fixtures/auth.ts
-export const test = base.extend({
-  authenticatedPage: async ({ page }, use) => {
-    await page.goto('/login');
-    await page.getByLabel('Email').fill('admin@test.com');
-    await page.getByLabel('Senha').fill('senha123');
-    await page.getByRole('button', { name: /Entrar/i }).click();
-    
-    // Salvar estado de autenticação
-    await page.context().storageState({ path: 'auth.json' });
-    
-    await use(page);
+projects: [
+  // 1. Executar setup primeiro
+  { name: 'setup', testMatch: /.*\.setup\.ts/ },
+  
+  // 2. Testes principais carregam estado salvo
+  {
+    name: 'chromium',
+    use: { storageState: '.auth/user.json' },
+    dependencies: ['setup'],
   },
+]
+```
+
+### Personalizando Autenticação
+
+Edite `e2e/auth.setup.ts` para implementar seu fluxo de login:
+
+**Opção 1: Login via UI**
+```typescript
+setup('authenticate', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(process.env.TEST_USER_EMAIL);
+  await page.getByLabel('Senha').fill(process.env.TEST_USER_PASSWORD);
+  await page.getByRole('button', { name: /Entrar/i }).click();
+  
+  await page.context().storageState({ path: '.auth/user.json' });
 });
 ```
+
+**Opção 2: Injetar Cookie Diretamente**
+```typescript
+setup('authenticate', async ({ page }) => {
+  await page.context().addCookies([{
+    name: 'session',
+    value: process.env.TEST_SESSION_TOKEN,
+    domain: 'localhost',
+    path: '/',
+  }]);
+  
+  await page.context().storageState({ path: '.auth/user.json' });
+});
+```
+
+**Opção 3: Sem Autenticação (Padrão Atual)**
+```typescript
+setup('authenticate', async ({ page }) => {
+  // Apenas navegar para home
+  await page.goto('/');
+  await page.context().storageState({ path: '.auth/user.json' });
+});
+```
+
+### Variáveis de Ambiente
+
+Crie `.env.e2e` baseado em `.env.e2e.example`:
+
+```bash
+TEST_USER_EMAIL=test@example.com
+TEST_USER_PASSWORD=senha_de_teste_123
+TEST_SESSION_TOKEN=seu-token-aqui
+```
+
+### Múltiplos Usuários
+
+Para testar com diferentes perfis (admin, user comum):
+
+1. Crie múltiplos setups:
+   - `e2e/auth.admin.setup.ts` → salva em `.auth/admin.json`
+   - `e2e/auth.user.setup.ts` → salva em `.auth/user.json`
+
+2. Configure projetos no `playwright.config.ts`:
+   ```typescript
+   projects: [
+     { name: 'setup-admin', testMatch: /auth.admin.setup.ts/ },
+     { name: 'setup-user', testMatch: /auth.user.setup.ts/ },
+     
+     {
+       name: 'admin-tests',
+       use: { storageState: '.auth/admin.json' },
+       dependencies: ['setup-admin'],
+       testMatch: /admin.*\.spec\.ts/,
+     },
+     {
+       name: 'user-tests',
+       use: { storageState: '.auth/user.json' },
+       dependencies: ['setup-user'],
+       testMatch: /user.*\.spec\.ts/,
+     },
+   ]
+   ```
+
+### Verificando Autenticação
+
+Execute o teste de exemplo:
+
+```bash
+pnpm test:e2e e2e/authenticated.spec.ts
+```
+
+Este teste verifica:
+- ✅ Estado de autenticação foi carregado
+- ✅ Cookies estão presentes
+- ✅ Autenticação persiste entre navegações
 
 ## 📚 Recursos Adicionais
 

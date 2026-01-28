@@ -48,9 +48,22 @@ export default defineConfig({
 
   // Projetos: diferentes navegadores e configurações
   projects: [
+    // Setup: Executado UMA VEZ antes de todos os testes
+    // Faz login e salva estado de autenticação
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Testes principais: Usam estado de autenticação salvo
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        // Carregar estado de autenticação salvo pelo setup
+        storageState: '.auth/user.json',
+      },
+      dependencies: ['setup'], // Executar setup antes
     },
 
     // Descomente para testar em Firefox
