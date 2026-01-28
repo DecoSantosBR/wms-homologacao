@@ -1196,3 +1196,27 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - Subtrai quantidade ou remove registro se zerou
 - Registra movimentação com movementType: "shipment" e toLocationId: null (baixa)
 - Valida estoque suficiente antes de baixar
+
+
+## 🐛 ERRO: VALIDAÇÃO DE ENDEREÇO ÚNICO ITEM/LOTE - 28/01/2026
+
+### Erro Reportado
+- [x] Página: /stock
+- [x] Mensagem: "Endereço H01-01-01 é de único item/lote e já contém outro produto/lote"
+- [x] Contexto: Usuário tentou realizar operação na página de estoque
+- [x] **CONFIRMAÇÃO: O endereço está VAZIO** - Bug confirmado!
+
+### Investigação Realizada
+- [x] Identificada operação: movimentação de estoque na página /stock
+- [x] Verificado H01-01-01: endereço estava vazio mas tinha 5 registros fantasma
+- [x] Validada causa: validação verificava existência de registro sem checar quantity > 0
+
+### Causa Confirmada
+- [x] **BUG: Validação incorreta** - Sistema acusava que endereço continha produto quando estava vazio
+- [x] Confirmado: 5 registros com quantity=0 no endereço H01-01-01
+- [x] Confirmado: validação verificava existência de registro sem filtrar quantity > 0
+
+### Correções Implementadas
+- [x] Corrigida validação em movements.ts: adicionado filtro `quantity > 0` na linha 126
+- [x] Limpados 11 registros fantasma do banco de dados (quantity=0 e reservedQuantity=0)
+- [x] Endereço H01-01-01 agora está completamente limpo e disponível para uso

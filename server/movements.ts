@@ -120,7 +120,12 @@ export async function registerMovement(input: RegisterMovementInput) {
       const existingStock = await dbConn
         .select()
         .from(inventory)
-        .where(eq(inventory.locationId, input.toLocationId))
+        .where(
+          and(
+            eq(inventory.locationId, input.toLocationId),
+            sql`${inventory.quantity} > 0` // Ignorar registros com quantity=0
+          )
+        )
         .limit(1);
 
       if (existingStock.length > 0) {
