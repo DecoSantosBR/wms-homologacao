@@ -1260,3 +1260,27 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Substituído `continue` por erro claro: throw TRPCError com código NOT_FOUND
 - [x] Mensagem de erro agora é explícita: "Produto ID X não encontrado"
 - [x] Isso previne criação de pedido sem reservas (inconsistência)
+
+
+## 🐛 ERRO: "FAILED TO FETCH" AO EDITAR PEDIDO - 28/01/2026
+
+### Erro Reportado
+- [x] Erro "Failed to fetch" ao tentar adicionar produto de volta no pedido após exclusão
+- [x] Erro do iframe targetlabs.cloud é secundário (extensão do navegador tentando capturar erro)
+- [x] Servidor está rodando corretamente e logs mostram que produtos são encontrados
+
+### Investigação Realizada
+- [x] Verificado que não há iframe targetlabs.cloud no código do projeto
+- [x] Confirmado que servidor está respondendo (logs: produtos IDs 4 e 6 encontrados)
+- [x] Erro "Failed to fetch" indica problema de conexão/rede, não de lógica
+
+### Possíveis Causas
+- [ ] Timeout na requisição (demora muito para processar)
+- [ ] Problema de CORS temporário
+- [ ] Requisição muito grande sendo bloqueada
+- [ ] Conflito de extensões do navegador
+
+### Próximos Passos
+- [ ] Testar em navegador sem extensões (modo anônimo)
+- [ ] Verificar se erro persiste após reiniciar servidor
+- [ ] Adicionar tratamento de timeout mais robusto
