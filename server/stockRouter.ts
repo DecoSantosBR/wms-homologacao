@@ -145,17 +145,23 @@ export const stockRouter = router({
    * Obtém produtos disponíveis em um endereço
    */
   getLocationProducts: protectedProcedure
-    .input(z.object({ locationId: z.number() }))
+    .input(z.object({ 
+      locationId: z.number(),
+      tenantId: z.number().optional().nullable(),
+    }))
     .query(async ({ input }) => {
-      return await getLocationProducts(input.locationId);
+      return await getLocationProducts(input.locationId, input.tenantId);
     }),
 
   /**
    * Lista endereços que possuem estoque alocado
    */
   getLocationsWithStock: protectedProcedure
-    .query(async () => {
-      return await getLocationsWithStock();
+    .input(z.object({ 
+      tenantId: z.number().optional().nullable(),
+    }).optional())
+    .query(async ({ input }) => {
+      return await getLocationsWithStock(input?.tenantId);
     }),
 
   /**

@@ -332,10 +332,17 @@ export async function getMovementHistory(filters?: {
  * Obtém produtos disponíveis em um endereço para movimentação
  * Calcula quantidade disponível (total - reservado)
  */
-export async function getLocationProducts(locationId: number) {
+export async function getLocationProducts(locationId: number, tenantId?: number | null) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
-
+  
+  let whereConditions = [eq(inventory.locationId, locationId)];
+  
+  // Aplicar filtro de tenantId se fornecido
+  if (tenantId !== undefined && tenantId !== null) {
+    whereConditions.push(eq(products.tenantId, tenantId));
+  }
+  
   const results = await dbConn
     .select({
       inventoryId: inventory.id,
@@ -352,7 +359,7 @@ export async function getLocationProducts(locationId: number) {
     .from(inventory)
     .innerJoin(products, eq(inventory.productId, products.id))
     .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
-    .where(eq(inventory.locationId, locationId))
+    .where(and(...whereConditions))
     .groupBy(
       inventory.id,
       inventory.productId,
@@ -365,7 +372,7 @@ export async function getLocationProducts(locationId: number) {
       products.tenantId
     )
     .orderBy(products.sku);
-
+  
   // Calcular quantidade disponível para cada item
   return results.map(item => ({
     ...item,

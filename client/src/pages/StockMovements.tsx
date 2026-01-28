@@ -17,6 +17,7 @@ import { format } from "date-fns";
 
 export default function StockMovements() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [fromLocationId, setFromLocationId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
   const [toLocationId, setToLocationId] = useState("");
@@ -26,14 +27,23 @@ export default function StockMovements() {
 
   const utils = trpc.useUtils();
 
+  // Query de clientes
+  const { data: tenants = [] } = trpc.tenants.list.useQuery();
+  
   // Queries
   const { data: movements = [], isLoading } = trpc.stock.getMovements.useQuery({});
-  const { data: locationsWithStock = [] } = trpc.stock.getLocationsWithStock.useQuery();
+  const { data: locationsWithStock = [] } = trpc.stock.getLocationsWithStock.useQuery(
+    { tenantId: selectedTenantId },
+    { enabled: !!selectedTenantId }
+  );
   
   // Query de produtos do endereço origem (só busca quando fromLocationId está definido)
   const { data: locationProducts = [] } = trpc.stock.getLocationProducts.useQuery(
-    { locationId: Number(fromLocationId) },
-    { enabled: !!fromLocationId }
+    { 
+      locationId: Number(fromLocationId),
+      tenantId: selectedTenantId,
+    },
+    { enabled: !!fromLocationId && !!selectedTenantId }
   );
 
   // Query de endereços destino (filtrados por tipo de movimentação)
@@ -90,6 +100,7 @@ export default function StockMovements() {
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
+    setSelectedTenantId(null);
     setFromLocationId("");
     setSelectedProduct("");
     setToLocationId("");
@@ -97,6 +108,14 @@ export default function StockMovements() {
     setMovementType("transfer");
     setNotes("");
   };
+  
+  // Limpar seleções ao trocar de cliente
+  useEffect(() => {
+    setFromLocationId("");
+    setSelectedProduct("");
+    setToLocationId("");
+    setQuantity("");
+  }, [selectedTenantId]);
 
   const handleSubmit = () => {
     // Validação: endereço destino é opcional apenas para descarte
@@ -247,7 +266,33 @@ export default function StockMovements() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* Cliente */}
+            <div className="grid gap-2">
+              <Label htmlFor="tenant">Cliente *</Label>
+              <Select 
+                value={selectedTenantId ? String(selectedTenantId) : ""} 
+                onValueChange={(value) => setSelectedTenantId(Number(value))}
+              >
+                <SelectTrigger id="tenant">
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={String(tenant.id)}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!selectedTenantId && (
+                <p className="text-sm text-muted-foreground">
+                  Selecione um cliente para visualizar produtos e endereços disponíveis
+                </p>
+              )}
+            </div>
+
             {/* Endereço Origem */}
+            {selectedTenantId && (
             <div className="grid gap-2">
               <Label htmlFor="fromLocation">Endereço Origem *</Label>
               <Select value={fromLocationId} onValueChange={setFromLocationId}>
@@ -260,12 +305,12 @@ export default function StockMovements() {
                       {loc.code} ({loc.zoneName})
                     </SelectItem>
                   ))}
-                </SelectContent>
+                 </SelectContent>
               </Select>
             </div>
-
+            )}
             {/* Produto/Lote */}
-            {fromLocationId && (
+            {fromLocationId && selectedTenantId && (
               <div className="grid gap-2">
                 <Label htmlFor="product">Produto/Lote *</Label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>

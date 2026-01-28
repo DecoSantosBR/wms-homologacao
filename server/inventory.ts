@@ -258,10 +258,16 @@ export async function getExpiringProducts(
 /**
  * Lista endereços que possuem estoque disponível (descontando reservas)
  */
-export async function getLocationsWithStock() {
+export async function getLocationsWithStock(tenantId?: number | null) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
-
+  
+  // Construir condições WHERE
+  let whereConditions = [gt(inventory.quantity, 0)];
+  if (tenantId !== undefined && tenantId !== null) {
+    whereConditions.push(eq(inventory.tenantId, tenantId));
+  }
+  
   // Buscar endereços com estoque e calcular saldo disponível
   const results = await dbConn
     .select({
@@ -276,7 +282,7 @@ export async function getLocationsWithStock() {
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
-    .where(gt(inventory.quantity, 0))
+    .where(and(...whereConditions))
     .groupBy(
       inventory.locationId,
       warehouseLocations.id,
@@ -285,7 +291,7 @@ export async function getLocationsWithStock() {
       warehouseZones.code
     )
     .orderBy(warehouseLocations.code);
-
+  
   // Filtrar apenas endereços com saldo disponível > 0
   const locationsWithAvailableStock = results
     .filter(loc => (loc.totalQuantity - loc.reservedQuantity) > 0)
@@ -295,13 +301,10 @@ export async function getLocationsWithStock() {
       zoneName: loc.zoneName,
       zoneCode: loc.zoneCode,
     }));
-
+  
   return locationsWithAvailableStock;
 }
 
-/**
- * Lista endereços de destino válidos baseado no tipo de movimentação
- */
 export async function getDestinationLocations(params: {
   movementType: string;
   productId?: number;

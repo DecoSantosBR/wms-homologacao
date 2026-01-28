@@ -1348,3 +1348,26 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Mostrar quantidade de romaneios selecionados no botão
 - [x] Atualizar listagem após exclusão bem-sucedida
 - [x] Desabilitar seleção de romaneios já expedidos (shipped)
+
+
+## ✅ FILTRO POR CLIENTE NA MOVIMENTAÇÃO DE ESTOQUE - CONCLUÍDO - 28/01/2026
+
+### Requisito
+- [x] Adicionar dropdown de seleção de cliente na tela "Nova Movimentação de Estoque"
+- [x] Ao selecionar cliente, filtrar produtos para mostrar apenas os do cliente selecionado
+- [x] Ao selecionar cliente, filtrar endereços para mostrar apenas os do cliente selecionado
+- [x] Manter lógica existente de filtro de endereços (origem com produto, destino por tipo)
+
+### Backend
+- [x] Modificar endpoint `getLocationProducts` para aceitar filtro opcional por tenantId
+- [x] Modificar endpoint `getLocationsWithStock` para aceitar filtro opcional por tenantId
+- [x] Garantir que filtros sejam opcionais (manter compatibilidade com código existente)
+- [x] Atualizar `stockRouter.ts` para aceitar tenantId nos endpoints
+
+### Frontend
+- [x] Adicionar dropdown de clientes no topo do formulário de movimentação
+- [x] Adicionar estado `selectedTenantId` para controlar cliente selecionado
+- [x] Passar tenantId para queries de produtos (`getLocationProducts`) e endereços (`getLocationsWithStock`)
+- [x] Limpar seleções de produto/endereço ao trocar de cliente (useEffect)
+- [x] Mostrar mensagem informativa quando nenhum cliente estiver selecionado
+- [x] Desabilitar campos de endereço/produto até que cliente seja selecionado
