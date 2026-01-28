@@ -318,7 +318,7 @@ export async function getDestinationLocations(params: {
 
   // Para TRANSFERÊNCIA: filtrar por regras de armazenagem
   if (movementType === "transfer") {
-    // Buscar todos os endereços (vazios E ocupados)
+    // Buscar todos os endereços (vazios E ocupados) do tenant selecionado
     // Endereços ocupados podem ser destino se contiverem o mesmo item-lote
     const allLocations = await dbConn
       .select({
@@ -330,9 +330,14 @@ export async function getDestinationLocations(params: {
       })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .where(
+        tenantId !== undefined && tenantId !== null
+          ? eq(warehouseLocations.tenantId, tenantId)
+          : sql`1=1`
+      )
       .orderBy(warehouseLocations.code);
 
-    // Buscar estoque atual de cada endereço
+    // Buscar estoque atual de cada endereço (filtrado por tenant se fornecido)
     const locationStocks = await dbConn
       .select({
         locationId: inventory.locationId,
@@ -341,7 +346,14 @@ export async function getDestinationLocations(params: {
         quantity: inventory.quantity,
       })
       .from(inventory)
-      .where(gt(inventory.quantity, 0));
+      .where(
+        tenantId !== undefined && tenantId !== null
+          ? and(
+              gt(inventory.quantity, 0),
+              eq(inventory.tenantId, tenantId)
+            )
+          : gt(inventory.quantity, 0)
+      );
 
     // Criar mapa de estoque por endereço
     const stockMap = new Map<number, Array<{ productId: number; batch: string | null }>>();

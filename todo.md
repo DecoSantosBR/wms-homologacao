@@ -1371,3 +1371,23 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Limpar seleções de produto/endereço ao trocar de cliente (useEffect)
 - [x] Mostrar mensagem informativa quando nenhum cliente estiver selecionado
 - [x] Desabilitar campos de endereço/produto até que cliente seja selecionado
+
+
+## ✅ BUG CORRIGIDO: ENDEREÇOS DESTINO MOSTRANDO OUTROS CLIENTES - 28/01/2026
+
+### Problema
+- [x] Lista dropdown "Endereço Destino" estava mostrando endereços de todos os clientes
+- [x] Deveria mostrar apenas endereços do cliente selecionado (filtrado por tenantId)
+
+### Causa Identificada
+- [x] Endpoint `getDestinationLocations` não estava filtrando por tenantId em todos os tipos de movimentação
+- [x] Frontend estava passando tenantId mas backend não estava aplicando o filtro para "transfer", "adjustment" e "disposal"
+
+### Correção Aplicada
+- [x] Modificado função `getDestinationLocations` em `server/inventory.ts` para filtrar por tenantId em TODOS os tipos de movimentação:
+  - [x] **Transfer**: Filtrar endereços disponíveis por tenant (vazios + ocupados com mesmo item/lote)
+  - [x] **Return**: Já filtrava corretamente por tenant (zona DEV)
+  - [x] **Quality**: Já filtrava corretamente por tenant (zona NCG)
+  - [x] **Adjustment/Disposal**: Agora filtra endereços com estoque por tenant
+- [x] Filtrado também o estoque consultado internamente pela função (para validação de regras de armazenagem)
+- [x] Garantido isolamento completo entre clientes em todas as operações de movimentação
