@@ -1711,3 +1711,14 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Adicionar 5 cards de relatórios na aba "Operacionais"
 - [x] Implementar filtros específicos (período, operador, cliente)
 - [x] Testar visualização e exportação
+
+
+## 🐛 BUG: VIOLAÇÃO DA REGRA DE HOOKS EM REPORTS - 29/01/2026
+
+### Problema
+- [x] Erro "Rendered more hooks than during the previous render" na página /reports
+- [x] Queries condicionais do tRPC violam regra de Hooks do React
+
+### Solução
+- [x] Refatorar para usar todas as queries sempre (com enabled condicional)
+- [x] Selecionar dados corretos baseado em selectedReport

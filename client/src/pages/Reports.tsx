@@ -113,55 +113,71 @@ export default function Reports() {
   const categoryReports = AVAILABLE_REPORTS.filter(r => r.category === selectedCategory);
   const currentReport = AVAILABLE_REPORTS.find(r => r.id === selectedReport);
 
-  // Query do relatório selecionado
-  const reportQuery = selectedReport === 'stockPosition'
-    ? trpc.reports.stockPosition.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
-    : selectedReport === 'stockByTenant'
-    ? trpc.reports.stockByTenant.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
-    : selectedReport === 'stockByLocation'
-    ? trpc.reports.stockByLocation.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
-    : selectedReport === 'expiringProducts'
-    ? trpc.reports.expiringProducts.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
-    : selectedReport === 'productAvailability'
-    ? trpc.reports.productAvailability.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
-    : selectedReport === 'inventoryMovements'
-    ? trpc.reports.inventoryMovements.useQuery({ 
-        ...filters, 
-        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        endDate: filters.endDate || new Date().toISOString().split('T')[0],
-        page: currentPage 
-      }, { enabled: !!selectedReport })
-    : selectedReport === 'pickingProductivity'
-    ? trpc.reports.pickingProductivity.useQuery({ 
-        ...filters, 
-        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        endDate: filters.endDate || new Date().toISOString().split('T')[0],
-        page: currentPage 
-      }, { enabled: !!selectedReport })
-    : selectedReport === 'pickingAccuracy'
-    ? trpc.reports.pickingAccuracy.useQuery({ 
-        ...filters, 
-        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        endDate: filters.endDate || new Date().toISOString().split('T')[0],
-        page: currentPage 
-      }, { enabled: !!selectedReport })
-    : selectedReport === 'averageCycleTime'
-    ? trpc.reports.averageCycleTime.useQuery({ 
-        ...filters, 
-        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        endDate: filters.endDate || new Date().toISOString().split('T')[0],
-        page: currentPage 
-      }, { enabled: !!selectedReport })
-    : selectedReport === 'ordersByStatus'
-    ? trpc.reports.ordersByStatus.useQuery({ ...filters }, { enabled: !!selectedReport })
-    : selectedReport === 'operatorPerformance'
-    ? trpc.reports.operatorPerformance.useQuery({ 
-        ...filters, 
-        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        endDate: filters.endDate || new Date().toISOString().split('T')[0],
-        page: currentPage 
-      }, { enabled: !!selectedReport })
-    : { data: null, isLoading: false, error: null };
+  // Queries de todos os relatórios (sempre chamadas, mas habilitadas condicionalmente)
+  const defaultDateFilters = {
+    startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: filters.endDate || new Date().toISOString().split('T')[0],
+  };
+
+  const stockPositionQuery = trpc.reports.stockPosition.useQuery(
+    { ...filters, page: currentPage },
+    { enabled: selectedReport === 'stockPosition' }
+  );
+  const stockByTenantQuery = trpc.reports.stockByTenant.useQuery(
+    { ...filters, page: currentPage },
+    { enabled: selectedReport === 'stockByTenant' }
+  );
+  const stockByLocationQuery = trpc.reports.stockByLocation.useQuery(
+    { ...filters, page: currentPage },
+    { enabled: selectedReport === 'stockByLocation' }
+  );
+  const expiringProductsQuery = trpc.reports.expiringProducts.useQuery(
+    { ...filters, page: currentPage },
+    { enabled: selectedReport === 'expiringProducts' }
+  );
+  const productAvailabilityQuery = trpc.reports.productAvailability.useQuery(
+    { ...filters, page: currentPage },
+    { enabled: selectedReport === 'productAvailability' }
+  );
+  const inventoryMovementsQuery = trpc.reports.inventoryMovements.useQuery(
+    { ...filters, ...defaultDateFilters, page: currentPage },
+    { enabled: selectedReport === 'inventoryMovements' }
+  );
+  const pickingProductivityQuery = trpc.reports.pickingProductivity.useQuery(
+    { ...filters, ...defaultDateFilters, page: currentPage },
+    { enabled: selectedReport === 'pickingProductivity' }
+  );
+  const pickingAccuracyQuery = trpc.reports.pickingAccuracy.useQuery(
+    { ...filters, ...defaultDateFilters, page: currentPage },
+    { enabled: selectedReport === 'pickingAccuracy' }
+  );
+  const averageCycleTimeQuery = trpc.reports.averageCycleTime.useQuery(
+    { ...filters, ...defaultDateFilters, page: currentPage },
+    { enabled: selectedReport === 'averageCycleTime' }
+  );
+  const ordersByStatusQuery = trpc.reports.ordersByStatus.useQuery(
+    { ...filters },
+    { enabled: selectedReport === 'ordersByStatus' }
+  );
+  const operatorPerformanceQuery = trpc.reports.operatorPerformance.useQuery(
+    { ...filters, ...defaultDateFilters, page: currentPage },
+    { enabled: selectedReport === 'operatorPerformance' }
+  );
+
+  // Selecionar query ativa baseado no relatório selecionado
+  const reportQuery = 
+    selectedReport === 'stockPosition' ? stockPositionQuery :
+    selectedReport === 'stockByTenant' ? stockByTenantQuery :
+    selectedReport === 'stockByLocation' ? stockByLocationQuery :
+    selectedReport === 'expiringProducts' ? expiringProductsQuery :
+    selectedReport === 'productAvailability' ? productAvailabilityQuery :
+    selectedReport === 'inventoryMovements' ? inventoryMovementsQuery :
+    selectedReport === 'pickingProductivity' ? pickingProductivityQuery :
+    selectedReport === 'pickingAccuracy' ? pickingAccuracyQuery :
+    selectedReport === 'averageCycleTime' ? averageCycleTimeQuery :
+    selectedReport === 'ordersByStatus' ? ordersByStatusQuery :
+    selectedReport === 'operatorPerformance' ? operatorPerformanceQuery :
+    { data: null, isLoading: false, error: null };
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
