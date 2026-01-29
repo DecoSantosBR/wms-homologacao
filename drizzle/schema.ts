@@ -989,3 +989,53 @@ export type ShipmentManifest = typeof shipmentManifests.$inferSelect;
 export type InsertShipmentManifest = typeof shipmentManifests.$inferInsert;
 export type ShipmentManifestItem = typeof shipmentManifestItems.$inferSelect;
 export type InsertShipmentManifestItem = typeof shipmentManifestItems.$inferInsert;
+
+
+// ============================================================================
+// MÓDULO DE RELATÓRIOS
+// ============================================================================
+
+/**
+ * Tabela de logs de geração de relatórios
+ * Registra auditoria de quem gerou qual relatório e quando
+ */
+export const reportLogs = mysqlTable("reportLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId"), // null = relatório global (admin)
+  userId: int("userId").notNull(), // Quem gerou o relatório
+  reportType: varchar("reportType", { length: 100 }).notNull(), // ex: "stock_position", "productivity"
+  reportCategory: mysqlEnum("reportCategory", ["stock", "operational", "shipping", "audit"]).notNull(),
+  filters: json("filters"), // Filtros aplicados (JSON)
+  exportFormat: mysqlEnum("exportFormat", ["screen", "excel", "pdf", "csv"]),
+  recordCount: int("recordCount"), // Quantidade de registros retornados
+  executionTime: int("executionTime"), // Tempo de execução em ms
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+}, (table) => ({
+  tenantIdx: index("reportLogs_tenantId_idx").on(table.tenantId),
+  userIdx: index("reportLogs_userId_idx").on(table.userId),
+  typeIdx: index("reportLogs_reportType_idx").on(table.reportType),
+  dateIdx: index("reportLogs_generatedAt_idx").on(table.generatedAt),
+}));
+
+/**
+ * Tabela de filtros favoritos salvos por usuário
+ * Permite que usuários salvem combinações de filtros frequentes
+ */
+export const reportFavorites = mysqlTable("reportFavorites", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  reportType: varchar("reportType", { length: 100 }).notNull(),
+  favoriteName: varchar("favoriteName", { length: 255 }).notNull(), // Nome dado pelo usuário
+  filters: json("filters").notNull(), // Filtros salvos (JSON)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdx: index("reportFavorites_userId_idx").on(table.userId),
+  typeIdx: index("reportFavorites_reportType_idx").on(table.reportType),
+}));
+
+// Type exports
+export type ReportLog = typeof reportLogs.$inferSelect;
+export type InsertReportLog = typeof reportLogs.$inferInsert;
+export type ReportFavorite = typeof reportFavorites.$inferSelect;
+export type InsertReportFavorite = typeof reportFavorites.$inferInsert;

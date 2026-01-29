@@ -218,6 +218,13 @@
       "when": 1769480250801,
       "tag": "0030_awesome_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1769721500963,
+      "tag": "0031_aspiring_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

@@ -1549,3 +1549,150 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Rota /picking ainda redireciona para OAuth apesar de desabilitação implementada
 - [ ] Possível cache do Vite ou ponto adicional de autenticação não identificado
 - [ ] Workaround: testes manuais ou implementar autenticação real
+
+
+## 📊 MÓDULO DE RELATÓRIOS - IMPLANTAÇÃO COMPLETA - 29/01/2026
+
+### 1. Estrutura de Banco de Dados
+- [ ] Criar tabela reportLogs para auditoria de geração de relatórios
+- [ ] Criar tabela reportFavorites para filtros salvos por usuário
+- [ ] Criar índices otimizados para queries de relatórios
+
+### 2. Backend - API e Lógica
+- [ ] Criar reportsRouter.ts com todas as procedures
+- [ ] Implementar relatórios de Estoque (6 tipos)
+  - [ ] Posição de Estoque Atual
+  - [ ] Estoque por Cliente
+  - [ ] Estoque por Endereço
+  - [ ] Estoque por Lote e Validade
+  - [ ] Estoque Bloqueado x Disponível
+  - [ ] Curva ABC
+- [ ] Implementar relatórios Operacionais (4 tipos)
+  - [ ] Produtividade por Usuário
+  - [ ] Tempo médio de separação
+  - [ ] Movimentações internas
+  - [ ] Ocorrências operacionais
+- [ ] Implementar relatórios de Expedição (4 tipos)
+  - [ ] Pedidos expedidos por período
+  - [ ] Romaneios emitidos
+  - [ ] Volumes por transportadora
+  - [ ] SLA de expedição
+- [ ] Implementar relatórios de Auditoria (4 tipos)
+  - [ ] Log de acessos
+  - [ ] Alterações de estoque
+  - [ ] Alterações de status
+  - [ ] Histórico de bloqueios/desbloqueios
+- [ ] Adicionar filtros padronizados (período, cliente, produto, lote, etc)
+- [ ] Implementar paginação para relatórios grandes
+- [ ] Adicionar controle de acesso por perfil de usuário
+
+### 3. Frontend - Interface
+- [ ] Criar página Reports.tsx com menu de categorias
+- [ ] Implementar componente ReportFilters com todos os filtros padrão
+- [ ] Criar componente ReportTable para visualização em tela
+- [ ] Adicionar funcionalidade de salvar filtros favoritos
+- [ ] Implementar visualização responsiva e paginação
+
+### 4. Exportação e Impressão
+- [ ] Implementar exportação para Excel (.xlsx)
+- [ ] Implementar exportação para PDF
+- [ ] Implementar exportação para CSV
+- [ ] Adicionar funcionalidade de impressão
+- [ ] Garantir que exportações respeitem filtros aplicados
+
+### 5. Segurança e Performance
+- [ ] Implementar controle de acesso por perfil
+- [ ] Registrar logs de geração de relatórios
+- [ ] Limitar exportações massivas por perfil
+- [ ] Otimizar queries com índices adequados
+- [ ] Adicionar processamento assíncrono para relatórios grandes
+
+### 6. Documentação e Testes
+- [ ] Criar testes unitários para procedures de relatórios
+- [ ] Documentar API de relatórios
+- [ ] Validar performance e precisão dos dados
+
+## ✅ MÓDULO DE RELATÓRIOS IMPLEMENTADO - 29/01/2026
+
+### Banco de Dados
+- [x] Tabela `reportLogs` para auditoria de geração de relatórios
+- [x] Tabela `reportFavorites` para relatórios favoritos do usuário
+
+### Backend (6 Relatórios de Estoque)
+- [x] `reports.stockPosition` - Posição de Estoque detalhada
+- [x] `reports.stockByTenant` - Estoque por Cliente
+- [x] `reports.stockByLocation` - Estoque por Endereço
+- [x] `reports.expiringProducts` - Produtos Próximos ao Vencimento
+- [x] `reports.productAvailability` - Disponibilidade de Produtos
+- [x] `reports.inventoryMovements` - Movimentações de Estoque
+- [x] Função helper `logReportGeneration` para auditoria
+
+### Frontend
+- [x] Página `/reports` com interface completa
+- [x] Navegação por abas (Estoque, Operacionais, Expedição, Auditoria)
+- [x] Cards de seleção de relatórios
+- [x] Filtros dinâmicos por tipo de relatório
+- [x] Visualização em tabela com paginação
+- [x] Botões de ação (Voltar, Imprimir, Exportar)
+
+### Exportação
+- [x] Função `exportToCSV` - Exportação para CSV com BOM UTF-8
+- [x] Função `exportToExcel` - Exportação para Excel (HTML table)
+- [x] Função `exportToPDF` - Exportação para PDF (via print)
+- [x] Integração na página de relatórios
+
+### Controle de Acesso
+- [x] Todos os relatórios usam `protectedProcedure` (requer autenticação)
+- [x] Filtro automático por tenant para usuários não-admin
+- [x] Admins podem visualizar dados de todos os clientes
+
+### Pendências para Expansão Futura
+- [ ] Implementar 12 relatórios restantes (Operacionais, Expedição, Auditoria)
+- [ ] Adicionar sistema de favoritos de relatórios
+- [ ] Implementar agendamento de relatórios recorrentes
+- [ ] Adicionar gráficos e visualizações (charts)
+- [ ] Melhorar exportação Excel usando biblioteca xlsx
+- [ ] Implementar exportação PDF real usando jsPDF/pdfmake
+
+
+## ✅ MÓDULO DE RELATÓRIOS IMPLEMENTADO - 29/01/2026
+
+### Banco de Dados
+- [x] Tabela `reportLogs` para auditoria de geração de relatórios
+- [x] Tabela `reportFavorites` para relatórios favoritos do usuário
+
+### Backend (6 Relatórios de Estoque)
+- [x] `reports.stockPosition` - Posição de Estoque detalhada
+- [x] `reports.stockByTenant` - Estoque por Cliente
+- [x] `reports.stockByLocation` - Estoque por Endereço
+- [x] `reports.expiringProducts` - Produtos Próximos ao Vencimento
+- [x] `reports.productAvailability` - Disponibilidade de Produtos
+- [x] `reports.inventoryMovements` - Movimentações de Estoque
+- [x] Função helper `logReportGeneration` para auditoria
+
+### Frontend
+- [x] Página `/reports` com interface completa
+- [x] Navegação por abas (Estoque, Operacionais, Expedição, Auditoria)
+- [x] Cards de seleção de relatórios
+- [x] Filtros dinâmicos por tipo de relatório
+- [x] Visualização em tabela com paginação
+- [x] Botões de ação (Voltar, Imprimir, Exportar)
+
+### Exportação
+- [x] Função `exportToCSV` - Exportação para CSV com BOM UTF-8
+- [x] Função `exportToExcel` - Exportação para Excel (HTML table)
+- [x] Função `exportToPDF` - Exportação para PDF (via print)
+- [x] Integração na página de relatórios
+
+### Controle de Acesso
+- [x] Todos os relatórios usam `protectedProcedure` (requer autenticação)
+- [x] Filtro automático por tenant para usuários não-admin
+- [x] Admins podem visualizar dados de todos os clientes
+
+### Pendências para Expansão Futura
+- [ ] Implementar 12 relatórios restantes (Operacionais, Expedição, Auditoria)
+- [ ] Adicionar sistema de favoritos de relatórios
+- [ ] Implementar agendamento de relatórios recorrentes
+- [ ] Adicionar gráficos e visualizações (charts)
+- [ ] Melhorar exportação Excel usando biblioteca xlsx
+- [ ] Implementar exportação PDF real usando jsPDF/pdfmake

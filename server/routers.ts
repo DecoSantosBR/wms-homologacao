@@ -18,6 +18,7 @@ import { stageRouter } from "./stageRouter.js";
 import { shippingRouter } from "./shippingRouter.js";
 import { userRouter } from "./userRouter";
 import { roleRouter } from "./roleRouter";
+import { reportsRouter } from "./reportsRouter.js";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   shipping: shippingRouter,
   users: userRouter,
   roles: roleRouter,
+  reports: reportsRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
