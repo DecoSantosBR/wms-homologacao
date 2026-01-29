@@ -354,12 +354,12 @@ export default function Reports() {
                     {selectedReport === 'stockByLocation' && (
                       <div className="space-y-2">
                         <Label htmlFor="locationType">Tipo de Endereço</Label>
-                        <Select value={filters.locationType || ''} onValueChange={(v) => handleFilterChange('locationType', v || undefined)}>
+                        <Select value={filters.locationType || 'all'} onValueChange={(v) => handleFilterChange('locationType', v === 'all' ? undefined : v)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Todos" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="all">Todos</SelectItem>
                             <SelectItem value="whole">Inteiro</SelectItem>
                             <SelectItem value="fraction">Fração</SelectItem>
                           </SelectContent>

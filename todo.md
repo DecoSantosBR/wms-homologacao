@@ -1722,3 +1722,13 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ### Solução
 - [x] Refatorar para usar todas as queries sempre (com enabled condicional)
 - [x] Selecionar dados corretos baseado em selectedReport
+
+## 🐛 BUG: SELECT.ITEM COM VALUE VAZIO EM REPORTS - 29/01/2026
+
+### Problema
+- [x] Erro "A <Select.Item /> must have a value prop that is not an empty string"
+- [x] Componente Select na página /reports tem item com value=""
+
+### Solução
+- [x] Localizar todos os Select.Item em Reports.tsx
+- [x] Substituir value="" por valores válidos ou remover item
