@@ -172,6 +172,8 @@ export const reportsRouter = router({
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       if (locationType) conditions.push(eq(warehouseLocations.locationType, locationType));
+      // Filtrar apenas registros com estoque > 0 para evitar endereços vazios
+      conditions.push(sql`${inventory.quantity} > 0`);
       
       const offset = (page - 1) * pageSize;
       

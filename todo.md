@@ -1747,3 +1747,19 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ### Solução
 - [x] Corrigir fórmula de cálculo de totalAvailable
 - [x] Garantir que disponível = total - reservado (nunca negativo em contexto de exibição)
+
+## 🔍 ISSUE: PRODUCT COUNT EM ENDEREÇOS COM ESTOQUE ZERADO - 29/01/2026
+
+### Problema
+- [x] Endereços H01-02-01, H01-02-02, H01-02-03 mostram productCount=1 mas totalQuantity=0
+- [x] Isso indica registros de estoque com quantidade zerada no banco
+
+### Investigação
+- [x] Verificar quantos registros de inventory têm quantity=0
+- [x] Identificar se são registros órfãos ou se têm propósito
+- [x] Analisar impacto em outros relatórios
+
+### Solução Implementada
+- [x] Opção 2 escolhida: Ajustar query do relatório para filtrar quantity > 0
+- [x] Adicionado filtro conditions.push(sql`${inventory.quantity} > 0`) em stockByLocation
+- [x] Endereços vazios não aparecem mais no relatório
