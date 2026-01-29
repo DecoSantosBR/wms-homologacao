@@ -65,6 +65,42 @@ const AVAILABLE_REPORTS: ReportDefinition[] = [
     category: 'stock',
     icon: <Package className="h-4 w-4" />,
   },
+  // Relatórios Operacionais
+  {
+    id: 'pickingProductivity',
+    name: 'Produtividade de Separação',
+    description: 'Itens separados por hora, por operador',
+    category: 'operational',
+    icon: <BarChart3 className="h-4 w-4" />,
+  },
+  {
+    id: 'pickingAccuracy',
+    name: 'Acuracidade de Picking',
+    description: 'Taxa de acerto nas conferências (divergências vs total)',
+    category: 'operational',
+    icon: <BarChart3 className="h-4 w-4" />,
+  },
+  {
+    id: 'averageCycleTime',
+    name: 'Tempo Médio de Ciclo',
+    description: 'Tempo entre criação e finalização de pedidos',
+    category: 'operational',
+    icon: <BarChart3 className="h-4 w-4" />,
+  },
+  {
+    id: 'ordersByStatus',
+    name: 'Pedidos por Status',
+    description: 'Distribuição de pedidos por status',
+    category: 'operational',
+    icon: <BarChart3 className="h-4 w-4" />,
+  },
+  {
+    id: 'operatorPerformance',
+    name: 'Performance de Operadores',
+    description: 'Métricas individuais de produtividade',
+    category: 'operational',
+    icon: <BarChart3 className="h-4 w-4" />,
+  },
 ];
 
 export default function Reports() {
@@ -90,6 +126,36 @@ export default function Reports() {
     ? trpc.reports.productAvailability.useQuery({ ...filters, page: currentPage }, { enabled: !!selectedReport })
     : selectedReport === 'inventoryMovements'
     ? trpc.reports.inventoryMovements.useQuery({ 
+        ...filters, 
+        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        page: currentPage 
+      }, { enabled: !!selectedReport })
+    : selectedReport === 'pickingProductivity'
+    ? trpc.reports.pickingProductivity.useQuery({ 
+        ...filters, 
+        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        page: currentPage 
+      }, { enabled: !!selectedReport })
+    : selectedReport === 'pickingAccuracy'
+    ? trpc.reports.pickingAccuracy.useQuery({ 
+        ...filters, 
+        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        page: currentPage 
+      }, { enabled: !!selectedReport })
+    : selectedReport === 'averageCycleTime'
+    ? trpc.reports.averageCycleTime.useQuery({ 
+        ...filters, 
+        startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        page: currentPage 
+      }, { enabled: !!selectedReport })
+    : selectedReport === 'ordersByStatus'
+    ? trpc.reports.ordersByStatus.useQuery({ ...filters }, { enabled: !!selectedReport })
+    : selectedReport === 'operatorPerformance'
+    ? trpc.reports.operatorPerformance.useQuery({ 
         ...filters, 
         startDate: filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         endDate: filters.endDate || new Date().toISOString().split('T')[0],

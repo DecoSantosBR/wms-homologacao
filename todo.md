@@ -1696,3 +1696,18 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [ ] Adicionar gráficos e visualizações (charts)
 - [ ] Melhorar exportação Excel usando biblioteca xlsx
 - [ ] Implementar exportação PDF real usando jsPDF/pdfmake
+
+
+## 📊 RELATÓRIOS OPERACIONAIS - 29/01/2026
+
+### Backend (5 Relatórios)
+- [x] `reports.pickingProductivity` - Produtividade de Separação (itens/hora por operador)
+- [x] `reports.pickingAccuracy` - Acuracidade de Picking (divergências vs total)
+- [x] `reports.averageCycleTime` - Tempo Médio de Ciclo (tempo entre criação e finalização)
+- [x] `reports.ordersByStatus` - Pedidos por Status (distribuição de status)
+- [x] `reports.operatorPerformance` - Performance de Operadores (métricas individuais)
+
+### Frontend
+- [x] Adicionar 5 cards de relatórios na aba "Operacionais"
+- [x] Implementar filtros específicos (período, operador, cliente)
+- [x] Testar visualização e exportação

@@ -411,9 +411,325 @@ export const reportsRouter = router({
     }),
 
   /**
-   * Deletar favorito
+   * ========================================
+   * RELATÓRIOS OPERACIONAIS
+   * ========================================
    */
-  deleteFavorite: protectedProcedure
+
+  /**
+   * 1. Produtividade de Separação
+   * Itens separados por hora, por operador
+   */
+  pickingProductivity: protectedProcedure
+    .input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+      operatorId: z.number().optional(),
+      tenantId: z.number().optional(),
+      page: z.number().default(1),
+      pageSize: z.number().default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const { startDate, endDate, operatorId, tenantId, page, pageSize } = input;
+      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      
+      const conditions = [
+        gte(pickingOrders.pickedAt, new Date(startDate)),
+        lte(pickingOrders.pickedAt, new Date(endDate)),
+      ];
+      if (effectiveTenantId) conditions.push(eq(pickingOrders.tenantId, effectiveTenantId));
+      if (operatorId) conditions.push(eq(pickingOrders.pickedBy, operatorId));
+      
+      // Calcular produtividade: total de itens / horas trabalhadas
+      const results = await db
+        .select({
+          operatorId: pickingOrders.pickedBy,
+          operatorName: users.name,
+          totalOrders: sql<number>`COUNT(DISTINCT ${pickingOrders.id})`,
+          totalItems: sql<number>`SUM(${pickingOrderItems.pickedQuantity})`,
+          firstPick: sql<Date>`MIN(${pickingOrders.pickedAt})`,
+          lastPick: sql<Date>`MAX(${pickingOrders.pickedAt})`,
+        })
+        .from(pickingOrders)
+        .leftJoin(users, eq(pickingOrders.pickedBy, users.id))
+        .leftJoin(pickingOrderItems, eq(pickingOrders.id, pickingOrderItems.pickingOrderId))
+        .where(and(...conditions))
+        .groupBy(pickingOrders.pickedBy, users.name);
+      
+      const productivity = results.map(r => {
+        const hoursWorked = r.firstPick && r.lastPick 
+          ? (new Date(r.lastPick).getTime() - new Date(r.firstPick).getTime()) / (1000 * 60 * 60)
+          : 0;
+        const itemsPerHour = hoursWorked > 0 ? (r.totalItems || 0) / hoursWorked : 0;
+        
+        return {
+          operatorId: r.operatorId,
+          operatorName: r.operatorName || 'N/A',
+          totalOrders: Number(r.totalOrders) || 0,
+          totalItems: Number(r.totalItems) || 0,
+          hoursWorked: Math.round(hoursWorked * 100) / 100,
+          itemsPerHour: Math.round(itemsPerHour * 100) / 100,
+        };
+      });
+      
+      const start = (page - 1) * pageSize;
+      const paginatedResults = productivity.slice(start, start + pageSize);
+      
+      return {
+        data: paginatedResults,
+        total: productivity.length,
+        page,
+        pageSize,
+      };
+    }),
+
+  /**
+   * 2. Acuracidade de Picking
+   * Divergências vs total de conferências
+   */
+  pickingAccuracy: protectedProcedure
+    .input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+      tenantId: z.number().optional(),
+      page: z.number().default(1),
+      pageSize: z.number().default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const { startDate, endDate, tenantId, page, pageSize } = input;
+      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      
+      // Buscar conferências de stage no período
+      const conditions = [
+        gte(sql`DATE(stageChecks.completedAt)`, startDate),
+        lte(sql`DATE(stageChecks.completedAt)`, endDate),
+      ];
+      if (effectiveTenantId) {
+        conditions.push(sql`pickingOrders.tenantId = ${effectiveTenantId}`);
+      }
+      
+      const results = await db
+        .select({
+          date: sql<string>`DATE(stageChecks.completedAt)`,
+          totalChecks: sql<number>`COUNT(DISTINCT stageChecks.id)`,
+          totalItems: sql<number>`COUNT(stageCheckItems.id)`,
+          itemsWithDivergence: sql<number>`SUM(CASE WHEN stageCheckItems.divergence != 0 THEN 1 ELSE 0 END)`,
+        })
+        .from(sql`stageChecks`)
+        .leftJoin(sql`pickingOrders`, sql`stageChecks.pickingOrderId = pickingOrders.id`)
+        .leftJoin(sql`stageCheckItems`, sql`stageChecks.id = stageCheckItems.stageCheckId`)
+        .where(and(...conditions))
+        .groupBy(sql`DATE(stageChecks.completedAt)`);
+      
+      const accuracy = results.map(r => {
+        const accuracyRate = r.totalItems > 0 
+          ? ((r.totalItems - r.itemsWithDivergence) / r.totalItems) * 100
+          : 100;
+        
+        return {
+          date: r.date,
+          totalChecks: Number(r.totalChecks) || 0,
+          totalItems: Number(r.totalItems) || 0,
+          itemsWithDivergence: Number(r.itemsWithDivergence) || 0,
+          accuracyRate: Math.round(accuracyRate * 100) / 100,
+        };
+      });
+      
+      const start = (page - 1) * pageSize;
+      const paginatedResults = accuracy.slice(start, start + pageSize);
+      
+      return {
+        data: paginatedResults,
+        total: accuracy.length,
+        page,
+        pageSize,
+      };
+    }),
+
+  /**
+   * 3. Tempo Médio de Ciclo
+   * Tempo entre criação e finalização de pedidos
+   */
+  averageCycleTime: protectedProcedure
+    .input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+      tenantId: z.number().optional(),
+      page: z.number().default(1),
+      pageSize: z.number().default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const { startDate, endDate, tenantId, page, pageSize } = input;
+      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      
+      const conditions = [
+        gte(pickingOrders.createdAt, new Date(startDate)),
+        lte(pickingOrders.createdAt, new Date(endDate)),
+        sql`${pickingOrders.pickedAt} IS NOT NULL`,
+      ];
+      if (effectiveTenantId) conditions.push(eq(pickingOrders.tenantId, effectiveTenantId));
+      
+      const results = await db
+        .select({
+          orderNumber: pickingOrders.customerOrderNumber,
+          customerName: tenants.name,
+          createdAt: pickingOrders.createdAt,
+          pickedAt: pickingOrders.pickedAt,
+          cycleTimeMinutes: sql<number>`TIMESTAMPDIFF(MINUTE, ${pickingOrders.createdAt}, ${pickingOrders.pickedAt})`,
+        })
+        .from(pickingOrders)
+        .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
+        .where(and(...conditions))
+        .orderBy(desc(pickingOrders.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+      
+      const countResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pickingOrders)
+        .where(and(...conditions));
+      
+      return {
+        data: results.map(r => ({
+          orderNumber: r.orderNumber,
+          customerName: r.customerName || 'N/A',
+          createdAt: r.createdAt,
+          pickedAt: r.pickedAt,
+          cycleTimeMinutes: Number(r.cycleTimeMinutes) || 0,
+          cycleTimeHours: Math.round((Number(r.cycleTimeMinutes) || 0) / 60 * 100) / 100,
+        })),
+        total: Number(countResult[0]?.count) || 0,
+        page,
+        pageSize,
+      };
+    }),
+
+  /**
+   * 4. Pedidos por Status
+   * Distribuição de pedidos por status
+   */
+  ordersByStatus: protectedProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      tenantId: z.number().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const { startDate, endDate, tenantId } = input;
+      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      
+      const conditions = [];
+      if (startDate) conditions.push(gte(pickingOrders.createdAt, new Date(startDate)));
+      if (endDate) conditions.push(lte(pickingOrders.createdAt, new Date(endDate)));
+      if (effectiveTenantId) conditions.push(eq(pickingOrders.tenantId, effectiveTenantId));
+      
+      const results = await db
+        .select({
+          status: pickingOrders.status,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(pickingOrders)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .groupBy(pickingOrders.status);
+      
+      const statusLabels: Record<string, string> = {
+        pending: 'Pendente',
+        in_wave: 'Em Onda',
+        picked: 'Separado',
+        staged: 'Conferido',
+        shipped: 'Expedido',
+        cancelled: 'Cancelado',
+      };
+      
+      return {
+        data: results.map(r => ({
+          status: r.status,
+          statusLabel: statusLabels[r.status] || r.status,
+          count: Number(r.count) || 0,
+        })),
+      };
+    }),
+
+  /**
+   * 5. Performance de Operadores
+   * Métricas individuais de operadores
+   */
+  operatorPerformance: protectedProcedure
+    .input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+      operatorId: z.number().optional(),
+      page: z.number().default(1),
+      pageSize: z.number().default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const { startDate, endDate, operatorId, page, pageSize } = input;
+      
+      const conditions = [
+        gte(pickingOrders.pickedAt, new Date(startDate)),
+        lte(pickingOrders.pickedAt, new Date(endDate)),
+      ];
+      if (operatorId) conditions.push(eq(pickingOrders.pickedBy, operatorId));
+      
+      const results = await db
+        .select({
+          operatorId: pickingOrders.pickedBy,
+          operatorName: users.name,
+          totalOrders: sql<number>`COUNT(DISTINCT ${pickingOrders.id})`,
+          totalItems: sql<number>`SUM(${pickingOrderItems.pickedQuantity})`,
+          avgCycleTime: sql<number>`AVG(TIMESTAMPDIFF(MINUTE, ${pickingOrders.createdAt}, ${pickingOrders.pickedAt}))`,
+        })
+        .from(pickingOrders)
+        .leftJoin(users, eq(pickingOrders.pickedBy, users.id))
+        .leftJoin(pickingOrderItems, eq(pickingOrders.id, pickingOrderItems.pickingOrderId))
+        .where(and(...conditions))
+        .groupBy(pickingOrders.pickedBy, users.name);
+      
+      const performance = results.map(r => ({
+        operatorId: r.operatorId,
+        operatorName: r.operatorName || 'N/A',
+        totalOrders: Number(r.totalOrders) || 0,
+        totalItems: Number(r.totalItems) || 0,
+        avgCycleTimeMinutes: Math.round(Number(r.avgCycleTime) || 0),
+        avgCycleTimeHours: Math.round((Number(r.avgCycleTime) || 0) / 60 * 100) / 100,
+      }));
+      
+      const start = (page - 1) * pageSize;
+      const paginatedResults = performance.slice(start, start + pageSize);
+      
+      return {
+        data: paginatedResults,
+        total: performance.length,
+        page,
+        pageSize,
+      };
+    }),
+
+  /**
+   * ========================================
+   * FAVORITOS E AUDITORIA
+   * ========================================
+   */
+
+  /**
+   * Adicionar favorito
+   */
+  addFavorite: protectedProcedure
     .input(z.object({
       id: z.number(),
     }))
