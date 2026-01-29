@@ -1732,3 +1732,18 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 ### Solução
 - [x] Localizar todos os Select.Item em Reports.tsx
 - [x] Substituir value="" por valores válidos ou remover item
+
+## 🐛 BUG: ESTOQUE DISPONÍVEL NEGATIVO EM RELATÓRIO - 29/01/2026
+
+### Problema
+- [x] Coluna totalAvailable no relatório "Estoque por Endereço" exibe valores negativos (-280, -160, -140)
+- [x] Valores negativos não fazem sentido para estoque disponível
+
+### Investigação Necessária
+- [x] Verificar lógica de cálculo em reportsRouter.ts (procedure stockByLocation)
+- [x] Analisar se está subtraindo reservas corretamente
+- [x] Verificar se há problema na agregação por endereço
+
+### Solução
+- [x] Corrigir fórmula de cálculo de totalAvailable
+- [x] Garantir que disponível = total - reservado (nunca negativo em contexto de exibição)
