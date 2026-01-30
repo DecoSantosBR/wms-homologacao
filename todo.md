@@ -2016,3 +2016,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Usar cores do tema Tailwind para consistência visual
 - [ ] Adicionar loading skeleton para gráficos
 - [ ] Tornar gráficos responsivos (ResponsiveContainer)
+
+## 🐛 BUG: CORES DA LEGENDA DOS GRÁFICOS IDÊNTICAS
+- [x] Corrigir cores da legenda em TopProductsChart (Disponível e Reservado aparecem ambos em preto)
+
+## 🐛 BUG: GRÁFICO DE PIZZA MOSTRANDO "SEM ZONA" EM VEZ DE ZONAS REAIS
+- [x] Corrigir mapeamento de dados em StockByZoneChart para usar campo correto de zona

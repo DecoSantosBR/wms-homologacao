@@ -94,8 +94,8 @@ export function TopProductsChart({ data, limit = 10 }: TopProductsChartProps) {
             <YAxis className="text-xs" />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Bar dataKey="Disponível" stackId="a" fill="hsl(var(--chart-1))" />
-            <Bar dataKey="Reservado" stackId="a" fill="hsl(var(--chart-2))" />
+            <Bar dataKey="Disponível" stackId="a" fill="#3b82f6" />
+            <Bar dataKey="Reservado" stackId="a" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

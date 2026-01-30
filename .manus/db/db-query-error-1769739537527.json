@@ -1,0 +1,8 @@
+{
+  "query": "SELECT \n  i.id as locationId,\n  wl.code as locationCode,\n  wl.locationType as locationType,\n  wz.name as zoneName,\n  wz.code as zoneCode,\n  SUM(i.quantity) as totalQuantity,\n  SUM(i.reservedQuantity) as totalReserved,\n  SUM(i.quantity - i.reservedQuantity) as totalAvailable,\n  COUNT(DISTINCT i.productId) as productCount\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN warehouseZones wz ON wl.zoneId = wz.id\nWHERE i.quantity > 0\nGROUP BY i.locationId, wl.code, wl.locationType, wz.name, wz.code\nLIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  i.id as locationId,\n  wl.code as locationCode,\n  wl.locationType as locationType,\n  wz.name as zoneName,\n  wz.code as zoneCode,\n  SUM(i.quantity) as totalQuantity,\n  SUM(i.reservedQuantity) as totalReserved,\n  SUM(i.quantity - i.reservedQuantity) as totalAvailable,\n  COUNT(DISTINCT i.productId) as productCount\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN warehouseZones wz ON wl.zoneId = wz.id\nWHERE i.quantity > 0\nGROUP BY i.locationId, wl.code, wl.locationType, wz.name, wz.code\nLIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1055 (42000) at line 1: Expression #1 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'YB8JBMXFWs4i38ecUvjPnS.i.id' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by"
+  ]
+}

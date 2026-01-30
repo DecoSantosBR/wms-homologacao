@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc.js";
 import { getDb } from "./db.js";
 import { 
-  inventory, products, tenants, warehouseLocations, pickingOrders, 
+  inventory, products, tenants, warehouseLocations, warehouseZones, pickingOrders, 
   pickingOrderItems, shipmentManifests, users, inventoryMovements,
   reportLogs, reportFavorites, auditLogs
 } from "../drizzle/schema.js";
@@ -186,6 +186,8 @@ export const reportsRouter = router({
           locationId: inventory.locationId,
           locationCode: warehouseLocations.code,
           locationType: warehouseLocations.locationType,
+          zoneName: warehouseZones.name,
+          zoneCode: warehouseZones.code,
           totalQuantity: sql<number>`SUM(${inventory.quantity})`,
           totalReserved: sql<number>`SUM(${inventory.reservedQuantity})`,
           totalAvailable: sql<number>`SUM(${inventory.quantity} - ${inventory.reservedQuantity})`,
@@ -194,8 +196,9 @@ export const reportsRouter = router({
         })
         .from(inventory)
         .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+        .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .groupBy(inventory.locationId, warehouseLocations.code, warehouseLocations.locationType)
+        .groupBy(inventory.locationId, warehouseLocations.code, warehouseLocations.locationType, warehouseZones.name, warehouseZones.code)
         .orderBy(asc(warehouseLocations.code))
         .limit(pageSize)
         .offset(offset);
