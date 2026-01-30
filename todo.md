@@ -1777,3 +1777,27 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Aplicado filtro em productAvailability (Disponibilidade de Produtos)
 - [x] Total: 5 relatórios com filtro quantity > 0 aplicado
 - [x] Consistência garantida em todos os relatórios de estoque
+
+## 🐛 BUG: ERRO AO IMPORTAR NF-E - 30/01/2026
+
+### Problema
+- [x] Falha no INSERT na tabela invoices ao importar NF-e 1002
+- [x] Erro: "Failed query: insert into `invoices`..."
+- [x] Parâmetros: tenantId=1, invoiceNumber=1002, series=0, invoiceKey=43220631673254001508550000000010001989903913
+
+### Investigação
+- [x] Verificado schema da tabela invoices em drizzle/schema.ts
+- [x] Identificado constraint UNIQUE em invoiceKey (linha 885)
+- [x] Confirmado que NF-e já existe no banco (1 registro encontrado)
+- [x] Analisado procedure nfe.import em server/routers.ts
+
+### Causa Raiz
+- [x] Procedure verifica duplicidade em receivingOrders e pickingOrders
+- [x] MAS não verifica duplicidade em invoices antes do INSERT
+- [x] Violação de constraint UNIQUE em invoiceKey causava erro de banco
+
+### Solução Implementada
+- [x] Adicionado verificação de duplicidade em invoices (linhas 1414-1422)
+- [x] Query SELECT antes do INSERT para detectar chave duplicada
+- [x] Mensagem amigável: "NF-e já importada. Nota Fiscal: {número}"
+- [x] Consistência com verificações de receivingOrders e pickingOrders

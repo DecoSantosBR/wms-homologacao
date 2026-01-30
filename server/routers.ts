@@ -1411,6 +1411,16 @@ export const appRouter = router({
           // Para saída: apenas criar invoice (não criar pedido novo)
           // O pedido já deve existir e ser vinculado manualmente
           
+          // Verificar se invoice já existe
+          const existingInvoice = await db.select()
+            .from(invoices)
+            .where(eq(invoices.invoiceKey, nfeData.chaveAcesso))
+            .limit(1);
+
+          if (existingInvoice.length > 0) {
+            throw new Error(`NF-e já importada. Nota Fiscal: ${existingInvoice[0].invoiceNumber}`);
+          }
+          
           // Criar registro de invoice (Nota Fiscal) para expedição
           const clienteName = nfeData.destinatario?.razaoSocial || nfeData.fornecedor.razaoSocial;
           
