@@ -20,18 +20,37 @@ export function MovementsTimelineChart({ data }: MovementsTimelineChartProps) {
     const dateStr = new Date(date).toLocaleDateString('pt-BR');
     const movementType = item.movementType || item.type || 'unknown';
     
+    // Mapear tipos reais do banco para entrada/saída
+    const isEntrada = (
+      movementType === 'in' || 
+      movementType === 'entrada' || 
+      movementType === 'receiving' ||  // Recebimento = entrada
+      movementType === 'return' ||      // Devolução = entrada
+      movementType === 'adjustment' ||  // Ajuste positivo = entrada
+      (movementType === 'transfer' && item.toLocation && !item.fromLocation) // Transferência de entrada (sem origem)
+    );
+    
+    const isSaida = (
+      movementType === 'out' || 
+      movementType === 'saida' || 
+      movementType === 'picking' ||     // Separação = saída
+      movementType === 'disposal' ||    // Descarte = saída
+      movementType === 'quality' ||     // Qualidade = saída
+      (movementType === 'transfer' && item.fromLocation && !item.toLocation) // Transferência de saída (sem destino)
+    );
+    
     const existing = dateMap.get(dateStr);
     if (existing) {
       existing.total += 1;
-      if (movementType === 'in' || movementType === 'entrada') {
+      if (isEntrada) {
         existing.entradas += 1;
-      } else if (movementType === 'out' || movementType === 'saida') {
+      } else if (isSaida) {
         existing.saidas += 1;
       }
     } else {
       dateMap.set(dateStr, {
-        entradas: (movementType === 'in' || movementType === 'entrada') ? 1 : 0,
-        saidas: (movementType === 'out' || movementType === 'saida') ? 1 : 0,
+        entradas: isEntrada ? 1 : 0,
+        saidas: isSaida ? 1 : 0,
         total: 1,
       });
     }

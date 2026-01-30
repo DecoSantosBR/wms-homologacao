@@ -2048,3 +2048,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar validações preventivas na liberação (impede reserva negativa)
 - [x] Logs detalhados: [EXPEDIÇÃO] para auditoria
 - [x] Validar que não restam reservas órfãs (0 encontradas)
+
+
+## 🐛 BUG: RELATÓRIO DE MOVIMENTAÇÕES EM BRANCO - 30/01/2026
+- [x] Investigar tipos de movimentação registrados no banco (picking, transfer vs entrada, saída)
+- [x] Corrigir mapeamento de tipos no componente MovementsTimelineChart.tsx
+- [x] Mapear picking=saída, receiving=entrada, transfer=entrada/saída
+- [x] Testar relatório com dados reais (HMR aplicado com sucesso)
+- [x] Validar gráfico de movimentações ao longo do tempo
