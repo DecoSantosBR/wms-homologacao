@@ -591,6 +591,23 @@ export const shippingRouter = router({
         if (expStock.length > 0) {
           const stock = expStock[0];
           const quantityToReserve = Math.min(item.totalUnits, stock.availableQuantity);
+          
+          // VALIDAÇÃO PREVENTIVA: Garantir que reserva não exceda estoque disponível
+          if (quantityToReserve <= 0) {
+            console.warn(`[RESERVA] Estoque insuficiente na zona EXP para produto ${item.productId}. Necessário: ${item.totalUnits}, Disponível: ${stock.availableQuantity}`);
+            continue; // Pular este item
+          }
+          
+          // Validar que a nova reserva total não excederá a quantidade física
+          const newReservedQuantity = stock.reservedQuantity + quantityToReserve;
+          if (newReservedQuantity > stock.quantity) {
+            console.error(`[RESERVA] ERRO CRÍTICO: Tentativa de reservar mais do que existe fisicamente!`);
+            console.error(`  Produto: ${item.productId}, Estoque ID: ${stock.inventoryId}`);
+            console.error(`  Quantidade física: ${stock.quantity}, Já reservado: ${stock.reservedQuantity}, Tentando reservar: ${quantityToReserve}`);
+            console.error(`  Nova reserva total seria: ${newReservedQuantity} (EXCEDE O ESTOQUE!)`);
+            throw new Error(`Erro de integridade: reserva excederia estoque físico. Produto ${item.productId}, Endereço ${stock.locationId}`);
+          }
+          
           // Atualizar reservedQuantity
           await db
             .update(inventory)
@@ -598,6 +615,8 @@ export const shippingRouter = router({
               reservedQuantity: sql`${inventory.reservedQuantity} + ${quantityToReserve}` 
             })
             .where(eq(inventory.id, stock.inventoryId));
+          
+          console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do produto ${item.productId} no estoque ${stock.inventoryId}`);
         }
       }
 
@@ -1038,7 +1057,22 @@ export const shippingRouter = router({
           if (expStock.length > 0) {
             const stock = expStock[0];
             const quantityToRelease = Math.min(item.quantity, stock.reservedQuantity);
-
+            
+            // VALIDAÇÃO PREVENTIVA: Garantir que liberação não resulte em reserva negativa
+            if (quantityToRelease <= 0) {
+              console.warn(`[LIBERAÇÃO] Nenhuma reserva para liberar. Produto ${item.productId}, Reservado: ${stock.reservedQuantity}`);
+              continue; // Pular este item
+            }
+            
+            const newReservedQuantity = stock.reservedQuantity - quantityToRelease;
+            if (newReservedQuantity < 0) {
+              console.error(`[LIBERAÇÃO] ERRO CRÍTICO: Tentativa de liberar mais do que está reservado!`);
+              console.error(`  Produto: ${item.productId}, Estoque ID: ${stock.inventoryId}`);
+              console.error(`  Reservado atualmente: ${stock.reservedQuantity}, Tentando liberar: ${quantityToRelease}`);
+              console.error(`  Nova reserva seria: ${newReservedQuantity} (NEGATIVO!)`);
+              throw new Error(`Erro de integridade: liberação resultaria em reserva negativa. Produto ${item.productId}`);
+            }
+            
             // Decrementar reservedQuantity
             await db
               .update(inventory)
@@ -1046,6 +1080,8 @@ export const shippingRouter = router({
                 reservedQuantity: sql`${inventory.reservedQuantity} - ${quantityToRelease}` 
               })
               .where(eq(inventory.id, stock.inventoryId));
+            
+            console.log(`[LIBERAÇÃO] Liberado ${quantityToRelease} unidades do produto ${item.productId} no estoque ${stock.inventoryId}`);
           }
         }
       }

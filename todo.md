@@ -2022,3 +2022,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ## 🐛 BUG: GRÁFICO DE PIZZA MOSTRANDO "SEM ZONA" EM VEZ DE ZONAS REAIS
 - [x] Corrigir mapeamento de dados em StockByZoneChart para usar campo correto de zona
+
+
+## 🚨 BUG CRÍTICO: ESTOQUE DISPONÍVEL NEGATIVO - 30/01/2026
+- [x] Investigar causa raiz do estoque negativo (H01-01-02: Qtd. Reservada = 260, Qtd. Disponível = -80)
+- [x] Implementar correção definitiva para recalcular reservas
+- [x] Adicionar validações preventivas para impedir reservas maiores que estoque total
+- [x] Criar testes automatizados para validações de reservas
+- [x] Testar solução com dados reais
+- [ ] Criar job de sincronização automática de reservas órfãs (opcional)

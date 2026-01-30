@@ -1,0 +1,163 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "auditLogs"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "blindConferenceAdjustments"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "blindConferenceSessions"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "contracts"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "divergenceApprovals"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "inventory"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "inventoryCountItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "inventoryCounts"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "inventoryMovements"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "invoices"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "labelAssociations"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "labelPrintHistory"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "labelReadings"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "permissions"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingAuditLogs"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingExecutionItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingOrderItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingOrders"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingReservations"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingWaveItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "pickingWaves"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "printSettings"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "productBarcodes"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "productLabels"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "productLocationMapping"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "products"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "recalls"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "receivingConferences"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "receivingDivergences"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "receivingOrderItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "receivingOrders"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "receivingPreallocations"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "reportFavorites"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "reportLogs"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "returns"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "rolePermissions"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "roles"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "shipmentManifestItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "shipmentManifests"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "shipments"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "stageCheckItems"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "stageChecks"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "systemUsers"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "tenants"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "userPermissions"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "userRoles"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "users"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "warehouseLocations"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "warehouseZones"
+    },
+    {
+      "Tables_in_YB8JBMXFWs4i38ecUvjPnS": "warehouses"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_YB8JBMXFWs4i38ecUvjPnS\n__drizzle_migrations\nauditLogs\nblindConferenceAdjustments\nblindConferenceSessions\ncontracts\ndivergenceApprovals\ninventory\ninventoryCountItems\ninventoryCounts\ninventoryMovements\ninvoices\nlabelAssociations\nlabelPrintHistory\nlabelReadings\npermissions\npickingAuditLogs\npickingExecutionItems\npickingOrderItems\npickingOrders\npickingReservations\npickingWaveItems\npickingWaves\nprintSettings\nproductBarcodes\nproductLabels\nproductLocationMapping\nproducts\nrecalls\nreceivingConferences\nreceivingDivergences\nreceivingOrderItems\nreceivingOrders\nreceivingPreallocations\nreportFavorites\nreportLogs\nreturns\nrolePermissions\nroles\nshipmentManifestItems\nshipmentManifests\nshipments\nstageCheckItems\nstageChecks\nsystemUsers\ntenants\nuserPermissions\nuserRoles\nusers\nwarehouseLocations\nwarehouseZones\nwarehouses\n",
+  "stderr": "",
+  "execution_time_ms": 349
+}
