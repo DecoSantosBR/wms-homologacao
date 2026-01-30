@@ -73,6 +73,8 @@ export const reportsRouter = router({
       if (batchNumber) conditions.push(eq(inventory.batch, batchNumber));
       if (expiryDateStart) conditions.push(gte(inventory.expiryDate, new Date(expiryDateStart)));
       if (expiryDateEnd) conditions.push(lte(inventory.expiryDate, new Date(expiryDateEnd)));
+      // Filtrar apenas registros com estoque > 0
+      conditions.push(sql`${inventory.quantity} > 0`);
       
       const offset = (page - 1) * pageSize;
       
@@ -128,6 +130,8 @@ export const reportsRouter = router({
       const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
+      // Filtrar apenas registros com estoque > 0
+      conditions.push(sql`${inventory.quantity} > 0`);
       
       const offset = (page - 1) * pageSize;
       
@@ -224,6 +228,8 @@ export const reportsRouter = router({
         lte(inventory.expiryDate, futureDate),
       ];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
+      // Filtrar apenas registros com estoque > 0
+      conditions.push(sql`${inventory.quantity} > 0`);
       
       const offset = (page - 1) * pageSize;
       
@@ -272,6 +278,8 @@ export const reportsRouter = router({
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       if (productId) conditions.push(eq(inventory.productId, productId));
+      // Filtrar apenas registros com estoque > 0
+      conditions.push(sql`${inventory.quantity} > 0`);
       
       const offset = (page - 1) * pageSize;
       

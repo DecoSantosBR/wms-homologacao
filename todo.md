@@ -1763,3 +1763,17 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Opção 2 escolhida: Ajustar query do relatório para filtrar quantity > 0
 - [x] Adicionado filtro conditions.push(sql`${inventory.quantity} > 0`) em stockByLocation
 - [x] Endereços vazios não aparecem mais no relatório
+
+## 🔧 TAREFA: APLICAR FILTRO QUANTITY > 0 EM OUTROS RELATÓRIOS - 29/01/2026
+
+### Problema
+- [x] Relatório "Posição de Estoque" também exibe registros com quantity=0 (IDs 240019, 240020, 240021)
+- [x] Inconsistência: filtro já aplicado em "Estoque por Endereço" mas não em outros relatórios
+
+### Solução Implementada
+- [x] Aplicado filtro em stockPosition (Posição de Estoque)
+- [x] Aplicado filtro em stockByTenant (Estoque por Cliente)
+- [x] Aplicado filtro em expiringProducts (Produtos Próximos ao Vencimento)
+- [x] Aplicado filtro em productAvailability (Disponibilidade de Produtos)
+- [x] Total: 5 relatórios com filtro quantity > 0 aplicado
+- [x] Consistência garantida em todos os relatórios de estoque
