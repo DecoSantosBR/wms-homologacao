@@ -1801,3 +1801,49 @@ Pedidos com múltiplas linhas do mesmo produto (endereços diferentes) criavam i
 - [x] Query SELECT antes do INSERT para detectar chave duplicada
 - [x] Mensagem amigável: "NF-e já importada. Nota Fiscal: {número}"
 - [x] Consistência com verificações de receivingOrders e pickingOrders
+
+## 🚀 FEATURE: RESERVA AUTOMÁTICA DE ESTOQUE AO GERAR ROMANEIO - 30/01/2026
+
+### Requisito
+Ao gerar um romaneio (shipment manifest), o sistema deve:
+- [x] Identificar todos os pedidos vinculados ao romaneio
+- [x] Identificar todos os itens desses pedidos
+- [x] Localizar saldo dos itens no endereço de expedição "EXP"
+- [x] Atualizar status do estoque para "Reservado" (incrementar reservedQuantity)
+- [x] Garantir que estoque reservado não seja alocado para outros pedidos
+
+### Implementação Realizada
+- [x] Investigado schema de shipmentManifests, pickingOrderItems e inventory
+- [x] Identificado estrutura: warehouseZones (code="EXP") → warehouseLocations → inventory
+- [x] Adicionado warehouseZones aos imports de shippingRouter.ts
+- [x] Implementada função de reserva automática no procedure createManifest (linhas 551-602)
+- [x] Lógica: Busca itens dos pedidos → Localiza estoque em zona EXP → Incrementa reservedQuantity
+- [x] Validação de saldo disponível (quantity - reservedQuantity > 0)
+- [x] Reserva apenas quantidade disponível (Math.min)
+- [x] Mensagem de sucesso atualizada para indicar reserva automática
+
+### Detalhes Técnicos
+**Arquivo:** server/shippingRouter.ts (linhas 551-609)
+
+**Fluxo:**
+1. Buscar todos pickingOrderItems dos pedidos vinculados ao romaneio
+2. Para cada item (productId + requestedQuantity):
+   - Query: inventory JOIN warehouseLocations JOIN warehouseZones
+   - Filtro: productId, status=available, zone.code=EXP, saldo>0
+   - LIMIT 1 (primeiro endereço disponível)
+3. Calcular quantityToReserve = Math.min(requested, available)
+4. UPDATE inventory SET reservedQuantity = reservedQuantity + quantityToReserve
+
+**Benefícios:**
+- ✅ Reserva automática ao criar romaneio (sincronização em tempo real)
+- ✅ Previne alocação dupla do estoque em EXP
+- ✅ Garante integridade entre romaneio e estoque
+- ✅ Transparente para o usuário (automático)
+
+### Testes Pendentes (Aguardando Dados)
+- [ ] Criar romaneio e verificar reservedQuantity atualizado
+- [ ] Verificar que apenas itens em EXP são reservados
+- [ ] Testar comportamento com saldo insuficiente
+- [ ] Validar que reservas são liberadas ao cancelar romaneio
+
+**Nota:** Zona EXP existe no banco. Não há pedidos com status invoice_linked para teste imediato.

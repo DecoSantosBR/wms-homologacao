@@ -17,6 +17,7 @@ import {
   inventoryMovements,
   pickingReservations,
   warehouseLocations,
+  warehouseZones,
   stageCheckItems,
   stageChecks
 } from "../drizzle/schema.js";
@@ -547,11 +548,64 @@ export const shippingRouter = router({
           sql`${invoices.pickingOrderId} IN (${sql.join(input.orderIds.map(id => sql`${id}`), sql`, `)})`
         );
 
+      // ========================================================================
+      // RESERVA AUTOMÁTICA DE ESTOQUE NO ENDEREÇO EXP
+      // ========================================================================
+      
+      // 1. Buscar todos os itens dos pedidos vinculados ao romaneio
+      const orderItems = await db
+        .select({
+          productId: pickingOrderItems.productId,
+          quantity: pickingOrderItems.requestedQuantity,
+        })
+        .from(pickingOrderItems)
+        .where(
+          sql`${pickingOrderItems.pickingOrderId} IN (${sql.join(input.orderIds.map(id => sql`${id}`), sql`, `)})`
+        );
+
+      // 2. Para cada item, localizar estoque na zona EXP e reservar
+      for (const item of orderItems) {
+        // Buscar estoque disponível na zona EXP para este produto
+        const expStock = await db
+          .select({
+            inventoryId: inventory.id,
+            locationId: inventory.locationId,
+            quantity: inventory.quantity,
+            reservedQuantity: inventory.reservedQuantity,
+            availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
+          })
+          .from(inventory)
+          .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+          .where(
+            and(
+              eq(inventory.productId, item.productId),
+              eq(inventory.status, "available"),
+              eq(warehouseZones.code, "EXP"), // Apenas zona de expedição
+              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0` // Saldo disponível
+            )
+          )
+          .limit(1); // Pegar primeiro endereço disponível
+
+        if (expStock.length > 0) {
+          const stock = expStock[0];
+          const quantityToReserve = Math.min(item.quantity, stock.availableQuantity);
+
+          // Atualizar reservedQuantity
+          await db
+            .update(inventory)
+            .set({ 
+              reservedQuantity: sql`${inventory.reservedQuantity} + ${quantityToReserve}` 
+            })
+            .where(eq(inventory.id, stock.inventoryId));
+        }
+      }
+
       return { 
         success: true, 
         manifestId,
         manifestNumber,
-        message: `Romaneio ${manifestNumber} criado com ${input.orderIds.length} pedido(s)` 
+        message: `Romaneio ${manifestNumber} criado com ${input.orderIds.length} pedido(s). Estoque reservado automaticamente na zona EXP.` 
       };
     }),
 
