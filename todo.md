@@ -2031,3 +2031,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Criar testes automatizados para validações de reservas
 - [x] Testar solução com dados reais
 - [ ] Criar job de sincronização automática de reservas órfãs (opcional)
+
+
+## 🧹 LIMPEZA COMPLETA DE RESERVAS ÓRFÃS - 30/01/2026
+- [x] Identificar todas as reservas órfãs no sistema (varredura completa)
+- [x] Corrigir reservas órfãs existentes via SQL (2 registros, 420 unidades liberadas)
+- [x] Implementar endpoint de sincronização manual (trpc.maintenance.syncReservations)
+- [x] Atualizar função syncInventoryReservations para calcular unidades corretamente
+- [x] Criar testes automatizados para sincronização (3/3 passando)
+- [x] Validar que não restam reservas órfãs (0 encontradas)

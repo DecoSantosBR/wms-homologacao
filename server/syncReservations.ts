@@ -47,18 +47,28 @@ export async function syncInventoryReservations() {
     // 2. Para cada registro de estoque, calcular reservas reais
     for (const inv of allInventory) {
       // Buscar pedidos ativos que reservam este produto/tenant/localização
+      // IMPORTANTE: Calcular unidades totais (caixas × unitsPerBox)
       const activeReservations = await db
         .select({
-          totalReserved: sql<number>`COALESCE(SUM(${pickingOrderItems.requestedQuantity}), 0)`,
+          totalReserved: sql<number>`COALESCE(
+            SUM(
+              CASE 
+                WHEN ${pickingOrderItems.unit} = 'box' 
+                THEN ${pickingOrderItems.requestedQuantity} * COALESCE(p.unitsPerBox, 1)
+                ELSE ${pickingOrderItems.requestedQuantity}
+              END
+            ), 0
+          )`,
         })
         .from(pickingOrderItems)
         .innerJoin(pickingOrders, eq(pickingOrderItems.pickingOrderId, pickingOrders.id))
+        .innerJoin(sql`products p`, sql`${pickingOrderItems.productId} = p.id`)
         .where(
           and(
             eq(pickingOrderItems.productId, inv.productId),
             sql`${pickingOrders.tenantId} = ${inv.tenantId}`,
             // Apenas pedidos ativos reservam estoque
-            sql`${pickingOrders.status} IN ('pending', 'in_progress', 'separated')`
+            sql`${pickingOrders.status} IN ('pending', 'in_progress', 'separated', 'in_wave')`
           )
         );
 
