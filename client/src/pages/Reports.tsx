@@ -10,6 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FileText, Download, Printer, Star, Filter, BarChart3, Package, TruckIcon, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { exportToCSV, exportToExcel, exportToPDF } from "@/lib/reportExport";
+import { StockByZoneChart } from "@/components/charts/StockByZoneChart";
+import { TopProductsChart } from "@/components/charts/TopProductsChart";
+import { MovementsTimelineChart } from "@/components/charts/MovementsTimelineChart";
+import { OperatorProductivityChart } from "@/components/charts/OperatorProductivityChart";
 
 type ReportCategory = 'stock' | 'operational' | 'shipping' | 'audit';
 
@@ -369,6 +373,27 @@ export default function Reports() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Gráficos Visuais */}
+              {!reportQuery.isLoading && reportQuery.data?.data && reportQuery.data.data.length > 0 && (
+                <div className="space-y-4">
+                  {/* Gráficos de Estoque */}
+                  {selectedReport === 'stockByLocation' && (
+                    <StockByZoneChart data={reportQuery.data.data} />
+                  )}
+                  {selectedReport === 'stockPosition' && (
+                    <TopProductsChart data={reportQuery.data.data} limit={10} />
+                  )}
+                  
+                  {/* Gráficos Operacionais */}
+                  {selectedReport === 'inventoryMovements' && (
+                    <MovementsTimelineChart data={reportQuery.data.data} />
+                  )}
+                  {(selectedReport === 'pickingProductivity' || selectedReport === 'operatorPerformance') && (
+                    <OperatorProductivityChart data={reportQuery.data.data} />
+                  )}
+                </div>
+              )}
 
               {/* Tabela de Resultados */}
               <Card>

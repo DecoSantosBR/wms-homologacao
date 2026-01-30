@@ -1952,3 +1952,67 @@ Tela "Posições de Estoque" mostra coluna "Qtd. Reservada" vazia ("-") mesmo ap
 - SKU 834207: 1 unidade reservada (140 total, 139 disponíveis) ✅
 
 **Coluna "Qtd. Disponível"** também calculando corretamente: `quantity - reservedQuantity`
+
+## 🐛 BUG CRÍTICO: RESERVAS USANDO QUANTIDADE DE CAIXAS EM VEZ DE UNIDADES - 30/01/2026
+
+### Descrição
+Sistema está reservando quantidade de **caixas** em vez de **unidades totais** ao criar romaneio.
+
+### Evidência Atual (Incorreto)
+- SKU 4014609: **2 unidades** reservadas (deveria ser **280 unidades** = 2 caixas × 140 un/cx)
+- SKU 443060: **2 unidades** reservadas (deveria ser **160 unidades** = 2 caixas × 80 un/cx)
+- SKU 834207: **1 unidade** reservada (deveria ser **140 unidades** = 1 caixa × 140 un/cx)
+
+### Causa Raiz
+Linha 559 em `server/shippingRouter.ts`:
+```typescript
+quantity: pickingOrderItems.requestedQuantity  // ← Quantidade de CAIXAS
+```
+
+Deveria ser:
+```typescript
+quantity: sql<number>`${pickingOrderItems.requestedQuantity} * ${products.unitsPerPackage}`  // ← Unidades totais
+```
+
+### Correção Necessária
+- [ ] Adicionar JOIN com tabela `products` para obter `unitsPerPackage`
+- [ ] Calcular quantidade total: `requestedQuantity × unitsPerPackage`
+- [ ] Cancelar romaneio atual e criar novo para testar
+- [ ] Verificar se reservas agora mostram valores corretos em unidades
+
+## 📊 FEATURE: GRÁFICOS VISUAIS NOS RELATÓRIOS - 30/01/2026
+
+### Objetivo
+Adicionar visualizações gráficas aos relatórios existentes usando Recharts para facilitar análise de tendências e KPIs.
+
+### Gráficos Planejados por Relatório
+
+#### 📦 Relatórios de Estoque
+- [ ] **Posição de Estoque**: Gráfico de barras horizontais (Top 10 produtos por quantidade)
+- [ ] **Estoque por Endereço**: Gráfico de pizza (distribuição por zona)
+- [ ] **Produtos Próximos ao Vencimento**: Gráfico de linha (vencimentos por mês)
+- [ ] **Disponibilidade de Produtos**: Gráfico de barras empilhadas (disponível vs reservado)
+
+#### ⚙️ Relatórios Operacionais
+- [ ] **Movimentações de Estoque**: Gráfico de linha (movimentações ao longo do tempo)
+- [ ] **Produtividade de Separação**: Gráfico de barras (produtividade por operador)
+- [ ] **Acuracidade de Separação**: Gráfico de área (taxa de acerto ao longo do tempo)
+- [ ] **Tempo Médio de Separação**: Gráfico de linha com área (tendência temporal)
+
+#### 📤 Relatórios de Expedição
+- [ ] **Pedidos Expedidos**: Gráfico de barras (volume por período)
+- [ ] **Taxa de Ocupação de Veículos**: Gráfico de gauge/medidor (% ocupação média)
+
+### Componentes Recharts a Usar
+- `LineChart` + `Line` + `XAxis` + `YAxis` + `CartesianGrid` + `Tooltip` + `Legend`
+- `BarChart` + `Bar`
+- `PieChart` + `Pie` + `Cell`
+- `AreaChart` + `Area`
+- `ComposedChart` (para gráficos mistos)
+
+### Implementação
+- [ ] Criar componente reutilizável `ReportChart.tsx` para encapsular lógica comum
+- [ ] Adicionar seção de gráficos acima ou abaixo da tabela de dados
+- [ ] Usar cores do tema Tailwind para consistência visual
+- [ ] Adicionar loading skeleton para gráficos
+- [ ] Tornar gráficos responsivos (ResponsiveContainer)
