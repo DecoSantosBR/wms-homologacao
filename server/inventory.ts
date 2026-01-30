@@ -99,7 +99,6 @@ export async function getInventoryPositions(
 
   const locationTenant = alias(tenants, "locationTenant");
 
-  // Calcular quantidade reservada dinamicamente
   const results = await dbConn
     .select({
       id: inventory.id,
@@ -114,7 +113,7 @@ export async function getInventoryPositions(
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
-      reservedQuantity: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)`,
+      reservedQuantity: inventory.reservedQuantity,
       status: inventory.status,
       tenantId: inventory.tenantId,
       tenantName: locationTenant.name,
@@ -126,27 +125,7 @@ export async function getInventoryPositions(
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
-    .leftJoin(pickingReservations, eq(inventory.id, pickingReservations.inventoryId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .groupBy(
-      inventory.id,
-      inventory.productId,
-      products.sku,
-      products.description,
-      inventory.locationId,
-      warehouseLocations.code,
-      warehouseLocations.status,
-      warehouseLocations.tenantId,
-      warehouseZones.name,
-      inventory.batch,
-      inventory.expiryDate,
-      inventory.quantity,
-      inventory.status,
-      inventory.tenantId,
-      locationTenant.name,
-      inventory.createdAt,
-      inventory.updatedAt
-    )
     .orderBy(warehouseLocations.code, products.sku)
     .limit(1000);
 

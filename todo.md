@@ -1927,3 +1927,28 @@ Romaneio ROM-1769734935811 foi criado com sucesso, mas a reserva automática de 
 [RESERVA] Estoque EXP encontrado! Inventory ID: 390003, Disponível: 140, Reservando: 1
 [RESERVA] ✅ Reserva criada com sucesso para produto 6
 ```
+
+## 🐛 ISSUE: QTD. RESERVADA NÃO EXIBIDA NA TELA POSIÇÕES DE ESTOQUE - 30/01/2026 ✅ RESOLVIDO
+
+### Descrição
+Tela "Posições de Estoque" mostra coluna "Qtd. Reservada" vazia ("-") mesmo após criar romaneio com reservas automáticas.
+
+### Causa Raiz Identificada
+- [x] Query estava usando `pickingReservations` (tabela inexistente) em vez de `inventory.reservedQuantity`
+- [x] Linha 117 em `server/inventory.ts` usava `COALESCE(SUM(pickingReservations.quantity), 0)`
+- [x] JOIN desnecessário com `pickingReservations` e GROUP BY complexo
+
+### Correção Aplicada
+- [x] Substituído `sql<number>\`COALESCE(SUM(${pickingReservations.quantity}), 0)\`` por `inventory.reservedQuantity` (linha 116)
+- [x] Removido `.leftJoin(pickingReservations, ...)` (linha 129)
+- [x] Removido `.groupBy(...)` desnecessário (linhas 131-149)
+- [x] Query simplificada: agora lê diretamente o campo `reservedQuantity` da tabela `inventory`
+
+### Resultado do Teste
+**Tela:** /stock (Posições de Estoque)
+**Valores exibidos corretamente:**
+- SKU 4014609: 2 unidades reservadas (160 total, 158 disponíveis) ✅
+- SKU 443060: 2 unidades reservadas (280 total, 278 disponíveis) ✅
+- SKU 834207: 1 unidade reservada (140 total, 139 disponíveis) ✅
+
+**Coluna "Qtd. Disponível"** também calculando corretamente: `quantity - reservedQuantity`
