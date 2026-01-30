@@ -2056,3 +2056,14 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Mapear picking=saída, receiving=entrada, transfer=entrada/saída
 - [x] Testar relatório com dados reais (HMR aplicado com sucesso)
 - [x] Validar gráfico de movimentações ao longo do tempo
+
+
+## 🐛 BUG: SISTEMA NÃO REGISTRA MOVIMENTAÇÕES DE ENTRADA - 30/01/2026
+- [x] Investigar código de recebimento (receivingRouter.ts)
+- [x] Identificar que sistema estava incompleto (faltava execução de endereçamento)
+- [x] Implementar função executeAddressing em preallocation.ts
+- [x] Adicionar endpoint trpc.preallocation.execute no preallocationRouter
+- [x] Registrar movimentação tipo 'receiving' ao mover estoque de REC para endereço final
+- [x] Adicionar botão "Endereçar" na interface (Receiving.tsx)
+- [x] Criar testes automatizados (4/4 passando)
+- [x] Validar que movimentação aparece no relatório como "Entrada"

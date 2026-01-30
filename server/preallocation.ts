@@ -287,3 +287,191 @@ export async function deletePreallocations(receivingOrderId: number) {
     .delete(receivingPreallocations)
     .where(eq(receivingPreallocations.receivingOrderId, receivingOrderId));
 }
+
+/**
+ * Executa endereçamento: move estoque de REC para endereços finais
+ * e registra movimentações de entrada (receiving)
+ */
+export async function executeAddressing(
+  receivingOrderId: number,
+  userId: number
+): Promise<{ success: boolean; movedItems: number; message: string }> {
+  const dbConn = await getDb();
+  if (!dbConn) throw new Error("Database connection failed");
+
+  // Importar schemas necessários
+  const { inventory, inventoryMovements } = await import("../drizzle/schema");
+  const { eq, and, sql } = await import("drizzle-orm");
+
+  // 1. Buscar ordem de recebimento
+  const [order] = await dbConn
+    .select()
+    .from(receivingOrders)
+    .where(eq(receivingOrders.id, receivingOrderId))
+    .limit(1);
+
+  if (!order) {
+    throw new Error("Ordem de recebimento não encontrada");
+  }
+
+  if (order.status !== "addressing") {
+    throw new Error(`Ordem não está em status de endereçamento. Status atual: ${order.status}`);
+  }
+
+  // 2. Buscar pré-alocações pendentes
+  const preallocations = await dbConn
+    .select({
+      id: receivingPreallocations.id,
+      productId: receivingPreallocations.productId,
+      locationId: receivingPreallocations.locationId,
+      batch: receivingPreallocations.batch,
+      quantity: receivingPreallocations.quantity,
+      productSku: products.sku,
+      productDescription: products.description,
+      locationCode: warehouseLocations.code,
+    })
+    .from(receivingPreallocations)
+    .leftJoin(products, eq(receivingPreallocations.productId, products.id))
+    .leftJoin(warehouseLocations, eq(receivingPreallocations.locationId, warehouseLocations.id))
+    .where(
+      and(
+        eq(receivingPreallocations.receivingOrderId, receivingOrderId),
+        eq(receivingPreallocations.status, "pending")
+      )
+    );
+
+  if (preallocations.length === 0) {
+    throw new Error("Nenhuma pré-alocação pendente encontrada. Importe o arquivo de pré-alocação primeiro.");
+  }
+
+  // 3. Buscar endereço REC do tenant
+  const recLocations = await dbConn
+    .select()
+    .from(warehouseLocations)
+    .where(
+      and(
+        sql`${warehouseLocations.code} LIKE '%REC%'`,
+        sql`${warehouseLocations.tenantId} = ${order.tenantId}`
+      )
+    )
+    .limit(1);
+
+  if (recLocations.length === 0) {
+    throw new Error(`Endereço REC não encontrado para o cliente (tenantId=${order.tenantId})`);
+  }
+
+  const recLocationId = recLocations[0].id;
+  const recLocationCode = recLocations[0].code;
+  let movedItems = 0;
+
+  // 4. Para cada pré-alocação, mover estoque de REC para endereço final
+  for (const prealloc of preallocations) {
+    // 4.1. Buscar estoque no endereço REC
+    const [stockInRec] = await dbConn
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.productId, prealloc.productId),
+          eq(inventory.locationId, recLocationId),
+          prealloc.batch ? eq(inventory.batch, prealloc.batch) : sql`${inventory.batch} IS NULL`,
+          eq(inventory.status, "available")
+        )
+      )
+      .limit(1);
+
+    if (!stockInRec) {
+      console.warn(`[ENDEREÇAMENTO] Estoque não encontrado em REC para produto ${prealloc.productSku}, lote ${prealloc.batch}. Pulando...`);
+      continue;
+    }
+
+    if (stockInRec.quantity < prealloc.quantity) {
+      console.warn(`[ENDEREÇAMENTO] Estoque insuficiente em REC. Produto: ${prealloc.productSku}, Lote: ${prealloc.batch}, Disponível: ${stockInRec.quantity}, Necessário: ${prealloc.quantity}`);
+      // Continuar mesmo assim, movendo o que tem disponível
+    }
+
+    const quantityToMove = Math.min(stockInRec.quantity, prealloc.quantity);
+
+    // 4.2. Reduzir estoque no endereço REC
+    const newRecQuantity = stockInRec.quantity - quantityToMove;
+    
+    if (newRecQuantity > 0) {
+      await dbConn
+        .update(inventory)
+        .set({ quantity: newRecQuantity })
+        .where(eq(inventory.id, stockInRec.id));
+    } else {
+      // Se quantidade ficou zero, deletar registro
+      await dbConn
+        .delete(inventory)
+        .where(eq(inventory.id, stockInRec.id));
+    }
+
+    // 4.3. Verificar se já existe estoque no endereço final
+    const [existingStock] = await dbConn
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.productId, prealloc.productId),
+          eq(inventory.locationId, prealloc.locationId),
+          prealloc.batch ? eq(inventory.batch, prealloc.batch) : sql`${inventory.batch} IS NULL`,
+          eq(inventory.status, "available")
+        )
+      )
+      .limit(1);
+
+    if (existingStock) {
+      // Incrementar estoque existente
+      await dbConn
+        .update(inventory)
+        .set({ quantity: existingStock.quantity + quantityToMove })
+        .where(eq(inventory.id, existingStock.id));
+    } else {
+      // Criar novo registro de estoque
+      await dbConn.insert(inventory).values({
+        tenantId: order.tenantId,
+        productId: prealloc.productId,
+        locationId: prealloc.locationId,
+        batch: prealloc.batch,
+        expiryDate: stockInRec.expiryDate,
+        quantity: quantityToMove,
+        status: "available",
+      });
+    }
+
+    // 4.4. Registrar movimentação de ENTRADA (receiving)
+    await dbConn.insert(inventoryMovements).values({
+      tenantId: order.tenantId,
+      productId: prealloc.productId,
+      movementType: "receiving", // TIPO CORRETO: receiving = entrada
+      quantity: quantityToMove,
+      fromLocationId: recLocationId, // De: REC
+      toLocationId: prealloc.locationId, // Para: Endereço final
+      notes: `Endereçamento da ordem ${order.orderNumber} - ${prealloc.productDescription} (Lote: ${prealloc.batch})`,
+      performedBy: userId,
+      createdAt: new Date(),
+    });
+
+    // 4.5. Atualizar status da pré-alocação
+    await dbConn
+      .update(receivingPreallocations)
+      .set({ status: "allocated" })
+      .where(eq(receivingPreallocations.id, prealloc.id));
+
+    movedItems++;
+    console.log(`[ENDEREÇAMENTO] Movido ${quantityToMove} unidades de ${prealloc.productSku} (${prealloc.batch}) de ${recLocationCode} para ${prealloc.locationCode}`);
+  }
+
+  // 5. Atualizar status da ordem para "completed"
+  await dbConn
+    .update(receivingOrders)
+    .set({ status: "completed" })
+    .where(eq(receivingOrders.id, receivingOrderId));
+
+  return {
+    success: true,
+    movedItems,
+    message: `Endereçamento concluído com sucesso! ${movedItems} item(ns) movido(s) para endereços finais.`,
+  };
+}

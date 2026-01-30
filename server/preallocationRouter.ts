@@ -104,4 +104,22 @@ export const preallocationRouter = router({
       await deletePreallocations(input.receivingOrderId);
       return { success: true };
     }),
+
+  /**
+   * Executa endereçamento: move estoque de REC para endereços finais
+   * e registra movimentações de entrada
+   */
+  execute: protectedProcedure
+    .input(
+      z.object({
+        receivingOrderId: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { executeAddressing } = await import("./preallocation");
+      return await executeAddressing(
+        input.receivingOrderId,
+        ctx.user.id
+      );
+    }),
 });

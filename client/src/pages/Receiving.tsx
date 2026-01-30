@@ -98,6 +98,22 @@ export default function Receiving() {
     },
   });
 
+  const executeAddressingMutation = trpc.preallocation.execute.useMutation({
+    onSuccess: (result) => {
+      toast.success(result.message);
+      refetch();
+    },
+    onError: (error: any) => {
+      const message = error.message;
+      
+      if (message.includes("não tem permissão") || message.includes("FORBIDDEN")) {
+        businessError.showPermissionDenied("executar endereçamento");
+      } else {
+        businessError.showGenericError(message);
+      }
+    },
+  });
+
   const generateLabelMutation = trpc.receiving.generateLabel.useMutation({
     onSuccess: (data) => {
       // Abrir PDF em nova aba para impressão
@@ -259,6 +275,12 @@ export default function Receiving() {
       return;
     }
     scheduleMutation.mutate({ id: scheduleOrderId, scheduledDate });
+  };
+
+  const handleExecuteAddressing = (receivingOrderId: number) => {
+    if (confirm("Tem certeza que deseja executar o endereçamento? Isso moverá o estoque de REC para os endereços finais.")) {
+      executeAddressingMutation.mutate({ receivingOrderId });
+    }
   };
 
   const toggleSelectAll = () => {
@@ -429,6 +451,17 @@ export default function Receiving() {
                           <ClipboardCheck className="h-4 w-4 mr-1" />
                           Conferir
                         </Button>
+                        {order.status === "addressing" && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleExecuteAddressing(order.id)}
+                            className="flex-1 min-w-[100px]"
+                          >
+                            <Package className="h-4 w-4 mr-1" />
+                            Endereçar
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -538,6 +571,16 @@ export default function Receiving() {
                             >
                               <ClipboardCheck className="h-4 w-4 text-green-600" />
                             </Button>
+                            {order.status === "addressing" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleExecuteAddressing(order.id)}
+                                title="Executar endereçamento"
+                              >
+                                <Package className="h-4 w-4 text-indigo-600" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
