@@ -1896,3 +1896,34 @@ Ao cancelar um romaneio, o sistema:
 2. Criar romaneio com PED-0016 ✅
 3. Cancelar romaneio ✅ (NF restaurada para status 'linked', reservas liberadas)
 4. Criar novo romaneio ✅ (funciona corretamente)
+
+## 🐛 ISSUE: RESERVA AUTOMÁTICA NÃO FUNCIONOU AO CRIAR ROMANEIO - 30/01/2026 ✅ RESOLVIDO
+
+### Descrição
+Romaneio ROM-1769734935811 foi criado com sucesso, mas a reserva automática de estoque em EXP não foi executada.
+
+### Causa Raiz Identificada
+- [x] Query de busca de itens usava sintaxe incorreta: `sql.join()` em vez de `inArray()`
+- [x] Linha 563 em shippingRouter.ts causava falha silenciosa
+- [x] Nenhum item era encontrado, então nenhuma reserva era criada
+
+### Correção Aplicada
+- [x] Substituído `sql.join()` por `inArray(pickingOrderItems.pickingOrderId, input.orderIds)` (linha 562)
+- [x] Adicionados logs temporários para debug
+- [x] Testado com novo romaneio - 3 produtos reservados com sucesso
+- [x] Logs de debug removidos após confirmação
+
+### Resultado do Teste
+**Romaneio criado:** ROM-1769735948 (novo teste)
+**Reservas criadas:**
+- Produto 6 (SKU 834207): 1 unidade reservada
+- Produto 5 (SKU 4014609): 2 unidades reservadas
+- Produto 4 (SKU 443060): 3 unidades reservadas
+**Total:** 6 unidades reservadas automaticamente na zona EXP ✅
+
+### Logs do Servidor (Confirmação)
+```
+[RESERVA] Processando produto 6, quantidade: 1
+[RESERVA] Estoque EXP encontrado! Inventory ID: 390003, Disponível: 140, Reservando: 1
+[RESERVA] ✅ Reserva criada com sucesso para produto 6
+```

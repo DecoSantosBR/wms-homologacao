@@ -559,9 +559,7 @@ export const shippingRouter = router({
           quantity: pickingOrderItems.requestedQuantity,
         })
         .from(pickingOrderItems)
-        .where(
-          sql`${pickingOrderItems.pickingOrderId} IN (${sql.join(input.orderIds.map(id => sql`${id}`), sql`, `)})`
-        );
+        .where(inArray(pickingOrderItems.pickingOrderId, input.orderIds));
 
       // 2. Para cada item, localizar estoque na zona EXP e reservar
       for (const item of orderItems) {
@@ -590,7 +588,6 @@ export const shippingRouter = router({
         if (expStock.length > 0) {
           const stock = expStock[0];
           const quantityToReserve = Math.min(item.quantity, stock.availableQuantity);
-
           // Atualizar reservedQuantity
           await db
             .update(inventory)

@@ -1,0 +1,82 @@
+{
+  "query": "SELECT \n  i.id,\n  i.invoiceNumber,\n  i.status,\n  i.pickingOrderId,\n  po.customerOrderNumber,\n  po.shippingStatus\nFROM invoices i\nLEFT JOIN pickingOrders po ON po.id = i.pickingOrderId\nWHERE i.pickingOrderId IS NOT NULL\nORDER BY i.id DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  i.id,\n  i.invoiceNumber,\n  i.status,\n  i.pickingOrderId,\n  po.customerOrderNumber,\n  po.shippingStatus\nFROM invoices i\nLEFT JOIN pickingOrders po ON po.id = i.pickingOrderId\nWHERE i.pickingOrderId IS NOT NULL\nORDER BY i.id DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "210002",
+      "invoiceNumber": "1002",
+      "status": "linked",
+      "pickingOrderId": "450001",
+      "customerOrderNumber": "PED-0016",
+      "shippingStatus": "awaiting_invoice"
+    },
+    {
+      "id": "180001",
+      "invoiceNumber": "1001",
+      "status": "shipped",
+      "pickingOrderId": "420001",
+      "customerOrderNumber": "PED-0015",
+      "shippingStatus": "shipped"
+    },
+    {
+      "id": "150002",
+      "invoiceNumber": "1234",
+      "status": "shipped",
+      "pickingOrderId": "390002",
+      "customerOrderNumber": "PED-0014",
+      "shippingStatus": "shipped"
+    },
+    {
+      "id": "150001",
+      "invoiceNumber": "5555",
+      "status": "shipped",
+      "pickingOrderId": "390001",
+      "customerOrderNumber": "PED-0013",
+      "shippingStatus": "shipped"
+    },
+    {
+      "id": "120002",
+      "invoiceNumber": "4444",
+      "status": "shipped",
+      "pickingOrderId": "330004",
+      "customerOrderNumber": "PED-0012",
+      "shippingStatus": "shipped"
+    },
+    {
+      "id": "120001",
+      "invoiceNumber": "3333",
+      "status": "shipped",
+      "pickingOrderId": "330001",
+      "customerOrderNumber": "PED-0011",
+      "shippingStatus": "shipped"
+    },
+    {
+      "id": "90005",
+      "invoiceNumber": "2222",
+      "status": "in_manifest",
+      "pickingOrderId": "300001",
+      "customerOrderNumber": "NULL",
+      "shippingStatus": "NULL"
+    },
+    {
+      "id": "60001",
+      "invoiceNumber": "9999",
+      "status": "shipped",
+      "pickingOrderId": "270005",
+      "customerOrderNumber": "NULL",
+      "shippingStatus": "NULL"
+    },
+    {
+      "id": "30004",
+      "invoiceNumber": "8888",
+      "status": "shipped",
+      "pickingOrderId": "210005",
+      "customerOrderNumber": "NULL",
+      "shippingStatus": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tinvoiceNumber\tstatus\tpickingOrderId\tcustomerOrderNumber\tshippingStatus\n210002\t1002\tlinked\t450001\tPED-0016\tawaiting_invoice\n180001\t1001\tshipped\t420001\tPED-0015\tshipped\n150002\t1234\tshipped\t390002\tPED-0014\tshipped\n150001\t5555\tshipped\t390001\tPED-0013\tshipped\n120002\t4444\tshipped\t330004\tPED-0012\tshipped\n120001\t3333\tshipped\t330001\tPED-0011\tshipped\n90005\t2222\tin_manifest\t300001\tNULL\tNULL\n60001\t9999\tshipped\t270005\tNULL\tNULL\n30004\t8888\tshipped\t210005\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 344
+}
