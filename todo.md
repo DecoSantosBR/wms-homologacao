@@ -1847,3 +1847,52 @@ Ao gerar um romaneio (shipment manifest), o sistema deve:
 - [ ] Validar que reservas são liberadas ao cancelar romaneio
 
 **Nota:** Zona EXP existe no banco. Não há pedidos com status invoice_linked para teste imediato.
+
+## 🐛 BUG CRÍTICO: CANCELAMENTO DE ROMANEIO NÃO DESVINCULA NF - 30/01/2026 ✅ RESOLVIDO
+
+### Descrição do Problema
+Ao cancelar um romaneio, o sistema:
+- ✅ Libera o pedido (restaura shippingStatus)
+- ❌ **NÃO desvinculava a NF do romaneio cancelado**
+- ❌ **NÃO restaurava status da NF**
+- ❌ **NÃO liberava reservas de estoque em EXP**
+
+### Impacto
+- [x] Pedido não conseguia criar novo romaneio (erro: "Pedidos sem NF vinculada")
+- [x] NF ficava "presa" ao romaneio cancelado
+- [x] Estoque em EXP permanecia reservado indevidamente
+- [x] Usuário precisava intervenção manual no banco de dados
+
+### Correção Implementada
+- [x] Localizado procedure deleteMany (linhas 945-1059 em shippingRouter.ts)
+- [x] Adicionada lógica para restaurar status das NFs (UPDATE invoices SET status = 'linked')
+- [x] Implementada liberação de reservas em EXP (decrementar reservedQuantity)
+- [x] Mensagem de sucesso atualizada para indicar restauração
+- [x] Fluxo completo testável: criar → cancelar → recriar romaneio
+
+### Detalhes Técnicos
+**Arquivo:** server/shippingRouter.ts (linhas 995-1058)
+
+**Correções aplicadas:**
+1. **Restaurar status das NFs** (linhas 999-1005):
+   - UPDATE invoices SET status = 'linked' WHERE pickingOrderId IN (orderIds)
+   - Permite que NF seja usada em novo romaneio
+
+2. **Liberar reservas em EXP** (linhas 1007-1051):
+   - Buscar pickingOrderItems dos pedidos cancelados
+   - Para cada item: localizar inventory em zona EXP com reservedQuantity > 0
+   - Decrementar reservedQuantity = reservedQuantity - quantityToRelease
+   - Restaura disponibilidade do estoque
+
+3. **Mensagem aprimorada:**
+   - Antes: "X romaneio(s) excluído(s)"
+   - Depois: "X romaneio(s) cancelado(s). Y pedido(s) liberado(s). NFs e reservas restauradas."
+
+### Caso de Teste
+**Pedido:** PED-0016
+**NF:** 1002
+**Fluxo:**
+1. Vincular NF 1002 ao pedido PED-0016 ✅
+2. Criar romaneio com PED-0016 ✅
+3. Cancelar romaneio ✅ (NF restaurada para status 'linked', reservas liberadas)
+4. Criar novo romaneio ✅ (funciona corretamente)

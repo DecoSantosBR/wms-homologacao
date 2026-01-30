@@ -992,10 +992,69 @@ export const shippingRouter = router({
           .where(inArray(pickingOrders.id, orderIds));
       }
 
+      // ========================================================================
+      // CORREÇÃO: RESTAURAR STATUS DAS NFs E LIBERAR RESERVAS
+      // ========================================================================
+
+      // 1. Restaurar status das NFs vinculadas aos pedidos
+      if (orderIds.length > 0) {
+        await db
+          .update(invoices)
+          .set({ status: "linked" }) // Volta para status "linked" (vinculada ao pedido, mas não em romaneio)
+          .where(inArray(invoices.pickingOrderId, orderIds));
+      }
+
+      // 2. Liberar reservas de estoque em EXP
+      // Buscar itens dos pedidos para liberar reservas
+      if (orderIds.length > 0) {
+        const orderItems = await db
+          .select({
+            productId: pickingOrderItems.productId,
+            quantity: pickingOrderItems.requestedQuantity,
+          })
+          .from(pickingOrderItems)
+          .where(inArray(pickingOrderItems.pickingOrderId, orderIds));
+
+        // Para cada item, liberar reserva na zona EXP
+        for (const item of orderItems) {
+          // Buscar estoque reservado na zona EXP para este produto
+          const expStock = await db
+            .select({
+              inventoryId: inventory.id,
+              reservedQuantity: inventory.reservedQuantity,
+            })
+            .from(inventory)
+            .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+            .where(
+              and(
+                eq(inventory.productId, item.productId),
+                eq(warehouseZones.code, "EXP"),
+                sql`${inventory.reservedQuantity} > 0` // Tem reserva
+              )
+            )
+            .limit(1);
+
+          if (expStock.length > 0) {
+            const stock = expStock[0];
+            const quantityToRelease = Math.min(item.quantity, stock.reservedQuantity);
+
+            // Decrementar reservedQuantity
+            await db
+              .update(inventory)
+              .set({ 
+                reservedQuantity: sql`${inventory.reservedQuantity} - ${quantityToRelease}` 
+              })
+              .where(eq(inventory.id, stock.inventoryId));
+          }
+        }
+      }
+
       return {
         success: true,
         deletedCount: input.ids.length,
         releasedOrders: orderIds.length,
+        message: `${input.ids.length} romaneio(s) cancelado(s). ${orderIds.length} pedido(s) liberado(s). NFs e reservas restauradas.`,
       };
     }),
 });
