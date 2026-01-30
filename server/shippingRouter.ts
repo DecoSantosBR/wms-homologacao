@@ -850,6 +850,87 @@ export const shippingRouter = router({
       }
       // ===== FIM DA BAIXA DE ESTOQUE =====
 
+      // ===== LIBERAÇÃO DE RESERVAS NA ZONA EXP =====
+      // Após expedir, liberar reservas dos pedidos na zona EXP
+      console.log(`[EXPEDIÇÃO] Liberando reservas de ${orderIds.length} pedido(s)...`);
+      
+      for (const orderId of orderIds) {
+        // Buscar itens do pedido
+        const orderItems = await db
+          .select({
+            productId: pickingOrderItems.productId,
+            quantity: pickingOrderItems.requestedQuantity,
+            unit: pickingOrderItems.unit,
+          })
+          .from(pickingOrderItems)
+          .where(eq(pickingOrderItems.pickingOrderId, orderId));
+
+        // Para cada item, liberar reserva na zona EXP
+        for (const item of orderItems) {
+          // Buscar produto para obter unitsPerBox
+          const [product] = await db
+            .select({ unitsPerBox: products.unitsPerBox })
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          // Calcular quantidade em unidades
+          const quantityInUnits = item.unit === 'box' 
+            ? item.quantity * (product?.unitsPerBox || 1)
+            : item.quantity;
+
+          // Buscar estoque reservado na zona EXP para este produto
+          const expStock = await db
+            .select({
+              inventoryId: inventory.id,
+              reservedQuantity: inventory.reservedQuantity,
+            })
+            .from(inventory)
+            .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+            .where(
+              and(
+                eq(inventory.productId, item.productId),
+                eq(warehouseZones.code, "EXP"),
+                sql`${inventory.reservedQuantity} > 0` // Tem reserva
+              )
+            )
+            .limit(1);
+
+          if (expStock.length > 0) {
+            const stock = expStock[0];
+            const quantityToRelease = Math.min(quantityInUnits, stock.reservedQuantity);
+            
+            // VALIDAÇÃO PREVENTIVA: Garantir que liberação não resulte em reserva negativa
+            if (quantityToRelease <= 0) {
+              console.warn(`[EXPEDIÇÃO] Nenhuma reserva para liberar. Produto ${item.productId}, Reservado: ${stock.reservedQuantity}`);
+              continue; // Pular este item
+            }
+            
+            const newReservedQuantity = stock.reservedQuantity - quantityToRelease;
+            if (newReservedQuantity < 0) {
+              console.error(`[EXPEDIÇÃO] ERRO CRÍTICO: Tentativa de liberar mais do que está reservado!`);
+              console.error(`  Produto: ${item.productId}, Estoque ID: ${stock.inventoryId}`);
+              console.error(`  Reservado atualmente: ${stock.reservedQuantity}, Tentando liberar: ${quantityToRelease}`);
+              console.error(`  Nova reserva seria: ${newReservedQuantity} (NEGATIVO!)`);
+              throw new Error(`Erro de integridade: liberação resultaria em reserva negativa. Produto ${item.productId}`);
+            }
+            
+            // Decrementar reservedQuantity
+            await db
+              .update(inventory)
+              .set({ 
+                reservedQuantity: sql`${inventory.reservedQuantity} - ${quantityToRelease}` 
+              })
+              .where(eq(inventory.id, stock.inventoryId));
+            
+            console.log(`[EXPEDIÇÃO] Liberado ${quantityToRelease} unidades do produto ${item.productId} no estoque ${stock.inventoryId}`);
+          }
+        }
+      }
+      console.log(`[EXPEDIÇÃO] Reservas liberadas com sucesso!`);
+      // ===== FIM DA LIBERAÇÃO DE RESERVAS =====
+
       // Atualizar status do romaneio
       await db
         .update(shipmentManifests)

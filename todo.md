@@ -2040,3 +2040,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Atualizar função syncInventoryReservations para calcular unidades corretamente
 - [x] Criar testes automatizados para sincronização (3/3 passando)
 - [x] Validar que não restam reservas órfãs (0 encontradas)
+
+
+## 🚨 BUG CRÍTICO: EXPEDIÇÃO NÃO LIBERA RESERVAS - 30/01/2026
+- [x] Implementar liberação automática de reservas na expedição de romaneio (shippingRouter.ts linhas 853-932)
+- [x] Corrigir 4 reservas órfãs criadas por expedições recentes (580 unidades liberadas)
+- [x] Adicionar validações preventivas na liberação (impede reserva negativa)
+- [x] Logs detalhados: [EXPEDIÇÃO] para auditoria
+- [x] Validar que não restam reservas órfãs (0 encontradas)

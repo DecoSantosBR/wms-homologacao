@@ -1,0 +1,54 @@
+{
+  "query": "\n-- Detalhes das reservas órfãs\nSELECT \n  i.id as inventoryId,\n  p.sku,\n  p.description as productName,\n  i.batch,\n  wl.code as locationCode,\n  i.reservedQuantity,\n  COALESCE(active_reserves.totalReserved, 0) as reservasReaisAtivas,\n  (i.reservedQuantity - COALESCE(active_reserves.totalReserved, 0)) as reservaOrfa,\n  i.updatedAt as ultimaAtualizacao\nFROM inventory i\nINNER JOIN products p ON i.productId = p.id\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN (\n  SELECT \n    poi.productId,\n    poi.batch,\n    SUM(\n      CASE \n        WHEN poi.unit = 'box' THEN poi.requestedQuantity * COALESCE(p.unitsPerBox, 1)\n        ELSE poi.requestedQuantity\n      END\n    ) as totalReserved\n  FROM pickingOrderItems poi\n  INNER JOIN pickingOrders po ON poi.pickingOrderId = po.id\n  INNER JOIN products p ON poi.productId = p.id\n  WHERE po.status IN ('pending', 'in_progress', 'separated', 'in_wave')\n  GROUP BY poi.productId, poi.batch\n) active_reserves ON i.productId = active_reserves.productId \n  AND (i.batch = active_reserves.batch OR (i.batch IS NULL AND active_reserves.batch IS NULL))\nWHERE i.reservedQuantity > 0\n  AND i.reservedQuantity != COALESCE(active_reserves.totalReserved, 0)\nORDER BY i.updatedAt DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \n-- Detalhes das reservas órfãs\nSELECT \n  i.id as inventoryId,\n  p.sku,\n  p.description as productName,\n  i.batch,\n  wl.code as locationCode,\n  i.reservedQuantity,\n  COALESCE(active_reserves.totalReserved, 0) as reservasReaisAtivas,\n  (i.reservedQuantity - COALESCE(active_reserves.totalReserved, 0)) as reservaOrfa,\n  i.updatedAt as ultimaAtualizacao\nFROM inventory i\nINNER JOIN products p ON i.productId = p.id\nINNER JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN (\n  SELECT \n    poi.productId,\n    poi.batch,\n    SUM(\n      CASE \n        WHEN poi.unit = 'box' THEN poi.requestedQuantity * COALESCE(p.unitsPerBox, 1)\n        ELSE poi.requestedQuantity\n      END\n    ) as totalReserved\n  FROM pickingOrderItems poi\n  INNER JOIN pickingOrders po ON poi.pickingOrderId = po.id\n  INNER JOIN products p ON poi.productId = p.id\n  WHERE po.status IN ('pending', 'in_progress', 'separated', 'in_wave')\n  GROUP BY poi.productId, poi.batch\n) active_reserves ON i.productId = active_reserves.productId \n  AND (i.batch = active_reserves.batch OR (i.batch IS NULL AND active_reserves.batch IS NULL))\nWHERE i.reservedQuantity > 0\n  AND i.reservedQuantity != COALESCE(active_reserves.totalReserved, 0)\nORDER BY i.updatedAt DESC;\n",
+  "rows": [
+    {
+      "inventoryId": "420004",
+      "sku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "batch": "22D08LB108",
+      "locationCode": "H01-01-03",
+      "reservedQuantity": "80",
+      "reservasReaisAtivas": "0",
+      "reservaOrfa": "80",
+      "ultimaAtualizacao": "2026-01-30 08:47:55"
+    },
+    {
+      "inventoryId": "420005",
+      "sku": "834207",
+      "productName": "PERFUSOR SET 60 CM",
+      "batch": "22D08LA129",
+      "locationCode": "H01-01-05",
+      "reservedQuantity": "140",
+      "reservasReaisAtivas": "0",
+      "reservaOrfa": "140",
+      "ultimaAtualizacao": "2026-01-30 08:47:55"
+    },
+    {
+      "inventoryId": "270007",
+      "sku": "443060",
+      "productName": "EXTENSOFIX 60 CM",
+      "batch": "22D14LA124",
+      "locationCode": "H01-01-01",
+      "reservedQuantity": "280",
+      "reservasReaisAtivas": "0",
+      "reservaOrfa": "280",
+      "ultimaAtualizacao": "2026-01-30 08:47:54"
+    },
+    {
+      "inventoryId": "270008",
+      "sku": "401460P",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "batch": "22D08LB108",
+      "locationCode": "H01-01-02",
+      "reservedQuantity": "80",
+      "reservasReaisAtivas": "0",
+      "reservaOrfa": "80",
+      "ultimaAtualizacao": "2026-01-30 08:47:54"
+    }
+  ],
+  "messages": [],
+  "stdout": "inventoryId\tsku\tproductName\tbatch\tlocationCode\treservedQuantity\treservasReaisAtivas\treservaOrfa\tultimaAtualizacao\n420004\t401460P\tINTRAFIX PRIMELINE AIR\t22D08LB108\tH01-01-03\t80\t0\t80\t2026-01-30 08:47:55\n420005\t834207\tPERFUSOR SET 60 CM\t22D08LA129\tH01-01-05\t140\t0\t140\t2026-01-30 08:47:55\n270007\t443060\tEXTENSOFIX 60 CM\t22D14LA124\tH01-01-01\t280\t0\t280\t2026-01-30 08:47:54\n270008\t401460P\tINTRAFIX PRIMELINE AIR\t22D08LB108\tH01-01-02\t80\t0\t80\t2026-01-30 08:47:54\n",
+  "stderr": "",
+  "execution_time_ms": 343
+}
