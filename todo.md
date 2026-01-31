@@ -2067,3 +2067,28 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar botão "Endereçar" na interface (Receiving.tsx)
 - [x] Criar testes automatizados (4/4 passando)
 - [x] Validar que movimentação aparece no relatório como "Entrada"
+
+
+## 🌡️ INTEGRAÇÃO COM SENSOR BLUE - 30/01/2026
+- [ ] Pesquisar documentação da API Sensor Blue
+- [ ] Implementar cliente HTTP para API Sensor Blue (server/sensorBlue.ts)
+- [ ] Criar endpoint tRPC para buscar leituras de temperatura
+- [ ] Adicionar tabela temperatureReadings no schema para histórico
+- [ ] Criar dashboard de monitoramento de temperatura por zona
+- [ ] Implementar alertas visuais para temperaturas fora da faixa
+- [ ] Adicionar gráfico de evolução de temperatura ao longo do tempo
+- [ ] Configurar variáveis de ambiente (SENSOR_BLUE_API_KEY, SENSOR_BLUE_API_URL)
+- [ ] Testar integração com credenciais reais
+- [ ] Documentar processo de configuração
+
+
+## 📦 RECEBIMENTO FRACIONADO - CONFERÊNCIA CEGA - 30/01/2026
+- [x] Modificar BlindCheckModal para exibir campo editável de quantidade em unidades
+- [x] Adicionar campo "Quantidade Recebida (Unidades)" no diálogo de associação
+- [x] Pré-preencher campo com unitsPerBox do produto (caixa completa)
+- [x] Permitir usuário editar quantidade para registrar caixas incompletas (ex: 80 de 160)
+- [x] Atualizar backend (blindConferenceRouter.ts) para aceitar totalUnitsReceived
+- [x] Implementar lógica: actualUnitsReceived = totalUnitsReceived || unitsPerPackage
+- [x] Garantir que unitsPerBox do produto NÃO seja alterado (mantido no cadastro)
+- [x] Criar testes automatizados (4/4 passando)
+- [x] Validar que quantidade fracionada é registrada corretamente no inventory

@@ -168,6 +168,7 @@ export const blindConferenceRouter = router({
       batch: z.string().nullable(),
       expiryDate: z.string().nullable(),
       unitsPerPackage: z.number(),
+      totalUnitsReceived: z.number().optional(), // Quantidade fracionada recebida
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -191,6 +192,9 @@ export const blindConferenceRouter = router({
         throw new Error("Etiqueta já associada nesta sessão");
       }
 
+      // Usar totalUnitsReceived se fornecido, senão usar unitsPerPackage (caixa completa)
+      const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage;
+
       // Criar associação
       await db.insert(labelAssociations).values({
         sessionId: input.sessionId,
@@ -198,9 +202,9 @@ export const blindConferenceRouter = router({
         productId: input.productId,
         batch: input.batch,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        unitsPerPackage: input.unitsPerPackage,
+        unitsPerPackage: input.unitsPerPackage, // Mantém cadastro original
         packagesRead: 1, // Primeira leitura
-        totalUnits: input.unitsPerPackage,
+        totalUnits: actualUnitsReceived, // Usa quantidade fracionada se fornecida
         associatedBy: userId,
       });
 
@@ -223,7 +227,7 @@ export const blindConferenceRouter = router({
         associationId: associationId,
         labelCode: input.labelCode,
         readBy: userId,
-        unitsAdded: input.unitsPerPackage,
+        unitsAdded: actualUnitsReceived, // Usa quantidade fracionada
       });
 
       // Atualizar unitsPerBox no produto se não existir
@@ -244,7 +248,7 @@ export const blindConferenceRouter = router({
           unitsPerBox: input.unitsPerPackage,
         },
         packagesRead: 1,
-        totalUnits: input.unitsPerPackage,
+        totalUnits: actualUnitsReceived, // Retorna quantidade fracionada
       };
     }),
 

@@ -40,6 +40,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const [batch, setBatch] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [unitsPerPackage, setUnitsPerPackage] = useState<number>(1);
+  const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
@@ -51,12 +52,14 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     { enabled: !!selectedProductId }
   );
 
-  // Preencher unitsPerPackage automaticamente quando produto for selecionado
+  // Preencher unitsPerPackage e totalUnitsReceived automaticamente quando produto for selecionado
   useEffect(() => {
     if (selectedProduct?.unitsPerBox) {
       setUnitsPerPackage(selectedProduct.unitsPerBox);
+      setTotalUnitsReceived(selectedProduct.unitsPerBox); // Pré-preencher com 1 caixa completa
     } else {
       setUnitsPerPackage(1); // Valor padrão se não houver cadastrado
+      setTotalUnitsReceived(1);
     }
   }, [selectedProduct]);
 
@@ -146,6 +149,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       setBatch("");
       setExpiryDate("");
       setUnitsPerPackage(1);
+      setTotalUnitsReceived(0);
       setLabelCode("");
       
       // Retornar foco
@@ -247,7 +251,12 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     }
 
     if (unitsPerPackage < 1) {
-      toast.error("Unidades por embalagem deve ser maior que zero");
+      toast.error("Unidades por caixa deve ser maior que zero");
+      return;
+    }
+
+    if (totalUnitsReceived < 1) {
+      toast.error("Quantidade recebida deve ser maior que zero");
       return;
     }
 
@@ -258,6 +267,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       batch: batch || null,
       expiryDate: expiryDate || null,
       unitsPerPackage,
+      totalUnitsReceived, // Enviar quantidade fracionada
     });
   };
 
@@ -515,14 +525,35 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
             </div>
 
             <div>
-              <Label className="text-sm font-medium mb-2 block">Unidades por Embalagem *</Label>
+              <Label className="text-sm font-medium mb-2 block">Unidades por Caixa (Cadastro) *</Label>
               <Input
                 type="number"
                 min="1"
                 value={unitsPerPackage}
-                onChange={(e) => setUnitsPerPackage(Number(e.target.value))}
-                placeholder="Ex: 12"
+                onChange={(e) => {
+                  const newValue = Number(e.target.value);
+                  setUnitsPerPackage(newValue);
+                  setTotalUnitsReceived(newValue); // Atualizar quantidade recebida também
+                }}
+                placeholder="Ex: 160"
+                className="bg-gray-50"
               />
+              <p className="text-xs text-gray-500 mt-1">Quantidade padrão de unidades por caixa fechada</p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Quantidade Recebida (Unidades) *</Label>
+              <Input
+                type="number"
+                min="1"
+                value={totalUnitsReceived}
+                onChange={(e) => setTotalUnitsReceived(Number(e.target.value))}
+                placeholder="Ex: 80 (caixa incompleta)"
+                className="font-semibold text-lg"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Edite este valor para registrar caixas incompletas/fracionadas
+              </p>
             </div>
 
             <div className="flex gap-2 justify-end">
