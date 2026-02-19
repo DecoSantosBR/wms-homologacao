@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, Download, Printer, Star, Filter, BarChart3, Package, TruckIcon, Shield } from "lucide-react";
+import { FileText, Download, Printer, Star, Filter, BarChart3, Package, TruckIcon, Shield, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { exportToCSV, exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { StockByZoneChart } from "@/components/charts/StockByZoneChart";
@@ -223,11 +223,22 @@ export default function Reports() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
-          <p className="text-muted-foreground">
-            Análises e relatórios gerenciais do WMS
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
+            <p className="text-muted-foreground">
+              Análises e relatórios gerenciais do WMS
+            </p>
+          </div>
         </div>
       </div>
 

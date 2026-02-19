@@ -2092,3 +2092,8 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Garantir que unitsPerBox do produto NÃO seja alterado (mantido no cadastro)
 - [x] Criar testes automatizados (4/4 passando)
 - [x] Validar que quantidade fracionada é registrada corretamente no inventory
+
+
+## 🔙 BOTÃO VOLTAR NA PÁGINA DE RELATÓRIOS - 31/01/2026
+- [x] Adicionar botão "Voltar" no cabeçalho da página Reports
+- [x] Implementar navegação usando window.history.back()
