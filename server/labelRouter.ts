@@ -13,10 +13,11 @@ export const labelRouter = router({
   associateInPicking: protectedProcedure
     .input(z.object({
       labelCode: z.string(),
-      inventoryId: z.number(), // ID do registro de estoque sendo separado
+      productSku: z.string(),
+      batch: z.string().nullable(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { labelCode, inventoryId } = input;
+      const { labelCode, productSku, batch } = input;
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -35,63 +36,75 @@ export const labelRouter = router({
         });
       }
 
-      // 2. Buscar informações do estoque
-      const inventoryRecords = await db.select({
-        id: inventory.id,
-        productId: inventory.productId,
-        batch: inventory.batch,
-        expiryDate: inventory.expiryDate,
-        productSku: products.sku,
-        productName: products.description,
-      })
-        .from(inventory)
-        .innerJoin(products, eq(inventory.productId, products.id))
-        .where(eq(inventory.id, inventoryId))
+      // 2. Buscar produto pelo SKU
+      const productRecords = await db.select()
+        .from(products)
+        .where(eq(products.sku, productSku))
         .limit(1);
       
-      const inventoryRecord = inventoryRecords[0];
-
-      if (!inventoryRecord) {
+      const product = productRecords[0];
+      
+      if (!product) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Registro de estoque não encontrado",
+          message: `Produto ${productSku} não encontrado`,
         });
       }
 
-      // 3. Criar ou atualizar etiqueta
+      // 3. Buscar informações do estoque (se houver lote)
+      let expiryDate = null;
+      if (batch) {
+        const inventoryRecords = await db.select({
+          expiryDate: inventory.expiryDate,
+        })
+          .from(inventory)
+          .where(
+            and(
+              eq(inventory.productId, product.id),
+              eq(inventory.batch, batch)
+            )
+          )
+          .limit(1);
+        
+        if (inventoryRecords[0]) {
+          expiryDate = inventoryRecords[0].expiryDate;
+        }
+      }
+
+      // 4. Criar ou atualizar etiqueta
       if (existingLabel) {
         // Atualizar etiqueta existente
         await db.update(productLabels)
           .set({
-            productId: inventoryRecord.productId,
-            productSku: inventoryRecord.productSku,
-            batch: inventoryRecord.batch || "",
-            expiryDate: inventoryRecord.expiryDate,
+            productId: product.id,
+            productSku: product.sku,
+            batch: batch || "",
+            expiryDate: expiryDate,
           })
           .where(eq(productLabels.id, existingLabel.id));
       } else {
         // Criar nova etiqueta
         await db.insert(productLabels).values({
           labelCode: labelCode,
-          productId: inventoryRecord.productId,
-          productSku: inventoryRecord.productSku,
-          batch: inventoryRecord.batch || "",
-          expiryDate: inventoryRecord.expiryDate,
+          productId: product.id,
+          productSku: product.sku,
+          batch: batch || "",
+          expiryDate: expiryDate,
           createdBy: ctx.user.id,
         });
       }
 
-      console.log(`[PICKING] Etiqueta ${labelCode} associada ao produto ${inventoryRecord.productSku} (lote: ${inventoryRecord.batch})`);
+      console.log(`[PICKING] Etiqueta ${labelCode} associada ao produto ${product.sku} (lote: ${batch || 'sem lote'})`);
 
       return {
         success: true,
         message: "Etiqueta associada com sucesso",
         product: {
-          id: inventoryRecord.productId,
-          sku: inventoryRecord.productSku,
-          name: inventoryRecord.productName,
+          id: product.id,
+          sku: product.sku,
+          name: product.description,
         },
-        batch: inventoryRecord.batch,
+        batch: batch,
       };
     }),
 });

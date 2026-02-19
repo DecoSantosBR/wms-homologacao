@@ -2119,3 +2119,27 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar labelRouter ao appRouter (trpc.labels.associateInPicking)
 - [x] Implementar mutation no frontend com toast de sucesso/erro
 - [x] Avançar automaticamente para etapa de quantidade após associação
+
+
+## 📦 CADASTRO EM LOTE DE PRODUTOS - 31/01/2026
+- [x] Processar arquivo TSV com 48 produtos
+- [x] Validar dados (SKU, descrição, unidade de medida)
+- [x] Inserir produtos no banco de dados via SQL (INSERT com 48 registros)
+- [x] Validar cadastros realizados (48/48 produtos cadastrados com sucesso)
+
+
+## 📥 IMPORTAÇÃO DE ESTOQUE (INVENTORY) - 31/01/2026
+- [x] Processar arquivo Excel inventory_upload.xlsx (XML format)
+- [x] Validar estrutura e dados do arquivo (115 linhas)
+- [x] Mapear colunas para campos da tabela inventory
+- [x] Inserir registros no banco de dados via SQL (INSERT com 115 registros)
+- [x] Validar importação realizada (115/115 registros importados com sucesso)
+
+
+## 🏷️ ASSOCIAÇÃO AUTOMÁTICA NA SEPARAÇÃO DE ONDA - 31/01/2026
+- [x] Modificar PickingStepModal para aceitar qualquer etiqueta na 1ª bipagem sem labelCode
+- [x] Atualizar endpoint associateInPicking para aceitar productSku e batch (em vez de inventoryId)
+- [x] Criar associação automática em productLabels sem confirmação manual
+- [x] Remover diálogo de confirmação manual (showAssociationDialog)
+- [x] Prosseguir direto para etapa de quantidade após associação
+- [x] Toast informativo "Etiqueta associada automaticamente!"

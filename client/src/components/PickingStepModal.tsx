@@ -38,15 +38,11 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
   const [quantityInUnits, setQuantityInUnits] = useState<number>(1);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showAssociationDialog, setShowAssociationDialog] = useState(false);
-  const [pendingLabelCode, setPendingLabelCode] = useState<string | null>(null);
   
   // Mutation para associar etiqueta durante picking
   const associateLabelMutation = trpc.labels.associateInPicking.useMutation({
     onSuccess: () => {
-      toast.success("Etiqueta associada com sucesso!");
-      setShowAssociationDialog(false);
-      setPendingLabelCode(null);
+      toast.success("Etiqueta associada automaticamente!");
       setError(null);
       setCurrentStep(3); // Avançar para etapa de quantidade
     },
@@ -141,7 +137,7 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
       setError(null);
       setCurrentStep(3);
     } else {
-      // NÃO HÁ ETIQUETA VINCULADA: Abrir diálogo de associação
+      // NÃO HÁ ETIQUETA VINCULADA: Associar automaticamente
       // Validar que o SKU começa correto
       const skuLength = item.productSku.length;
       const scannedSku = scannedProduct.substring(0, skuLength);
@@ -151,9 +147,13 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
         return;
       }
       
-      // SKU correto, mas etiqueta não vinculada - solicitar associação
-      setPendingLabelCode(scannedProduct.trim());
-      setShowAssociationDialog(true);
+      // SKU correto, mas etiqueta não vinculada - associar automaticamente
+      toast.info("Associando etiqueta ao produto...");
+      associateLabelMutation.mutate({
+        labelCode: scannedProduct.trim(),
+        productSku: item.productSku,
+        batch: item.batch || null,
+      });
     }
   };
 
@@ -530,70 +530,7 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
         />
       )}
 
-      {/* Diálogo de Associação de Etiqueta */}
-      <Dialog open={showAssociationDialog} onOpenChange={setShowAssociationDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 text-primary" />
-              Associar Etiqueta
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                Esta etiqueta ainda não está vinculada a nenhum produto/lote.
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Etiqueta Lida</Label>
-              <Input value={pendingLabelCode || ""} disabled className="font-mono" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Input value={`${item.productSku} - ${item.productName}`} disabled />
-            </div>
-            
-            {item.batch && (
-              <div className="space-y-2">
-                <Label>Lote</Label>
-                <Input value={item.batch} disabled />
-              </div>
-            )}
-            
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowAssociationDialog(false);
-                  setPendingLabelCode(null);
-                  setScannedProduct("");
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (pendingLabelCode) {
-                    associateLabelMutation.mutate({
-                      labelCode: pendingLabelCode,
-                      inventoryId: item.id,
-                    });
-                  }
-                }}
-                disabled={associateLabelMutation.isPending}
-                className="bg-primary"
-              >
-                {associateLabelMutation.isPending ? "Associando..." : "Confirmar Associação"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
     </>
   );
 }
