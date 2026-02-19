@@ -2157,3 +2157,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Validar se vínculo existente corresponde ao produto/lote correto (isCorrectProduct && isCorrectBatch)
 - [x] Se correto: retornar sucesso e prosseguir (sem criar registro duplicado)
 - [x] Se incorreto: rejeitar com erro informativo detalhado
+
+
+## 🐛 BUG: VALIDAÇÃO NO ENDPOINT registerPickedItem REJEITANDO LOTE - 31/01/2026
+- [x] Localizar endpoint picking.registerPickedItem no waveRouter (linhas 212-223)
+- [x] Modificar validação para aceitar lote como etiqueta válida (isMatchingBatch || isMatchingSku)
+- [x] Atualizar mensagem de erro para incluir lote esperado
+- [x] Testar fluxo completo: associar → confirmar separação

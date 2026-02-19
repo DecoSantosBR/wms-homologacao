@@ -209,14 +209,15 @@ export const waveRouter = router({
             });
           }
         } else {
-          // Fallback: se não houver labelCode, validar pelo SKU (legado)
-          const skuLength = waveItem.productSku.length;
-          const scannedSku = input.scannedCode.substring(0, skuLength);
+          // Fallback: se não houver labelCode, validar pelo SKU OU lote
+          const scannedCode = input.scannedCode.trim();
+          const isMatchingBatch = waveItem.batch && scannedCode === waveItem.batch;
+          const isMatchingSku = scannedCode.startsWith(waveItem.productSku);
           
-          if (scannedSku !== waveItem.productSku) {
+          if (!isMatchingBatch && !isMatchingSku) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}, mas a etiqueta "${input.scannedCode}" não corresponde`,
+              message: `Produto/Lote incorreto! Esperado SKU: ${waveItem.productSku}${waveItem.batch ? ` ou Lote: ${waveItem.batch}` : ''}`,
             });
           }
         }
