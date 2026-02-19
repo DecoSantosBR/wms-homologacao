@@ -30,10 +30,30 @@ export const labelRouter = router({
       const existingLabel = existingLabels[0];
 
       if (existingLabel && existingLabel.productId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Etiqueta ${labelCode} já está vinculada ao produto ID ${existingLabel.productId}`,
-        });
+        // Verificar se a etiqueta já está vinculada ao produto/lote correto
+        const isCorrectProduct = existingLabel.productSku === productSku;
+        const isCorrectBatch = !batch || existingLabel.batch === batch;
+        
+        if (isCorrectProduct && isCorrectBatch) {
+          // Etiqueta já vinculada corretamente - retornar sucesso
+          console.log(`[PICKING] Etiqueta ${labelCode} já vinculada corretamente ao produto ${productSku}`);
+          return {
+            success: true,
+            message: "Etiqueta já vinculada corretamente",
+            product: {
+              id: existingLabel.productId,
+              sku: existingLabel.productSku,
+              name: "(produto já vinculado)",
+            },
+            batch: batch,
+          };
+        } else {
+          // Etiqueta vinculada a produto/lote diferente - erro
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Produto incorreto! Esperado SKU: ${productSku}, mas a etiqueta "${labelCode}" não corresponde`,
+          });
+        }
       }
 
       // 2. Buscar produto pelo SKU

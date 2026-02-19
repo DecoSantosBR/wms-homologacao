@@ -2150,3 +2150,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Validar se etiqueta corresponde ao lote OU ao SKU (isMatchingBatch || isMatchingSku)
 - [x] Atualizar mensagem de erro para incluir lote esperado
 - [x] Testar fluxo: separar item → escanear lote → aceitar e prosseguir
+
+
+## 🐛 BUG: ENDPOINT REJEITANDO ETIQUETA JÁ VINCULADA CORRETAMENTE - 31/01/2026
+- [x] Modificar labelRouter.associateInPicking para aceitar etiquetas já vinculadas
+- [x] Validar se vínculo existente corresponde ao produto/lote correto (isCorrectProduct && isCorrectBatch)
+- [x] Se correto: retornar sucesso e prosseguir (sem criar registro duplicado)
+- [x] Se incorreto: rejeitar com erro informativo detalhado
