@@ -2164,3 +2164,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Modificar validação para aceitar lote como etiqueta válida (isMatchingBatch || isMatchingSku)
 - [x] Atualizar mensagem de erro para incluir lote esperado
 - [x] Testar fluxo completo: associar → confirmar separação
+
+
+## 🐛 BUG: VALIDAÇÃO BUSCA ETIQUETA EM TABELA ERRADA - 31/01/2026
+- [x] Endpoint registerPickedItem busca etiqueta apenas em labelAssociations (conferência cega)
+- [x] Deveria buscar também em productLabels (associação automática no picking)
+- [x] Corrigir query para buscar em ambas as tabelas
+- [x] Priorizar productLabels (picking) sobre labelAssociations (recebimento)
