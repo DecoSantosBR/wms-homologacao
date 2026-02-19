@@ -2143,3 +2143,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Remover diálogo de confirmação manual (showAssociationDialog)
 - [x] Prosseguir direto para etapa de quantidade após associação
 - [x] Toast informativo "Etiqueta associada automaticamente!"
+
+
+## 🐛 BUG: VALIDAÇÃO DE ETIQUETA NO PICKING REJEITANDO LOTE - 31/01/2026
+- [x] Modificar validação em PickingStepModal para aceitar lote como etiqueta válida
+- [x] Validar se etiqueta corresponde ao lote OU ao SKU (isMatchingBatch || isMatchingSku)
+- [x] Atualizar mensagem de erro para incluir lote esperado
+- [x] Testar fluxo: separar item → escanear lote → aceitar e prosseguir

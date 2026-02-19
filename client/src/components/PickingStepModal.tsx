@@ -138,19 +138,21 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
       setCurrentStep(3);
     } else {
       // NÃO HÁ ETIQUETA VINCULADA: Associar automaticamente
-      // Validar que o SKU começa correto
-      const skuLength = item.productSku.length;
-      const scannedSku = scannedProduct.substring(0, skuLength);
+      const scannedCode = scannedProduct.trim();
       
-      if (scannedSku !== item.productSku) {
-        setError(`Produto incorreto! Esperado SKU: ${item.productSku}`);
+      // Validar se a etiqueta corresponde ao lote OU ao SKU
+      const isMatchingBatch = item.batch && scannedCode === item.batch;
+      const isMatchingSku = scannedCode.startsWith(item.productSku);
+      
+      if (!isMatchingBatch && !isMatchingSku) {
+        setError(`Produto/Lote incorreto! Esperado SKU: ${item.productSku}${item.batch ? ` ou Lote: ${item.batch}` : ''}`);
         return;
       }
       
-      // SKU correto, mas etiqueta não vinculada - associar automaticamente
+      // Válido - associar automaticamente
       toast.info("Associando etiqueta ao produto...");
       associateLabelMutation.mutate({
-        labelCode: scannedProduct.trim(),
+        labelCode: scannedCode,
         productSku: item.productSku,
         batch: item.batch || null,
       });
