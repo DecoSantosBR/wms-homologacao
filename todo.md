@@ -2097,3 +2097,25 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 ## 🔙 BOTÃO VOLTAR NA PÁGINA DE RELATÓRIOS - 31/01/2026
 - [x] Adicionar botão "Voltar" no cabeçalho da página Reports
 - [x] Implementar navegação usando window.history.back()
+
+
+## 🏷️ ASSOCIAÇÃO DE ETIQUETAS NÃO VINCULADAS NO PICKING - 31/01/2026
+- [ ] Analisar fluxo atual de picking (PickingModal.tsx)
+- [ ] Identificar onde ocorre leitura de etiqueta durante separação
+- [ ] Implementar detecção de etiqueta não vinculada
+- [ ] Criar diálogo de associação automática (similar à conferência cega)
+- [ ] Permitir operador confirmar produto/lote da etiqueta
+- [ ] Atualizar backend para aceitar associação durante picking
+- [ ] Testar fluxo: ler etiqueta não vinculada → associar → continuar separação
+- [ ] Validar que etiqueta fica vinculada permanentemente após associação
+
+
+## 🏷️ ASSOCIAÇÃO DE ETIQUETAS NO PICKING - 31/01/2026
+- [x] Analisar fluxo atual de picking (PickingStepModal.tsx)
+- [x] Detectar quando etiqueta lida não está vinculada (item.labelCode === null)
+- [x] Implementar diálogo de associação automática (Dialog com confirmação)
+- [x] Criar labelRouter.ts com endpoint associateInPicking
+- [x] Vincular etiqueta ao produto/lote do estoque sendo separado (productLabels)
+- [x] Adicionar labelRouter ao appRouter (trpc.labels.associateInPicking)
+- [x] Implementar mutation no frontend com toast de sucesso/erro
+- [x] Avançar automaticamente para etapa de quantidade após associação

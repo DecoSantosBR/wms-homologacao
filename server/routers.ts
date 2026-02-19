@@ -20,6 +20,7 @@ import { userRouter } from "./userRouter";
 import { roleRouter } from "./roleRouter";
 import { reportsRouter } from "./reportsRouter.js";
 import { maintenanceRouter } from "./maintenanceRouter";
+import { labelRouter } from "./labelRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -33,6 +34,7 @@ export const appRouter = router({
   roles: roleRouter,
   reports: reportsRouter,
   maintenance: maintenanceRouter,
+  labels: labelRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
