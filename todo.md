@@ -2171,3 +2171,15 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Deveria buscar também em productLabels (associação automática no picking)
 - [x] Corrigir query para buscar em ambas as tabelas
 - [x] Priorizar productLabels (picking) sobre labelAssociations (recebimento)
+
+
+## 🐛 BUG CRÍTICO: USAR APENAS labelAssociations - 31/01/2026
+- [x] Sistema está usando duas tabelas diferentes (labelAssociations e productLabels)
+- [x] Recebimento cria em labelAssociations, picking cria em productLabels
+- [x] Isso causa erro porque validação não encontra associação
+- [x] SOLUÇÃO: Usar APENAS labelAssociations em ambos os fluxos com sessões
+- [x] Modificar schema: sessionId de int para varchar (aceitar "R10002" e "P10002")
+- [x] Criar lógica de sessão de picking (prefixo "P" + número sequencial)
+- [x] Modificar labelRouter.associateInPicking para criar em labelAssociations
+- [x] Remover busca em productLabels do waveRouter.registerPickedItem
+- [x] Manter apenas labelAssociations como fonte única de verdade

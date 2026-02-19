@@ -660,7 +660,7 @@ export const blindConferenceSessions = mysqlTable("blindConferenceSessions", {
 // Associações de etiquetas a produtos/lotes
 export const labelAssociations = mysqlTable("labelAssociations", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: int("sessionId").notNull(),
+  sessionId: varchar("sessionId", { length: 20 }).notNull(), // "R10002" (recebimento) ou "P10002" (picking)
   labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta lida
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 100 }),
@@ -678,7 +678,7 @@ export const labelAssociations = mysqlTable("labelAssociations", {
 // Histórico de leituras de etiquetas
 export const labelReadings = mysqlTable("labelReadings", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: int("sessionId").notNull(),
+  sessionId: varchar("sessionId", { length: 20 }).notNull(), // "R10002" ou "P10002"
   associationId: int("associationId").notNull(),
   labelCode: varchar("labelCode", { length: 100 }).notNull(),
   readBy: int("readBy").notNull(), // userId

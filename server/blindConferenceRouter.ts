@@ -99,11 +99,12 @@ export const blindConferenceRouter = router({
       if (!userId) throw new Error("User not authenticated");
 
       // Buscar associação existente
+      const sessionIdStr = `R${input.sessionId}`;
       const existingAssociation = await db.select()
         .from(labelAssociations)
         .where(
           and(
-            eq(labelAssociations.sessionId, input.sessionId),
+            eq(labelAssociations.sessionId, sessionIdStr),
             eq(labelAssociations.labelCode, input.labelCode)
           )
         )
@@ -132,7 +133,7 @@ export const blindConferenceRouter = router({
 
       // Registrar leitura
       await db.insert(labelReadings).values({
-        sessionId: input.sessionId,
+        sessionId: sessionIdStr,
         associationId: association.id,
         labelCode: input.labelCode,
         readBy: userId,
@@ -177,12 +178,15 @@ export const blindConferenceRouter = router({
       const userId = ctx.user?.id;
       if (!userId) throw new Error("User not authenticated");
 
+      // Converter sessionId para string com prefixo "R" (recebimento)
+      const sessionIdStr = `R${input.sessionId}`;
+
       // Verificar se etiqueta já foi associada nesta sessão
       const existingAssociation = await db.select()
         .from(labelAssociations)
         .where(
           and(
-            eq(labelAssociations.sessionId, input.sessionId),
+            eq(labelAssociations.sessionId, sessionIdStr),
             eq(labelAssociations.labelCode, input.labelCode)
           )
         )
@@ -197,7 +201,7 @@ export const blindConferenceRouter = router({
 
       // Criar associação
       await db.insert(labelAssociations).values({
-        sessionId: input.sessionId,
+        sessionId: sessionIdStr,
         labelCode: input.labelCode,
         productId: input.productId,
         batch: input.batch,
@@ -213,7 +217,7 @@ export const blindConferenceRouter = router({
         .from(labelAssociations)
         .where(
           and(
-            eq(labelAssociations.sessionId, input.sessionId),
+            eq(labelAssociations.sessionId, sessionIdStr),
             eq(labelAssociations.labelCode, input.labelCode)
           )
         )
@@ -223,7 +227,7 @@ export const blindConferenceRouter = router({
 
       // Registrar primeira leitura
       await db.insert(labelReadings).values({
-        sessionId: input.sessionId,
+        sessionId: sessionIdStr,
         associationId: associationId,
         labelCode: input.labelCode,
         readBy: userId,
@@ -264,9 +268,10 @@ export const blindConferenceRouter = router({
       if (!db) throw new Error("Database not available");
 
       // Buscar última leitura
+      const sessionIdStr = `R${input.sessionId}`;
       const lastReading = await db.select()
         .from(labelReadings)
-        .where(eq(labelReadings.sessionId, input.sessionId))
+        .where(eq(labelReadings.sessionId, sessionIdStr))
         .orderBy(desc(labelReadings.readAt))
         .limit(1);
 
@@ -400,6 +405,7 @@ export const blindConferenceRouter = router({
       }
 
       // Buscar associações com produtos
+      const sessionIdStr = `R${input.sessionId}`;
       const associations = await db.select({
         id: labelAssociations.id,
         labelCode: labelAssociations.labelCode,
@@ -413,7 +419,7 @@ export const blindConferenceRouter = router({
       })
         .from(labelAssociations)
         .innerJoin(products, eq(labelAssociations.productId, products.id))
-        .where(eq(labelAssociations.sessionId, input.sessionId));
+        .where(eq(labelAssociations.sessionId, sessionIdStr));
 
       // Buscar itens esperados da ordem
       const expectedItems = await db.select({
@@ -485,9 +491,10 @@ export const blindConferenceRouter = router({
       }
 
       // Buscar associações
+      const sessionIdStr = `R${input.sessionId}`;
       const associations = await db.select()
         .from(labelAssociations)
-        .where(eq(labelAssociations.sessionId, input.sessionId));
+        .where(eq(labelAssociations.sessionId, sessionIdStr));
 
       // Buscar endereço REC do cliente correto (mesmo tenantId da sessão)
       const sessionTenantId = session[0].tenantId;

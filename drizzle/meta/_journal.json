@@ -225,6 +225,13 @@
       "when": 1769721500963,
       "tag": "0031_aspiring_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1771541342479,
+      "tag": "0032_gigantic_carmella_unuscione",
+      "breakpoints": true
     }
   ]
 }

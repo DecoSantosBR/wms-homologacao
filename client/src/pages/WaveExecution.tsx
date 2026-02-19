@@ -648,6 +648,7 @@ export default function WaveExecution() {
       {isPickingModalOpen && selectedItem && (
         <PickingStepModal
           isOpen={isPickingModalOpen}
+          waveId={waveId}
           onClose={() => {
             setIsPickingModalOpen(false);
             setSelectedItem(null);

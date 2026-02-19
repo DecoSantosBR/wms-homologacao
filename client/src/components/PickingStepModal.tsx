@@ -14,6 +14,7 @@ interface PickingStepModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (data: { locationCode: string; productCode: string; quantity: number }) => void;
+  waveId: number; // ID da onda de picking
   item: {
     id: number;
     productName: string;
@@ -29,7 +30,7 @@ interface PickingStepModalProps {
 
 type Step = 1 | 2 | 3;
 
-export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingStepModalProps) {
+export function PickingStepModal({ isOpen, onClose, onComplete, waveId, item }: PickingStepModalProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [scannedLocation, setScannedLocation] = useState("");
   const [scannedProduct, setScannedProduct] = useState("");
@@ -155,6 +156,7 @@ export function PickingStepModal({ isOpen, onClose, onComplete, item }: PickingS
         labelCode: scannedCode,
         productSku: item.productSku,
         batch: item.batch || null,
+        waveId: waveId,
       });
     }
   };

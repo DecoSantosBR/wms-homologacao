@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, productLabels } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { generateWaveDocument } from "./waveDocument";
@@ -188,21 +188,9 @@ export const waveRouter = router({
 
       // 2. Validar que o código escaneado corresponde à etiqueta armazenada
       if (waveItem.batch) {
-        // Buscar etiqueta associada ao produto/lote
-        // Prioridade 1: productLabels (associação automática no picking)
-        const [productLabel] = await db
-          .select({ labelCode: productLabels.labelCode })
-          .from(productLabels)
-          .where(
-            and(
-              eq(productLabels.productId, waveItem.productId),
-              eq(productLabels.batch, waveItem.batch)
-            )
-          )
-          .limit(1);
-
-        // Prioridade 2: labelAssociations (conferência cega no recebimento)
-        const [labelAssociation] = await db
+        // Buscar etiqueta associada ao produto/lote em labelAssociations
+        // (tanto recebimento "R..." quanto picking "P...")
+        const [labelRecord] = await db
           .select({ labelCode: labelAssociations.labelCode })
           .from(labelAssociations)
           .where(
@@ -212,8 +200,6 @@ export const waveRouter = router({
             )
           )
           .limit(1);
-
-        const labelRecord = productLabel || labelAssociation;
 
         if (labelRecord) {
           // Se há labelCode armazenado, comparar diretamente
