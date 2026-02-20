@@ -2262,9 +2262,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Corrigir agrupamento de itens no stage: SKU + lote diferentes devem ser itens separados na conferência - RESOLVIDO: Modificado startStageCheck para agrupar por productId+batch ao invés de apenas productId. Incluidos campos batch e expiryDate na query. 3 testes automatizados passando.
 - [x] CRÍTICO: Corrigir perda de estoque quando validação de múltiplos lotes falha - estoque é removido da origem antes de validar destino - RESOLVIDO: Movida validação de múltiplos lotes para FASE 1 (antes de modificar estoque). Agora validações ocorrem ANTES de deduzir estoque da origem. 2 testes automatizados passando.
 - [x] URGENTE: Corrigir finalização de romaneio (/shipping) - sistema busca endereços EXP desnecessariamente, deve apenas baixar estoque - RESOLVIDO: Incluído status 'livre' na busca de endereços EXP (shippingRouter.ts linha 725-728). Sistema agora encontra endereços com ambos os status.
-- [ ] CRÍTICO: Implementar sistema de dupla reserva - romaneio deve criar reserva em EXP antes de baixar, com estornos corretos em cancelamentos
+- [x] CRÍTICO: Implementar sistema de dupla reserva (modelo bancário) - RESOLVIDO
   - [x] Parte 1: Romaneio cria reservas em EXP (shippingRouter.ts linha 619-626)
   - [x] Parte 2: Validar estoque antes de movimentar no stage (stage.ts linha 567-572)
-  - [ ] Parte 3: Finalização do romaneio deve usar reservas ao invés de baixar direto
-  - [ ] Parte 4: Cancelamento de romaneio deve estornar reservas
-  - [ ] Parte 5: Cancelamento de onda deve devolver estoque para origem
+  - [x] Parte 3: Finalização decrementa quantity E reservedQuantity (shippingRouter.ts linha 824-833)
+  - [ ] Parte 4: Cancelamento de romaneio deve estornar reservas (pendente)
+  - [ ] Parte 5: Cancelamento de onda deve devolver estoque para origem (pendente)

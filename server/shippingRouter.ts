@@ -821,12 +821,16 @@ export const shippingRouter = router({
 
             // Subtrair do estoque de expedição (baixa)
             const newQuantity = inv.quantity - quantityToShip;
+            const newReservedQuantity = Math.max(0, inv.reservedQuantity - quantityToShip);
             
             if (newQuantity > 0) {
-              // Atualizar quantidade
+              // Atualizar quantidade E reservedQuantity (modelo bancário: saque do cofre)
               await db
                 .update(inventory)
-                .set({ quantity: newQuantity })
+                .set({ 
+                  quantity: newQuantity,
+                  reservedQuantity: newReservedQuantity 
+                })
                 .where(eq(inventory.id, inv.id));
             } else {
               // Remover registro se quantidade zerou
