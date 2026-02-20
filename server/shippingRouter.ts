@@ -24,7 +24,7 @@ import {
 import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 export const shippingRouter = router({
   // ============================================================================
@@ -722,7 +722,10 @@ export const shippingRouter = router({
               and(
                 sql`${warehouseLocations.code} LIKE 'EXP%'`,
                 eq(warehouseLocations.tenantId, pickingOrder.tenantId),
-                eq(warehouseLocations.status, 'available')
+                or(
+                  eq(warehouseLocations.status, 'available'),
+                  eq(warehouseLocations.status, 'livre')
+                )
               )
             )
             .limit(1);
