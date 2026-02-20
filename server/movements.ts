@@ -140,6 +140,19 @@ export async function registerMovement(input: RegisterMovementInput) {
         }
       }
     }
+
+    // ✅ VALIDAÇÃO DE MÚTIPLOS LOTES (MOVIDA PARA FASE 1)
+    // Verificar se endereço pode receber este lote (zonas especiais vs storage)
+    const { validateLocationForBatch } = await import("./locationValidation");
+    const validation = await validateLocationForBatch(
+      input.toLocationId,
+      input.productId,
+      input.batch || null
+    );
+
+    if (!validation.allowed) {
+      throw new Error(validation.reason || "Endereço não pode receber este lote");
+    }
   }
 
   // FASE 2: MODIFICAR DADOS (somente se validações passarem)
@@ -197,19 +210,7 @@ export async function registerMovement(input: RegisterMovementInput) {
         })
         .where(eq(inventory.id, toInventory[0].id));
     } else {
-      // ✅ VALIDAÇÃO: Verificar se endereço pode receber este lote
-      const { validateLocationForBatch } = await import("./locationValidation");
-      const validation = await validateLocationForBatch(
-        input.toLocationId,
-        input.productId,
-        input.batch || null
-      );
-
-      if (!validation.allowed) {
-        throw new Error(validation.reason || "Endereço não pode receber este lote");
-      }
-
-      // Criar novo registro
+      // Criar novo registro (validação já foi feita na FASE 1)
       await dbConn.insert(inventory).values({
         productId: input.productId,
         locationId: input.toLocationId,
