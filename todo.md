@@ -2248,3 +2248,4 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 ## Bug Corrigido - 20/02/2026
 
 - [x] Corrigir lógica de endereçamento automático no recebimento e picking para incluir endereços "livre" além de "available" - RESOLVIDO: modificadas funções de busca de endereços REC (blindConferenceRouter.ts) e EXP (stage.ts) para aceitar status 'available' OR 'livre'. Criados 5 testes automatizados validando a correção (todos passando).
+- [x] Corrigir etiquetas de volumes para exibir customerName (destinatário) e tenant name (cliente) ao invés de "N/A" - RESOLVIDO: modificado picking.getById para incluir clientName via JOIN com tenants. Frontend atualizado com lógica de fallback para valores null. 4 testes automatizados passando.

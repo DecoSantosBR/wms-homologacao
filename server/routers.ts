@@ -1926,16 +1926,56 @@ export const appRouter = router({
         let order;
         if (ctx.user.role === "admin") {
           const [result] = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              tenantId: pickingOrders.tenantId,
+              clientName: tenants.name, // Nome do cliente (tenant)
+              orderNumber: pickingOrders.orderNumber,
+              customerOrderNumber: pickingOrders.customerOrderNumber,
+              customerName: pickingOrders.customerName,
+              priority: pickingOrders.priority,
+              status: pickingOrders.status,
+              totalItems: pickingOrders.totalItems,
+              totalQuantity: pickingOrders.totalQuantity,
+              scheduledDate: pickingOrders.scheduledDate,
+              createdAt: pickingOrders.createdAt,
+              createdBy: pickingOrders.createdBy,
+              assignedTo: pickingOrders.assignedTo,
+              pickedBy: pickingOrders.pickedBy,
+              pickedAt: pickingOrders.pickedAt,
+              nfeNumber: pickingOrders.nfeNumber,
+              nfeKey: pickingOrders.nfeKey,
+            })
             .from(pickingOrders)
+            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
             .where(eq(pickingOrders.id, input.id))
             .limit(1);
           order = result;
         } else {
           const tenantId = ctx.user.tenantId!;
           const [result] = await db
-            .select()
+            .select({
+              id: pickingOrders.id,
+              tenantId: pickingOrders.tenantId,
+              clientName: tenants.name, // Nome do cliente (tenant)
+              orderNumber: pickingOrders.orderNumber,
+              customerOrderNumber: pickingOrders.customerOrderNumber,
+              customerName: pickingOrders.customerName,
+              priority: pickingOrders.priority,
+              status: pickingOrders.status,
+              totalItems: pickingOrders.totalItems,
+              totalQuantity: pickingOrders.totalQuantity,
+              scheduledDate: pickingOrders.scheduledDate,
+              createdAt: pickingOrders.createdAt,
+              createdBy: pickingOrders.createdBy,
+              assignedTo: pickingOrders.assignedTo,
+              pickedBy: pickingOrders.pickedBy,
+              pickedAt: pickingOrders.pickedAt,
+              nfeNumber: pickingOrders.nfeNumber,
+              nfeKey: pickingOrders.nfeKey,
+            })
             .from(pickingOrders)
+            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
             .where(
               and(
                 eq(pickingOrders.id, input.id),

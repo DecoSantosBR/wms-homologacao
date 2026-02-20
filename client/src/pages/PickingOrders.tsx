@@ -171,10 +171,22 @@ export default function PickingOrders() {
     }
 
     try {
+      // Buscar dados completos do pedido se customerName ou clientName estiverem faltando
+      let customerName = reprintOrder.customerName;
+      let tenantName = reprintOrder.clientName;
+
+      // Se customerName ou tenantName estiverem faltando, usar valores padrão informativos
+      if (!customerName) {
+        customerName = "Destinatário não informado";
+      }
+      if (!tenantName) {
+        tenantName = "Cliente não identificado";
+      }
+
       const result = await generateLabelsMutation.mutateAsync({
         customerOrderNumber: reprintOrder.customerOrderNumber,
-        customerName: reprintOrder.customerName || "N/A",
-        tenantName: reprintOrder.clientName || "N/A",
+        customerName: customerName || "N/A",
+        tenantName: tenantName || "N/A",
         totalVolumes: qty,
       });
 
