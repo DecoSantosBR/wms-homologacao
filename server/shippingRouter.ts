@@ -616,10 +616,21 @@ export const shippingRouter = router({
             })
             .where(eq(inventory.id, stock.inventoryId));
           
-          console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do produto ${item.productId} no estoque ${stock.inventoryId}`);
+          // Registrar reserva na tabela pickingReservations
+          // Usar primeiro pedido do romaneio como referência (simplificado)
+          await db.insert(pickingReservations).values({
+            pickingOrderId: input.orderIds[0],
+            productId: item.productId,
+            inventoryId: stock.inventoryId,
+            quantity: quantityToReserve,
+          });
+          
+          console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do produto ${item.productId} no estoque ${stock.inventoryId} para romaneio ${manifestId}`);
         }
       }
 
+      console.log(`[ROMANEIO] Romaneio ${manifestId} criado com ${input.orderIds.length} pedido(s). Reservas criadas em EXP.`);
+      
       return { 
         success: true, 
         manifestId,

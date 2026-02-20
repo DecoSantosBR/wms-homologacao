@@ -563,6 +563,14 @@ export async function completeStageCheck(params: {
 
       if (!sourceInventory) continue;
 
+      // Validar se há estoque suficiente
+      if (sourceInventory.quantity < quantityToShip) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Estoque insuficiente no endereço ${sourceInventory.locationId} para o produto ${item.productSku}. Disponível: ${sourceInventory.quantity}, Necessário: ${quantityToShip}. Isso indica inconsistência entre reservas e estoque real.`,
+        });
+      }
+
       // Subtrair do estoque origem
       await dbConn
         .update(inventory)
