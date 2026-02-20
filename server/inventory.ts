@@ -116,6 +116,22 @@ export async function getInventoryPositions(
 
   if (includeEmpty) {
     // LEFT JOIN: inclui endereços sem inventory
+    // Quando filtro é APENAS "livre", não filtrar por quantidade no JOIN
+    const onlyFreeFilter = statusArray.length === 1 && statusArray[0] === "livre";
+    
+    const inventoryJoinConditions = [
+      eq(inventory.locationId, warehouseLocations.id),
+    ];
+    
+    // Adicionar filtro de quantidade apenas se não for filtro exclusivo de "livre"
+    if (!onlyFreeFilter) {
+      inventoryJoinConditions.push(gt(inventory.quantity, 0));
+      // Adicionar outras condições de inventory
+      inventoryJoinConditions.push(
+        ...inventoryConditions.filter(c => c.toString() !== gt(inventory.quantity, 0).toString())
+      );
+    }
+    
     const results = await dbConn
       .select({
         id: inventory.id,
@@ -140,11 +156,7 @@ export async function getInventoryPositions(
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
       .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
-      .leftJoin(inventory, and(
-        eq(inventory.locationId, warehouseLocations.id),
-        gt(inventory.quantity, 0),
-        ...(inventoryConditions.filter(c => c.toString() !== gt(inventory.quantity, 0).toString()))
-      ))
+      .leftJoin(inventory, and(...inventoryJoinConditions))
       .leftJoin(products, eq(inventory.productId, products.id))
       .where(locationConditions.length > 0 ? and(...locationConditions) : undefined)
       .orderBy(warehouseLocations.code)

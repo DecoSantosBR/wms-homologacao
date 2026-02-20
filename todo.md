@@ -2223,3 +2223,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Atualizar contadores do dashboard para refletir filtros selecionados
 - [x] Garantir que exportação Excel inclui endereços vazios quando filtrados
 - [x] Testar combinações de filtros (Livre+Disponível, Ocupado+Bloqueado, etc.)
+
+
+## 🐛 BUG: FILTRO "LIVRE" NÃO RETORNA ENDEREÇOS VAZIOS - 31/01/2026
+- [x] Filtro de status "Livre" sozinho retorna 0 posições
+- [x] Filtro "Livre" + "Disponível" retorna corretamente (107 posições incluindo livres)
+- [x] Problema: condição WHERE está filtrando endereços vazios incorretamente
+- [x] Corrigir lógica de LEFT JOIN e WHERE para incluir endereços sem inventory quando filtro é apenas "livre"
