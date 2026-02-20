@@ -1,4 +1,4 @@
-import { eq, and, like, isNull, sql, gte, lte, gt } from "drizzle-orm";
+import { eq, and, or, gt, gte, lte, like, isNull, sql, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { getDb } from "./db";
 import {
@@ -17,7 +17,7 @@ export interface InventoryFilters {
   locationId?: number;
   zoneId?: number;
   batch?: string;
-  status?: "available" | "quarantine" | "blocked" | "damaged" | "expired";
+  status?: "livre" | "available" | "occupied" | "blocked" | "counting" | ("livre" | "available" | "occupied" | "blocked" | "counting")[];
   minQuantity?: number;
   search?: string;
   locationCode?: string;
@@ -53,83 +53,138 @@ export async function getInventoryPositions(
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
 
-  const conditions = [];
+  const locationConditions = [];
+  const inventoryConditions = [];
 
-  // Filtro por tenant (usar inventory.tenantId em vez de location.tenantId)
+  // Normalizar status para array
+  const statusArray = filters.status 
+    ? (Array.isArray(filters.status) ? filters.status : [filters.status])
+    : [];
+
+  // Filtro por tenant do endereço
   if (filters.tenantId !== undefined) {
     if (filters.tenantId === null) {
-      conditions.push(isNull(inventory.tenantId));
+      locationConditions.push(isNull(warehouseLocations.tenantId));
     } else {
-      conditions.push(eq(inventory.tenantId, filters.tenantId));
+      locationConditions.push(eq(warehouseLocations.tenantId, filters.tenantId));
     }
   }
 
-  // Filtrar apenas posições com quantidade > 0 (ocultar registros zerados)
-  conditions.push(gt(inventory.quantity, 0));
+  // Filtro por zona
+  if (filters.zoneId) {
+    locationConditions.push(eq(warehouseLocations.zoneId, filters.zoneId));
+  }
 
-  // Filtros adicionais
+  // Filtro por código de endereço
+  if (filters.locationCode) {
+    locationConditions.push(like(warehouseLocations.code, `%${filters.locationCode}%`));
+  }
+
+  // Filtro por status de endereço
+  if (statusArray.length > 0) {
+    locationConditions.push(inArray(warehouseLocations.status, statusArray as any));
+  }
+
+  // Filtros de inventory (apenas quando há produtos)
   if (filters.productId) {
-    conditions.push(eq(inventory.productId, filters.productId));
+    inventoryConditions.push(eq(inventory.productId, filters.productId));
   }
   if (filters.locationId) {
-    conditions.push(eq(inventory.locationId, filters.locationId));
-  }
-  if (filters.zoneId) {
-    conditions.push(eq(warehouseLocations.zoneId, filters.zoneId));
+    inventoryConditions.push(eq(inventory.locationId, filters.locationId));
   }
   if (filters.batch) {
-    conditions.push(like(inventory.batch, `%${filters.batch}%`));
-  }
-  if (filters.status) {
-    conditions.push(eq(inventory.status, filters.status));
+    inventoryConditions.push(like(inventory.batch, `%${filters.batch}%`));
   }
   if (filters.minQuantity !== undefined) {
-    conditions.push(gte(inventory.quantity, filters.minQuantity));
-  }
-  if (filters.locationCode) {
-    conditions.push(like(warehouseLocations.code, `%${filters.locationCode}%`));
+    inventoryConditions.push(gte(inventory.quantity, filters.minQuantity));
   }
 
-  // Busca geral (SKU ou descrição)
+  // Filtrar apenas posições com quantidade > 0
+  inventoryConditions.push(gt(inventory.quantity, 0));
+
+  // Busca geral (SKU ou descrição) - apenas quando há produtos
   if (filters.search) {
-    conditions.push(
+    inventoryConditions.push(
       sql`(${products.sku} LIKE ${`%${filters.search}%`} OR ${products.description} LIKE ${`%${filters.search}%`})`
     );
   }
 
   const locationTenant = alias(tenants, "locationTenant");
 
-  const results = await dbConn
-    .select({
-      id: inventory.id,
-      productId: inventory.productId,
-      productSku: products.sku,
-      productDescription: products.description,
-      locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
-      locationStatus: warehouseLocations.status,
-      locationTenantId: warehouseLocations.tenantId,
-      zoneName: warehouseZones.name,
-      batch: inventory.batch,
-      expiryDate: inventory.expiryDate,
-      quantity: inventory.quantity,
-      reservedQuantity: inventory.reservedQuantity,
-      status: inventory.status,
-      tenantId: inventory.tenantId,
-      tenantName: locationTenant.name,
-      createdAt: inventory.createdAt,
-      updatedAt: inventory.updatedAt,
-    })
-    .from(inventory)
-    .innerJoin(products, eq(inventory.productId, products.id))
-    .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
-    .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(warehouseLocations.code, products.sku)
-    .limit(1000);
+  // Se filtro inclui "livre", usar LEFT JOIN para incluir endereços vazios
+  const includeEmpty = statusArray.includes("livre");
 
-  return results;
+  if (includeEmpty) {
+    // LEFT JOIN: inclui endereços sem inventory
+    const results = await dbConn
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        productSku: products.sku,
+        productDescription: products.description,
+        locationId: warehouseLocations.id,
+        locationCode: warehouseLocations.code,
+        locationStatus: warehouseLocations.status,
+        locationTenantId: warehouseLocations.tenantId,
+        zoneName: warehouseZones.name,
+        batch: inventory.batch,
+        expiryDate: inventory.expiryDate,
+        quantity: inventory.quantity,
+        reservedQuantity: inventory.reservedQuantity,
+        status: inventory.status,
+        tenantId: inventory.tenantId,
+        tenantName: locationTenant.name,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+      })
+      .from(warehouseLocations)
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
+      .leftJoin(inventory, and(
+        eq(inventory.locationId, warehouseLocations.id),
+        gt(inventory.quantity, 0),
+        ...(inventoryConditions.filter(c => c.toString() !== gt(inventory.quantity, 0).toString()))
+      ))
+      .leftJoin(products, eq(inventory.productId, products.id))
+      .where(locationConditions.length > 0 ? and(...locationConditions) : undefined)
+      .orderBy(warehouseLocations.code)
+      .limit(1000);
+
+    return results as InventoryPosition[];
+  } else {
+    // INNER JOIN: apenas endereços com inventory
+    const results = await dbConn
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        productSku: products.sku,
+        productDescription: products.description,
+        locationId: inventory.locationId,
+        locationCode: warehouseLocations.code,
+        locationStatus: warehouseLocations.status,
+        locationTenantId: warehouseLocations.tenantId,
+        zoneName: warehouseZones.name,
+        batch: inventory.batch,
+        expiryDate: inventory.expiryDate,
+        quantity: inventory.quantity,
+        reservedQuantity: inventory.reservedQuantity,
+        status: inventory.status,
+        tenantId: inventory.tenantId,
+        tenantName: locationTenant.name,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
+      .where(and(...locationConditions, ...inventoryConditions))
+      .orderBy(warehouseLocations.code, products.sku)
+      .limit(1000);
+
+    return results;
+  }
 }
 
 /**

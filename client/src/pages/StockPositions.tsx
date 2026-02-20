@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ export default function StockPositions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [zoneFilter, setZoneFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [batchFilter, setBatchFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
 
@@ -26,7 +27,7 @@ export default function StockPositions() {
     tenantId: clientFilter === "all" ? undefined : clientFilter === "shared" ? null : Number(clientFilter),
     search: searchTerm || undefined,
     zoneId: zoneFilter === "all" ? undefined : Number(zoneFilter),
-    status: statusFilter === "all" ? undefined : (statusFilter as any),
+    status: statusFilter.length === 0 ? undefined : (statusFilter.length === 1 ? statusFilter[0] : statusFilter) as any,
     batch: batchFilter || undefined,
     locationCode: locationFilter || undefined,
   });
@@ -35,7 +36,7 @@ export default function StockPositions() {
     tenantId: clientFilter === "all" ? undefined : clientFilter === "shared" ? null : Number(clientFilter),
     search: searchTerm || undefined,
     zoneId: zoneFilter === "all" ? undefined : Number(zoneFilter),
-    status: statusFilter === "all" ? undefined : (statusFilter as any),
+    status: statusFilter.length === 0 ? undefined : (statusFilter.length === 1 ? statusFilter[0] : statusFilter) as any,
     batch: batchFilter || undefined,
     locationCode: locationFilter || undefined,
   });
@@ -68,7 +69,7 @@ export default function StockPositions() {
     setSearchTerm("");
     setClientFilter("all");
     setZoneFilter("all");
-    setStatusFilter("all");
+    setStatusFilter([]);
     setBatchFilter("");
     setLocationFilter("");
   };
@@ -102,7 +103,7 @@ export default function StockPositions() {
       tenantId: clientFilter === "all" ? undefined : clientFilter === "shared" ? null : Number(clientFilter),
       search: searchTerm || undefined,
       zoneId: zoneFilter === "all" ? undefined : Number(zoneFilter),
-      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      status: statusFilter.length === 0 ? undefined : (statusFilter.length === 1 ? statusFilter[0] : statusFilter) as any,
       batch: batchFilter || undefined,
       locationCode: locationFilter || undefined,
     });
@@ -255,19 +256,18 @@ export default function StockPositions() {
                 </SelectContent>
               </Select>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="livre">Livre</SelectItem>
-                  <SelectItem value="available">Disponível</SelectItem>
-                  <SelectItem value="occupied">Ocupado</SelectItem>
-                  <SelectItem value="blocked">Bloqueado</SelectItem>
-                  <SelectItem value="counting">Em Contagem</SelectItem>
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={[
+                  { value: "livre", label: "Livre" },
+                  { value: "available", label: "Disponível" },
+                  { value: "occupied", label: "Ocupado" },
+                  { value: "blocked", label: "Bloqueado" },
+                  { value: "counting", label: "Em Contagem" },
+                ]}
+                selected={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Todos os status"
+              />
 
               <Input
                 placeholder="Filtrar por lote..."
@@ -327,23 +327,23 @@ export default function StockPositions() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {positions.map((pos) => (
-                      <TableRow key={`${pos.id}-${pos.batch}-${pos.locationId}`}>
+                    {positions.map((pos, idx) => (
+                      <TableRow key={pos.id ? `${pos.id}-${pos.batch}-${pos.locationId}` : `empty-${pos.locationId}-${idx}`}>
                         <TableCell>{getLocationTenantName(pos.locationTenantId)}</TableCell>
                         <TableCell>{pos.zoneName}</TableCell>
                         <TableCell className="font-mono">{pos.locationCode}</TableCell>
                         <TableCell>{getLocationStatusBadge(pos.locationStatus)}</TableCell>
-                        <TableCell className="font-mono">{pos.productSku}</TableCell>
-                        <TableCell>{pos.productDescription}</TableCell>
+                        <TableCell className="font-mono">{pos.productSku || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{pos.productDescription || "Endereço vazio"}</TableCell>
                         <TableCell className="font-mono">{pos.batch || "-"}</TableCell>
                         <TableCell className="text-right font-bold">
-                          {pos.quantity.toLocaleString("pt-BR")}
+                          {pos.quantity ? pos.quantity.toLocaleString("pt-BR") : "-"}
                         </TableCell>
                         <TableCell className="text-right text-orange-600 font-semibold">
-                          {pos.reservedQuantity > 0 ? pos.reservedQuantity.toLocaleString("pt-BR") : "-"}
+                          {pos.reservedQuantity && pos.reservedQuantity > 0 ? pos.reservedQuantity.toLocaleString("pt-BR") : "-"}
                         </TableCell>
                         <TableCell className="text-right text-green-600 font-semibold">
-                          {(pos.quantity - pos.reservedQuantity).toLocaleString("pt-BR")}
+                          {pos.quantity ? (pos.quantity - (pos.reservedQuantity || 0)).toLocaleString("pt-BR") : "-"}
                         </TableCell>
                         <TableCell>
                           {pos.expiryDate ? format(new Date(pos.expiryDate), "dd/MM/yyyy") : "-"}

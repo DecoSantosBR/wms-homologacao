@@ -2214,3 +2214,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar opção "Livre" no dropdown de filtro de status
 - [x] Atualizar legenda de status para incluir "Livre - Endereço vazio"
 - [x] Garantir que filtro funciona corretamente
+
+
+## 🎯 FEATURE: RELATÓRIO DE POSIÇÕES POR STATUS COM MULTI-SELECT - 31/01/2026
+- [x] Transformar filtro de status em multi-select (permitir múltiplos status)
+- [x] Modificar backend para buscar endereços por status (LEFT JOIN com inventory)
+- [x] Exibir endereços livres com campos vazios (sem produto/lote/quantidade)
+- [x] Atualizar contadores do dashboard para refletir filtros selecionados
+- [x] Garantir que exportação Excel inclui endereços vazios quando filtrados
+- [x] Testar combinações de filtros (Livre+Disponível, Ocupado+Bloqueado, etc.)
