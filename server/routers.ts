@@ -1844,6 +1844,9 @@ export const appRouter = router({
         // PASSO 2: Todas as validações passaram, agora criar o pedido
         const orderNumber = `PK${Date.now()}`;
 
+        // CORREÇÃO: Calcular totalQuantity em UNIDADES (somando quantityInUnits de cada item)
+        const totalQuantityInUnits = stockValidations.reduce((sum, val: any) => sum + val.quantityInUnits, 0);
+
         await db.insert(pickingOrders).values({
           tenantId,
           orderNumber,
@@ -1852,7 +1855,7 @@ export const appRouter = router({
           priority: input.priority,
           status: "pending",
           totalItems: input.items.length,
-          totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+          totalQuantity: totalQuantityInUnits, // ✅ Total em unidades
           scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
           createdBy: userId,
         });
@@ -1900,13 +1903,14 @@ export const appRouter = router({
           }
 
           // Criar item do pedido
+          // CORREÇÃO: Sempre registrar quantidades em UNIDADES (UN)
           await db.insert(pickingOrderItems).values({
             pickingOrderId: order.id,
             productId: item.productId,
-            requestedQuantity: item.requestedQuantity,
-            requestedUM: item.requestedUnit,
-            unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade original do pedido
-            unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined, // Unidades por caixa
+            requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
+            requestedUM: "unit", // ✅ Sempre "unit" pois quantidade já foi convertida
+            unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade ORIGINAL do pedido (para referência)
+            unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined, // Unidades por caixa (para referência)
             pickedQuantity: 0,
             status: "pending",
           });
@@ -2109,6 +2113,28 @@ export const appRouter = router({
           });
         }
 
+        // Buscar dados dos produtos para calcular totalQuantity em unidades
+        const productIdsForTotal = input.items.map(item => item.productId);
+        const productsForTotal = await db
+          .select({
+            id: products.id,
+            unitsPerBox: products.unitsPerBox,
+          })
+          .from(products)
+          .where(inArray(products.id, productIdsForTotal));
+        
+        const productsMapForTotal = new Map(productsForTotal.map(p => [p.id, p]));
+        
+        // CORREÇÃO: Calcular totalQuantity em UNIDADES
+        const totalQuantityInUnits = input.items.reduce((sum, item) => {
+          const product = productsMapForTotal.get(item.productId);
+          let quantityInUnits = item.requestedQuantity;
+          if (item.requestedUnit === "box" && product?.unitsPerBox) {
+            quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+          }
+          return sum + quantityInUnits;
+        }, 0);
+
         // Atualizar pedido
         await db
           .update(pickingOrders)
@@ -2118,7 +2144,7 @@ export const appRouter = router({
             priority: input.priority,
             scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
             totalItems: input.items.length,
-            totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+            totalQuantity: totalQuantityInUnits, // ✅ Total em unidades
           })
           .where(eq(pickingOrders.id, input.id));
 
@@ -2162,15 +2188,23 @@ export const appRouter = router({
           
           const productsMap = new Map(productsData.map(p => [p.id, p]));
 
+          // CORREÇÃO: Converter quantidades para unidades antes de inserir
           await db.insert(pickingOrderItems).values(
             input.items.map((item) => {
               const product = productsMap.get(item.productId);
+              
+              // Converter para unidades se necessário
+              let quantityInUnits = item.requestedQuantity;
+              if (item.requestedUnit === "box" && product?.unitsPerBox) {
+                quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+              }
+              
               return {
                 pickingOrderId: input.id,
                 productId: item.productId,
-                requestedQuantity: item.requestedQuantity,
-                requestedUM: item.requestedUnit,
-                unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+                requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
+                requestedUM: "unit" as const, // ✅ Sempre "unit"
+                unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade ORIGINAL
                 unitsPerBox: item.requestedUnit === "box" && product ? product.unitsPerBox : undefined,
                 pickedQuantity: 0,
                 status: "pending" as const,
@@ -2989,6 +3023,28 @@ export const appRouter = router({
                 continue;
               }
 
+              // Buscar dados dos produtos para calcular totalQuantity em unidades
+              const productIdsForTotalCalc = orderItems.map(item => item.productId);
+              const productsForTotalCalc = await db
+                .select({
+                  id: products.id,
+                  unitsPerBox: products.unitsPerBox,
+                })
+                .from(products)
+                .where(inArray(products.id, productIdsForTotalCalc));
+              
+              const productsMapForTotalCalc = new Map(productsForTotalCalc.map(p => [p.id, p]));
+              
+              // CORREÇÃO: Calcular totalQuantity em UNIDADES
+              const totalQuantityInUnitsImport = orderItems.reduce((sum, item) => {
+                const product = productsMapForTotalCalc.get(item.productId);
+                let quantityInUnits = item.requestedQuantity;
+                if (item.requestedUnit === "box" && product?.unitsPerBox) {
+                  quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+                }
+                return sum + quantityInUnits;
+              }, 0);
+
               // Criar pedido
               await db.insert(pickingOrders).values({
                 tenantId: tenant.id,
@@ -2998,7 +3054,7 @@ export const appRouter = router({
                 priority: "normal",
                 status: "pending",
                 totalItems: orderItems.length,
-                totalQuantity: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+                totalQuantity: totalQuantityInUnitsImport, // ✅ Total em unidades
                 createdBy: ctx.user.id,
               });
 
@@ -3018,16 +3074,38 @@ export const appRouter = router({
                 throw new Error("Falha ao criar pedido");
               }
 
-              // Criar itens do pedido
+              // Buscar dados dos produtos para converter quantidades
+              const productIdsForImport = orderItems.map(item => item.productId);
+              const productsForImport = await db
+                .select({
+                  id: products.id,
+                  unitsPerBox: products.unitsPerBox,
+                })
+                .from(products)
+                .where(inArray(products.id, productIdsForImport));
+              
+              const productsMapForImport = new Map(productsForImport.map(p => [p.id, p]));
+
+              // CORREÇÃO: Converter quantidades para unidades antes de criar itens
               await db.insert(pickingOrderItems).values(
-                orderItems.map((item) => ({
-                  pickingOrderId: order.id,
-                  productId: item.productId,
-                  requestedQuantity: item.requestedQuantity,
-                  requestedUM: item.requestedUnit,
-                  pickedQuantity: 0,
-                  status: "pending" as const,
-                }))
+                orderItems.map((item) => {
+                  const product = productsMapForImport.get(item.productId);
+                  
+                  // Converter para unidades se necessário
+                  let quantityInUnits = item.requestedQuantity;
+                  if (item.requestedUnit === "box" && product?.unitsPerBox) {
+                    quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+                  }
+                  
+                  return {
+                    pickingOrderId: order.id,
+                    productId: item.productId,
+                    requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
+                    requestedUM: "unit" as const, // ✅ Sempre "unit"
+                    pickedQuantity: 0,
+                    status: "pending" as const,
+                  };
+                })
               );
 
               // Reservar estoque (FEFO)

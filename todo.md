@@ -2249,3 +2249,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 - [x] Corrigir lógica de endereçamento automático no recebimento e picking para incluir endereços "livre" além de "available" - RESOLVIDO: modificadas funções de busca de endereços REC (blindConferenceRouter.ts) e EXP (stage.ts) para aceitar status 'available' OR 'livre'. Criados 5 testes automatizados validando a correção (todos passando).
 - [x] Corrigir etiquetas de volumes para exibir customerName (destinatário) e tenant name (cliente) ao invés de "N/A" - RESOLVIDO: modificado picking.getById para incluir clientName via JOIN com tenants. Frontend atualizado com lógica de fallback para valores null. 4 testes automatizados passando.
+- [ ] Garantir conversão automática de quantidades para unidades (UN) ao registrar em todas as tabelas do sistema
+
+
+## Correções - 20/02/2026
+
+- [x] Corrigir lógica de endereçamento automático no recebimento e picking para incluir endereços "livre" além de "available" - RESOLVIDO: modificado blindConferenceRouter.ts e stage.ts para buscar endereços com status "available" OU "livre". 5 testes automatizados passando.
+- [x] Corrigir etiquetas de volumes para exibir customerName (destinatário) e tenant name (cliente) ao invés de "N/A" - RESOLVIDO: modificado picking.getById para incluir clientName via JOIN com tenants. Frontend atualizado com lógica de fallback para valores null. 4 testes automatizados passando.
+- [x] Garantir conversão automática de quantidades para unidades (UN) ao registrar em todas as tabelas do sistema - RESOLVIDO: Implementada conversão automática em picking (criação, edição, importação), totalQuantity corrigido. 4 testes automatizados passando.
