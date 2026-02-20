@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, like } from "drizzle-orm";
+import { eq, and, or, desc, sql, like } from "drizzle-orm";
 import { getDb } from "./db";
 import {
   pickingOrders,
@@ -471,7 +471,10 @@ export async function completeStageCheck(params: {
         and(
           like(warehouseLocations.code, 'EXP%'),
           eq(warehouseLocations.tenantId, pickingOrder.tenantId),
-          eq(warehouseLocations.status, 'available')
+          or(
+            eq(warehouseLocations.status, 'available'),
+            eq(warehouseLocations.status, 'livre')
+          )
         )
       )
       .limit(1);

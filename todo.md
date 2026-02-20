@@ -2236,3 +2236,15 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] PARCIALMENTE RESOLVIDO: Filtro "Livre" + outros status funciona (107 posições)
 - [x] NOVO PROBLEMA: "Todos os status" (sem filtro) ainda mostra apenas 94 posições
 - [x] Modificar lógica para usar LEFT JOIN quando filtro está vazio (todos os status)
+
+
+## 🐛 BUG CRÍTICO: FILTRO "LIVRE" AINDA NÃO FUNCIONA - 31/01/2026
+- [ ] Após todas as correções, filtro "Livre" ainda retorna 0 posições
+- [ ] Frontend envia corretamente: statusParam = "livre"
+- [ ] Verificar se correção do backend foi aplicada corretamente
+- [ ] Investigar se há cache ou problema de deploy
+- [ ] Testar query SQL diretamente no banco
+
+## Bug Corrigido - 20/02/2026
+
+- [x] Corrigir lógica de endereçamento automático no recebimento e picking para incluir endereços "livre" além de "available" - RESOLVIDO: modificadas funções de busca de endereços REC (blindConferenceRouter.ts) e EXP (stage.ts) para aceitar status 'available' OR 'livre'. Criados 5 testes automatizados validando a correção (todos passando).

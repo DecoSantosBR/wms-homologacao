@@ -11,7 +11,7 @@ import {
   inventory,
   warehouseLocations
 } from "../drizzle/schema";
-import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, or, desc, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 export const blindConferenceRouter = router({
@@ -504,7 +504,11 @@ export const blindConferenceRouter = router({
         .where(
           and(
             sql`${warehouseLocations.code} LIKE '%REC%'`,
-            sql`${warehouseLocations.tenantId} = ${sessionTenantId}`
+            sql`${warehouseLocations.tenantId} = ${sessionTenantId}`,
+            or(
+              eq(warehouseLocations.status, 'available'),
+              eq(warehouseLocations.status, 'livre')
+            )
           )
         )
         .limit(1);
