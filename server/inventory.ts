@@ -1,4 +1,4 @@
-import { eq, and, or, gt, gte, lte, like, isNull, sql, inArray } from "drizzle-orm";
+import { eq, and, or, gte, lte, gt, inArray, isNull, isNotNull, sql, like } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { getDb } from "./db";
 import {
@@ -111,13 +111,17 @@ export async function getInventoryPositions(
 
   const locationTenant = alias(tenants, "locationTenant");
 
-  // Se filtro inclui "livre", usar LEFT JOIN para incluir endereços vazios
-  const includeEmpty = statusArray.includes("livre");
+  // Se filtro inclui "livre" OU está vazio (todos os status), usar LEFT JOIN para incluir endereços vazios
+  console.log("[DEBUG] statusArray:", statusArray);
+  console.log("[DEBUG] filters.status:", filters.status);
+  const includeEmpty = statusArray.length === 0 || statusArray.includes("livre");
+  console.log("[DEBUG] includeEmpty:", includeEmpty);
 
   if (includeEmpty) {
     // LEFT JOIN: inclui endereços sem inventory
     // Quando filtro é APENAS "livre", não filtrar por quantidade no JOIN
     const onlyFreeFilter = statusArray.length === 1 && statusArray[0] === "livre";
+    console.log("[DEBUG] onlyFreeFilter:", onlyFreeFilter);
     
     const inventoryJoinConditions = [
       eq(inventory.locationId, warehouseLocations.id),
@@ -134,7 +138,8 @@ export async function getInventoryPositions(
     
     const results = await dbConn
       .select({
-        id: inventory.id,
+        // Usar locationId como ID principal para incluir endereços vazios
+        id: sql`COALESCE(${inventory.id}, ${warehouseLocations.id})`.as('id'),
         productId: inventory.productId,
         productSku: products.sku,
         productDescription: products.description,
@@ -148,7 +153,7 @@ export async function getInventoryPositions(
         quantity: inventory.quantity,
         reservedQuantity: inventory.reservedQuantity,
         status: inventory.status,
-        tenantId: inventory.tenantId,
+        tenantId: sql`COALESCE(${inventory.tenantId}, ${warehouseLocations.tenantId})`.as('tenantId'),
         tenantName: locationTenant.name,
         createdAt: inventory.createdAt,
         updatedAt: inventory.updatedAt,

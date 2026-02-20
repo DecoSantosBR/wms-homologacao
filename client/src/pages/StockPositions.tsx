@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,10 +19,21 @@ export default function StockPositions() {
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [zoneFilter, setZoneFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  
+  // Debug: log quando statusFilter mudar
+  useEffect(() => {
+    console.log("[FRONTEND DEBUG] statusFilter changed:", statusFilter);
+  }, [statusFilter]);
   const [batchFilter, setBatchFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
 
   // Queries
+  const statusParam = statusFilter.length === 0 ? undefined : (statusFilter.length === 1 ? statusFilter[0] : statusFilter);
+  
+  useEffect(() => {
+    console.log("[FRONTEND DEBUG] statusParam being sent:", statusParam, "type:", typeof statusParam, "isArray:", Array.isArray(statusParam));
+  }, [statusParam]);
+  
   const { data: positions = [], isLoading, refetch } = trpc.stock.getPositions.useQuery({
     tenantId: clientFilter === "all" ? undefined : clientFilter === "shared" ? null : Number(clientFilter),
     search: searchTerm || undefined,

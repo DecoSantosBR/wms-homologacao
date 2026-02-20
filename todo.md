@@ -2230,3 +2230,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Filtro "Livre" + "Disponível" retorna corretamente (107 posições incluindo livres)
 - [x] Problema: condição WHERE está filtrando endereços vazios incorretamente
 - [x] Corrigir lógica de LEFT JOIN e WHERE para incluir endereços sem inventory quando filtro é apenas "livre"
+- [x] BUG PERSISTE: Correção anterior não resolveu - investigar logs e queries SQL
+- [x] Adicionar logs detalhados no backend para debug
+- [x] Verificar se filtro está chegando corretamente no backend
+- [x] PARCIALMENTE RESOLVIDO: Filtro "Livre" + outros status funciona (107 posições)
+- [x] NOVO PROBLEMA: "Todos os status" (sem filtro) ainda mostra apenas 94 posições
+- [x] Modificar lógica para usar LEFT JOIN quando filtro está vazio (todos os status)
