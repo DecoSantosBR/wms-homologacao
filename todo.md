@@ -2208,3 +2208,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Atualizar interface de listagem de endereços para exibir novo status
 - [x] Garantir transições corretas: Livre ↔ Ocupado
 - [x] Testar fluxo completo de alocação e desalocação
+
+
+## 🔧 AJUSTE: ATUALIZAR FILTRO DE STATUS EM /STOCK - 31/01/2026
+- [x] Adicionar opção "Livre" no dropdown de filtro de status
+- [x] Atualizar legenda de status para incluir "Livre - Endereço vazio"
+- [x] Garantir que filtro funciona corretamente
