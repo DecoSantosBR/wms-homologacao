@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { ArrowRightLeft, AlertCircle, Plus, History } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -170,6 +171,24 @@ export default function StockMovements() {
     ? destinationLocations
     : locationsWithStock.filter((loc) => String(loc.id) !== fromLocationId);
 
+  // Preparar opções para Combobox de endereços origem
+  const originLocationOptions = useMemo<ComboboxOption[]>(() => {
+    return locationsWithStock.map((loc) => ({
+      value: String(loc.id),
+      label: `${loc.code} (${loc.zoneName})`,
+      searchTerms: `${loc.code} ${loc.zoneName}`.toLowerCase(),
+    }));
+  }, [locationsWithStock]);
+
+  // Preparar opções para Combobox de endereços destino
+  const destinationLocationOptions = useMemo<ComboboxOption[]>(() => {
+    return availableDestinations.map((loc) => ({
+      value: String(loc.id),
+      label: `${loc.code} (${loc.zoneName})`,
+      searchTerms: `${loc.code} ${loc.zoneName}`.toLowerCase(),
+    }));
+  }, [availableDestinations]);
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
@@ -295,18 +314,14 @@ export default function StockMovements() {
             {selectedTenantId && (
             <div className="grid gap-2">
               <Label htmlFor="fromLocation">Endereço Origem *</Label>
-              <Select value={fromLocationId} onValueChange={setFromLocationId}>
-                <SelectTrigger id="fromLocation">
-                  <SelectValue placeholder="Selecione o endereço origem" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locationsWithStock.map((loc) => (
-                    <SelectItem key={loc.id} value={String(loc.id)}>
-                      {loc.code} ({loc.zoneName})
-                    </SelectItem>
-                  ))}
-                 </SelectContent>
-              </Select>
+              <Combobox
+                options={originLocationOptions}
+                value={fromLocationId}
+                onValueChange={setFromLocationId}
+                placeholder="Selecione o endereço origem"
+                searchPlaceholder="Buscar endereço..."
+                emptyText="Nenhum endereço encontrado"
+              />
             </div>
             )}
             {/* Produto/Lote */}
@@ -358,30 +373,23 @@ export default function StockMovements() {
             {movementType !== "disposal" && (
               <div className="grid gap-2">
                 <Label htmlFor="toLocation">Endereço Destino *</Label>
-              <Select value={toLocationId} onValueChange={setToLocationId}>
-                <SelectTrigger id="toLocation">
-                  <SelectValue placeholder="Selecione o endereço destino" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDestinations.length === 0 ? (
-                    <SelectItem value="none" disabled>Nenhum endereço disponível</SelectItem>
-                  ) : (
-                    availableDestinations.map((loc) => (
-                      <SelectItem key={loc.id} value={String(loc.id)}>
-                        {loc.code} ({loc.zoneName})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {suggestedDestination && toLocationId === String(suggestedDestination.locationId) && (
-                <Alert className="mt-2 border-green-200 bg-green-50">
-                  <AlertCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    <strong>Sugestão automática:</strong> Este endereço foi sugerido com base na pré-alocação do recebimento.
-                  </AlertDescription>
-                </Alert>
-              )}
+                <Combobox
+                  options={destinationLocationOptions}
+                  value={toLocationId}
+                  onValueChange={setToLocationId}
+                  placeholder="Selecione o endereço destino"
+                  searchPlaceholder="Buscar endereço..."
+                  emptyText="Nenhum endereço disponível"
+                  disabled={availableDestinations.length === 0}
+                />
+                {suggestedDestination && toLocationId === String(suggestedDestination.locationId) && (
+                  <Alert className="mt-2 border-green-200 bg-green-50">
+                    <AlertCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      <strong>Sugestão automática:</strong> Este endereço foi sugerido com base na pré-alocação do recebimento.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 

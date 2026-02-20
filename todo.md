@@ -2183,3 +2183,19 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Modificar labelRouter.associateInPicking para criar em labelAssociations
 - [x] Remover busca em productLabels do waveRouter.registerPickedItem
 - [x] Manter apenas labelAssociations como fonte única de verdade
+
+
+## 🐛 BUG: ERRO 502 NA IMPORTAÇÃO DE XML DE NF - 31/01/2026
+- [ ] Erro 502 ao importar XML de Nota Fiscal de recebimento
+- [ ] Servidor retorna HTML ao invés de JSON
+- [ ] Investigar logs para identificar causa (timeout, memória, parsing)
+- [ ] Corrigir endpoint de importação
+- [ ] Testar com arquivo XML real
+
+
+## 🎯 FEATURE: BUSCA/FILTRO DE ENDEREÇOS NA MOVIMENTAÇÃO - 31/01/2026
+- [x] Transformar campo "Endereço Origem" em Combobox com busca
+- [x] Transformar campo "Endereço Destino" em Combobox com busca
+- [x] Permitir filtro por digitação (código ou descrição)
+- [x] Manter regras de negócio existentes (origem com estoque, destino por tipo)
+- [x] Testar UX com muitos endereços

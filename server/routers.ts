@@ -1354,16 +1354,30 @@ export const appRouter = router({
         tipo: z.enum(["entrada", "saida"]), // Tipo de movimento
       }))
       .mutation(async ({ input, ctx }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
+        try {
+          console.log('[NFE Import] Iniciando importação de XML...', {
+            tipo: input.tipo,
+            xmlSize: input.xmlContent.length,
+            userId: ctx.user?.id
+          });
 
-        // Validar XML
-        if (!isValidNFE(input.xmlContent)) {
-          throw new Error("XML inválido. O arquivo não é uma NF-e válida.");
-        }
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
 
-        // Parse do XML
-        const nfeData = await parseNFE(input.xmlContent);
+          // Validar XML
+          if (!isValidNFE(input.xmlContent)) {
+            throw new Error("XML inválido. O arquivo não é uma NF-e válida.");
+          }
+
+          console.log('[NFE Import] XML validado, iniciando parse...');
+
+          // Parse do XML
+          const nfeData = await parseNFE(input.xmlContent);
+          
+          console.log('[NFE Import] Parse concluído:', {
+            nfeNumero: nfeData.numero,
+            totalProdutos: nfeData.produtos.length
+          });
 
         // Verificar se NF-e já foi importada (entrada ou saída)
         if (input.tipo === "entrada") {
@@ -1552,7 +1566,22 @@ export const appRouter = router({
         }
         } // Fim do if tipo === "entrada"
 
+        console.log('[NFE Import] Importação concluída com sucesso:', {
+          orderId: result.orderId,
+          totalProdutos: result.totalProdutos,
+          produtosNovos: result.produtosNovos.length,
+          erros: result.erros.length
+        });
+
         return result;
+        } catch (error: any) {
+          console.error('[NFE Import] Erro fatal na importação:', {
+            message: error.message,
+            stack: error.stack,
+            tipo: input.tipo
+          });
+          throw new Error(`Erro ao importar NF-e: ${error.message}`);
+        }
       }),
   }),
 
