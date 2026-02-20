@@ -428,6 +428,18 @@ export async function executeAddressing(
         .set({ quantity: existingStock.quantity + quantityToMove })
         .where(eq(inventory.id, existingStock.id));
     } else {
+      // ✅ VALIDAÇÃO: Verificar se endereço pode receber este lote
+      const { validateLocationForBatch } = await import("./locationValidation");
+      const validation = await validateLocationForBatch(
+        prealloc.locationId,
+        prealloc.productId,
+        prealloc.batch
+      );
+
+      if (!validation.allowed) {
+        throw new Error(`Pré-alocação inválida: ${validation.reason}`);
+      }
+
       // Criar novo registro de estoque
       await dbConn.insert(inventory).values({
         tenantId: order.tenantId,

@@ -521,6 +521,18 @@ export const blindConferenceRouter = router({
 
       // Criar inventário em endereço REC para cada associação
       for (const assoc of associations) {
+        // ✅ VALIDAÇÃO: Verificar se endereço REC pode receber este lote
+        const { validateLocationForBatch } = await import("./locationValidation");
+        const validation = await validateLocationForBatch(
+          recLocationId,
+          assoc.productId,
+          assoc.batch
+        );
+
+        if (!validation.allowed) {
+          throw new Error(`Erro ao finalizar conferência: ${validation.reason}`);
+        }
+
         await db.insert(inventory).values({
           tenantId: session[0].tenantId || null,
           productId: assoc.productId,

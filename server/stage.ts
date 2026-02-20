@@ -161,6 +161,7 @@ export async function startStageCheck(params: {
   });
 
   // Buscar itens do pedido para criar registros de conferência
+  // CORREÇÃO: Incluir batch e expiryDate para agrupar corretamente por SKU+lote
   const orderItems = await dbConn
     .select({
       productId: pickingOrderItems.productId,
@@ -169,16 +170,19 @@ export async function startStageCheck(params: {
       quantity: pickingOrderItems.requestedQuantity,
       unit: pickingOrderItems.requestedUM,
       unitsPerBox: products.unitsPerBox,
+      batch: pickingOrderItems.batch, // ✅ Incluir lote
+      expiryDate: pickingOrderItems.expiryDate, // ✅ Incluir validade
     })
     .from(pickingOrderItems)
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
     .where(eq(pickingOrderItems.pickingOrderId, params.pickingOrderId));
 
-  // Agrupar itens por produto e somar quantidades
-  // (pedidos podem ter múltiplas linhas do mesmo produto em endereços diferentes)
+  // CORREÇÃO: Agrupar itens por produto+lote (SKU+batch) ao invés de apenas produto
+  // Itens com mesmo SKU mas lotes diferentes devem ser conferidos separadamente
   console.log('[DEBUG startStageCheck] orderItems BEFORE grouping:', orderItems.map(i => ({
     productId: i.productId,
     sku: i.productSku,
+    batch: i.batch,
     qty: i.quantity
   })));
   
@@ -190,7 +194,12 @@ export async function startStageCheck(params: {
       console.log(`[DEBUG] Convertendo ${item.productSku}: ${item.quantity} caixas x ${item.unitsPerBox} = ${quantityInUnits} unidades`);
     }
     
-    const existing = acc.find(i => i.productId === item.productId);
+    // ✅ Buscar por productId + batch (ao invés de apenas productId)
+    const existing = acc.find(i => 
+      i.productId === item.productId && 
+      i.batch === item.batch
+    );
+    
     if (existing) {
       existing.quantity += quantityInUnits;
     } else {
@@ -198,11 +207,20 @@ export async function startStageCheck(params: {
         productId: item.productId!,
         productSku: item.productSku!,
         productDescription: item.productDescription!,
+        batch: item.batch || null, // ✅ Incluir lote
+        expiryDate: item.expiryDate || null, // ✅ Incluir validade
         quantity: quantityInUnits,
       });
     }
     return acc;
-  }, [] as Array<{ productId: number; productSku: string; productDescription: string; quantity: number }>);
+  }, [] as Array<{ 
+    productId: number; 
+    productSku: string; 
+    productDescription: string; 
+    batch: string | null; 
+    expiryDate: Date | null; 
+    quantity: number 
+  }>);
 
   console.log('[DEBUG startStageCheck] groupedItems AFTER grouping:', groupedItems.map(i => ({
     productId: i.productId,
@@ -579,6 +597,18 @@ export async function completeStageCheck(params: {
           })
           .where(eq(inventory.id, existingShippingInventory.id));
       } else {
+        // ✅ VALIDAÇÃO: Verificar se endereço EXP pode receber este lote
+        const { validateLocationForBatch } = await import("./locationValidation");
+        const validation = await validateLocationForBatch(
+          shippingLocation.id,
+          sourceInventory.productId,
+          sourceInventory.batch
+        );
+
+        if (!validation.allowed) {
+          throw new Error(`Erro ao movimentar para expedição: ${validation.reason}`);
+        }
+
         // Criar novo registro de estoque no endereço de expedição
         await dbConn.insert(inventory).values({
           locationId: shippingLocation.id,

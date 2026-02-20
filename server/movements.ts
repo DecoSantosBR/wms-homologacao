@@ -197,6 +197,18 @@ export async function registerMovement(input: RegisterMovementInput) {
         })
         .where(eq(inventory.id, toInventory[0].id));
     } else {
+      // ✅ VALIDAÇÃO: Verificar se endereço pode receber este lote
+      const { validateLocationForBatch } = await import("./locationValidation");
+      const validation = await validateLocationForBatch(
+        input.toLocationId,
+        input.productId,
+        input.batch || null
+      );
+
+      if (!validation.allowed) {
+        throw new Error(validation.reason || "Endereço não pode receber este lote");
+      }
+
       // Criar novo registro
       await dbConn.insert(inventory).values({
         productId: input.productId,
