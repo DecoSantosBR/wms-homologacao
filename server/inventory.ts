@@ -92,9 +92,6 @@ export async function getInventoryPositions(
   if (filters.locationId) {
     inventoryConditions.push(eq(inventory.locationId, filters.locationId));
   }
-  if (filters.batch) {
-    inventoryConditions.push(like(inventory.batch, `%${filters.batch}%`));
-  }
   if (filters.minQuantity !== undefined) {
     inventoryConditions.push(gte(inventory.quantity, filters.minQuantity));
   }
@@ -102,9 +99,13 @@ export async function getInventoryPositions(
   // Filtrar apenas posições com quantidade > 0
   inventoryConditions.push(gt(inventory.quantity, 0));
 
-  // Busca geral (SKU ou descrição) - apenas quando há produtos
+  // Filtros que devem ser aplicados no WHERE (não no JOIN)
+  const whereConditions = [];
+  if (filters.batch) {
+    whereConditions.push(like(inventory.batch, `%${filters.batch}%`));
+  }
   if (filters.search) {
-    inventoryConditions.push(
+    whereConditions.push(
       sql`(${products.sku} LIKE ${`%${filters.search}%`} OR ${products.description} LIKE ${`%${filters.search}%`})`
     );
   }
@@ -163,7 +164,12 @@ export async function getInventoryPositions(
       .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
       .leftJoin(inventory, and(...inventoryJoinConditions))
       .leftJoin(products, eq(inventory.productId, products.id))
-      .where(locationConditions.length > 0 ? and(...locationConditions) : undefined)
+      .where(
+        and(
+          ...(locationConditions.length > 0 ? locationConditions : []),
+          ...(whereConditions.length > 0 ? whereConditions : [])
+        )
+      )
       .orderBy(warehouseLocations.code)
       .limit(1000);
 
@@ -196,7 +202,13 @@ export async function getInventoryPositions(
       .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
       .leftJoin(locationTenant, eq(warehouseLocations.tenantId, locationTenant.id))
-      .where(and(...locationConditions, ...inventoryConditions))
+      .where(
+        and(
+          ...locationConditions,
+          ...inventoryConditions,
+          ...(whereConditions.length > 0 ? whereConditions : [])
+        )
+      )
       .orderBy(warehouseLocations.code, products.sku)
       .limit(1000);
 

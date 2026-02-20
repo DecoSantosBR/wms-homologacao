@@ -2268,3 +2268,4 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Parte 3: Finalização decrementa quantity E reservedQuantity (shippingRouter.ts linha 824-833)
   - [ ] Parte 4: Cancelamento de romaneio deve estornar reservas (pendente)
   - [ ] Parte 5: Cancelamento de onda deve devolver estoque para origem (pendente)
+- [x] Corrigir filtros na página de Posições de Estoque (/stock): busca por SKU/descrição e filtro por lote não funcionam - RESOLVIDO: Movidos filtros de busca e lote para WHERE ao invés de JOIN (inventory.ts linhas 102-111, 167-172, 205-211). Filtros agora funcionam corretamente em ambas as branches da query.
