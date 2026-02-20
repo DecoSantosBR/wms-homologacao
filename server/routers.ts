@@ -594,7 +594,7 @@ export const appRouter = router({
         const { id, isBlocked, ...updateData } = input;
         
         // Determinar status baseado em isBlocked e estoque
-        let status: "available" | "occupied" | "blocked" | "counting";
+        let status: "livre" | "available" | "occupied" | "blocked" | "counting";
         
         if (isBlocked === true) {
           // Usuário marcou como bloqueado
@@ -606,7 +606,7 @@ export const appRouter = router({
             .from(inventory)
             .where(eq(inventory.locationId, id));
           
-          status = (stockCheck?.total || 0) > 0 ? "occupied" : "available";
+          status = (stockCheck?.total || 0) > 0 ? "occupied" : "livre";
         } else {
           // isBlocked não fornecido - manter status atual
           const [current] = await db
@@ -614,7 +614,7 @@ export const appRouter = router({
             .from(warehouseLocations)
             .where(eq(warehouseLocations.id, id))
             .limit(1);
-          status = current?.status || "available";
+          status = current?.status || "livre";
         }
         
         await db.update(warehouseLocations)
@@ -791,7 +791,7 @@ export const appRouter = router({
               position: row.quadrante || null,
               locationType,
               storageRule,
-              status: 'available',
+              status: 'livre',
             });
 
             results.success.push(code);

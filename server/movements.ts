@@ -253,23 +253,62 @@ export async function registerMovement(input: RegisterMovementInput) {
 
 /**
  * Atualiza status de um endereço baseado no estoque
+ * 
+ * Lógica de status:
+ * - Livre: sem produtos alocados
+ * - Disponível: com produtos, mas aceita mais (multi-item)
+ * - Ocupado: com produtos e não aceita mais (single-item)
  */
 async function updateLocationStatus(locationId: number) {
   const dbConn = await getDb();
   if (!dbConn) return;
 
+  // Buscar informações do endereço
+  const [location] = await dbConn
+    .select({
+      storageRule: warehouseLocations.storageRule,
+      currentStatus: warehouseLocations.status,
+    })
+    .from(warehouseLocations)
+    .where(eq(warehouseLocations.id, locationId))
+    .limit(1);
+
+  if (!location) return;
+
+  // Calcular quantidade total de produtos no endereço
   const stock = await dbConn
     .select({ total: sql<number>`COALESCE(SUM(${inventory.quantity}), 0)` })
     .from(inventory)
     .where(eq(inventory.locationId, locationId));
 
   const totalQuantity = Number(stock[0]?.total ?? 0);
-  const newStatus = totalQuantity > 0 ? "occupied" : "available";
 
-  await dbConn
-    .update(warehouseLocations)
-    .set({ status: newStatus })
-    .where(eq(warehouseLocations.id, locationId));
+  // Determinar novo status
+  let newStatus: "livre" | "available" | "occupied" | "blocked" | "counting";
+
+  if (totalQuantity === 0) {
+    // Sem produtos = Livre
+    newStatus = "livre";
+  } else if (location.storageRule === "multi") {
+    // Com produtos + multi-item = Disponível (aceita mais produtos)
+    newStatus = "available";
+  } else {
+    // Com produtos + single-item = Ocupado (não aceita mais)
+    newStatus = "occupied";
+  }
+
+  // Preservar status especiais (blocked, counting)
+  if (location.currentStatus === "blocked" || location.currentStatus === "counting") {
+    return; // Não alterar status especiais automaticamente
+  }
+
+  // Atualizar status apenas se mudou
+  if (location.currentStatus !== newStatus) {
+    await dbConn
+      .update(warehouseLocations)
+      .set({ status: newStatus })
+      .where(eq(warehouseLocations.id, locationId));
+  }
 }
 
 /**

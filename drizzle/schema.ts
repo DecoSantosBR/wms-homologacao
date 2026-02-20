@@ -250,7 +250,7 @@ export const warehouseLocations = mysqlTable("warehouseLocations", {
   position: varchar("position", { length: 10 }), // Quadrante (obrigatório apenas para tipo "fraction")
   locationType: mysqlEnum("locationType", ["whole", "fraction"]).default("whole").notNull(), // Inteira ou Fração
   storageRule: mysqlEnum("storageRule", ["single", "multi"]).default("single").notNull(), // Único item/lote ou Multi-item
-  status: mysqlEnum("status", ["available", "occupied", "blocked", "counting"]).default("available").notNull(),
+  status: mysqlEnum("status", ["livre", "available", "occupied", "blocked", "counting"]).default("livre").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

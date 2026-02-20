@@ -2199,3 +2199,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Permitir filtro por digitação (código ou descrição)
 - [x] Manter regras de negócio existentes (origem com estoque, destino por tipo)
 - [x] Testar UX com muitos endereços
+
+
+## 🎯 FEATURE: STATUS "LIVRE" PARA ENDEREÇOS VAZIOS - 31/01/2026
+- [x] Adicionar status "Livre" ao enum de status de endereços no schema
+- [x] Atualizar lógica para marcar endereços como "Livre" quando não houver produtos
+- [x] Atualizar lógica para marcar como "Ocupado" quando produto for alocado
+- [x] Atualizar interface de listagem de endereços para exibir novo status
+- [x] Garantir transições corretas: Livre ↔ Ocupado
+- [x] Testar fluxo completo de alocação e desalocação

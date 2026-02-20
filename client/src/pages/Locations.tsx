@@ -552,6 +552,7 @@ export default function Locations() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os status</SelectItem>
+                        <SelectItem value="livre">Livre</SelectItem>
                         <SelectItem value="available">Disponível</SelectItem>
                         <SelectItem value="occupied">Ocupado</SelectItem>
                         <SelectItem value="blocked">Bloqueado</SelectItem>
@@ -682,8 +683,25 @@ export default function Locations() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={location.status === "available" ? "default" : "secondary"}>
-                              {location.status === "available" ? "Disponível" : location.status === "occupied" ? "Ocupado" : "Bloqueado"}
+                            <Badge 
+                              variant={
+                                location.status === "livre" ? "outline" :
+                                location.status === "available" ? "default" : 
+                                "secondary"
+                              }
+                              className={
+                                location.status === "livre" ? "border-gray-300 text-gray-600" :
+                                location.status === "available" ? "" :
+                                location.status === "occupied" ? "bg-blue-100 text-blue-800 border-blue-300" :
+                                "bg-red-100 text-red-800 border-red-300"
+                              }
+                            >
+                              {location.status === "livre" ? "Livre" :
+                               location.status === "available" ? "Disponível" : 
+                               location.status === "occupied" ? "Ocupado" : 
+                               location.status === "blocked" ? "Bloqueado" :
+                               location.status === "counting" ? "Contagem" :
+                               location.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
