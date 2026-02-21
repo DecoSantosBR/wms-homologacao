@@ -2269,3 +2269,29 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [ ] Parte 4: Cancelamento de romaneio deve estornar reservas (pendente)
   - [ ] Parte 5: Cancelamento de onda deve devolver estoque para origem (pendente)
 - [x] Corrigir filtros na página de Posições de Estoque (/stock): busca por SKU/descrição e filtro por lote não funcionam - RESOLVIDO: Movidos filtros de busca e lote para WHERE ao invés de JOIN (inventory.ts linhas 102-111, 167-172, 205-211). Filtros agora funcionam corretamente em ambas as branches da query.
+
+## Nova Feature - Frontend para Coletor de Dados
+
+- [ ] Criar layout base mobile-first para coletor
+- [ ] Implementar menu de navegação simplificado
+- [ ] Criar tela de recebimento para coletor
+- [ ] Criar tela de picking para coletor
+- [ ] Criar tela de conferência (stage) para coletor
+- [ ] Implementar leitura de código de barras via câmera
+- [ ] Adicionar feedback visual (cores, animações)
+- [ ] Implementar feedback sonoro para operações
+- [ ] Otimizar inputs para auto-focus após leitura
+- [ ] Adicionar modo offline (cache local)
+
+
+## Nova Feature - Frontend para Coletor de Dados - 21/02/2026
+
+- [x] Layout base com navegação mobile-first (CollectorLayout.tsx)
+- [x] Tela inicial com seleção de operações (CollectorHome.tsx)
+- [x] Tela de recebimento com scanner (CollectorReceiving.tsx)
+- [x] Componente BarcodeScanner já existia com funcionalidades completas (câmera, flash, vibração, múltiplos formatos)
+- [x] Integração com menu principal (card "Coletor de Dados" no Home.tsx)
+- [ ] Tela de picking com scanner (pendente)
+- [ ] Tela de stage com scanner (pendente)
+- [ ] Tela de movimentação com scanner (pendente)
+- [ ] Integração completa com APIs backend (atualmente em modo demo)

@@ -26,6 +26,8 @@ import StageCheck from "./pages/StageCheck";
 import ScannerTest from "./pages/ScannerTest";
 import PrintSettings from "./pages/PrintSettings";
 import Reports from "./pages/Reports";
+import { CollectorHome } from "./pages/collector/CollectorHome";
+import { CollectorReceiving } from "./pages/collector/CollectorReceiving";
 
 function Router() {
   return (
@@ -54,6 +56,8 @@ function Router() {
       <Route path={"/scanner-test"} component={ScannerTest} />
       <Route path={"/settings/printing"} component={PrintSettings} />
       <Route path={"/reports"} component={Reports} />
+      <Route path={"/collector"} component={CollectorHome} />
+      <Route path={"/collector/receiving"} component={CollectorReceiving} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -11,7 +11,8 @@ import {
   BarChart3,
   Warehouse,
   Shield,
-  CheckSquare
+  CheckSquare,
+  Smartphone
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -82,6 +83,20 @@ export default function Home() {
         "Confirmar picking"
       ],
       href: "/picking"
+    },
+    {
+      title: "Coletor de Dados",
+      description: "Interface otimizada para dispositivos móveis com scanner",
+      icon: Smartphone,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50",
+      features: [
+        "Recebimento mobile",
+        "Picking mobile",
+        "Stage mobile",
+        "Movimentações"
+      ],
+      href: "/collector"
     },
     {
       title: "Stage",
