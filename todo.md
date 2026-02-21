@@ -2291,7 +2291,16 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Tela de recebimento com scanner (CollectorReceiving.tsx)
 - [x] Componente BarcodeScanner já existia com funcionalidades completas (câmera, flash, vibração, múltiplos formatos)
 - [x] Integração com menu principal (card "Coletor de Dados" no Home.tsx)
-- [ ] Tela de picking com scanner (pendente)
-- [ ] Tela de stage com scanner (pendente)
-- [ ] Tela de movimentação com scanner (pendente)
-- [ ] Integração completa com APIs backend (atualmente em modo demo)
+- [ ] Tela de picking com scanner - CollectorPicking.tsx
+- [ ] Tela de stage com scanner - CollectorStage.tsx
+- [ ] Tela de movimentação com scanner - CollectorMovement.tsx
+- [ ] Integração completa com APIs backend (wave.registerPickedItem, stage.recordStageItem, movements.moveInventory)
+
+
+## Telas Restantes do Coletor - 21/02/2026
+
+- [x] CollectorPicking.tsx - Tela de picking com scanner integrado (wave.registerPickedItem)
+- [x] CollectorStage.tsx - Tela de stage com scanner integrado (stage.startStageCheck, recordStageItem, completeStageCheck)
+- [x] CollectorMovement.tsx - Tela de movimentação com scanner (modo demo, aguardando endpoints backend)
+- [x] Rotas adicionadas no App.tsx (/collector/picking, /collector/stage, /collector/movement)
+- [x] Todas as telas seguem padrão mobile-first com botões touch-friendly e scanner BarcodeScanner
