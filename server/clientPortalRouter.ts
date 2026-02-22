@@ -1279,4 +1279,181 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
         message: "Pedido cancelado com sucesso!",
       };
     }),
+
+  // Importar pedidos em lote via Excel
+  importOrders: publicProcedure
+    .input(
+      z.object({
+        fileData: z.string(), // Base64 do arquivo Excel
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const session = await getPortalSession(ctx.req);
+
+      try {
+        // Decodificar base64 e processar Excel
+        const buffer = Buffer.from(input.fileData, 'base64');
+        const xlsx = await import('xlsx');
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows: any[] = xlsx.utils.sheet_to_json(sheet);
+
+        if (rows.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Planilha vazia" });
+        }
+
+        const results = {
+          success: [] as any[],
+          errors: [] as any[],
+        };
+
+        // Agrupar por número do pedido
+        const orderGroups = new Map<string, any[]>();
+        
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const rowNum = i + 2; // +2 porque linha 1 é cabeçalho e array começa em 0
+
+          // Validar campos obrigatórios
+          if (!row['Nº do Pedido']) {
+            results.errors.push({ linha: rowNum, erro: 'Nº do Pedido é obrigatório' });
+            continue;
+          }
+          if (!row['Cód. do Produto']) {
+            results.errors.push({ linha: rowNum, erro: 'Cód. do Produto é obrigatório' });
+            continue;
+          }
+          if (!row['Quantidade'] || row['Quantidade'] <= 0) {
+            results.errors.push({ linha: rowNum, erro: 'Quantidade deve ser maior que zero' });
+            continue;
+          }
+          if (!row['Unidade de Medida']) {
+            results.errors.push({ linha: rowNum, erro: 'Unidade de Medida é obrigatória' });
+            continue;
+          }
+
+          const orderNumber = String(row['Nº do Pedido']).trim();
+          if (!orderGroups.has(orderNumber)) {
+            orderGroups.set(orderNumber, []);
+          }
+          orderGroups.get(orderNumber)!.push({ ...row, rowNum });
+        }
+
+        // Processar cada pedido
+        for (const [orderNumber, items] of Array.from(orderGroups.entries())) {
+          try {
+            // Processar itens do pedido
+            const orderItems: Array<{
+              productId: number;
+              requestedQuantity: number;
+              requestedUM: "box" | "unit";
+            }> = [];
+
+            let hasItemError = false;
+            for (const item of items) {
+              const productCode = String(item['Cód. do Produto']).trim();
+              const quantity = Number(item['Quantidade']);
+              const unit = String(item['Unidade de Medida']).toLowerCase().trim();
+
+              // Buscar produto por SKU
+              const [product] = await db
+                .select()
+                .from(products)
+                .where(
+                  and(
+                    eq(products.tenantId, session.tenantId),
+                    sql`LOWER(${products.sku}) = LOWER(${productCode})`
+                  )
+                )
+                .limit(1);
+
+              if (!product) {
+                results.errors.push({
+                  pedido: orderNumber,
+                  linha: item.rowNum,
+                  erro: `Produto "${productCode}" não encontrado`,
+                });
+                hasItemError = true;
+                break;
+              }
+
+              // Validar unidade de medida
+              let requestedUM: "box" | "unit";
+              if (unit === "caixa" || unit === "box") {
+                requestedUM = "box";
+              } else if (unit === "unidade" || unit === "unit" || unit === "un") {
+                requestedUM = "unit";
+              } else {
+                results.errors.push({
+                  pedido: orderNumber,
+                  linha: item.rowNum,
+                  erro: `Unidade de medida "${unit}" inválida. Use: caixa ou unidade`,
+                });
+                hasItemError = true;
+                break;
+              }
+
+              orderItems.push({
+                productId: product.id,
+                requestedQuantity: quantity,
+                requestedUM,
+              });
+            }
+
+            if (hasItemError) {
+              continue;
+            }
+
+            // Criar pedido
+            const [order] = await db.insert(pickingOrders).values({
+              tenantId: session.tenantId,
+              orderNumber,
+              customerOrderNumber: orderNumber,
+              status: "pending",
+              priority: "normal",
+              totalItems: orderItems.length,
+              totalQuantity: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+              createdBy: session.systemUserId,
+            });
+
+            const orderId = Number(order.insertId);
+
+            // Criar itens do pedido
+            const items_to_insert = orderItems.map((item) => ({
+              pickingOrderId: orderId,
+              productId: item.productId,
+              requestedQuantity: item.requestedQuantity,
+              requestedUM: item.requestedUM,
+              unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+              status: "pending" as const,
+            }));
+
+            await db.insert(pickingOrderItems).values(items_to_insert);
+
+            results.success.push({
+              pedido: orderNumber,
+              numeroSistema: `#${orderId}`,
+              itens: orderItems.length,
+              quantidadeTotal: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+            });
+          } catch (error: any) {
+            results.errors.push({
+              pedido: orderNumber,
+              erro: error.message || "Erro ao processar pedido",
+            });
+          }
+        }
+
+        return results;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Erro ao processar arquivo",
+        });
+      }
+    }),
 });

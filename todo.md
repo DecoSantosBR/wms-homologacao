@@ -2484,3 +2484,15 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Implementar lógica de cancelamento no botão Cancelar
 - [ ] Implementar validação: apenas pedidos com status "Pendente" podem ser editados/cancelados
 - [ ] Testar fluxo completo: criar → editar → cancelar
+
+### Feature: Criação de Pedidos Individual e em Lote (Portal do Cliente)
+- [x] Investigar implementação de criação de pedidos no Med@x
+- [x] Criar endpoint tRPC para importação em lote de pedidos (.xls)
+- [ ] Criar página /portal/pedidos/novo com abas: Individual e Importação
+- [ ] Implementar formulário de criação individual de pedido
+- [ ] Implementar seleção de produtos com busca e autocomplete
+- [ ] Implementar upload de arquivo .xls para importação em lote
+- [ ] Processar arquivo .xls e validar dados (SKU, quantidade, UM)
+- [ ] Exibir preview dos pedidos antes de confirmar importação
+- [ ] Criar template .xls de exemplo para download
+- [ ] Testar criação individual e em lote
