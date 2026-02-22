@@ -2458,3 +2458,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar validação de tenantId no login
 - [x] Corrigir erro de sintaxe no rejectUser
 - [ ] Testar fluxo completo: cadastro → aprovação → login
+
+### Feature: Notificações por Email para Aprovação
+- [x] Criar helper de envio de email (usar API de notificação do Manus)
+- [x] Criar template HTML de email de aprovação
+- [x] Integrar envio de email no endpoint approveUser
+- [x] Incluir credenciais (login) e link direto no email
+- [x] Testar envio de email (servidor compilou sem erros, pronto para teste em produção)

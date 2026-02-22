@@ -31,6 +31,7 @@ import {
 import { eq, and, desc, gte, lte, sql, gt, like, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as crypto from "crypto";
+import { sendEmail, createApprovalEmailTemplate } from "./_core/emailNotification";
 
 // ============================================================================
 // HELPERS DE AUTENTICAÇÃO DO PORTAL
@@ -917,6 +918,7 @@ export const clientPortalRouter = router({
           id: systemUsers.id,
           fullName: systemUsers.fullName,
           email: systemUsers.email,
+          login: systemUsers.login,
           approvalStatus: systemUsers.approvalStatus,
         })
         .from(systemUsers)
@@ -931,6 +933,20 @@ export const clientPortalRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Usuário já foi aprovado ou rejeitado." });
       }
 
+      // Buscar dados do tenant
+      const tenantData = await db
+        .select({
+          id: tenants.id,
+          name: tenants.name,
+        })
+        .from(tenants)
+        .where(eq(tenants.id, input.tenantId))
+        .limit(1);
+
+      if (tenantData.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+      }
+
       // Aprovar usuário
       await db
         .update(systemUsers)
@@ -943,9 +959,28 @@ export const clientPortalRouter = router({
         })
         .where(eq(systemUsers.id, input.userId));
 
+      // Enviar email de aprovação
+      const portalUrl = `${ctx.req.headers.origin || "https://seu-dominio.com"}/portal/login`;
+      const emailHtml = createApprovalEmailTemplate({
+        userName: user[0].fullName,
+        userLogin: user[0].login,
+        tenantName: tenantData[0].name,
+        portalUrl,
+      });
+
+      const emailSent = await sendEmail({
+        to: user[0].email,
+        subject: "Acesso Aprovado - Portal do Cliente Med@x",
+        htmlContent: emailHtml,
+      });
+
+      if (!emailSent) {
+        console.warn(`[approveUser] Failed to send approval email to ${user[0].email}`);
+      }
+
       return {
         success: true,
-        message: `Usuário ${user[0].fullName} aprovado com sucesso!`,
+        message: `Usuário ${user[0].fullName} aprovado com sucesso!${emailSent ? " Email de confirmação enviado." : " (Email não enviado)"}`,
       };
     }),
 
