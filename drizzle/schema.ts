@@ -1039,3 +1039,30 @@ export type ReportLog = typeof reportLogs.$inferSelect;
 export type InsertReportLog = typeof reportLogs.$inferInsert;
 export type ReportFavorite = typeof reportFavorites.$inferSelect;
 export type InsertReportFavorite = typeof reportFavorites.$inferInsert;
+
+// ============================================================================
+// MÓDULO PORTAL DO CLIENTE
+// ============================================================================
+
+/**
+ * Sessões de acesso ao Portal do Cliente
+ * Usuários do systemUsers fazem login aqui com token próprio (independente do OAuth do WMS).
+ * Token JWT é armazenado em cookie "client_portal_session".
+ */
+export const clientPortalSessions = mysqlTable("clientPortalSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  systemUserId: int("systemUserId").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  tenantIdx: index("cps_tenant_idx").on(table.tenantId),
+  userIdx: index("cps_user_idx").on(table.systemUserId),
+  expiresIdx: index("cps_expires_idx").on(table.expiresAt),
+}));
+
+export type ClientPortalSession = typeof clientPortalSessions.$inferSelect;
+export type InsertClientPortalSession = typeof clientPortalSessions.$inferInsert;

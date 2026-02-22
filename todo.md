@@ -2319,6 +2319,15 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ## 🔴 RECOMENDAÇÕES CRÍTICAS - PORTAL DO CLIENTE - 22/02/2026
 
+### Integração do Módulo
+- [x] Copiar arquivos do módulo para o projeto
+- [x] Adicionar schema do Portal do Cliente ao drizzle/schema.ts
+- [x] Adicionar clientPortalRouter ao server/routers.ts
+- [x] Adicionar rotas do Portal ao client/src/App.tsx
+- [x] Adicionar constante CLIENT_PORTAL_COOKIE ao shared/const.ts
+- [x] Executar migração do banco de dados (pnpm db:push)
+- [x] Corrigir erros de TypeScript (ChevronRight duplicado, campo unit)
+
 ### Pré-Sprint: Validação de Ambiente E2E
 - [x] Criar arquivo .env.e2e.example com variáveis necessárias
 - [x] Criar script scripts/validate-e2e-env.ts

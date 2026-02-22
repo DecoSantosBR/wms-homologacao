@@ -1,0 +1,800 @@
+/**
+ * clientPortalRouter.ts
+ *
+ * Router tRPC para o Portal do Cliente.
+ * Todos os endpoints requerem autenticação via token de sessão do portal
+ * (diferente da sessão OAuth do painel WMS principal).
+ *
+ * Registrar em server/routers.ts:
+ *   import { clientPortalRouter } from "./clientPortalRouter";
+ *   // dentro do appRouter:
+ *   clientPortal: clientPortalRouter,
+ */
+
+import { router, publicProcedure, protectedProcedure, TRPCError } from "./_core/trpc";
+import { z } from "zod";
+import { getDb } from "./db";
+import {
+  systemUsers,
+  tenants,
+  clientPortalSessions,
+  inventory,
+  products,
+  warehouseLocations,
+  warehouseZones,
+  pickingOrders,
+  pickingOrderItems,
+  receivingOrders,
+  receivingOrderItems,
+  inventoryMovements,
+} from "../drizzle/schema";
+import { eq, and, desc, gte, lte, sql, gt, like, or } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import * as crypto from "crypto";
+
+// ============================================================================
+// HELPERS DE AUTENTICAÇÃO DO PORTAL
+// ============================================================================
+
+const PORTAL_SESSION_COOKIE = "client_portal_session";
+const SESSION_DURATION_HOURS = 8;
+
+/**
+ * Extrai e valida o token de sessão do portal a partir do cookie da requisição.
+ * Retorna { systemUserId, tenantId } se válido, ou lança UNAUTHORIZED.
+ */
+async function getPortalSession(req: any) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+  // Lê o cookie de sessão do portal (formato: Bearer <token> ou cookie direto)
+  const cookieHeader = req.headers?.cookie ?? "";
+  const cookieToken = cookieHeader
+    .split(";")
+    .map((c: string) => c.trim())
+    .find((c: string) => c.startsWith(`${PORTAL_SESSION_COOKIE}=`))
+    ?.split("=")[1];
+
+  const authHeader = req.headers?.authorization ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  const token = cookieToken || bearerToken;
+
+  if (!token) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão do portal inválida ou expirada. Faça login novamente." });
+  }
+
+  const sessions = await db
+    .select({
+      id: clientPortalSessions.id,
+      tenantId: clientPortalSessions.tenantId,
+      systemUserId: clientPortalSessions.systemUserId,
+      expiresAt: clientPortalSessions.expiresAt,
+    })
+    .from(clientPortalSessions)
+    .where(eq(clientPortalSessions.token, token))
+    .limit(1);
+
+  const session = sessions[0];
+
+  if (!session) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão não encontrada. Faça login novamente." });
+  }
+
+  if (session.expiresAt < new Date()) {
+    // Limpar sessão expirada
+    await db.delete(clientPortalSessions).where(eq(clientPortalSessions.id, session.id));
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão expirada. Faça login novamente." });
+  }
+
+  return { systemUserId: session.systemUserId, tenantId: session.tenantId };
+}
+
+// ============================================================================
+// ROUTER
+// ============================================================================
+
+export const clientPortalRouter = router({
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AUTH — Login / Logout / Me
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Login do cliente no portal.
+   * Recebe login + senha, valida contra systemUsers, retorna token de sessão.
+   * O token é definido como cookie HttpOnly pelo servidor.
+   */
+  login: publicProcedure
+    .input(z.object({
+      login: z.string().min(1, "Login obrigatório"),
+      password: z.string().min(1, "Senha obrigatória"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar usuário pelo login (login é único por tenant, mas no portal o login é globalmente único nos systemUsers)
+      const userRows = await db
+        .select({
+          id: systemUsers.id,
+          tenantId: systemUsers.tenantId,
+          fullName: systemUsers.fullName,
+          email: systemUsers.email,
+          passwordHash: systemUsers.passwordHash,
+          active: systemUsers.active,
+          failedLoginAttempts: systemUsers.failedLoginAttempts,
+          lockedUntil: systemUsers.lockedUntil,
+        })
+        .from(systemUsers)
+        .where(eq(systemUsers.login, input.login))
+        .limit(1);
+
+      const user = userRows[0];
+
+      // Retorno genérico para não vazar se login existe ou não
+      const INVALID_CREDENTIALS_MSG = "Login ou senha incorretos.";
+
+      if (!user) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: INVALID_CREDENTIALS_MSG });
+      }
+
+      if (!user.active) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário inativo. Contate o administrador do WMS." });
+      }
+
+      // Verificar bloqueio por força bruta
+      if (user.lockedUntil && user.lockedUntil > new Date()) {
+        const unlockMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Conta bloqueada por excesso de tentativas. Tente novamente em ${unlockMinutes} minuto(s).`,
+        });
+      }
+
+      // Verificar senha com hash SHA-256 (compatível com criação de usuários no WMS)
+      // NOTA: se o sistema usar bcrypt no futuro, trocar para bcrypt.compare
+      const hashedInput = crypto
+        .createHash("sha256")
+        .update(input.password)
+        .digest("hex");
+
+      const passwordValid = hashedInput === user.passwordHash;
+
+      if (!passwordValid) {
+        // Incrementar tentativas falhas
+        const newAttempts = (user.failedLoginAttempts ?? 0) + 1;
+        const lockedUntil = newAttempts >= 5
+          ? new Date(Date.now() + 15 * 60 * 1000) // bloqueia 15 min após 5 tentativas
+          : null;
+
+        await db.update(systemUsers)
+          .set({ failedLoginAttempts: newAttempts, lockedUntil })
+          .where(eq(systemUsers.id, user.id));
+
+        const remaining = 5 - newAttempts;
+        const suffix = remaining > 0
+          ? ` (${remaining} tentativa(s) restante(s) antes do bloqueio)`
+          : " Conta bloqueada por 15 minutos.";
+
+        throw new TRPCError({ code: "UNAUTHORIZED", message: `${INVALID_CREDENTIALS_MSG}${suffix}` });
+      }
+
+      // Reset contagem de tentativas e atualiza lastLogin
+      await db.update(systemUsers)
+        .set({ failedLoginAttempts: 0, lockedUntil: null, lastLogin: new Date() })
+        .where(eq(systemUsers.id, user.id));
+
+      // Buscar dados do tenant
+      const tenantRows = await db
+        .select({ id: tenants.id, name: tenants.name, tradeName: tenants.tradeName })
+        .from(tenants)
+        .where(eq(tenants.id, user.tenantId))
+        .limit(1);
+      const tenant = tenantRows[0];
+
+      if (!tenant) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+      }
+
+      // Criar token de sessão
+      const token = nanoid(64);
+      const expiresAt = new Date(Date.now() + SESSION_DURATION_HOURS * 60 * 60 * 1000);
+
+      await db.insert(clientPortalSessions).values({
+        tenantId: user.tenantId,
+        systemUserId: user.id,
+        token,
+        expiresAt,
+        ipAddress: ctx.req?.ip ?? ctx.req?.connection?.remoteAddress ?? null,
+        userAgent: ctx.req?.headers?.["user-agent"] ?? null,
+      });
+
+      // Definir cookie HttpOnly
+      ctx.res.cookie(PORTAL_SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        expires: expiresAt,
+        path: "/",
+      });
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          tenantId: user.tenantId,
+          tenantName: tenant.tradeName ?? tenant.name,
+        },
+      };
+    }),
+
+  /**
+   * Encerra a sessão do portal do cliente.
+   */
+  logout: publicProcedure
+    .mutation(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { success: true };
+
+      try {
+        const cookieHeader = ctx.req?.headers?.cookie ?? "";
+        const token = cookieHeader
+          .split(";")
+          .map((c: string) => c.trim())
+          .find((c: string) => c.startsWith(`${PORTAL_SESSION_COOKIE}=`))
+          ?.split("=")[1];
+
+        if (token) {
+          await db.delete(clientPortalSessions).where(eq(clientPortalSessions.token, token));
+        }
+      } catch {
+        // Ignorar erros ao fazer logout
+      }
+
+      ctx.res.clearCookie(PORTAL_SESSION_COOKIE, { path: "/" });
+      return { success: true };
+    }),
+
+  /**
+   * Retorna os dados do usuário/tenant da sessão ativa.
+   */
+  me: publicProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const session = await getPortalSession(ctx.req);
+        const db = await getDb();
+        if (!db) return null;
+
+        const userRows = await db
+          .select({
+            id: systemUsers.id,
+            fullName: systemUsers.fullName,
+            email: systemUsers.email,
+            tenantId: systemUsers.tenantId,
+            tenantName: tenants.name,
+            tenantTradeName: tenants.tradeName,
+          })
+          .from(systemUsers)
+          .innerJoin(tenants, eq(systemUsers.tenantId, tenants.id))
+          .where(eq(systemUsers.id, session.systemUserId))
+          .limit(1);
+
+        const user = userRows[0];
+        if (!user) return null;
+
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          tenantId: user.tenantId,
+          tenantName: user.tenantTradeName ?? user.tenantName,
+        };
+      } catch {
+        return null;
+      }
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ESTOQUE — visão do cliente sobre seu próprio estoque
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Resumo de estoque do cliente: totais por status.
+   */
+  stockSummary: publicProcedure
+    .query(async ({ ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const rows = await db
+        .select({
+          status: inventory.status,
+          totalItems: sql<number>`COUNT(DISTINCT ${inventory.productId})`,
+          totalQuantity: sql<number>`SUM(${inventory.quantity})`,
+          totalReserved: sql<number>`SUM(${inventory.reservedQuantity})`,
+        })
+        .from(inventory)
+        .where(and(
+          eq(inventory.tenantId, tenantId),
+          gt(inventory.quantity, 0),
+        ))
+        .groupBy(inventory.status);
+
+      const totalByStatus: Record<string, { items: number; quantity: number; reserved: number }> = {};
+      let grandTotalQty = 0;
+      let grandTotalReserved = 0;
+      let distinctProducts = 0;
+
+      for (const row of rows) {
+        totalByStatus[row.status] = {
+          items: Number(row.totalItems),
+          quantity: Number(row.totalQuantity),
+          reserved: Number(row.totalReserved),
+        };
+        grandTotalQty += Number(row.totalQuantity);
+        grandTotalReserved += Number(row.totalReserved);
+        distinctProducts += Number(row.totalItems);
+      }
+
+      // Produtos próximos ao vencimento (≤ 90 dias)
+      const ninetyDays = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+      const expiringRows = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(inventory)
+        .where(and(
+          eq(inventory.tenantId, tenantId),
+          gt(inventory.quantity, 0),
+          lte(inventory.expiryDate, ninetyDays),
+          gte(inventory.expiryDate, new Date()),
+        ));
+
+      return {
+        totalQuantity: grandTotalQty,
+        availableQuantity: grandTotalQty - grandTotalReserved,
+        reservedQuantity: grandTotalReserved,
+        distinctProducts,
+        byStatus: totalByStatus,
+        expiringIn90Days: Number(expiringRows[0]?.count ?? 0),
+      };
+    }),
+
+  /**
+   * Posições de estoque do cliente com filtros.
+   */
+  stockPositions: publicProcedure
+    .input(z.object({
+      search: z.string().optional(),
+      batch: z.string().optional(),
+      status: z.enum(["available", "quarantine", "blocked", "damaged", "expired"]).optional(),
+      expiryBefore: z.string().optional(), // ISO date
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(200).default(50),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const conditions = [
+        eq(inventory.tenantId, tenantId),
+        gt(inventory.quantity, 0),
+      ];
+
+      if (input.status) {
+        conditions.push(eq(inventory.status, input.status));
+      }
+      if (input.batch) {
+        conditions.push(like(inventory.batch, `%${input.batch}%`));
+      }
+      if (input.expiryBefore) {
+        conditions.push(lte(inventory.expiryDate, new Date(input.expiryBefore)));
+      }
+      if (input.search) {
+        conditions.push(or(
+          like(products.sku, `%${input.search}%`),
+          like(products.description, `%${input.search}%`),
+        )!);
+      }
+
+      const offset = (input.page - 1) * input.pageSize;
+
+      const rows = await db
+        .select({
+          inventoryId: inventory.id,
+          productId: inventory.productId,
+          sku: products.sku,
+          description: products.description,
+          batch: inventory.batch,
+          expiryDate: inventory.expiryDate,
+          quantity: inventory.quantity,
+          reservedQuantity: inventory.reservedQuantity,
+          status: inventory.status,
+          locationCode: warehouseLocations.code,
+          zoneName: warehouseZones.name,
+          unitOfMeasure: products.unitOfMeasure,
+        })
+        .from(inventory)
+        .innerJoin(products, eq(inventory.productId, products.id))
+        .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+        .where(and(...conditions))
+        .orderBy(inventory.expiryDate, products.description)
+        .limit(input.pageSize)
+        .offset(offset);
+
+      // Total para paginação
+      const totalRows = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(inventory)
+        .innerJoin(products, eq(inventory.productId, products.id))
+        .where(and(...conditions));
+
+      return {
+        items: rows.map(r => ({
+          ...r,
+          availableQuantity: r.quantity - (r.reservedQuantity ?? 0),
+        })),
+        total: Number(totalRows[0]?.count ?? 0),
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+
+  /**
+   * Produtos próximos ao vencimento (≤ N dias).
+   */
+  expiringProducts: publicProcedure
+    .input(z.object({
+      days: z.number().min(1).max(365).default(90),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const limitDate = new Date(Date.now() + input.days * 24 * 60 * 60 * 1000);
+
+      return await db
+        .select({
+          productId: inventory.productId,
+          sku: products.sku,
+          description: products.description,
+          batch: inventory.batch,
+          expiryDate: inventory.expiryDate,
+          quantity: inventory.quantity,
+          locationCode: warehouseLocations.code,
+        })
+        .from(inventory)
+        .innerJoin(products, eq(inventory.productId, products.id))
+        .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+        .where(and(
+          eq(inventory.tenantId, tenantId),
+          gt(inventory.quantity, 0),
+          lte(inventory.expiryDate, limitDate),
+          gte(inventory.expiryDate, new Date()),
+        ))
+        .orderBy(inventory.expiryDate);
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PEDIDOS DE SAÍDA (picking orders)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Lista pedidos de saída do cliente com filtros e paginação.
+   */
+  orders: publicProcedure
+    .input(z.object({
+      status: z.enum(["pending", "validated", "in_wave", "picking", "picked",
+        "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).optional(),
+      search: z.string().optional(), // busca por número do pedido
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(20),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const conditions = [eq(pickingOrders.tenantId, tenantId)];
+
+      if (input.status) conditions.push(eq(pickingOrders.status, input.status));
+      if (input.search) {
+        conditions.push(or(
+          like(pickingOrders.orderNumber, `%${input.search}%`),
+          like(pickingOrders.customerOrderNumber, `%${input.search}%`),
+        )!);
+      }
+      if (input.dateFrom) conditions.push(gte(pickingOrders.createdAt, new Date(input.dateFrom)));
+      if (input.dateTo) conditions.push(lte(pickingOrders.createdAt, new Date(input.dateTo)));
+
+      const offset = (input.page - 1) * input.pageSize;
+
+      const orders = await db
+        .select({
+          id: pickingOrders.id,
+          orderNumber: pickingOrders.orderNumber,
+          customerOrderNumber: pickingOrders.customerOrderNumber,
+          status: pickingOrders.status,
+          shippingStatus: pickingOrders.shippingStatus,
+          priority: pickingOrders.priority,
+          totalItems: pickingOrders.totalItems,
+          totalQuantity: pickingOrders.totalQuantity,
+          scheduledDate: pickingOrders.scheduledDate,
+          shippedAt: pickingOrders.shippedAt,
+          nfeNumber: pickingOrders.nfeNumber,
+          nfeKey: pickingOrders.nfeKey,
+          notes: pickingOrders.notes,
+          createdAt: pickingOrders.createdAt,
+          updatedAt: pickingOrders.updatedAt,
+        })
+        .from(pickingOrders)
+        .where(and(...conditions))
+        .orderBy(desc(pickingOrders.createdAt))
+        .limit(input.pageSize)
+        .offset(offset);
+
+      const totalRows = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pickingOrders)
+        .where(and(...conditions));
+
+      return {
+        items: orders,
+        total: Number(totalRows[0]?.count ?? 0),
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+
+  /**
+   * Detalhes de um pedido de saída específico, com seus itens.
+   */
+  orderDetail: publicProcedure
+    .input(z.object({ orderId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Valida que o pedido pertence ao tenant
+      const orderRows = await db
+        .select()
+        .from(pickingOrders)
+        .where(and(
+          eq(pickingOrders.id, input.orderId),
+          eq(pickingOrders.tenantId, tenantId),
+        ))
+        .limit(1);
+
+      const order = orderRows[0];
+      if (!order) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
+      }
+
+      const items = await db
+        .select({
+          id: pickingOrderItems.id,
+          productId: pickingOrderItems.productId,
+          sku: products.sku,
+          description: products.description,
+          batch: pickingOrderItems.batch,
+          expiryDate: pickingOrderItems.expiryDate,
+          requestedQuantity: pickingOrderItems.requestedQuantity,
+          pickedQuantity: pickingOrderItems.pickedQuantity,
+          unit: pickingOrderItems.unit,
+          status: pickingOrderItems.status,
+        })
+        .from(pickingOrderItems)
+        .innerJoin(products, eq(pickingOrderItems.productId, products.id))
+        .where(eq(pickingOrderItems.pickingOrderId, input.orderId))
+        .orderBy(products.description);
+
+      return { order, items };
+    }),
+
+  /**
+   * Resumo de pedidos por status (para dashboard do cliente).
+   */
+  ordersSummary: publicProcedure
+    .query(async ({ ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const rows = await db
+        .select({
+          status: pickingOrders.status,
+          count: sql<number>`COUNT(*)`,
+          totalQty: sql<number>`SUM(${pickingOrders.totalQuantity})`,
+        })
+        .from(pickingOrders)
+        .where(eq(pickingOrders.tenantId, tenantId))
+        .groupBy(pickingOrders.status);
+
+      const byStatus: Record<string, { count: number; totalQty: number }> = {};
+      for (const row of rows) {
+        byStatus[row.status] = {
+          count: Number(row.count),
+          totalQty: Number(row.totalQty ?? 0),
+        };
+      }
+
+      return { byStatus };
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // RECEBIMENTOS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Histórico de recebimentos do cliente.
+   */
+  receivings: publicProcedure
+    .input(z.object({
+      status: z.enum(["scheduled", "in_progress", "in_quarantine", "addressing", "completed", "cancelled"]).optional(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(20),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const conditions = [eq(receivingOrders.tenantId, tenantId)];
+
+      if (input.status) conditions.push(eq(receivingOrders.status, input.status));
+      if (input.dateFrom) conditions.push(gte(receivingOrders.createdAt, new Date(input.dateFrom)));
+      if (input.dateTo) conditions.push(lte(receivingOrders.createdAt, new Date(input.dateTo)));
+
+      const offset = (input.page - 1) * input.pageSize;
+
+      const rows = await db
+        .select({
+          id: receivingOrders.id,
+          orderNumber: receivingOrders.orderNumber,
+          nfeNumber: receivingOrders.nfeNumber,
+          nfeKey: receivingOrders.nfeKey,
+          supplierName: receivingOrders.supplierName,
+          supplierCnpj: receivingOrders.supplierCnpj,
+          status: receivingOrders.status,
+          scheduledDate: receivingOrders.scheduledDate,
+          receivedDate: receivingOrders.receivedDate,
+          createdAt: receivingOrders.createdAt,
+        })
+        .from(receivingOrders)
+        .where(and(...conditions))
+        .orderBy(desc(receivingOrders.createdAt))
+        .limit(input.pageSize)
+        .offset(offset);
+
+      const totalRows = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(receivingOrders)
+        .where(and(...conditions));
+
+      return {
+        items: rows,
+        total: Number(totalRows[0]?.count ?? 0),
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+
+  /**
+   * Detalhes de um recebimento com seus itens.
+   */
+  receivingDetail: publicProcedure
+    .input(z.object({ receivingId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const orderRows = await db
+        .select()
+        .from(receivingOrders)
+        .where(and(
+          eq(receivingOrders.id, input.receivingId),
+          eq(receivingOrders.tenantId, tenantId),
+        ))
+        .limit(1);
+
+      const order = orderRows[0];
+      if (!order) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recebimento não encontrado." });
+      }
+
+      const items = await db
+        .select({
+          id: receivingOrderItems.id,
+          productId: receivingOrderItems.productId,
+          sku: products.sku,
+          description: products.description,
+          batch: receivingOrderItems.batch,
+          expiryDate: receivingOrderItems.expiryDate,
+          expectedQuantity: receivingOrderItems.expectedQuantity,
+          receivedQuantity: receivingOrderItems.receivedQuantity,
+          status: receivingOrderItems.status,
+        })
+        .from(receivingOrderItems)
+        .innerJoin(products, eq(receivingOrderItems.productId, products.id))
+        .where(eq(receivingOrderItems.receivingOrderId, input.receivingId))
+        .orderBy(products.description);
+
+      return { order, items };
+    }),
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // MOVIMENTAÇÕES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Histórico de movimentações de estoque do cliente (audit trail).
+   */
+  movements: publicProcedure
+    .input(z.object({
+      productId: z.number().optional(),
+      movementType: z.enum(["receiving", "put_away", "picking", "transfer",
+        "adjustment", "return", "disposal", "quality"]).optional(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(30),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const conditions = [eq(inventoryMovements.tenantId, tenantId)];
+
+      if (input.productId) conditions.push(eq(inventoryMovements.productId, input.productId));
+      if (input.movementType) conditions.push(eq(inventoryMovements.movementType, input.movementType));
+      if (input.dateFrom) conditions.push(gte(inventoryMovements.createdAt, new Date(input.dateFrom)));
+      if (input.dateTo) conditions.push(lte(inventoryMovements.createdAt, new Date(input.dateTo)));
+
+      const offset = (input.page - 1) * input.pageSize;
+
+      const rows = await db
+        .select({
+          id: inventoryMovements.id,
+          productId: inventoryMovements.productId,
+          sku: products.sku,
+          description: products.description,
+          batch: inventoryMovements.batch,
+          movementType: inventoryMovements.movementType,
+          quantity: inventoryMovements.quantity,
+          referenceType: inventoryMovements.referenceType,
+          referenceId: inventoryMovements.referenceId,
+          notes: inventoryMovements.notes,
+          createdAt: inventoryMovements.createdAt,
+        })
+        .from(inventoryMovements)
+        .innerJoin(products, eq(inventoryMovements.productId, products.id))
+        .where(and(...conditions))
+        .orderBy(desc(inventoryMovements.createdAt))
+        .limit(input.pageSize)
+        .offset(offset);
+
+      const totalRows = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(inventoryMovements)
+        .where(and(...conditions));
+
+      return {
+        items: rows,
+        total: Number(totalRows[0]?.count ?? 0),
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }),
+});

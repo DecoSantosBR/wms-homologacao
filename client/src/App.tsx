@@ -31,6 +31,15 @@ import { CollectorReceiving } from "./pages/collector/CollectorReceiving";
 import { CollectorPicking } from "./pages/collector/CollectorPicking";
 import { CollectorStage } from "./pages/collector/CollectorStage";
 import { CollectorMovement } from "./pages/collector/CollectorMovement";
+import { ClientPortalLogin } from "@/pages/client/ClientPortalLogin";
+import { ClientPortalDashboard } from "@/pages/client/ClientPortalDashboard";
+import { ClientPortalStock } from "@/pages/client/ClientPortalStock";
+import { ClientPortalOrders, ClientPortalOrderDetail } from "@/pages/client/ClientPortalOrders";
+import {
+  ClientPortalReceivings,
+  ClientPortalReceivingDetail,
+  ClientPortalMovements,
+} from "@/pages/client/ClientPortalReceivings";
 
 function Router() {
   return (
@@ -64,6 +73,17 @@ function Router() {
         <Route path="/collector/picking" component={CollectorPicking} />
         <Route path="/collector/stage" component={CollectorStage} />
         <Route path="/collector/movement" component={CollectorMovement} />
+      
+      {/* Portal do Cliente */}
+      <Route path="/portal/login" component={ClientPortalLogin} />
+      <Route path="/portal/pedidos/:id" component={ClientPortalOrderDetail} />
+      <Route path="/portal/pedidos" component={ClientPortalOrders} />
+      <Route path="/portal/recebimentos/:id" component={ClientPortalReceivingDetail} />
+      <Route path="/portal/recebimentos" component={ClientPortalReceivings} />
+      <Route path="/portal/movimentacoes" component={ClientPortalMovements} />
+      <Route path="/portal/estoque" component={ClientPortalStock} />
+      <Route path="/portal" component={ClientPortalDashboard} />
+      
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
