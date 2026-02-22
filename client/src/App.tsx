@@ -33,6 +33,7 @@ import { CollectorPicking } from "./pages/collector/CollectorPicking";
 import { CollectorStage } from "./pages/collector/CollectorStage";
 import { CollectorMovement } from "./pages/collector/CollectorMovement";
 import { ClientPortalLogin } from "@/pages/client/ClientPortalLogin";
+import { ClientPortalFirstAccess } from "@/pages/client/ClientPortalFirstAccess";
 import { ClientPortalDashboard } from "@/pages/client/ClientPortalDashboard";
 import { ClientPortalStock } from "@/pages/client/ClientPortalStock";
 import { ClientPortalOrders, ClientPortalOrderDetail } from "@/pages/client/ClientPortalOrders";
@@ -78,6 +79,7 @@ function Router() {
       
       {/* Portal do Cliente */}
       <Route path="/portal/login" component={ClientPortalLogin} />
+      <Route path="/portal/primeiro-acesso" component={ClientPortalFirstAccess} />
       <Route path="/portal/pedidos/:id" component={ClientPortalOrderDetail} />
       <Route path="/portal/pedidos" component={ClientPortalOrders} />
       <Route path="/portal/recebimentos/:id" component={ClientPortalReceivingDetail} />

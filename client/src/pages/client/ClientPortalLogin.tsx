@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,21 +142,26 @@ export function ClientPortalLogin() {
               </Button>
             </form>
 
-            <p className="mt-5 text-center text-xs text-slate-500">
-              Precisa de acesso?{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  toast.info(
-                    "Entre em contato com o administrador do WMS para solicitar acesso ao portal.",
-                    { duration: 5000 }
-                  );
-                }}
-                className="text-blue-400 hover:text-blue-300 underline transition-colors"
-              >
-                Entre em contato com o administrador do WMS.
-              </button>
-            </p>
+            <div className="mt-5 space-y-3">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-700" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-slate-800 px-2 text-slate-500">Primeiro acesso?</span>
+                </div>
+              </div>
+
+              <Link href="/portal/primeiro-acesso">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white h-11"
+                >
+                  1º Acesso - Solicitar Cadastro
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 

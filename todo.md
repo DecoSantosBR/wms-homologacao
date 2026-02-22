@@ -2435,8 +2435,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Criar endpoint tRPC para aprovação de usuário
 - [x] Criar endpoint tRPC para rejeitar usuário
 - [x] Criar endpoint tRPC para listar usuários pendentes
-- [ ] Criar página de primeiro acesso (/portal/primeiro-acesso)
-- [ ] Adicionar botão "1º Acesso" na página de login
+- [x] Criar página de primeiro acesso (/portal/primeiro-acesso)
+- [x] Adicionar botão "1º Acesso" na página de login
+- [x] Registrar rota no App.tsx
 - [ ] Atualizar página /users com botão "Aprovar"
 - [ ] Implementar notificação por email para administradores
 - [ ] Implementar notificação por email para usuário aprovado
