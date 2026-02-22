@@ -2421,3 +2421,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ### Bugs Reportados
 - [x] Corrigir botão de ajuda não funcional na página de login do Portal do Cliente
+
+### Nova Feature: Página de Seleção de Ambiente
+- [x] Criar componente EnvironmentSelector.tsx
+- [x] Mover página inicial atual para rota /home
+- [x] Atualizar App.tsx com nova estrutura de rotas
+- [x] Testar navegação entre ambientes
