@@ -2304,3 +2304,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] CollectorMovement.tsx - Tela de movimentação com scanner (modo demo, aguardando endpoints backend)
 - [x] Rotas adicionadas no App.tsx (/collector/picking, /collector/stage, /collector/movement)
 - [x] Todas as telas seguem padrão mobile-first com botões touch-friendly e scanner BarcodeScanner
+
+## Preparação para GitHub - 21/02/2026
+- [x] Criar README.md completo com descrição, features, screenshots e instruções
+- [x] Criar CONTRIBUTING.md com guia de contribuição
+- [x] Adicionar LICENSE (MIT)
+- [x] Configurar .gitignore adequado
+- [x] Criar INSTALL.md com guia de instalação detalhado
+- [x] Criar DEPLOY.md com guia de deploy
+- [x] Limpar arquivos temporários e de teste

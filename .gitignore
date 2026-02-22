@@ -105,3 +105,13 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# WMS Med@x specific
+.webdev/
+.manus-logs/
+screenshots/
+uploads/
+test-results/
+playwright-report/
+drizzle/migrations/
+zpl-success.txt
