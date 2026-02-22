@@ -2442,3 +2442,12 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Implementar notificação por email para administradores
 - [ ] Implementar notificação por email para usuário aprovado
 - [ ] Testar fluxo completo
+
+### Atualização: Botão Aprovar na Página /users
+- [x] Adicionar coluna "Status de Aprovação" na tabela de usuários
+- [x] Adicionar badge visual para status (pending/approved/rejected)
+- [x] Adicionar botão "Aprovar" para usuários pendentes
+- [x] Criar diálogo de aprovação com seleção de tenant
+- [x] Integrar com endpoints approveUser e rejectUser
+- [x] Criar componente PortalClientUsersSection
+- [ ] Testar fluxo completo de aprovação

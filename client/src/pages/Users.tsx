@@ -42,6 +42,7 @@ import { Users as UsersIcon, Pencil, Shield, User as UserIcon, Building2, Search
 import { toast } from "sonner";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { PortalClientUsersSection } from "@/components/PortalClientUsersSection";
 
 export default function Users() {
   const [search, setSearch] = useState("");
@@ -370,6 +371,9 @@ export default function Users() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Portal Client Users Section */}
+      <PortalClientUsersSection />
 
       {/* Create Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
