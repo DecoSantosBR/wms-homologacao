@@ -144,9 +144,18 @@ export function ClientPortalLogin() {
 
             <p className="mt-5 text-center text-xs text-slate-500">
               Precisa de acesso?{" "}
-              <span className="text-slate-400">
+              <button
+                type="button"
+                onClick={() => {
+                  toast.info(
+                    "Entre em contato com o administrador do WMS para solicitar acesso ao portal.",
+                    { duration: 5000 }
+                  );
+                }}
+                className="text-blue-400 hover:text-blue-300 underline transition-colors"
+              >
                 Entre em contato com o administrador do WMS.
-              </span>
+              </button>
             </p>
           </CardContent>
         </Card>

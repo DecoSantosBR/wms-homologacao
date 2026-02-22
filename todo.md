@@ -2418,3 +2418,6 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Criar checkpoint final
 - [ ] Gerar relatório de implementação
 
+
+### Bugs Reportados
+- [x] Corrigir botão de ajuda não funcional na página de login do Portal do Cliente
