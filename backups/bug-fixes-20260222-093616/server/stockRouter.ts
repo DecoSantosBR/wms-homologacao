@@ -70,7 +70,7 @@ export const stockRouter = router({
   getPositions: protectedProcedure
     .input(inventoryFiltersSchema)
     .query(async ({ input }) => {
-
+      console.log("[BACKEND DEBUG] getPositions input:", JSON.stringify(input, null, 2));
       return await getInventoryPositions(input);
     }),
 

@@ -1,0 +1,9 @@
+WMS Med@x - Backup de Correções
+Data: 2026-02-22 09:36:16
+Diretório: /home/ubuntu/wms-medax/backups/bug-fixes-20260222-093616
+Arquivos:
+  - server/waveRouter.ts
+  - server/_core/authorization.ts
+  - server/stockRouter.ts
+  - server/stage.ts
+  - .gitignore

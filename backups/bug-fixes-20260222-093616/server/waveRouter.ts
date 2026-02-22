@@ -15,33 +15,20 @@ export const waveRouter = router({
     .input(z.object({
       status: z.enum(["pending", "picking", "completed", "cancelled"]).optional(),
       limit: z.number().min(1).max(500).default(100),
-      tenantId: z.number().optional(),
     }))
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const conditions = [];
-
-      // Admins podem filtrar por tenantId; não-admins só veem as ondas do seu tenant
-      if (ctx.user?.role === "admin") {
-        if (input.tenantId) {
-          conditions.push(eq(pickingWaves.tenantId, input.tenantId));
-        }
-      } else if (ctx.user?.tenantId) {
-        conditions.push(eq(pickingWaves.tenantId, ctx.user.tenantId));
-      }
-
-      if (input.status) {
-        conditions.push(eq(pickingWaves.status, input.status));
-      }
-
-      const query = db
+      let query = db
         .select()
         .from(pickingWaves)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(pickingWaves.createdAt))
         .limit(input.limit);
+
+      if (input.status) {
+        query = query.where(eq(pickingWaves.status, input.status)) as any;
+      }
 
       return await query;
     }),

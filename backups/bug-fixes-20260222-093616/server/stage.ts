@@ -179,14 +179,19 @@ export async function startStageCheck(params: {
 
   // CORREÇÃO: Agrupar itens por produto+lote (SKU+batch) ao invés de apenas produto
   // Itens com mesmo SKU mas lotes diferentes devem ser conferidos separadamente
-
+  console.log('[DEBUG startStageCheck] orderItems BEFORE grouping:', orderItems.map(i => ({
+    productId: i.productId,
+    sku: i.productSku,
+    batch: i.batch,
+    qty: i.quantity
+  })));
   
   const groupedItems = orderItems.reduce((acc, item) => {
     // Normalizar quantidade para unidades
     let quantityInUnits = item.quantity;
     if (item.unit === 'box' && item.unitsPerBox) {
       quantityInUnits = item.quantity * item.unitsPerBox;
-
+      console.log(`[DEBUG] Convertendo ${item.productSku}: ${item.quantity} caixas x ${item.unitsPerBox} = ${quantityInUnits} unidades`);
     }
     
     // ✅ Buscar por productId + batch (ao invés de apenas productId)
@@ -217,7 +222,11 @@ export async function startStageCheck(params: {
     quantity: number 
   }>);
 
-
+  console.log('[DEBUG startStageCheck] groupedItems AFTER grouping:', groupedItems.map(i => ({
+    productId: i.productId,
+    sku: i.productSku,
+    qty: i.quantity
+  })));
 
   // Criar registros de itens esperados (para comparação posterior)
   for (const item of groupedItems) {
@@ -381,6 +390,20 @@ export async function completeStageCheck(params: {
     .where(eq(stageCheckItems.stageCheckId, params.stageCheckId));
 
   // Verificar divergências
+  console.log('[DEBUG] ===== COMPLETE STAGE CHECK DEBUG =====');
+  console.log('[DEBUG] stageCheckId:', params.stageCheckId);
+  console.log('[DEBUG] Items before divergence check:');
+  items.forEach((item, index) => {
+    console.log(`[DEBUG]   Item ${index + 1}:`, {
+      id: item.id,
+      sku: item.productSku,
+      name: item.productName,
+      expected: item.expectedQuantity,
+      checked: item.checkedQuantity,
+      divergence: item.divergence,
+      calculated_divergence: item.checkedQuantity - item.expectedQuantity
+    });
+  });
   
   // Verificar se há itens não conferidos (checkedQuantity = 0)
   const uncheckedItems = items.filter(item => item.checkedQuantity === 0);
@@ -403,7 +426,9 @@ export async function completeStageCheck(params: {
   const hasDivergence = items.some(item => item.divergence !== 0);
   const divergentItems = items.filter(item => item.divergence !== 0);
   
-  
+  console.log('[DEBUG] hasDivergence:', hasDivergence);
+  console.log('[DEBUG] divergentItems count:', divergentItems.length);
+  console.log('[DEBUG] uncheckedItems count:', uncheckedItems.length);
 
   if (hasDivergence && !params.force) {
     // Atualizar status para divergent

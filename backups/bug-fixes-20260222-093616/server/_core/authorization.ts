@@ -42,54 +42,33 @@ export async function hasPermission(userId: number, permissionCode: string): Pro
 }
 
 /**
- * Busca todas as permissões de um usuário em uma única query (evita N+1)
- */
-async function getUserPermissionCodes(userId: number): Promise<Set<string>> {
-  const db = await getDb();
-  if (!db) return new Set();
-
-  const userRolesResult = await db
-    .select({ roleId: userRoles.roleId })
-    .from(userRoles)
-    .where(eq(userRoles.userId, userId));
-
-  if (userRolesResult.length === 0) return new Set();
-
-  const roleIds = userRolesResult.map(r => r.roleId);
-
-  const result = await db
-    .select({ code: permissions.code })
-    .from(rolePermissions)
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(inArray(rolePermissions.roleId, roleIds));
-
-  return new Set(result.map(r => r.code));
-}
-
-/**
  * Verifica se um usuário tem TODAS as permissões especificadas
- * Usa uma única query ao banco ao invés de N queries (evita N+1)
  * @param userId ID do usuário
  * @param permissionCodes Array de códigos de permissões
  * @returns true se o usuário tem todas as permissões, false caso contrário
  */
 export async function hasAllPermissions(userId: number, permissionCodes: string[]): Promise<boolean> {
-  if (permissionCodes.length === 0) return true;
-  const userPerms = await getUserPermissionCodes(userId);
-  return permissionCodes.every(code => userPerms.has(code));
+  for (const code of permissionCodes) {
+    if (!(await hasPermission(userId, code))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
  * Verifica se um usuário tem ALGUMA das permissões especificadas
- * Usa uma única query ao banco ao invés de N queries (evita N+1)
  * @param userId ID do usuário
  * @param permissionCodes Array de códigos de permissões
  * @returns true se o usuário tem pelo menos uma das permissões, false caso contrário
  */
 export async function hasAnyPermission(userId: number, permissionCodes: string[]): Promise<boolean> {
-  if (permissionCodes.length === 0) return false;
-  const userPerms = await getUserPermissionCodes(userId);
-  return permissionCodes.some(code => userPerms.has(code));
+  for (const code of permissionCodes) {
+    if (await hasPermission(userId, code)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
