@@ -2451,3 +2451,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Integrar com endpoints approveUser e rejectUser
 - [x] Criar componente PortalClientUsersSection
 - [ ] Testar fluxo completo de aprovação
+
+### Bug: Erro 401 após aprovação de usuário
+- [x] Investigar endpoint de login do Portal do Cliente
+- [x] Verificar se approveUser está ativando o usuário corretamente
+- [x] Adicionar validação de tenantId no login
+- [x] Corrigir erro de sintaxe no rejectUser
+- [ ] Testar fluxo completo: cadastro → aprovação → login

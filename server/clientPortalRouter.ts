@@ -180,6 +180,11 @@ export const clientPortalRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: `${INVALID_CREDENTIALS_MSG}${suffix}` });
       }
 
+      // Verificar se usuário tem tenantId atribuído
+      if (!user.tenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Seu acesso ainda não foi aprovado. Aguarde a liberação do administrador." });
+      }
+
       // Reset contagem de tentativas e atualiza lastLogin
       await db.update(systemUsers)
         .set({ failedLoginAttempts: 0, lockedUntil: null, lastLogin: new Date() })
@@ -194,7 +199,7 @@ export const clientPortalRouter = router({
       const tenant = tenantRows[0];
 
       if (!tenant) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado. Contate o administrador." });
       }
 
       // Criar token de sessão
@@ -994,7 +999,7 @@ export const clientPortalRouter = router({
 
       return {
         success: true,
-        message: `Solicitação de ${user[0].fullName} rejeitada.`,
+        message: `Solicitacao de ${user[0].fullName} rejeitada.`,
       };
     }),
 });
