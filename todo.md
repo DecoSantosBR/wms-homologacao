@@ -2313,3 +2313,99 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Criar INSTALL.md com guia de instalação detalhado
 - [x] Criar DEPLOY.md com guia de deploy
 - [x] Limpar arquivos temporários e de teste
+
+
+---
+
+## 🔴 RECOMENDAÇÕES CRÍTICAS - PORTAL DO CLIENTE - 22/02/2026
+
+### Pré-Sprint: Validação de Ambiente E2E
+- [x] Criar arquivo .env.e2e.example com variáveis necessárias
+- [x] Criar script scripts/validate-e2e-env.ts
+- [x] Criar script scripts/setup-e2e-db.ts
+- [x] Configurar workflow CI/CD (.github/workflows/e2e-tests.yml)
+- [x] Atualizar package.json com comandos E2E
+- [ ] Validar ambiente E2E localmente
+
+### Sprint 1: Testes Automatizados (10-18h)
+#### Testes Unitários Backend (19 testes)
+- [ ] Setup de ambiente de testes (server/clientPortalRouter.test.ts)
+- [ ] Testes de autenticação (7 casos)
+- [ ] Testes de isolamento multi-tenant (3 casos)
+- [ ] Testes de estoque (3 casos)
+- [ ] Testes de pedidos (3 casos)
+- [ ] Testes de recebimentos (2 casos)
+- [ ] Testes de movimentações (1 caso)
+
+#### Testes Unitários Frontend (5 testes)
+- [ ] Setup de testes frontend
+- [ ] Testes do hook useClientPortalAuth (5 casos)
+
+#### Testes E2E com Playwright (8 testes)
+- [ ] Estrutura de arquivos E2E (tests/e2e/client-portal/)
+- [ ] Fixtures de usuários de teste
+- [ ] Testes de autenticação E2E (4 casos)
+- [ ] Testes de dashboard E2E (1 caso)
+- [ ] Testes de estoque E2E (1 caso)
+- [ ] Testes de pedidos E2E (2 casos)
+- [ ] Configurar playwright.config.ts
+
+#### Documentação e Validação
+- [ ] Atualizar README com seção de testes
+- [ ] Gerar relatório de cobertura (≥70%)
+- [ ] Validar que todos os 32 testes passam
+
+### Sprint 2: Log de Auditoria Detalhado (4-6h)
+#### Schema e Migração
+- [ ] Atualizar drizzle/schema.ts com novos campos
+- [ ] Criar migração 0035_client_portal_access_log.sql
+- [ ] Executar migração no banco de dados
+
+#### Middleware de Auditoria
+- [ ] Criar server/_core/auditMiddleware.ts
+- [ ] Implementar mapeamento de endpoints para eventos
+- [ ] Implementar registro assíncrono de logs
+- [ ] Integrar middleware no clientPortalRouter.ts
+
+#### Auditoria de Autenticação
+- [ ] Adicionar logging de login sucesso/falha
+- [ ] Adicionar logging de bloqueio de conta
+- [ ] Adicionar logging de logout
+- [ ] Adicionar logging de sessão expirada
+
+#### Endpoint de Relatórios
+- [ ] Criar endpoint auditLogs (consulta admin)
+- [ ] Criar endpoint auditReportAnvisa (relatório CSV)
+- [ ] Testes de auditoria (server/auditLog.test.ts)
+
+#### Documentação
+- [ ] Criar docs/AUDITORIA.md
+- [ ] Documentar taxonomia de eventos
+- [ ] Documentar campos obrigatórios ANVISA
+
+### Sprint 3: Rate Limiting (2-3h)
+#### Implementação
+- [ ] Instalar express-rate-limit
+- [ ] Criar server/_core/rateLimitMiddleware.ts
+- [ ] Configurar loginRateLimiter (10/min por IP)
+- [ ] Configurar globalPortalRateLimiter (100/min por IP)
+- [ ] Integrar com Express (server/_core/index.ts)
+
+#### Monitoramento
+- [ ] Adicionar logs de rate limiting
+- [ ] Criar endpoint rateLimitStats (admin)
+- [ ] Testes de rate limiting (server/rateLimit.test.ts)
+
+#### Documentação
+- [ ] Criar docs/RATE_LIMITING.md
+- [ ] Documentar limites e configurações
+
+### Validação Final
+- [ ] Executar todos os testes (pnpm test:all)
+- [ ] Validar cobertura ≥70%
+- [ ] Validar testes E2E no CI/CD
+- [ ] Validar logs de auditoria funcionando
+- [ ] Validar rate limiting bloqueando após limites
+- [ ] Criar checkpoint final
+- [ ] Gerar relatório de implementação
+
