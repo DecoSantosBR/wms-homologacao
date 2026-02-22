@@ -2465,3 +2465,22 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Integrar envio de email no endpoint approveUser
 - [x] Incluir credenciais (login) e link direto no email
 - [x] Testar envio de email (servidor compilou sem erros, pronto para teste em produção)
+
+### Bug: Erro OAuth callback failed
+- [x] Verificar logs do servidor para identificar causa
+- [x] Verificar configuração OAuth em server/_core/
+- [x] Verificar variáveis de ambiente OAuth
+- [x] Reiniciar servidor para reconectar ao OAuth
+- [ ] Testar fluxo de login do WMS novamente
+
+### Feature: Gerar e Gerenciar Pedidos de Separação (Portal do Cliente)
+- [x] Criar endpoint tRPC para criar novo pedido de separação
+- [x] Criar endpoint tRPC para editar pedido pendente
+- [x] Criar endpoint tRPC para cancelar pedido pendente
+- [x] Atualizar página ClientPortalOrders com botão "Novo Pedido"
+- [x] Adicionar botões Editar/Cancelar na lista de pedidos (apenas para status Pendente)
+- [ ] Criar página de criação de pedido (/portal/pedidos/novo)
+- [ ] Criar página de edição de pedido (/portal/pedidos/:id/editar)
+- [ ] Implementar lógica de cancelamento no botão Cancelar
+- [ ] Implementar validação: apenas pedidos com status "Pendente" podem ser editados/cancelados
+- [ ] Testar fluxo completo: criar → editar → cancelar

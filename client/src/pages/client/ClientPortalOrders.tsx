@@ -100,6 +100,12 @@ export function ClientPortalOrders() {
               : "Carregando..."}
           </p>
         </div>
+        <Link href="/portal/pedidos/novo">
+          <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+            <Package className="h-4 w-4" />
+            Novo Pedido
+          </Button>
+        </Link>
       </div>
 
       {/* Filtros */}
@@ -148,6 +154,7 @@ export function ClientPortalOrders() {
                 <TableHead className="font-semibold text-slate-700 text-right">Qtd. Total</TableHead>
                 <TableHead className="font-semibold text-slate-700">Status</TableHead>
                 <TableHead className="font-semibold text-slate-700">NF-e</TableHead>
+                <TableHead className="font-semibold text-slate-700 text-right">Ações</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -155,14 +162,14 @@ export function ClientPortalOrders() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : data?.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-slate-400">
+                  <TableCell colSpan={9} className="text-center py-12 text-slate-400">
                     <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium">Nenhum pedido encontrado</p>
                   </TableCell>
@@ -201,6 +208,33 @@ export function ClientPortalOrders() {
                       ) : (
                         <span className="text-slate-300 text-sm">—</span>
                       )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {order.status === "pending" && (
+                          <>
+                            <Link href={`/portal/pedidos/${order.id}/editar`}>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+                                Editar
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-red-600 hover:text-red-800 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Tem certeza que deseja cancelar o pedido ${order.orderNumber}?`)) {
+                                  // TODO: Implementar cancelamento
+                                  alert("Funcionalidade de cancelamento será implementada");
+                                }
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Link href={`/portal/pedidos/${order.id}`}>

@@ -1037,4 +1037,246 @@ export const clientPortalRouter = router({
         message: `Solicitacao de ${user[0].fullName} rejeitada.`,
       };
     }),
+
+  // ============================================================================
+  // GERENCIAMENTO DE PEDIDOS DE SEPARAÇÃO (PORTAL DO CLIENTE)
+  // ============================================================================
+
+  /**
+   * Endpoint para criar novo pedido de separação.
+   * Apenas usuários do portal podem criar pedidos para seu tenant.
+   */
+  createPickingOrder: publicProcedure
+    .input(
+      z.object({
+        sessionToken: z.string(),
+        customerOrderNumber: z.string().optional(),
+        deliveryAddress: z.string().optional(),
+        priority: z.enum(["emergency", "urgent", "normal", "low"]).default("normal"),
+        scheduledDate: z.string().optional(), // ISO date string
+        notes: z.string().optional(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            requestedQuantity: z.number().positive(),
+            requestedUM: z.enum(["unit", "box", "pallet"]).default("unit"),
+          })
+        ).min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const session = await getPortalSession(ctx.req);
+
+      // Gerar número de pedido único
+      const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
+
+      // Buscar nome do tenant (cliente)
+      const tenant = await db
+        .select({ name: tenants.name })
+        .from(tenants)
+        .where(eq(tenants.id, session.tenantId))
+        .limit(1);
+
+      const customerName = tenant.length > 0 ? tenant[0].name : "Cliente";
+
+      // Criar pedido
+      const [order] = await db.insert(pickingOrders).values({
+        tenantId: session.tenantId,
+        orderNumber,
+        customerOrderNumber: input.customerOrderNumber || null,
+        customerId: session.tenantId,
+        customerName,
+        deliveryAddress: input.deliveryAddress || null,
+        priority: input.priority,
+        status: "pending",
+        totalItems: input.items.length,
+        totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+        scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+        notes: input.notes || null,
+        createdBy: session.systemUserId,
+      });
+
+      // Criar itens do pedido
+      const orderItems = input.items.map((item) => ({
+        pickingOrderId: order.insertId,
+        productId: item.productId,
+        requestedQuantity: item.requestedQuantity,
+        requestedUM: item.requestedUM,
+        unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+        status: "pending" as const,
+      }));
+
+      await db.insert(pickingOrderItems).values(orderItems);
+
+      return {
+        success: true,
+        orderId: order.insertId,
+        orderNumber,
+        message: "Pedido criado com sucesso!",
+      };
+    }),
+
+  /**
+   * Endpoint para editar pedido pendente.
+   * Apenas pedidos com status "pending" podem ser editados.
+   */
+  updatePickingOrder: publicProcedure
+    .input(
+      z.object({
+        sessionToken: z.string(),
+        orderId: z.number(),
+        customerOrderNumber: z.string().optional(),
+        deliveryAddress: z.string().optional(),
+        priority: z.enum(["emergency", "urgent", "normal", "low"]).optional(),
+        scheduledDate: z.string().optional(),
+        notes: z.string().optional(),
+        items: z.array(
+          z.object({
+            id: z.number().optional(), // Se existir, atualiza; senão, cria novo
+            productId: z.number(),
+            requestedQuantity: z.number().positive(),
+            requestedUM: z.enum(["unit", "box", "pallet"]).default("unit"),
+          })
+        ).min(1).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const session = await getPortalSession(ctx.req);
+
+      // Verificar se pedido existe e pertence ao tenant
+      const order = await db
+        .select()
+        .from(pickingOrders)
+        .where(
+          and(
+            eq(pickingOrders.id, input.orderId),
+            eq(pickingOrders.tenantId, session.tenantId)
+          )
+        )
+        .limit(1);
+
+      if (order.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
+      }
+
+      if (order[0].status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas pedidos pendentes podem ser editados." });
+      }
+
+      // Atualizar pedido
+      const updateData: any = {};
+      if (input.customerOrderNumber !== undefined) updateData.customerOrderNumber = input.customerOrderNumber;
+      if (input.deliveryAddress !== undefined) updateData.deliveryAddress = input.deliveryAddress;
+      if (input.priority) updateData.priority = input.priority;
+      if (input.scheduledDate) updateData.scheduledDate = new Date(input.scheduledDate);
+      if (input.notes !== undefined) updateData.notes = input.notes;
+
+      if (Object.keys(updateData).length > 0) {
+        await db
+          .update(pickingOrders)
+          .set(updateData)
+          .where(eq(pickingOrders.id, input.orderId));
+      }
+
+      // Atualizar itens se fornecidos
+      if (input.items) {
+        // Remover itens antigos
+        await db
+          .delete(pickingOrderItems)
+          .where(eq(pickingOrderItems.pickingOrderId, input.orderId));
+
+        // Inserir novos itens
+        const orderItems = input.items.map((item) => ({
+          pickingOrderId: input.orderId,
+          productId: item.productId,
+          requestedQuantity: item.requestedQuantity,
+          requestedUM: item.requestedUM,
+          unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+          status: "pending" as const,
+        }));
+
+        await db.insert(pickingOrderItems).values(orderItems);
+
+        // Atualizar totais
+        await db
+          .update(pickingOrders)
+          .set({
+            totalItems: input.items.length,
+            totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+          })
+          .where(eq(pickingOrders.id, input.orderId));
+      }
+
+      return {
+        success: true,
+        message: "Pedido atualizado com sucesso!",
+      };
+    }),
+
+  /**
+   * Endpoint para cancelar pedido pendente.
+   * Apenas pedidos com status "pending" podem ser cancelados.
+   */
+  cancelPickingOrder: publicProcedure
+    .input(
+      z.object({
+        sessionToken: z.string(),
+        orderId: z.number(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const session = await getPortalSession(ctx.req);
+
+      // Verificar se pedido existe e pertence ao tenant
+      const order = await db
+        .select()
+        .from(pickingOrders)
+        .where(
+          and(
+            eq(pickingOrders.id, input.orderId),
+            eq(pickingOrders.tenantId, session.tenantId)
+          )
+        )
+        .limit(1);
+
+      if (order.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
+      }
+
+      if (order[0].status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas pedidos pendentes podem ser cancelados." });
+      }
+
+      // Cancelar pedido
+      await db
+        .update(pickingOrders)
+        .set({
+          status: "cancelled",
+          notes: input.reason ? `${order[0].notes || ""}
+
+Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
+        })
+        .where(eq(pickingOrders.id, input.orderId));
+
+      // Cancelar itens
+      await db
+        .update(pickingOrderItems)
+        .set({ status: "cancelled" })
+        .where(eq(pickingOrderItems.pickingOrderId, input.orderId));
+
+      return {
+        success: true,
+        message: "Pedido cancelado com sucesso!",
+      };
+    }),
 });
