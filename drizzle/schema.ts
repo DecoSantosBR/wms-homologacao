@@ -38,6 +38,9 @@ export const systemUsers = mysqlTable("systemUsers", {
   email: varchar("email", { length: 320 }).notNull(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(), // bcrypt hash
   active: boolean("active").default(true).notNull(),
+  approvalStatus: mysqlEnum("approvalStatus", ["pending", "approved", "rejected"]).default("approved").notNull(), // Status de aprovação
+  approvedBy: int("approvedBy"), // ID do admin que aprovou
+  approvedAt: timestamp("approvedAt"), // Data/hora da aprovação
   failedLoginAttempts: int("failedLoginAttempts").default(0).notNull(),
   lockedUntil: timestamp("lockedUntil"), // Bloqueio temporário por tentativas inválidas
   lastLogin: timestamp("lastLogin"),

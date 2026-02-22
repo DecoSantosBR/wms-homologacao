@@ -797,4 +797,204 @@ export const clientPortalRouter = router({
         pageSize: input.pageSize,
       };
     }),
+
+  // ============================================================================
+  // AUTO-CADASTRO E APROVAÇÃO DE USUÁRIOS
+  // ============================================================================
+
+  /**
+   * Endpoint público para auto-cadastro de novos usuários do portal.
+   * Cria usuário com status "pending" aguardando aprovação de admin.
+   */
+  registerNewUser: publicProcedure
+    .input(
+      z.object({
+        fullName: z.string().min(3, "Nome completo deve ter pelo menos 3 caracteres"),
+        email: z.string().email("Email inválido"),
+        password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
+        companyName: z.string().min(3, "Nome da empresa deve ter pelo menos 3 caracteres"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Gerar login a partir do email (parte antes do @)
+      const login = input.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, ".");
+
+      // Verificar se já existe usuário com este email
+      const existingUser = await db
+        .select({ id: systemUsers.id })
+        .from(systemUsers)
+        .where(eq(systemUsers.email, input.email))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe um usuário cadastrado com este email.",
+        });
+      }
+
+      // Hash da senha com SHA-256
+      const passwordHash = crypto.createHash("sha256").update(input.password).digest("hex");
+
+      // Criar usuário com status pending (tenantId = 0 temporário)
+      await db.insert(systemUsers).values({
+        tenantId: 0, // Será atribuído pelo admin na aprovação
+        fullName: input.fullName,
+        login: login,
+        email: input.email,
+        passwordHash: passwordHash,
+        active: false, // Inativo até aprovação
+        approvalStatus: "pending",
+        failedLoginAttempts: 0,
+      });
+
+      return {
+        success: true,
+        message: "Sua solicitação foi registrada com sucesso. Em breve, você receberá a confirmação da liberação do seu usuário.",
+      };
+    }),
+
+  /**
+   * Endpoint para listar solicitações de cadastro pendentes.
+   * Apenas administradores podem acessar.
+   */
+  listPendingUsers: protectedProcedure.query(async ({ ctx }) => {
+    // Verificar se usuário é admin
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado. Apenas administradores podem visualizar solicitações pendentes." });
+    }
+
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const pendingUsers = await db
+      .select({
+        id: systemUsers.id,
+        fullName: systemUsers.fullName,
+        login: systemUsers.login,
+        email: systemUsers.email,
+        approvalStatus: systemUsers.approvalStatus,
+        createdAt: systemUsers.createdAt,
+      })
+      .from(systemUsers)
+      .where(eq(systemUsers.approvalStatus, "pending"))
+      .orderBy(desc(systemUsers.createdAt));
+
+    return pendingUsers;
+  }),
+
+  /**
+   * Endpoint para aprovar solicitação de cadastro.
+   * Atribui tenant, ativa usuário e envia email de confirmação.
+   */
+  approveUser: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        tenantId: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verificar se usuário é admin
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado. Apenas administradores podem aprovar solicitações." });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se usuário existe e está pendente
+      const user = await db
+        .select({
+          id: systemUsers.id,
+          fullName: systemUsers.fullName,
+          email: systemUsers.email,
+          approvalStatus: systemUsers.approvalStatus,
+        })
+        .from(systemUsers)
+        .where(eq(systemUsers.id, input.userId))
+        .limit(1);
+
+      if (user.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado." });
+      }
+
+      if (user[0].approvalStatus !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Usuário já foi aprovado ou rejeitado." });
+      }
+
+      // Aprovar usuário
+      await db
+        .update(systemUsers)
+        .set({
+          tenantId: input.tenantId,
+          active: true,
+          approvalStatus: "approved",
+          approvedBy: ctx.user.id,
+          approvedAt: new Date(),
+        })
+        .where(eq(systemUsers.id, input.userId));
+
+      return {
+        success: true,
+        message: `Usuário ${user[0].fullName} aprovado com sucesso!`,
+      };
+    }),
+
+  /**
+   * Endpoint para rejeitar solicitação de cadastro.
+   */
+  rejectUser: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verificar se usuário é admin
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado. Apenas administradores podem rejeitar solicitações." });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se usuário existe e está pendente
+      const user = await db
+        .select({
+          id: systemUsers.id,
+          fullName: systemUsers.fullName,
+          approvalStatus: systemUsers.approvalStatus,
+        })
+        .from(systemUsers)
+        .where(eq(systemUsers.id, input.userId))
+        .limit(1);
+
+      if (user.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado." });
+      }
+
+      if (user[0].approvalStatus !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Usuário já foi aprovado ou rejeitado." });
+      }
+
+      // Rejeitar usuário
+      await db
+        .update(systemUsers)
+        .set({
+          approvalStatus: "rejected",
+          approvedBy: ctx.user.id,
+          approvedAt: new Date(),
+        })
+        .where(eq(systemUsers.id, input.userId));
+
+      return {
+        success: true,
+        message: `Solicitação de ${user[0].fullName} rejeitada.`,
+      };
+    }),
 });

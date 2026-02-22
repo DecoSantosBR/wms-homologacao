@@ -246,6 +246,13 @@
       "when": 1771774315934,
       "tag": "0034_organic_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1771777037471,
+      "tag": "0035_breezy_master_chief",
+      "breakpoints": true
     }
   ]
 }

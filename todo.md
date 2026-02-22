@@ -2427,3 +2427,17 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Mover página inicial atual para rota /home
 - [x] Atualizar App.tsx com nova estrutura de rotas
 - [x] Testar navegação entre ambientes
+
+### Feature: Auto-Cadastro de Usuários do Portal com Aprovação
+- [x] Adicionar campo approvalStatus ao schema systemUsers
+- [x] Criar migração do banco de dados
+- [x] Criar endpoint tRPC para registro de novo usuário
+- [x] Criar endpoint tRPC para aprovação de usuário
+- [x] Criar endpoint tRPC para rejeitar usuário
+- [x] Criar endpoint tRPC para listar usuários pendentes
+- [ ] Criar página de primeiro acesso (/portal/primeiro-acesso)
+- [ ] Adicionar botão "1º Acesso" na página de login
+- [ ] Atualizar página /users com botão "Aprovar"
+- [ ] Implementar notificação por email para administradores
+- [ ] Implementar notificação por email para usuário aprovado
+- [ ] Testar fluxo completo
