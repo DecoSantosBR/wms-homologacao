@@ -2768,3 +2768,6 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ## Bug: Quantidade não incrementa ao bipar produto em /collector/picking
 - [x] Corrigir endpoint scanProduct para incrementar quantidade separada quando etiqueta já está associada
+
+## Bug: Status não muda para "Completo" em /collector/picking
+- [x] Corrigir lógica de status para mudar automaticamente para "Completo" quando pickedQuantity >= totalQuantity

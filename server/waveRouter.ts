@@ -752,10 +752,16 @@ export const waveRouter = router({
       const unitsPerPackage = association.unitsPerPackage || 1;
       const newPickedQuantity = waveItem.pickedQuantity + unitsPerPackage;
 
+      // Determinar novo status
+      const newStatus = newPickedQuantity >= waveItem.totalQuantity ? "picked" : "pending";
+
       // Atualizar pickingWaveItems
       await db
         .update(pickingWaveItems)
-        .set({ pickedQuantity: newPickedQuantity })
+        .set({ 
+          pickedQuantity: newPickedQuantity,
+          status: newStatus
+        })
         .where(eq(pickingWaveItems.id, waveItem.id));
 
       // Atualizar labelAssociations
