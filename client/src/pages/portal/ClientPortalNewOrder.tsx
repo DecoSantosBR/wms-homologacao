@@ -50,16 +50,10 @@ export default function ClientPortalNewOrder() {
   // Utils para chamadas imperativas
   const utils = trpc.useUtils();
   
-  // Buscar dados do usuário logado para obter tenantId
-  const { data: userData } = trpc.clientPortal.me.useQuery();
+  // Queries - busca produtos cadastrados para o cliente (mesma lógica de /picking)
+  const { data: products } = trpc.clientPortal.products.useQuery();
   
-  // Queries - busca produtos do cliente (mesma lógica de /picking)
-  const { data: products } = trpc.products.list.useQuery(
-    userData?.tenantId ? { tenantId: userData.tenantId } : undefined,
-    { enabled: !!userData?.tenantId }
-  );
-  
-  console.log('[ClientPortalNewOrder] Produtos carregados:', products?.length || 0, 'tenantId:', userData?.tenantId);
+  console.log('[ClientPortalNewOrder] Produtos carregados:', products?.length || 0);
   
   // Função para ajustar quantidades com base no estoque disponível
   const adjustQuantities = (insufficientItems: Array<{

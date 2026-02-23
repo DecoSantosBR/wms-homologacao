@@ -370,6 +370,46 @@ export const clientPortalRouter = router({
     }),
 
   /**
+   * Lista de produtos com estoque disponível para o cliente.
+   * Retorna apenas produtos que possuem estoque (quantity > 0 e status = 'available').
+   */
+  products: publicProcedure
+    .query(async ({ ctx }) => {
+      const { tenantId } = await getPortalSession(ctx.req);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      console.log('[clientPortal.products] Buscando produtos com estoque para tenantId:', tenantId);
+
+      // Buscar produtos únicos que possuem estoque disponível
+      const rows = await db
+        .selectDistinct({
+          id: products.id,
+          sku: products.sku,
+          description: products.description,
+          category: products.category,
+          unitOfMeasure: products.unitOfMeasure,
+          unitsPerBox: products.unitsPerBox,
+        })
+        .from(products)
+        .innerJoin(inventory, eq(inventory.productId, products.id))
+        .where(
+          and(
+            eq(products.tenantId, tenantId),
+            eq(inventory.tenantId, tenantId),
+            eq(inventory.status, "available"),
+            gt(inventory.quantity, 0)
+          )
+        )
+        .orderBy(products.description)
+        .limit(1000);
+
+      console.log('[clientPortal.products] Produtos com estoque encontrados:', rows.length);
+
+      return rows;
+    }),
+
+  /**
    * Posições de estoque do cliente com filtros.
    */
   stockPositions: publicProcedure
