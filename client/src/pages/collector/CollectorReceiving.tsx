@@ -10,6 +10,7 @@ import { BarcodeScanner } from "../../components/BarcodeScanner";
 import { Camera, Check, Loader2, Undo2, Package } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
+import { ProductCombobox } from "../../components/ProductCombobox";
 
 export function CollectorReceiving() {
   const [step, setStep] = useState<"select" | "conference">("select");
@@ -253,21 +254,17 @@ export function CollectorReceiving() {
 
               <div>
                 <Label>Produto *</Label>
-                <Select
+                <ProductCombobox
+                  products={orderItems?.map((item: any) => ({
+                    id: item.productId,
+                    sku: item.productSku,
+                    description: item.productDescription,
+                  }))}
                   value={selectedProductId?.toString() || ""}
                   onValueChange={(v) => setSelectedProductId(parseInt(v))}
-                >
-                  <SelectTrigger className="h-12 text-base">
-                    <SelectValue placeholder="Selecione o produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {orderItems?.map((item: any) => (
-                      <SelectItem key={item.productId} value={item.productId.toString()}>
-                        {item.productSku} - {item.productDescription}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Selecione o produto"
+                  className="h-12 text-base"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

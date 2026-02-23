@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
 import { useBusinessError } from "@/hooks/useBusinessError";
+import { ProductCombobox } from "@/components/ProductCombobox";
 
 interface ProductItem {
   productId: number;
@@ -796,18 +797,13 @@ export default function PickingOrders() {
                 <div className="space-y-3">
                   <div>
                     <Label>Produto</Label>
-                    <Select value={selectedProductId} onValueChange={setSelectedProductId} disabled={!selectedTenantId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={!selectedTenantId ? "Selecione um cliente primeiro" : products?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map((product) => (
-                          <SelectItem key={product.id} value={String(product.id)}>
-                            {product.sku} - {product.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ProductCombobox
+                      products={products}
+                      value={selectedProductId}
+                      onValueChange={setSelectedProductId}
+                      placeholder={!selectedTenantId ? "Selecione um cliente primeiro" : products?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"}
+                      disabled={!selectedTenantId}
+                    />
                   </div>
 
                   <div className="grid grid-cols-12 gap-2">
@@ -963,18 +959,13 @@ export default function PickingOrders() {
                 <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-5">
                     <Label>Produto</Label>
-                    <Select value={editSelectedProductId} onValueChange={setEditSelectedProductId} disabled={!editTenantId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={!editTenantId ? "Cliente não definido" : editProducts_available?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {editProducts_available?.map((product) => (
-                          <SelectItem key={product.id} value={String(product.id)}>
-                            {product.sku} - {product.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ProductCombobox
+                      products={editProducts_available}
+                      value={editSelectedProductId}
+                      onValueChange={setEditSelectedProductId}
+                      placeholder={!editTenantId ? "Cliente não definido" : editProducts_available?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"}
+                      disabled={!editTenantId}
+                    />
                   </div>
 
                   <div className="col-span-3">

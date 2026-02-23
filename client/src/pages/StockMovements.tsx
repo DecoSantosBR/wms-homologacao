@@ -328,25 +328,18 @@ export default function StockMovements() {
             {fromLocationId && selectedTenantId && (
               <div className="grid gap-2">
                 <Label htmlFor="product">Produto/Lote *</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger id="product">
-                    <SelectValue placeholder="Selecione o produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationProducts.length === 0 ? (
-                      <SelectItem value="none" disabled>Nenhum produto disponível</SelectItem>
-                    ) : (
-                      locationProducts.map((prod, index) => (
-                        <SelectItem 
-                          key={`${prod.productId}-${prod.batch || "NOBATCH"}-${index}`} 
-                          value={`${prod.productId}-${prod.batch || ""}`}
-                        >
-                          {prod.productSku} - {prod.productDescription} | Lote: {prod.batch || "SEM LOTE"} | Saldo: {prod.quantity}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={locationProducts.map((prod, index) => ({
+                    value: `${prod.productId}-${prod.batch || ""}`,
+                    label: `${prod.productSku} - ${prod.productDescription} | Lote: ${prod.batch || "SEM LOTE"} | Saldo: ${prod.quantity}`,
+                    searchTerms: `${prod.productSku} ${prod.productDescription} ${prod.batch || ""}`.toLowerCase(),
+                  }))}
+                  value={selectedProduct}
+                  onValueChange={setSelectedProduct}
+                  placeholder="Selecione o produto"
+                  emptyText="Nenhum produto disponível"
+                  searchPlaceholder="Buscar por SKU, descrição ou lote..."
+                />
                 {selectedProductData && (
                   <p className="text-sm text-muted-foreground">
                     Saldo disponível: <strong>{maxQuantity}</strong> unidades
