@@ -37,6 +37,7 @@ import { ClientPortalFirstAccess } from "@/pages/client/ClientPortalFirstAccess"
 import { ClientPortalDashboard } from "@/pages/client/ClientPortalDashboard";
 import { ClientPortalStock } from "@/pages/client/ClientPortalStock";
 import { ClientPortalOrders, ClientPortalOrderDetail } from "@/pages/client/ClientPortalOrders";
+import ClientPortalNewOrder from "@/pages/portal/ClientPortalNewOrder";
 import {
   ClientPortalReceivings,
   ClientPortalReceivingDetail,
@@ -80,6 +81,7 @@ function Router() {
       {/* Portal do Cliente */}
       <Route path="/portal/login" component={ClientPortalLogin} />
       <Route path="/portal/primeiro-acesso" component={ClientPortalFirstAccess} />
+      <Route path="/portal/pedidos/novo" component={ClientPortalNewOrder} />
       <Route path="/portal/pedidos/:id" component={ClientPortalOrderDetail} />
       <Route path="/portal/pedidos" component={ClientPortalOrders} />
       <Route path="/portal/recebimentos/:id" component={ClientPortalReceivingDetail} />

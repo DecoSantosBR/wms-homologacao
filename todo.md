@@ -2496,3 +2496,25 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Exibir preview dos pedidos antes de confirmar importação
 - [ ] Criar template .xls de exemplo para download
 - [ ] Testar criação individual e em lote
+
+### Verificação e Correção de Estoque - AESC Mãe de Deus
+- [x] Ler arquivo Excel com posições de estoque de referência (115 registros, 659,306 unidades)
+- [x] Consultar posições atuais do cliente AESC no banco de dados (tenantId=1149002)
+- [x] Comparar e identificar divergências (produto, endereço, quantidade)
+- [x] Gerar relatório de divergências (banco vazio - inserção em massa necessária)
+- [ ] Corrigir posições divergentes no banco de dados
+- [ ] Validar correções aplicadas
+
+
+## Portal do Cliente - Interface de Criação de Pedidos - 22/02/2026
+
+- [x] Criar página /portal/pedidos/novo com abas Individual e Importação
+- [x] Implementar aba Individual com formulário de criação manual
+- [x] Adicionar seleção de produtos no formulário individual
+- [x] Implementar aba Importação reutilizando ImportOrdersDialog
+- [x] Adicionar componente de upload de Excel
+- [x] Integrar com endpoint tRPC clientPortal.createPickingOrder
+- [x] Integrar com endpoint tRPC clientPortal.importOrders
+- [x] Adicionar validações de formulário
+- [ ] Testar criação individual de pedido
+- [ ] Testar importação em lote via Excel
