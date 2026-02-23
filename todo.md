@@ -2973,3 +2973,8 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Atualizar pickingOrderItems com batch e expiryDate correspondentes
   - [x] Garantir que stage.ts receba lote correto para validação
 - [ ] Testar fluxo completo de validação (aguardando teste do usuário)
+
+
+## Deletar cliente "Compartilhado" - 24/02/2026
+- [x] Deletar registro do cliente "Compartilhado" da tabela tenants
+- [x] Validar que cliente não aparece mais nos filtros (0 registros encontrados)
