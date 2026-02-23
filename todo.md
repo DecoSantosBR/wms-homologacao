@@ -2752,3 +2752,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] M-10 (⚪ BACKLOG): Substituir : any / as any por interface tipada
   - Status: PENDENTE
   - Impacto: Type safety no fluxo de picking
+
+
+## Bug - Portal do Cliente - 24/02/2026 02:00
+
+- [ ] /portal/pedidos/novo - Aba Individual: Lista de produtos vazia (não apresenta nenhum produto)
+- [ ] /portal/pedidos/novo - Aba Importação: Pedidos criados não geram reservas de estoque

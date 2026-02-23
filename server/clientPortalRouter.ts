@@ -24,6 +24,7 @@ import {
   warehouseZones,
   pickingOrders,
   pickingOrderItems,
+  pickingReservations,
   receivingOrders,
   receivingOrderItems,
   inventoryMovements,
@@ -385,6 +386,8 @@ export const clientPortalRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+      console.log('[stockPositions] Query iniciada:', { tenantId, input });
+
       const conditions = [
         eq(inventory.tenantId, tenantId),
         gt(inventory.quantity, 0),
@@ -439,7 +442,7 @@ export const clientPortalRouter = router({
         .innerJoin(products, eq(inventory.productId, products.id))
         .where(and(...conditions));
 
-      return {
+      const result = {
         items: rows.map(r => ({
           ...r,
           availableQuantity: r.quantity - (r.reservedQuantity ?? 0),
@@ -448,6 +451,10 @@ export const clientPortalRouter = router({
         page: input.page,
         pageSize: input.pageSize,
       };
+
+      console.log('[stockPositions] Resultado:', { itemsCount: result.items.length, total: result.total });
+
+      return result;
     }),
 
   /**
@@ -1069,10 +1076,83 @@ export const clientPortalRouter = router({
 
       const session = await getPortalSession(ctx.req);
 
-      // Gerar número de pedido único
+      // PASSO 1: Validar estoque disponível para cada item
+      const stockValidations: Array<{
+        item: typeof input.items[0];
+        product: any;
+        availableStock: any[];
+        quantityInUnits: number;
+      }> = [];
+
+      for (const item of input.items) {
+        // Buscar produto para obter unitsPerBox
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(eq(products.id, item.productId))
+          .limit(1);
+
+        if (!product) {
+          throw new TRPCError({ 
+            code: "NOT_FOUND", 
+            message: `Produto ID ${item.productId} não encontrado` 
+          });
+        }
+
+        // Converter quantidade para unidades se solicitado em caixa
+        let quantityInUnits = item.requestedQuantity;
+        if (item.requestedUM === "box") {
+          if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Produto ${product.sku} não possui quantidade por caixa configurada`
+            });
+          }
+          quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+        }
+
+        // Buscar estoque disponível (FEFO)
+        const availableStock = await db
+          .select({
+            id: inventory.id,
+            locationId: inventory.locationId,
+            quantity: inventory.quantity,
+            reservedQuantity: inventory.reservedQuantity,
+            batch: inventory.batch,
+            expiryDate: inventory.expiryDate,
+            availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+          })
+          .from(inventory)
+          .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+          .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+          .where(
+            and(
+              eq(inventory.tenantId, session.tenantId),
+              eq(inventory.productId, item.productId),
+              eq(inventory.status, "available"),
+              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+              // Excluir zonas especiais
+              sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+            )
+          )
+          .orderBy(inventory.expiryDate); // FEFO
+
+        // Calcular total disponível
+        const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+        
+        if (totalAvailable < quantityInUnits) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Estoque insuficiente para produto ${product.sku}. Disponível: ${totalAvailable} unidades, Solicitado: ${quantityInUnits} unidades`
+          });
+        }
+
+        stockValidations.push({ item, product, availableStock, quantityInUnits });
+      }
+
+      // PASSO 2: Criar pedido
       const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
 
-      // Buscar nome do tenant (cliente)
       const tenant = await db
         .select({ name: tenants.name })
         .from(tenants)
@@ -1081,7 +1161,9 @@ export const clientPortalRouter = router({
 
       const customerName = tenant.length > 0 ? tenant[0].name : "Cliente";
 
-      // Criar pedido
+      // Calcular totalQuantity em unidades
+      const totalQuantityInUnits = stockValidations.reduce((sum, val) => sum + val.quantityInUnits, 0);
+
       const [order] = await db.insert(pickingOrders).values({
         tenantId: session.tenantId,
         orderNumber,
@@ -1092,27 +1174,58 @@ export const clientPortalRouter = router({
         priority: input.priority,
         status: "pending",
         totalItems: input.items.length,
-        totalQuantity: input.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
+        totalQuantity: totalQuantityInUnits,
         scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
         notes: input.notes || null,
         createdBy: session.systemUserId,
       });
 
-      // Criar itens do pedido
-      const orderItems = input.items.map((item) => ({
-        pickingOrderId: order.insertId,
-        productId: item.productId,
-        requestedQuantity: item.requestedQuantity,
-        requestedUM: item.requestedUM,
-        unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-        status: "pending" as const,
-      }));
+      const orderId = Number(order.insertId);
 
-      await db.insert(pickingOrderItems).values(orderItems);
+      // PASSO 3: Criar itens e reservar estoque
+      for (const validation of stockValidations) {
+        const { item, product, availableStock, quantityInUnits } = validation;
+
+        // Reservar estoque em múltiplas posições (FEFO)
+        let remainingToReserve = quantityInUnits;
+        for (const stock of availableStock) {
+          if (remainingToReserve <= 0) break;
+
+          const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
+          
+          // Incrementar reservedQuantity no inventory
+          await db
+            .update(inventory)
+            .set({
+              reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+            })
+            .where(eq(inventory.id, stock.id));
+
+          // Registrar reserva na tabela pickingReservations
+          await db.insert(pickingReservations).values({
+            pickingOrderId: orderId,
+            productId: item.productId,
+            inventoryId: stock.id,
+            quantity: toReserve,
+          });
+
+          remainingToReserve -= toReserve;
+        }
+
+        // Criar item do pedido
+        await db.insert(pickingOrderItems).values({
+          pickingOrderId: orderId,
+          productId: item.productId,
+          requestedQuantity: quantityInUnits,
+          requestedUM: "unit",
+          unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+          status: "pending" as const,
+        });
+      }
 
       return {
         success: true,
-        orderId: order.insertId,
+        orderId,
         orderNumber,
         message: "Pedido criado com sucesso!",
       };
@@ -1343,10 +1456,12 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
         // Processar cada pedido
         for (const [orderNumber, items] of Array.from(orderGroups.entries())) {
           try {
-            // Processar itens do pedido
-            const orderItems: Array<{
+            // PASSO 1: Validar produtos e estoque
+            const stockValidations: Array<{
               productId: number;
-              requestedQuantity: number;
+              product: any;
+              availableStock: any[];
+              quantityInUnits: number;
               requestedUM: "box" | "unit";
             }> = [];
 
@@ -1394,9 +1509,64 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 break;
               }
 
-              orderItems.push({
+              // Converter quantidade para unidades
+              let quantityInUnits = quantity;
+              if (requestedUM === "box") {
+                if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+                  results.errors.push({
+                    pedido: orderNumber,
+                    linha: item.rowNum,
+                    erro: `Produto ${product.sku} não possui quantidade por caixa configurada`,
+                  });
+                  hasItemError = true;
+                  break;
+                }
+                quantityInUnits = quantity * product.unitsPerBox;
+              }
+
+              // Buscar estoque disponível (FEFO)
+              const availableStock = await db
+                .select({
+                  id: inventory.id,
+                  locationId: inventory.locationId,
+                  quantity: inventory.quantity,
+                  reservedQuantity: inventory.reservedQuantity,
+                  batch: inventory.batch,
+                  expiryDate: inventory.expiryDate,
+                  availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
+                })
+                .from(inventory)
+                .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+                .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+                .where(
+                  and(
+                    eq(inventory.tenantId, session.tenantId),
+                    eq(inventory.productId, product.id),
+                    eq(inventory.status, "available"),
+                    sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+                    sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                  )
+                )
+                .orderBy(inventory.expiryDate); // FEFO
+
+              // Calcular total disponível
+              const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+              
+              if (totalAvailable < quantityInUnits) {
+                results.errors.push({
+                  pedido: orderNumber,
+                  linha: item.rowNum,
+                  erro: `Estoque insuficiente para ${product.sku}. Disponível: ${totalAvailable} un, Solicitado: ${quantityInUnits} un`,
+                });
+                hasItemError = true;
+                break;
+              }
+
+              stockValidations.push({
                 productId: product.id,
-                requestedQuantity: quantity,
+                product,
+                availableStock,
+                quantityInUnits,
                 requestedUM,
               });
             }
@@ -1405,37 +1575,68 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
               continue;
             }
 
-            // Criar pedido
+            // PASSO 2: Criar pedido
+            const totalQuantityInUnits = stockValidations.reduce((sum, val) => sum + val.quantityInUnits, 0);
+
             const [order] = await db.insert(pickingOrders).values({
               tenantId: session.tenantId,
               orderNumber,
               customerOrderNumber: orderNumber,
               status: "pending",
               priority: "normal",
-              totalItems: orderItems.length,
-              totalQuantity: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+              totalItems: stockValidations.length,
+              totalQuantity: totalQuantityInUnits,
               createdBy: session.systemUserId,
             });
 
             const orderId = Number(order.insertId);
 
-            // Criar itens do pedido
-            const items_to_insert = orderItems.map((item) => ({
-              pickingOrderId: orderId,
-              productId: item.productId,
-              requestedQuantity: item.requestedQuantity,
-              requestedUM: item.requestedUM,
-              unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-              status: "pending" as const,
-            }));
+            // PASSO 3: Criar itens e reservar estoque
+            for (const validation of stockValidations) {
+              const { productId, availableStock, quantityInUnits, requestedUM } = validation;
 
-            await db.insert(pickingOrderItems).values(items_to_insert);
+              // Reservar estoque em múltiplas posições (FEFO)
+              let remainingToReserve = quantityInUnits;
+              for (const stock of availableStock) {
+                if (remainingToReserve <= 0) break;
+
+                const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
+                
+                // Incrementar reservedQuantity no inventory
+                await db
+                  .update(inventory)
+                  .set({
+                    reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+                  })
+                  .where(eq(inventory.id, stock.id));
+
+                // Registrar reserva na tabela pickingReservations
+                await db.insert(pickingReservations).values({
+                  pickingOrderId: orderId,
+                  productId,
+                  inventoryId: stock.id,
+                  quantity: toReserve,
+                });
+
+                remainingToReserve -= toReserve;
+              }
+
+              // Criar item do pedido
+              await db.insert(pickingOrderItems).values({
+                pickingOrderId: orderId,
+                productId,
+                requestedQuantity: quantityInUnits,
+                requestedUM: "unit",
+                unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+                status: "pending" as const,
+              });
+            }
 
             results.success.push({
               pedido: orderNumber,
               numeroSistema: `#${orderId}`,
-              itens: orderItems.length,
-              quantidadeTotal: orderItems.reduce((sum, item) => sum + item.requestedQuantity, 0),
+              itens: stockValidations.length,
+              quantidadeTotal: totalQuantityInUnits,
             });
           } catch (error: any) {
             results.errors.push({

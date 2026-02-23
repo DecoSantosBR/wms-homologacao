@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,23 +50,16 @@ export default function ClientPortalNewOrder() {
   // Utils para chamadas imperativas
   const utils = trpc.useUtils();
   
-  // Queries - busca produtos disponíveis no estoque do cliente
-  const { data: stockData } = trpc.clientPortal.stockPositions.useQuery({
-    page: 1,
-    pageSize: 1000, // Buscar todos os produtos disponíveis
-  });
+  // Buscar dados do usuário logado para obter tenantId
+  const { data: userData } = trpc.clientPortal.me.useQuery();
   
-  // Transformar posições de estoque em lista de produtos únicos
-  const products = stockData?.items.reduce((acc, item) => {
-    if (!acc.find(p => p.id === item.productId)) {
-      acc.push({
-        id: item.productId,
-        sku: item.sku,
-        description: item.description,
-      });
-    }
-    return acc;
-  }, [] as Array<{ id: number; sku: string; description: string }>);
+  // Queries - busca produtos do cliente (mesma lógica de /picking)
+  const { data: products } = trpc.products.list.useQuery(
+    userData?.tenantId ? { tenantId: userData.tenantId } : undefined,
+    { enabled: !!userData?.tenantId }
+  );
+  
+  console.log('[ClientPortalNewOrder] Produtos carregados:', products?.length || 0, 'tenantId:', userData?.tenantId);
   
   // Função para ajustar quantidades com base no estoque disponível
   const adjustQuantities = (insufficientItems: Array<{
