@@ -27,7 +27,7 @@ export function CollectorStage() {
   // Mutation para iniciar conferência
   const startCheckMutation = trpc.stage.startStageCheck.useMutation({
     onSuccess: (data: any) => {
-      setCheckId(data.checkId);
+      setCheckId(data.stageCheckId);
       toast.success("Conferência iniciada!");
     },
     onError: (error: any) => {

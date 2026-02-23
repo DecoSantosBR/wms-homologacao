@@ -2771,3 +2771,6 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ## Bug: Status não muda para "Completo" em /collector/picking
 - [x] Corrigir lógica de status para mudar automaticamente para "Completo" quando pickedQuantity >= totalQuantity
+
+## Bug: Nada acontece após "Iniciar Conferência" em /collector/stage
+- [x] Corrigir transição de tela após clicar em "Iniciar Conferência"
