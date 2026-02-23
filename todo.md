@@ -2792,3 +2792,17 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Incremento automático para itens inteiros
   - [x] Modal apenas para itens fracionados (< 1 caixa)
 - [x] Criar testes vitest validando todos os cenários (6 testes passando)
+
+
+## Botão Cancelar em /shipping - 24/02/2026
+- [x] Implementar endpoint backend cancelShipping
+  - [x] Alterar status do pedido de volta para "picked"
+  - [x] Limpar/cancelar conferência de stage anterior (marca como divergente)
+  - [x] Validar permissões e regras de negócio
+  - [x] Desvincular NF automaticamente
+  - [x] Validar se pedido não está em romaneio
+- [x] Adicionar botão "Cancelar" no frontend /shipping
+  - [x] Modal de confirmação antes de cancelar
+  - [x] Feedback visual de sucesso
+  - [x] Atualização automática da lista
+- [x] Criar testes vitest para o fluxo de cancelamento (6 testes passando)

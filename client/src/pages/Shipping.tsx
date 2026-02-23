@@ -123,6 +123,17 @@ export default function Shipping() {
     },
   });
 
+  const cancelShipping = trpc.shipping.cancelShipping.useMutation({
+    onSuccess: (data) => {
+      toast({ title: "Sucesso", description: data.message });
+      refetchOrders();
+      refetchInvoices();
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({
     xmlContent: '',
@@ -303,10 +314,9 @@ export default function Shipping() {
                   {orders.map((order) => (
                     <div
                       key={order.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                      onClick={() => toggleOrderSelection(order.id)}
+                      className="flex items-center justify-between p-4 border rounded-lg"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => toggleOrderSelection(order.id)}>
                         <input
                           type="checkbox"
                           checked={selectedOrders.includes(order.id)}
@@ -320,7 +330,22 @@ export default function Shipping() {
                           </p>
                         </div>
                       </div>
-                      {getShippingStatusBadge(order.shippingStatus)}
+                      <div className="flex items-center gap-2">
+                        {getShippingStatusBadge(order.shippingStatus)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Deseja cancelar a expedição do pedido ${order.customerOrderNumber}?\n\nO pedido retornará para o Stage para nova conferência.`)) {
+                              cancelShipping.mutate({ orderId: order.id });
+                            }
+                          }}
+                          disabled={cancelShipping.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -1192,4 +1192,126 @@ export const shippingRouter = router({
         message: `${input.ids.length} romaneio(s) cancelado(s). ${orderIds.length} pedido(s) liberado(s). NFs e reservas restauradas.`,
       };
     }),
+
+  /**
+   * Cancelar expedição de pedido
+   * Retorna pedido para status "picked" para nova conferência no Stage
+   */
+  cancelShipping: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar pedido
+      const [order] = await db
+        .select()
+        .from(pickingOrders)
+        .where(eq(pickingOrders.id, input.orderId))
+        .limit(1);
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Pedido não encontrado",
+        });
+      }
+
+      // Validar tenant
+      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId;
+      if (tenantId !== null && order.tenantId !== tenantId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Pedido não pertence ao tenant atual",
+        });
+      }
+
+      // Validar status (só pode cancelar se estiver em "staged")
+      if (order.status !== "staged") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Pedido deve estar com status "staged" para ser cancelado. Status atual: ${order.status}`,
+        });
+      }
+
+      // Verificar se pedido está em romaneio
+      const manifestItems = await db
+        .select()
+        .from(shipmentManifestItems)
+        .where(eq(shipmentManifestItems.pickingOrderId, input.orderId))
+        .limit(1);
+
+      if (manifestItems.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Pedido está em romaneio. Cancele o romaneio primeiro.",
+        });
+      }
+
+      // Desvincular NF (se houver)
+      const linkedInvoices = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.pickingOrderId, input.orderId));
+
+      if (linkedInvoices.length > 0) {
+        await db
+          .update(invoices)
+          .set({
+            pickingOrderId: null,
+            status: "imported",
+            linkedAt: null,
+          })
+          .where(eq(invoices.pickingOrderId, input.orderId));
+
+        console.log(`[CancelShipping] Desvinculado ${linkedInvoices.length} NF(s) do pedido ${order.orderNumber}`);
+      }
+
+      // Cancelar conferência de stage
+      const stageCheckList = await db
+        .select()
+        .from(stageChecks)
+        .where(
+          and(
+            eq(stageChecks.pickingOrderId, input.orderId),
+            eq(stageChecks.status, "completed")
+          )
+        );
+
+      if (stageCheckList.length > 0) {
+        // Marcar conferência como divergente (não há status "cancelled" no schema)
+        await db
+          .update(stageChecks)
+          .set({ 
+            status: "divergent",
+            notes: sql`CONCAT(COALESCE(${stageChecks.notes}, ''), '\n[CANCELADO] Expedição cancelada. Pedido retornado para nova conferência.')`
+          })
+          .where(
+            and(
+              eq(stageChecks.pickingOrderId, input.orderId),
+              eq(stageChecks.status, "completed")
+            )
+          );
+
+        console.log(`[CancelShipping] Marcado ${stageCheckList.length} conferência(s) de stage como divergente do pedido ${order.orderNumber}`);
+      }
+
+      // Alterar status do pedido para "picked"
+      await db
+        .update(pickingOrders)
+        .set({
+          status: "picked",
+          shippingStatus: null,
+        })
+        .where(eq(pickingOrders.id, input.orderId));
+
+      return {
+        success: true,
+        message: `Pedido ${order.customerOrderNumber || order.orderNumber} retornado para nova conferência no Stage`,
+      };
+    }),
 });
