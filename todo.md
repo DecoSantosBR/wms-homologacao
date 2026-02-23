@@ -2684,3 +2684,71 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Solução: Criado ClientPortalImportOrdersDialog separado usando apenas clientPortal.importOrders
   - Portal do Cliente agora usa componente próprio sem referências a OAuth
   - ImportOrdersDialog original mantido para sistema interno
+
+
+## Auditoria Consolidada - Fevereiro 2026 (Revisão A + B)
+
+### Bugs Corrigidos (B-01 a B-09)
+- [x] B-01 (CRÍTICO): FEFO com validade NULL inverte ordenação - server/pickingLogic.ts
+  - Status: APLICADO (ZIP consolidado)
+  - Impacto: Produtos sem validade separados ANTES dos com vencimento próximo
+  - Correção: CASE WHEN para colocar NULLs por último
+  
+- [x] B-02 (ALTO): suggestPickingLocations ignora reservas - server/pickingLogic.ts
+  - Status: APLICADO (ZIP consolidado)
+  - Impacto: Race condition de estoque em separações simultâneas
+  - Correção: Descontar reservedQuantity do availableQuantity
+  
+- [x] B-03 (ALTO): Dashboard com valores hardcoded - server/routers.ts
+  - Status: APLICADO (ZIP consolidado)
+  - Impacto: shippingPending: 15 e totalProcessed: 55 sempre fixos
+  - Correção: COUNT real do banco de dados
+  
+- [x] B-04 (ALTO): 4 logs [DEBUG] em inventory.ts - JÁ APLICADO (primeira auditoria)
+- [x] B-05 (ALTO): 4 logs [DEBUG] em waveRouter.ts - JÁ APLICADO (primeira auditoria)
+- [x] B-06 (ALTO): 6 logs em routers.ts - JÁ APLICADO (primeira auditoria)
+- [x] B-07 (MÉDIO): sessionToken inutilizado - JÁ APLICADO (primeira auditoria)
+- [x] B-08 (MÉDIO): 3 logs em nfeParser.ts - JÁ APLICADO (primeira auditoria)
+- [x] B-09 (MÉDIO): 6 logs em modules/picking.ts + waveDocument.ts - JÁ APLICADO (primeira auditoria)
+
+### Melhorias Recomendadas (M-01 a M-10)
+- [ ] M-01 (🔴 IMEDIATA): Transações de banco em registerMovement, createPickingOrder, registerPickedItem
+  - Status: PENDENTE - Requer refatoração extensa (250+ linhas)
+  - Impacto: Elimina race conditions em fluxos de estoque
+  - Solução: db.transaction() do Drizzle ORM
+  - Recomendação: Implementar em sprint dedicada com testes abrangentes
+  
+- [ ] M-02 (🔴 IMEDIATA): Brute-force lockout no login WMS
+  - Status: NÃO APLICÁVEL (sistema usa OAuth, não há login com senha)
+  
+- [x] M-03 (🔴 IMEDIATA): Validação de env vars com Zod - JÁ APLICADO (primeira auditoria)
+  - Status: IMPLEMENTADO em server/_core/env.ts
+  
+- [x] M-04 (🟠 ALTA): Remover endpoint debug.checkTenants de produção
+  - Status: APLICADO
+  - Impacto: Expunha dados de clientes sem restrição
+  - Solução: Endpoint removido completamente
+  
+- [ ] M-05 (🟠 ALTA): Logger estruturado com Pino
+  - Status: PENDENTE
+  - Impacto: Substitui console.log, distingue níveis, desabilita debug em produção
+  
+- [ ] M-06 (🟡 MÉDIA): Paginação cursor/offset em listagens com .limit(1000)
+  - Status: PENDENTE
+  - Impacto: Performance em tenants com muito estoque
+  
+- [ ] M-07 (🟡 MÉDIA): Consolidar dois arquivos nfeParser.ts
+  - Status: PENDENTE
+  - Impacto: Elimina risco de divergência de lógica fiscal
+  
+- [ ] M-08 (🟡 MÉDIA): Remover *.mjs de debug e .backup do repositório
+  - Status: PENDENTE
+  - Impacto: Limpeza de arquivos temporários
+  
+- [ ] M-09 (⚪ BACKLOG): Cache de permissões RBAC com TTL 5min
+  - Status: PENDENTE
+  - Impacto: Reduz 2 queries por requisição
+  
+- [ ] M-10 (⚪ BACKLOG): Substituir : any / as any por interface tipada
+  - Status: PENDENTE
+  - Impacto: Type safety no fluxo de picking

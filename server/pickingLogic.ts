@@ -79,7 +79,7 @@ export async function suggestPickingLocations(
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
       receivedDate: inventory.createdAt,
-      availableQuantity: inventory.quantity,
+      availableQuantity: sql<number>`(${inventory.quantity} - ${inventory.reservedQuantity})`.as('availableQuantity'),
     })
     .from(inventory)
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
@@ -88,7 +88,7 @@ export async function suggestPickingLocations(
         eq(inventory.productId, params.productId),
         eq(inventory.tenantId, params.tenantId),
         eq(inventory.status, "available"), // Apenas estoque disponível
-        gte(inventory.quantity, 1) // Quantidade > 0
+        sql`(${inventory.quantity} - ${inventory.reservedQuantity}) > 0` // Saldo livre > 0 (desconta reservas)
       )
     );
 

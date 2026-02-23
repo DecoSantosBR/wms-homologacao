@@ -47,32 +47,8 @@ export const appRouter = router({
     }),
   }),
 
-  // Endpoint temporário de debug
-  debug: router({
-    checkTenants: protectedProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      
-      // Buscar Hapvida
-      const hapvida = await db.select().from(tenants).where(sql`name LIKE '%Hapvida%'`).limit(1);
-      
-      // Buscar estoque
-      const stockTenants = await db
-        .select({
-          tenantId: inventory.tenantId,
-          tenantName: tenants.name,
-          count: sql<number>`COUNT(*)`
-        })
-        .from(inventory)
-        .leftJoin(tenants, eq(inventory.tenantId, tenants.id))
-        .groupBy(inventory.tenantId, tenants.name);
-      
-      return {
-        hapvida: hapvida[0] || null,
-        stockByTenant: stockTenants
-      };
-    })
-  }),
+  // Endpoint de debug removido por questões de segurança (M-04 - Auditoria Consolidada)
+  // Expunha dados de clientes sem restrição adequada
 
   dashboard: router({
     stats: protectedProcedure.query(async () => {
@@ -92,11 +68,19 @@ export const appRouter = router({
         eq(pickingOrders.status, 'picking')
       );
 
+      const shippingPendingResult = await db.select({ count: sql<number>`COUNT(*)` }).from(pickingOrders).where(
+        eq(pickingOrders.status, 'staged')
+      );
+
+      const totalProcessedResult = await db.select({ count: sql<number>`COUNT(*)` }).from(pickingOrders).where(
+        eq(pickingOrders.status, 'shipped')
+      );
+
       return {
         receivingToday: receivingToday.length,
         pickingInProgress: pickingInProgress.length,
-        shippingPending: 15,
-        totalProcessed: 55
+        shippingPending: Number(shippingPendingResult[0]?.count ?? 0),
+        totalProcessed: Number(totalProcessedResult[0]?.count ?? 0),
       };
     }),
   }),
