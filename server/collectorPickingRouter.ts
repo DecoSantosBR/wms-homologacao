@@ -918,6 +918,37 @@ export const collectorPickingRouter = {
       const hasShortPicked = allocs.some((a) => a.status === "short_picked");
       const newStatus = hasShortPicked ? "divergent" : "picked";
 
+      // CORREÇÃO: Copiar lote e validade das alocações para pickingOrderItems
+      // para que a validação de lote funcione no /collector/stage
+      const allocsWithBatch = await db
+        .select({
+          productId: pickingAllocations.productId,
+          batch: pickingAllocations.batch,
+          expiryDate: pickingAllocations.expiryDate,
+        })
+        .from(pickingAllocations)
+        .where(eq(pickingAllocations.pickingOrderId, input.pickingOrderId));
+
+      // Agrupar por produto+lote para atualizar pickingOrderItems
+      const { pickingOrderItems } = await import("../drizzle/schema");
+      for (const alloc of allocsWithBatch) {
+        if (alloc.batch) {
+          // Atualizar pickingOrderItems com lote e validade
+          await db
+            .update(pickingOrderItems)
+            .set({
+              batch: alloc.batch,
+              expiryDate: alloc.expiryDate,
+            })
+            .where(
+              and(
+                eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
+                eq(pickingOrderItems.productId, alloc.productId)
+              )
+            );
+        }
+      }
+
       await db
         .update(pickingOrders)
         .set({

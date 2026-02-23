@@ -2963,3 +2963,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Ajustar lógica para não retornar erro quando código não é reconhecido
 - [x] Assumir que código desconhecido é etiqueta nova e vincular ao produto da alocação
 - [ ] Testar com código real "22D08LA129" (aguardando teste do usuário)
+
+
+## Bug: /collector/stage não está validando lote - 24/02/2026
+- [x] Analisar código atual da validação de lote
+- [x] Identificar por que validação não estava funcionando (batch não copiado para pickingOrderItems)
+- [x] Corrigir lógica em collectorPickingRouter.ts para copiar batch e expiryDate ao finalizar picking
+  - [x] Buscar alocações com lote (pickingAllocations)
+  - [x] Atualizar pickingOrderItems com batch e expiryDate correspondentes
+  - [x] Garantir que stage.ts receba lote correto para validação
+- [ ] Testar fluxo completo de validação (aguardando teste do usuário)
