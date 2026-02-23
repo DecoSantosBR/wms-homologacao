@@ -2525,3 +2525,24 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Erro ao cadastrar endereços: "Unexpected token '<', "<!doctype "... is not valid JSON" - servidor retornando HTML ao invés de JSON
   - Causa: Campo tenantId é obrigatório no banco mas o formulário permitia "Compartilhado" (valor 0)
   - Solução: Removida opção "Compartilhado" e tornado campo Cliente obrigatório
+
+
+## Módulo Coletor - Conferência Cega - 22/02/2026 21:55
+
+### Recebimento
+- [x] Analisar lógica de conferência cega do sistema padrão (BlindCheckModal)
+- [x] Adaptar CollectorReceiving para usar conferência cega
+- [x] Implementar seleção de ordem de recebimento
+- [x] Adicionar leitura de etiquetas com scanner
+- [x] Implementar associação de etiquetas a produtos
+- [x] Adicionar resumo de conferência
+- [x] Implementar finalização com validação de divergências
+
+### Picking
+- [x] Analisar fluxo de picking com conferência
+- [x] Adaptar CollectorPicking para usar conferência cega
+- [x] Implementar seleção de onda de separação
+- [x] Adicionar leitura de etiquetas para conferência
+- [x] Implementar validação de produtos separados
+- [x] Adicionar resumo de itens conferidos
+- [x] Implementar finalização da onda

@@ -1,277 +1,309 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { CollectorLayout } from "../../components/CollectorLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { BarcodeScanner } from "../../components/BarcodeScanner";
-import { Camera, Check, X, Package } from "lucide-react";
+import { Camera, Check, Loader2, Package, CheckCircle2 } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
 
 export function CollectorPicking() {
+  const [step, setStep] = useState<"select" | "picking">("select");
   const [showScanner, setShowScanner] = useState(false);
-  const [currentField, setCurrentField] = useState<"wave" | "product" | "location" | null>(null);
+  const [selectedWaveId, setSelectedWaveId] = useState<number | null>(null);
   
-  const [waveId, setWaveId] = useState("");
-  const [waveInfo, setWaveInfo] = useState<any>(null);
-  const [productCode, setProductCode] = useState("");
-  const [locationCode, setLocationCode] = useState("");
-  const [quantity, setQuantity] = useState("");
+  // Conferência de picking
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [scannedCode, setScannedCode] = useState("");
+  const [pickedQuantity, setPickedQuantity] = useState("");
+  
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
 
-  // Query para buscar informações da onda
-  const waveQuery = trpc.wave.getById.useQuery(
-    { id: parseInt(waveId) },
-    { enabled: !!waveId && !isNaN(parseInt(waveId)) }
+  // Buscar ondas disponíveis
+  const { data: waves } = trpc.wave.list.useQuery({
+    status: "picking",
+    limit: 50,
+  });
+
+  // Buscar detalhes da onda selecionada
+  const { data: waveData } = trpc.wave.getById.useQuery(
+    { id: selectedWaveId! },
+    { enabled: !!selectedWaveId }
   );
 
-  // Mutation para registrar item separado
+  // Registrar item separado
   const registerItemMutation = trpc.wave.registerPickedItem.useMutation({
     onSuccess: (data) => {
-      const remaining = data.totalQuantity - data.pickedQuantity;
-      toast.success(`Item registrado! ${remaining} restantes`);
-      // Limpar campos para próximo item
-      setProductCode("");
-      setLocationCode("");
-      setQuantity("");
+      toast.success("Item registrado!", {
+        description: `${data.pickedQuantity}/${data.totalQuantity} separados`,
+      });
       
-      // Se todos os itens foram separados
-      if (data.waveCompleted) {
-        toast.success("Todos os itens da onda foram separados!");
-        setWaveId("");
-        setWaveInfo(null);
+      setScannedCode("");
+      setPickedQuantity("");
+      
+      // Avançar para próximo item
+      if (currentItemIndex < (waveData?.items.length || 0) - 1) {
+        setCurrentItemIndex(currentItemIndex + 1);
+      } else {
+        // Todos os itens foram separados
+        toast.success("Onda finalizada!", {
+          description: "Todos os itens foram separados",
+        });
+        setStep("select");
+        setSelectedWaveId(null);
+        setCurrentItemIndex(0);
       }
+      
+      utils.wave.getById.invalidate({ id: selectedWaveId! });
     },
     onError: (error: any) => {
       toast.error(error.message);
     },
   });
 
-  const handleScan = (code: string) => {
-    if (currentField === "wave") {
-      setWaveId(code);
-      toast.success(`Onda escaneada: ${code}`);
-    } else if (currentField === "product") {
-      setProductCode(code);
-      toast.success(`Produto escaneado: ${code}`);
-    } else if (currentField === "location") {
-      setLocationCode(code);
-      toast.success(`Endereço escaneado: ${code}`);
+  const handleStartPicking = () => {
+    if (!selectedWaveId) {
+      toast.error("Selecione uma onda");
+      return;
     }
-    setShowScanner(false);
-    setCurrentField(null);
+    setStep("picking");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!waveId || !productCode || !locationCode || !quantity) {
-      toast.error("Preencha todos os campos");
+  const handleScanSuccess = (code: string) => {
+    setScannedCode(code);
+    setShowScanner(false);
+    codeInputRef.current?.focus();
+  };
+
+  const handleConfirmItem = () => {
+    if (!scannedCode.trim()) {
+      toast.error("Escaneie a etiqueta do produto");
       return;
     }
 
-    // Buscar itemId da onda (primeiro item disponível)
-    if (!waveQuery.data || !waveQuery.data.items || waveQuery.data.items.length === 0) {
-      toast.error("Nenhum item disponível na onda");
+    if (!pickedQuantity || parseInt(pickedQuantity) < 1) {
+      toast.error("Informe a quantidade separada");
       return;
     }
-    
-    const firstItem = waveQuery.data.items[0];
-    
+
+    const currentItem = waveData?.items[currentItemIndex];
+    if (!currentItem) {
+      toast.error("Item não encontrado");
+      return;
+    }
+
     registerItemMutation.mutate({
-      waveId: parseInt(waveId),
-      itemId: firstItem.id,
-      scannedCode: productCode,
-      quantity: parseInt(quantity),
+      waveId: selectedWaveId!,
+      itemId: currentItem.id,
+      scannedCode: scannedCode.trim(),
+      quantity: parseInt(pickedQuantity),
     });
   };
 
-  const handleClear = () => {
-    setProductCode("");
-    setLocationCode("");
-    setQuantity("");
-  };
-
-  const handleNewWave = () => {
-    setWaveId("");
-    setWaveInfo(null);
-    setProductCode("");
-    setLocationCode("");
-    setQuantity("");
-  };
+  const currentItem = waveData?.items[currentItemIndex];
+  const totalItems = waveData?.items.length || 0;
+  const completedItems = currentItemIndex;
 
   if (showScanner) {
     return (
       <BarcodeScanner
-        onScan={handleScan}
-        onClose={() => {
-          setShowScanner(false);
-          setCurrentField(null);
-        }}
+        onScan={handleScanSuccess}
+        onClose={() => setShowScanner(false)}
       />
     );
   }
 
-  return (
-    <CollectorLayout title="Picking - Separação">
-      <div className="space-y-4">
-        {/* Informações da Onda */}
-        {!waveId ? (
+  // Tela de seleção de onda
+  if (step === "select") {
+    return (
+      <CollectorLayout title="Picking - Separação">
+        <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Selecionar Onda</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="ID da onda"
-                  value={waveId}
-                  onChange={(e) => setWaveId(e.target.value)}
-                  className="h-12 text-lg"
-                  type="number"
-                />
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={() => {
-                    setCurrentField("wave");
-                    setShowScanner(true);
-                  }}
-                  className="h-12 px-4"
-                >
-                  <Camera className="h-5 w-5" />
-                </Button>
-              </div>
-              {waveQuery.isLoading && (
-                <p className="text-sm text-muted-foreground">Carregando onda...</p>
-              )}
-              {waveQuery.error && (
-                <p className="text-sm text-destructive">{waveQuery.error.message}</p>
-              )}
+            <CardContent className="p-4">
+              <Label className="text-lg font-semibold mb-3 block">Selecione a Onda</Label>
+              <Select
+                value={selectedWaveId?.toString() || ""}
+                onValueChange={(v) => setSelectedWaveId(parseInt(v))}
+              >
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue placeholder="Escolha uma onda de separação" />
+                </SelectTrigger>
+                <SelectContent>
+                  {waves?.map((wave: any) => (
+                    <SelectItem key={wave.id} value={wave.id.toString()}>
+                      Onda #{wave.id} - {wave.totalItems} itens
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
-        ) : (
+
+          <Button
+            onClick={handleStartPicking}
+            disabled={!selectedWaveId}
+            className="w-full h-14 text-lg"
+          >
+            <Package className="w-5 h-5 mr-2" />
+            Iniciar Separação
+          </Button>
+        </div>
+      </CollectorLayout>
+    );
+  }
+
+  // Tela de separação
+  return (
+    <CollectorLayout title={`Onda #${selectedWaveId}`}>
+      <div className="space-y-4">
+        {/* Progresso */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-base font-semibold">Progresso</Label>
+              <span className="text-2xl font-bold">{completedItems}/{totalItems}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-blue-600 h-3 rounded-full transition-all"
+                style={{ width: `${(completedItems / totalItems) * 100}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {currentItem ? (
           <>
-            {/* Resumo da Onda */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Onda #{waveId}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {waveQuery.data?.items.length || 0} itens
-                    </p>
+            {/* Informações do Item Atual */}
+            <Card>
+              <CardContent className="p-4">
+                <Label className="text-base font-semibold mb-3 block">Item Atual</Label>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Produto:</span>
+                    <span className="font-medium text-sm">{currentItem.productName}</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNewWave}
-                  >
-                    Trocar Onda
-                  </Button>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">SKU:</span>
+                    <span className="font-medium text-sm">{currentItem.productSku}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Endereço:</span>
+                    <span className="font-medium text-sm">{currentItem.locationCode}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Quantidade:</span>
+                    <span className="font-bold text-lg text-blue-600">{currentItem.totalQuantity}</span>
+                  </div>
+                  {currentItem.batch && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Lote:</span>
+                      <span className="font-medium text-sm">{currentItem.batch}</span>
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
+              </CardContent>
             </Card>
 
-            {/* Formulário de Separação */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Produto */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Etiqueta do Produto</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Escaneie a etiqueta"
-                      value={productCode}
-                      onChange={(e) => setProductCode(e.target.value)}
-                      className="h-12 text-lg"
-                    />
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={() => {
-                        setCurrentField("product");
-                        setShowScanner(true);
-                      }}
-                      className="h-12 px-4"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Endereço */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Endereço de Origem</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Código do endereço"
-                      value={locationCode}
-                      onChange={(e) => setLocationCode(e.target.value)}
-                      className="h-12 text-lg"
-                    />
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={() => {
-                        setCurrentField("location");
-                        setShowScanner(true);
-                      }}
-                      className="h-12 px-4"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quantidade */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Quantidade</CardTitle>
-                </CardHeader>
-                <CardContent>
+            {/* Escaneamento */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <Label className="text-base font-semibold">Etiqueta do Produto</Label>
+                <div className="flex gap-2">
                   <Input
-                    type="number"
-                    placeholder="Quantidade separada"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="h-12 text-lg"
-                    min="1"
+                    ref={codeInputRef}
+                    value={scannedCode}
+                    onChange={(e) => setScannedCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleConfirmItem();
+                      }
+                    }}
+                    placeholder="Escaneie ou digite o código..."
+                    className="h-12 text-base"
+                    disabled={registerItemMutation.isPending}
+                    inputMode="numeric"
                   />
-                </CardContent>
-              </Card>
+                  <Button
+                    onClick={() => setShowScanner(true)}
+                    className="h-12 px-4"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Botões de Ação */}
-              <div className="grid grid-cols-2 gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleClear}
-                  className="h-14"
-                >
-                  <X className="mr-2 h-5 w-5" />
-                  Limpar
-                </Button>
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-14"
+            {/* Quantidade */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <Label className="text-base font-semibold">Quantidade Separada</Label>
+                <Input
+                  type="number"
+                  value={pickedQuantity}
+                  onChange={(e) => setPickedQuantity(e.target.value)}
+                  placeholder="Quantidade..."
+                  className="h-12 text-base"
+                  min="1"
+                  max={currentItem.totalQuantity}
                   disabled={registerItemMutation.isPending}
-                >
-                  <Check className="mr-2 h-5 w-5" />
-                  {registerItemMutation.isPending ? "Registrando..." : "Confirmar"}
-                </Button>
-              </div>
-            </form>
+                  inputMode="numeric"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPickedQuantity(currentItem.totalQuantity.toString())}
+                    className="flex-1 h-10 text-sm"
+                  >
+                    Quantidade Total
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPickedQuantity(Math.floor(currentItem.totalQuantity / 2).toString())}
+                    className="flex-1 h-10 text-sm"
+                  >
+                    Metade
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Confirmar */}
+            <Button
+              onClick={handleConfirmItem}
+              disabled={registerItemMutation.isPending || !scannedCode || !pickedQuantity}
+              className="w-full h-14 text-lg"
+            >
+              {registerItemMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              ) : (
+                <Check className="w-5 h-5 mr-2" />
+              )}
+              Confirmar Item
+            </Button>
           </>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-600" />
+              <Label className="text-xl font-bold mb-2 block">Onda Finalizada!</Label>
+              <p className="text-gray-600 mb-4">Todos os itens foram separados</p>
+              <Button
+                onClick={() => {
+                  setStep("select");
+                  setSelectedWaveId(null);
+                  setCurrentItemIndex(0);
+                }}
+                className="w-full h-12"
+              >
+                Nova Onda
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </CollectorLayout>
