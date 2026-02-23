@@ -15,7 +15,7 @@ const envSchema = z.object({
   // Variáveis do Manus (obrigatórias em produção)
   VITE_APP_ID: z.string().min(1, "VITE_APP_ID é obrigatória"),
   OAUTH_SERVER_URL: z.string().url("OAUTH_SERVER_URL deve ser uma URL válida"),
-  OWNER_OPEN_ID: z.string().min(1, "OWNER_OPEN_ID é obrigatória"),
+  OWNER_OPEN_ID: z.string().optional(), // Opcional: apenas disponível no ambiente Manus
   BUILT_IN_FORGE_API_URL: z.string().url("BUILT_IN_FORGE_API_URL deve ser uma URL válida"),
   BUILT_IN_FORGE_API_KEY: z.string().min(1, "BUILT_IN_FORGE_API_KEY é obrigatória"),
   
@@ -38,7 +38,7 @@ export const ENV = {
   cookieSecret: parsed.data.JWT_SECRET,
   databaseUrl: parsed.data.DATABASE_URL,
   oAuthServerUrl: parsed.data.OAUTH_SERVER_URL,
-  ownerOpenId: parsed.data.OWNER_OPEN_ID,
+  ownerOpenId: parsed.data.OWNER_OPEN_ID || "system", // Fallback para "system" se não estiver disponível
   isProduction: parsed.data.NODE_ENV === "production",
   forgeApiUrl: parsed.data.BUILT_IN_FORGE_API_URL,
   forgeApiKey: parsed.data.BUILT_IN_FORGE_API_KEY,
