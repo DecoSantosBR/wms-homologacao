@@ -2565,3 +2565,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - Causa: Função handleAddProduct tentava buscar produto em originProducts (query que requer locationId), mas apenas tínhamos originCode
   - Solução: Simplificada função para aceitar qualquer código escaneado sem validação de estoque (TODO: implementar busca via API no futuro)
   - Removido limite de quantidade disponível nos botões +/-
+
+
+## CollectorMovement - Melhorias de Interface - 23/02/2026
+
+- [x] Exibir nome completo do produto com SKU e lote (ex: "401460P - INTRAFIX PRIMELINE AIR - LOTE: 22D10LB111")
+- [x] Mostrar quantidade no formato "X cx / Y pc" ao invés de apenas número
+- [x] Calcular quantidade em peças baseado em unidades por caixa
+- [x] Permitir edição manual da quantidade em unidades (input editável para caixas fracionadas)

@@ -19,6 +19,7 @@ interface ScannedProduct {
   batch: string | null;
   availableQuantity: number;
   quantity: number;
+  unitsPerBox: number | null;
 }
 
 export function CollectorMovement() {
@@ -112,6 +113,7 @@ export function CollectorMovement() {
           batch: null,
           availableQuantity: 999, // TODO: Buscar via API
           quantity: 1,
+          unitsPerBox: 80, // TODO: Buscar via API
         },
       ]);
       toast.success("Produto adicionado");
@@ -294,52 +296,69 @@ export function CollectorMovement() {
                 </Label>
                 
                 <div className="space-y-2">
-                  {scannedProducts.map((product) => (
-                    <div key={product.code} className="border rounded-lg p-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{product.productName}</div>
-                          <div className="text-xs text-gray-600">{product.sku}</div>
-                          {product.batch && (
-                            <div className="text-xs text-gray-600">Lote: {product.batch}</div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleUpdateQuantity(product.code, -1)}
-                            disabled={product.quantity <= 1}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <span className="font-bold text-lg min-w-[3ch] text-center">
-                            {product.quantity}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleUpdateQuantity(product.code, 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                  {scannedProducts.map((product) => {
+                    const boxes = product.unitsPerBox ? Math.floor(product.quantity / product.unitsPerBox) : 0;
+                    const pieces = product.quantity;
+                    const displayName = `${product.sku} - ${product.productName}${product.batch ? ' - LOTE: ' + product.batch : ''}`;
+                    
+                    return (
+                      <div key={product.code} className="border rounded-lg p-3 bg-green-50">
+                        <div className="mb-2">
+                          <div className="font-medium text-sm">{displayName}</div>
+                          <div className="text-xs text-gray-600 mt-1">{product.code}</div>
                         </div>
                         
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleRemoveProduct(product.code)}
-                        >
-                          Remover
-                        </Button>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleUpdateQuantity(product.code, -1)}
+                              disabled={product.quantity <= 1}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <Input
+                              type="number"
+                              value={product.quantity}
+                              onChange={(e) => {
+                                const newQty = parseInt(e.target.value) || 1;
+                                setScannedProducts(prev =>
+                                  prev.map(p =>
+                                    p.code === product.code
+                                      ? { ...p, quantity: Math.max(1, newQty) }
+                                      : p
+                                  )
+                                );
+                              }}
+                              className="h-8 w-20 text-center font-bold"
+                              min="1"
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleUpdateQuantity(product.code, 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                            <span className="text-sm font-medium bg-green-100 px-3 py-1 rounded">
+                              {boxes} cx / {pieces} pc
+                            </span>
+                          </div>
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveProduct(product.code)}
+                          >
+                            Remover
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
