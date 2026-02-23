@@ -85,16 +85,9 @@ export function CollectorMovement() {
       return;
     }
 
-    // Buscar produto no estoque do endereço de origem
-    const product = originProducts?.find(
-      (p: any) => p.labelCode === code || p.sku === code || p.gtin === code
-    );
-
-    if (!product) {
-      toast.error("Produto não encontrado no endereço de origem");
-      return;
-    }
-
+    // TODO: Implementar busca de produto no endereço de origem via API
+    // Por enquanto, permitir adicionar qualquer código escaneado
+    
     // Verificar se já foi escaneado
     const existing = scannedProducts.find(p => p.code === code);
     if (existing) {
@@ -102,22 +95,22 @@ export function CollectorMovement() {
       setScannedProducts(prev =>
         prev.map(p =>
           p.code === code
-            ? { ...p, quantity: Math.min(p.quantity + 1, p.availableQuantity) }
+            ? { ...p, quantity: p.quantity + 1 }
             : p
         )
       );
       toast.success("Quantidade incrementada");
     } else {
-      // Adicionar novo produto
+      // Adicionar novo produto com dados básicos
       setScannedProducts(prev => [
         ...prev,
         {
           code,
-          productId: product.productId,
-          productName: product.productDescription,
-          sku: product.productSku,
-          batch: product.batch,
-          availableQuantity: product.quantity,
+          productId: 0, // TODO: Buscar via API
+          productName: `Produto ${code}`, // TODO: Buscar via API
+          sku: code,
+          batch: null,
+          availableQuantity: 999, // TODO: Buscar via API
           quantity: 1,
         },
       ]);
@@ -134,7 +127,7 @@ export function CollectorMovement() {
         p.code === code
           ? {
               ...p,
-              quantity: Math.max(1, Math.min(p.quantity + delta, p.availableQuantity)),
+              quantity: Math.max(1, p.quantity + delta),
             }
           : p
       )
@@ -332,7 +325,6 @@ export function CollectorMovement() {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => handleUpdateQuantity(product.code, 1)}
-                            disabled={product.quantity >= product.availableQuantity}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>

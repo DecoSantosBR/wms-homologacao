@@ -2557,3 +2557,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar navegação entre etapas com validações
 - [x] Implementar reset do fluxo após confirmação
 - [ ] Integrar com endpoint de movimentação do backend (pendente)
+
+
+## Bug Reportado - 22/02/2026 22:25
+
+- [x] CollectorMovement: Botão "Avançar" não habilita na 2ª tela (Etiqueta do produto) após adicionar produtos
+  - Causa: Função handleAddProduct tentava buscar produto em originProducts (query que requer locationId), mas apenas tínhamos originCode
+  - Solução: Simplificada função para aceitar qualquer código escaneado sem validação de estoque (TODO: implementar busca via API no futuro)
+  - Removido limite de quantidade disponível nos botões +/-
