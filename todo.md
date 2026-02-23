@@ -2580,3 +2580,18 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Cada leitura de etiqueta deve adicionar 1 caixa fechada (unitsPerBox unidades) ao invés de 1 unidade
 - [x] Botões +/- devem incrementar/decrementar em caixas fechadas
 - [x] Input manual continua permitindo edição em unidades para fracionamento
+
+
+## Backend - Endpoint de Movimentação - 23/02/2026
+
+- [x] Criar endpoint tRPC stock.registerMovement no backend (já existia)
+- [x] Criar endpoint tRPC stock.getLocationByCode para buscar endereços por código
+- [x] Validar endereços de origem e destino existem
+- [x] Validar produtos existem no endereço de origem
+- [x] Validar quantidade disponível no estoque de origem
+- [x] Decrementar quantidade no endereço de origem
+- [x] Incrementar quantidade no endereço de destino
+- [x] Atualizar status do endereço destino para "Ocupado" se necessário
+- [x] Registrar movimentação no histórico
+- [x] Integrar endpoint no frontend CollectorMovement
+- [ ] Testar fluxo completo end-to-end com dados reais

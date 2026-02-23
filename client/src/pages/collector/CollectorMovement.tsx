@@ -155,7 +155,18 @@ export function CollectorMovement() {
     setTimeout(() => codeInputRef.current?.focus(), 100);
   };
 
-  const handleConfirmMovement = () => {
+  // Mutation para registrar movimentação
+  const registerMovementMutation = trpc.stock.registerMovement.useMutation({
+    onSuccess: () => {
+      toast.success("Movimentação realizada com sucesso!");
+      handleReset();
+    },
+    onError: (error) => {
+      toast.error(`Erro ao movimentar: ${error.message}`);
+    },
+  });
+
+  const handleConfirmMovement = async () => {
     if (!destinationCode.trim()) {
       toast.error("Escaneie o endereço de destino");
       return;
@@ -166,18 +177,29 @@ export function CollectorMovement() {
       return;
     }
 
-    // Executar movimentação
-    // TODO: Implementar quando endpoint de movimentação estiver completo
-    toast.info("Funcionalidade em desenvolvimento");
-    // movementMutation.mutate({
-    //   originLocationCode: originCode,
-    //   destinationLocationCode: destinationCode,
-    //   items: scannedProducts.map(p => ({
-    //     productId: p.productId,
-    //     batch: p.batch,
-    //     quantity: p.quantity,
-    //   })),
-    // });
+    try {
+      // Buscar IDs dos endereços
+      const originLocation = await utils.client.stock.getLocationByCode.query({ code: originCode });
+      const destLocation = await utils.client.stock.getLocationByCode.query({ code: destinationCode });
+
+      // Executar movimentações para cada produto
+      for (const product of scannedProducts) {
+        await registerMovementMutation.mutateAsync({
+          productId: product.productId,
+          fromLocationId: originLocation.id,
+          toLocationId: destLocation.id,
+          quantity: product.quantity,
+          batch: product.batch || undefined,
+          movementType: "transfer" as const,
+          notes: `Movimentação via Coletor: ${originCode} → ${destinationCode}`,
+        });
+      }
+      
+      toast.success("Movimentação realizada com sucesso!");
+      handleReset();
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message}`);
+    }
   };
 
   const handleReset = () => {

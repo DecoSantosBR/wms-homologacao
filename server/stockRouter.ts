@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { warehouseLocations } from "../drizzle/schema";
+import { getDb } from "./db";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import {
   getInventoryPositions,
@@ -287,5 +290,32 @@ export const stockRouter = router({
         filename: `estoque_${new Date().toISOString().split('T')[0]}.xlsx`,
         data: base64,
       };
+    }),
+
+  /**
+   * Busca endereço por código
+   */
+  getLocationByCode: protectedProcedure
+    .input(z.object({ code: z.string() }))
+    .query(async ({ input }) => {
+      const dbConn = await getDb();
+      if (!dbConn) throw new Error("Database connection failed");
+
+      const location = await dbConn
+        .select({
+          id: warehouseLocations.id,
+          code: warehouseLocations.code,
+          tenantId: warehouseLocations.tenantId,
+          status: warehouseLocations.status,
+        })
+        .from(warehouseLocations)
+        .where(eq(warehouseLocations.code, input.code))
+        .limit(1);
+
+      if (!location[0]) {
+        throw new Error(`Endereço ${input.code} não encontrado`);
+      }
+
+      return location[0];
     }),
 });
