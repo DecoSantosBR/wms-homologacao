@@ -24,11 +24,15 @@ export default function StageCheck() {
   const [orderInfo, setOrderInfo] = useState<any>(null);
   const [scannedItems, setScannedItems] = useState<StageItem[]>([]);
   const [currentSku, setCurrentSku] = useState("");
-  const [currentQuantity, setCurrentQuantity] = useState("");
   const [showDivergenceModal, setShowDivergenceModal] = useState(false);
   const [divergentItems, setDivergentItems] = useState<any[]>([]);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [volumeQuantity, setVolumeQuantity] = useState("");
+  
+  // Modal de item fracionado
+  const [showFractionalModal, setShowFractionalModal] = useState(false);
+  const [fractionalData, setFractionalData] = useState<any>(null);
+  const [fractionalQuantity, setFractionalQuantity] = useState("");
 
   const utils = trpc.useUtils();
   const getOrderQuery = trpc.stage.getOrderForStage.useQuery(
@@ -95,41 +99,100 @@ export default function StageCheck() {
   const handleRecordItem = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentSku.trim() || !currentQuantity.trim()) {
-      toast.error("Informe a etiqueta e a quantidade");
+    if (!currentSku.trim()) {
+      toast.error("Informe a etiqueta do produto");
       return;
     }
 
-    const quantity = parseInt(currentQuantity);
-    if (isNaN(quantity) || quantity <= 0) {
-      toast.error("A quantidade deve ser um número positivo");
+    if (!stageCheckId) {
+      toast.error("Nenhuma conferência ativa");
+      return;
+    }
+
+    try {
+      // Chamar com autoIncrement = true
+      const result = await recordItemMutation.mutateAsync({
+        stageCheckId: stageCheckId,
+        labelCode: currentSku.trim(),
+        autoIncrement: true,
+      });
+
+      if (result.isFractional) {
+        // Item fracionado: abrir modal para entrada manual
+        setFractionalData(result);
+        setShowFractionalModal(true);
+        toast.info(result.message);
+      } else {
+        // Item inteiro: incrementado automaticamente
+        // Adicionar item à lista
+        const existingIndex = scannedItems.findIndex(
+          (item) => item.productSku === result.productSku
+        );
+
+        if (existingIndex >= 0) {
+          const updated = [...scannedItems];
+          updated[existingIndex].checkedQuantity = result.checkedQuantity ?? 0;
+          updated[existingIndex].scannedAt = new Date();
+          setScannedItems(updated);
+        } else {
+          setScannedItems([
+            ...scannedItems,
+            {
+              productSku: result.productSku,
+              productName: result.productName,
+              checkedQuantity: result.checkedQuantity ?? 0,
+              scannedAt: new Date(),
+            },
+          ]);
+        }
+
+        toast.success(result.message);
+      }
+
+      // Limpar campo
+      setCurrentSku("");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao registrar item");
+    }
+  };
+
+  const handleRecordFractionalItem = async () => {
+    const qty = parseInt(fractionalQuantity);
+    if (!qty || qty <= 0) {
+      toast.error("Informe uma quantidade válida");
+      return;
+    }
+
+    if (!stageCheckId || !fractionalData) {
+      toast.error("Dados inválidos");
       return;
     }
 
     try {
       const result = await recordItemMutation.mutateAsync({
-        stageCheckId: stageCheckId!,
-        labelCode: currentSku.trim(),
-        quantity,
+        stageCheckId: stageCheckId,
+        labelCode: fractionalData.labelCode,
+        quantity: qty,
+        autoIncrement: false,
       });
 
       // Adicionar item à lista
       const existingIndex = scannedItems.findIndex(
-        (item) => item.productSku === currentSku.trim()
+        (item) => item.productSku === result.productSku
       );
 
       if (existingIndex >= 0) {
         const updated = [...scannedItems];
-        updated[existingIndex].checkedQuantity = result.checkedQuantity;
+        updated[existingIndex].checkedQuantity = result.checkedQuantity ?? 0;
         updated[existingIndex].scannedAt = new Date();
         setScannedItems(updated);
       } else {
         setScannedItems([
           ...scannedItems,
           {
-            productSku: currentSku.trim(),
+            productSku: result.productSku,
             productName: result.productName,
-            checkedQuantity: result.checkedQuantity,
+            checkedQuantity: result.checkedQuantity ?? 0,
             scannedAt: new Date(),
           },
         ]);
@@ -137,9 +200,10 @@ export default function StageCheck() {
 
       toast.success(result.message);
 
-      // Limpar campos
-      setCurrentSku("");
-      setCurrentQuantity("");
+      // Fechar modal e limpar dados
+      setShowFractionalModal(false);
+      setFractionalData(null);
+      setFractionalQuantity("");
     } catch (error: any) {
       toast.error(error.message || "Erro ao registrar item");
     }
@@ -165,7 +229,6 @@ export default function StageCheck() {
       setOrderInfo(null);
       setScannedItems([]);
       setCurrentSku("");
-      setCurrentQuantity("");
     } catch (error: any) {
       toast.error(error.message || "Erro ao cancelar conferência");
     }
@@ -326,7 +389,7 @@ export default function StageCheck() {
           Conferindo Pedido: {customerOrderNumber}
         </h1>
         <p className="text-muted-foreground mt-2">
-          Bipe cada produto e informe a quantidade conferida
+          Bipe cada produto para registrar automaticamente (+1 caixa)
         </p>
       </div>
 
@@ -347,21 +410,13 @@ export default function StageCheck() {
                 placeholder="Bipe a etiqueta do lote"
                 autoFocus
               />
-            </div>
-            <div>
-              <Label htmlFor="quantity">Quantidade Conferida</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={currentQuantity}
-                onChange={(e) => setCurrentQuantity(e.target.value)}
-                placeholder="Digite a quantidade"
-                min="1"
-              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Ao bipar, o sistema incrementa automaticamente +1 caixa
+              </p>
             </div>
             <Button type="submit" className="w-full" disabled={recordItemMutation.isPending}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Registrar Item
+              {recordItemMutation.isPending ? "Processando..." : "Registrar Item"}
             </Button>
           </form>
         </Card>
@@ -421,6 +476,61 @@ export default function StageCheck() {
           Finalizar Conferência
         </Button>
       </div>
+
+      {/* Modal de Item Fracionado */}
+      <Dialog open={showFractionalModal} onOpenChange={setShowFractionalModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Item Fracionado Detectado</DialogTitle>
+            <DialogDescription>
+              A quantidade restante é menor que 1 caixa. Informe a quantidade exata conferida.
+            </DialogDescription>
+          </DialogHeader>
+          {fractionalData && (
+            <div className="space-y-4 py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-yellow-900">
+                  {fractionalData.productName}
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  SKU: {fractionalData.productSku} | Lote: {fractionalData.batch}
+                </p>
+                <p className="text-xs text-yellow-700">
+                  Quantidade restante: <span className="font-bold">{fractionalData.remainingQuantity}</span> unidades
+                </p>
+                <p className="text-xs text-yellow-700">
+                  (1 caixa = {fractionalData.unitsPerBox} unidades)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fractionalQuantity">Quantidade Conferida (unidades)</Label>
+                <Input
+                  id="fractionalQuantity"
+                  type="number"
+                  placeholder="Ex: 15"
+                  value={fractionalQuantity}
+                  onChange={(e) => setFractionalQuantity(e.target.value)}
+                  min="1"
+                  max={fractionalData.remainingQuantity}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowFractionalModal(false);
+              setFractionalData(null);
+              setFractionalQuantity("");
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRecordFractionalItem} disabled={recordItemMutation.isPending}>
+              {recordItemMutation.isPending ? "Registrando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Divergências */}
       <Dialog open={showDivergenceModal} onOpenChange={setShowDivergenceModal}>

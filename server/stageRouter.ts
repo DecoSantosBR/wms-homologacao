@@ -51,13 +51,15 @@ export const stageRouter = {
     .input(z.object({
       stageCheckId: z.number(),
       labelCode: z.string(),
-      quantity: z.number().positive(),
+      quantity: z.number().positive().optional(),
+      autoIncrement: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       return await recordStageItem({
         stageCheckId: input.stageCheckId,
         labelCode: input.labelCode,
         quantity: input.quantity,
+        autoIncrement: input.autoIncrement,
         tenantId: ctx.user.tenantId,
       });
     }),

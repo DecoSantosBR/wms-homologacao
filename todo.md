@@ -2779,3 +2779,16 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Analisar lógica de /stage/check para entender geração de etiquetas
 - [x] Implementar geração de etiquetas de volume no endpoint completeStageCheck
 - [x] Implementar movimentação de saldos de endereço de armazenagem (reserva) para endereço EXP (disponível)
+
+
+## Auto-preenchimento de quantidade por leitura de etiqueta - 24/02/2026
+- [x] Implementar auto-preenchimento em /collector/stage
+  - [x] Incremento automático de +1 caixa (unitsPerBox) quando quantidade esperada >= 1 caixa
+  - [x] Modal de entrada manual APENAS quando quantidade esperada < 1 caixa
+  - [x] Atualização de saldo em tempo real após cada bipagem
+  - [x] Validação de etiqueta inválida sem alterar saldos
+- [x] Implementar auto-preenchimento em /stage/check
+  - [x] Mesma lógica de /collector/stage
+  - [x] Incremento automático para itens inteiros
+  - [x] Modal apenas para itens fracionados (< 1 caixa)
+- [x] Criar testes vitest validando todos os cenários (6 testes passando)

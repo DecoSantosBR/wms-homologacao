@@ -16,11 +16,14 @@ export function CollectorStage() {
   
   const [orderNumber, setOrderNumber] = useState("");
   const [checkId, setCheckId] = useState<number | null>(null);
-  const [productCode, setProductCode] = useState("");
-  const [quantity, setQuantity] = useState("");
   const [scannedItems, setScannedItems] = useState<any[]>([]);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [volumeQuantity, setVolumeQuantity] = useState("");
+  
+  // Modal de item fracionado
+  const [showFractionalModal, setShowFractionalModal] = useState(false);
+  const [fractionalData, setFractionalData] = useState<any>(null);
+  const [fractionalQuantity, setFractionalQuantity] = useState("");
 
   // Query para buscar pedido
   const orderQuery = trpc.stage.getOrderForStage.useQuery(
@@ -39,13 +42,25 @@ export function CollectorStage() {
     },
   });
 
-  // Mutation para registrar item
+  // Mutation para registrar item (com auto-incremento)
   const recordItemMutation = trpc.stage.recordStageItem.useMutation({
     onSuccess: (data: any) => {
-      toast.success("Item registrado!");
-      setScannedItems((prev) => [...prev, { productCode, quantity: parseInt(quantity) }]);
-      setProductCode("");
-      setQuantity("");
+      if (data.isFractional) {
+        // Item fracionado: abrir modal para entrada manual
+        setFractionalData(data);
+        setShowFractionalModal(true);
+        toast.info(data.message);
+      } else {
+        // Item inteiro: incrementado automaticamente
+        toast.success(data.message);
+        setScannedItems((prev) => [...prev, {
+          productCode: data.labelCode,
+          productName: data.productName,
+          quantity: data.quantityAdded,
+          checkedQuantity: data.checkedQuantity,
+          remainingQuantity: data.remainingQuantity,
+        }]);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message);
@@ -76,8 +91,17 @@ export function CollectorStage() {
       setOrderNumber(code);
       toast.success(`Pedido escaneado: ${code}`);
     } else if (currentField === "product") {
-      setProductCode(code);
-      toast.success(`Produto escaneado: ${code}`);
+      // Auto-incremento: chamar backend com autoIncrement = true
+      if (!checkId) {
+        toast.error("Inicie a conferência primeiro");
+        return;
+      }
+      
+      recordItemMutation.mutate({
+        stageCheckId: checkId,
+        labelCode: code,
+        autoIncrement: true,
+      });
     }
     setShowScanner(false);
     setCurrentField(null);
@@ -94,19 +118,29 @@ export function CollectorStage() {
     });
   };
 
-  const handleRecordItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!checkId || !productCode || !quantity) {
-      toast.error("Preencha todos os campos");
+  const handleRecordFractionalItem = () => {
+    const qty = parseInt(fractionalQuantity);
+    if (!qty || qty <= 0) {
+      toast.error("Informe uma quantidade válida");
+      return;
+    }
+
+    if (!checkId || !fractionalData) {
+      toast.error("Dados inválidos");
       return;
     }
 
     recordItemMutation.mutate({
       stageCheckId: checkId,
-      labelCode: productCode,
-      quantity: parseInt(quantity),
+      labelCode: fractionalData.labelCode,
+      quantity: qty,
+      autoIncrement: false,
     });
+
+    // Fechar modal e limpar dados
+    setShowFractionalModal(false);
+    setFractionalData(null);
+    setFractionalQuantity("");
   };
 
   const handleCompleteCheck = () => {
@@ -162,8 +196,6 @@ export function CollectorStage() {
       setOrderNumber("");
       setCheckId(null);
       setScannedItems([]);
-      setProductCode("");
-      setQuantity("");
     } catch (error: any) {
       toast.error(error.message || "Erro ao gerar etiquetas");
     }
@@ -173,8 +205,6 @@ export function CollectorStage() {
     setOrderNumber("");
     setCheckId(null);
     setScannedItems([]);
-    setProductCode("");
-    setQuantity("");
   };
 
   if (showScanner) {
@@ -276,64 +306,30 @@ export function CollectorStage() {
               </CardHeader>
             </Card>
 
-            {/* Formulário de Conferência */}
-            <form onSubmit={handleRecordItem} className="space-y-4">
-              {/* Produto */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Etiqueta do Produto</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Escaneie a etiqueta"
-                      value={productCode}
-                      onChange={(e) => setProductCode(e.target.value)}
-                      className="h-12 text-lg"
-                    />
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={() => {
-                        setCurrentField("product");
-                        setShowScanner(true);
-                      }}
-                      className="h-12 px-4"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quantidade */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Quantidade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Input
-                    type="number"
-                    placeholder="Quantidade conferida"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="h-12 text-lg"
-                    min="1"
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Botão Registrar */}
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full h-14"
-                disabled={recordItemMutation.isPending}
-              >
-                <Check className="mr-2 h-5 w-5" />
-                {recordItemMutation.isPending ? "Registrando..." : "Registrar Item"}
-              </Button>
-            </form>
+            {/* Card de Bipagem */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Bipar Etiqueta</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Bipe a etiqueta do produto para registrar automaticamente
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => {
+                    setCurrentField("product");
+                    setShowScanner(true);
+                  }}
+                  className="w-full h-14"
+                  disabled={recordItemMutation.isPending}
+                >
+                  <Camera className="mr-2 h-5 w-5" />
+                  {recordItemMutation.isPending ? "Processando..." : "Escanear Produto"}
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Lista de Itens Conferidos */}
             {scannedItems.length > 0 && (
@@ -350,9 +346,14 @@ export function CollectorStage() {
                       >
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.productCode}</p>
+                          <p className="text-xs text-gray-600">{item.productName}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-green-600">{item.quantity}</p>
+                          <p className="font-bold text-green-600">+{item.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Total: {item.checkedQuantity}
+                            {item.remainingQuantity > 0 && ` (falta: ${item.remainingQuantity})`}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -374,6 +375,61 @@ export function CollectorStage() {
           </>
         )}
       </div>
+
+      {/* Modal de Item Fracionado */}
+      <Dialog open={showFractionalModal} onOpenChange={setShowFractionalModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Item Fracionado Detectado</DialogTitle>
+            <DialogDescription>
+              A quantidade restante é menor que 1 caixa. Informe a quantidade exata conferida.
+            </DialogDescription>
+          </DialogHeader>
+          {fractionalData && (
+            <div className="space-y-4 py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-yellow-900">
+                  {fractionalData.productName}
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  SKU: {fractionalData.productSku} | Lote: {fractionalData.batch}
+                </p>
+                <p className="text-xs text-yellow-700">
+                  Quantidade restante: <span className="font-bold">{fractionalData.remainingQuantity}</span> unidades
+                </p>
+                <p className="text-xs text-yellow-700">
+                  (1 caixa = {fractionalData.unitsPerBox} unidades)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fractionalQuantity">Quantidade Conferida (unidades)</Label>
+                <Input
+                  id="fractionalQuantity"
+                  type="number"
+                  placeholder="Ex: 15"
+                  value={fractionalQuantity}
+                  onChange={(e) => setFractionalQuantity(e.target.value)}
+                  min="1"
+                  max={fractionalData.remainingQuantity}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowFractionalModal(false);
+              setFractionalData(null);
+              setFractionalQuantity("");
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRecordFractionalItem} disabled={recordItemMutation.isPending}>
+              {recordItemMutation.isPending ? "Registrando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Geração de Etiquetas de Volume */}
       <Dialog open={showVolumeModal} onOpenChange={setShowVolumeModal}>
@@ -406,8 +462,6 @@ export function CollectorStage() {
               setOrderNumber("");
               setCheckId(null);
               setScannedItems([]);
-              setProductCode("");
-              setQuantity("");
             }}>
               Pular
             </Button>

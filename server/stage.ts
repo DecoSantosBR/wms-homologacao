@@ -247,7 +247,8 @@ export async function startStageCheck(params: {
 export async function recordStageItem(params: {
   stageCheckId: number;
   labelCode: string;
-  quantity: number;
+  quantity?: number; // Opcional quando autoIncrement = true
+  autoIncrement?: boolean; // Se true, incrementa automaticamente +1 caixa
   tenantId: number | null;
 }) {
   const dbConn = await getDb();
@@ -318,8 +319,43 @@ export async function recordStageItem(params: {
     });
   }
 
+  // Determinar quantidade a incrementar
+  let quantityToAdd = params.quantity || 0;
+  let isFractional = false;
+
+  if (params.autoIncrement) {
+    // Verificar se item é fracionado (quantidade esperada < 1 caixa)
+    const unitsPerBox = product.unitsPerBox || 1;
+    const remainingQuantity = item.expectedQuantity - item.checkedQuantity;
+    
+    if (remainingQuantity < unitsPerBox) {
+      // Item fracionado: retornar flag para frontend solicitar entrada manual
+      isFractional = true;
+      return {
+        isFractional: true,
+        productSku: product.sku,
+        productName: product.description,
+        labelCode: params.labelCode,
+        batch: label.batch,
+        remainingQuantity,
+        unitsPerBox,
+        message: `Item fracionado detectado. Quantidade restante: ${remainingQuantity} unidades (< 1 caixa de ${unitsPerBox} unidades)`,
+      };
+    }
+    
+    // Item inteiro: incrementar automaticamente 1 caixa
+    quantityToAdd = unitsPerBox;
+  }
+
+  if (quantityToAdd <= 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Quantidade inválida",
+    });
+  }
+
   // Atualizar quantidade conferida
-  const newCheckedQuantity = item.checkedQuantity + params.quantity;
+  const newCheckedQuantity = item.checkedQuantity + quantityToAdd;
   const newDivergence = newCheckedQuantity - item.expectedQuantity;
 
   await dbConn
@@ -331,12 +367,16 @@ export async function recordStageItem(params: {
     .where(eq(stageCheckItems.id, item.id));
 
   return {
+    isFractional: false,
     productSku: product.sku,
     labelCode: params.labelCode,
     batch: label.batch,
     productName: product.description,
     checkedQuantity: newCheckedQuantity,
-    message: `Quantidade registrada: ${params.quantity}. Total conferido: ${newCheckedQuantity}`,
+    quantityAdded: quantityToAdd,
+    remainingQuantity: item.expectedQuantity - newCheckedQuantity,
+    unitsPerBox: product.unitsPerBox || 1,
+    message: `Quantidade registrada: ${quantityToAdd}. Total conferido: ${newCheckedQuantity}/${item.expectedQuantity}`,
   };
 }
 
