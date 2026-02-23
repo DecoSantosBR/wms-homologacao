@@ -50,8 +50,23 @@ export default function ClientPortalNewOrder() {
   // Utils para chamadas imperativas
   const utils = trpc.useUtils();
   
-  // Queries
-  const { data: products } = trpc.products.list.useQuery();
+  // Queries - busca produtos disponíveis no estoque do cliente
+  const { data: stockData } = trpc.clientPortal.stockPositions.useQuery({
+    page: 1,
+    pageSize: 1000, // Buscar todos os produtos disponíveis
+  });
+  
+  // Transformar posições de estoque em lista de produtos únicos
+  const products = stockData?.items.reduce((acc, item) => {
+    if (!acc.find(p => p.id === item.productId)) {
+      acc.push({
+        id: item.productId,
+        sku: item.sku,
+        description: item.description,
+      });
+    }
+    return acc;
+  }, [] as Array<{ id: number; sku: string; description: string }>);
   
   // Função para ajustar quantidades com base no estoque disponível
   const adjustQuantities = (insufficientItems: Array<{

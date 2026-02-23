@@ -2646,5 +2646,7 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 ## Bug - Portal do Cliente - 24/02/2026 00:20
 
 - [x] /portal/pedidos/novo está redirecionando para login OAuth (Manus) ao invés de usar autenticação do Portal do Cliente
-- [x] Corrigir para usar ClientPortalLayout e useClientPortalAuth
-  - Solução: Envolvido componente com ClientPortalLayout que gerencia autenticação automaticamente
+- [x] Tentativa 1: Envolvido componente com ClientPortalLayout - problema persiste
+- [x] Investigar configuração de rotas no App.tsx - rota correta
+- [x] Identificado problema: query trpc.products.list.useQuery() requer auth OAuth
+- [x] Solução: Substituído por trpc.clientPortal.stockPositions.useQuery() que usa auth do portal
