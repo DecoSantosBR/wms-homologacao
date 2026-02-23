@@ -2628,3 +2628,16 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - Identificação do produto com problema (SKU)
   - Contador de sucessos
 - [ ] Testar movimentação com lotes válidos e inválidos
+
+
+## Portal do Cliente - Adaptar Criação de Pedidos - 24/02/2026
+
+- [x] Analisar tela "Criar Pedido de Separação" (/picking)
+- [x] Identificar lógica de seleção de produtos
+- [x] Identificar lógica de adição de itens ao pedido
+- [x] Reescrever ClientPortalNewOrder com mesma lógica
+- [x] Remover campo "Cliente (Tenant)" (usar tenant do usuário logado via cookie)
+- [x] Implementar tratamento de erros estruturado com useBusinessError
+- [x] Adicionar função de ajuste automático de quantidades
+- [x] Integrar com ImportOrdersDialog na aba Importação
+- [ ] Testar criação de pedido pelo portal
