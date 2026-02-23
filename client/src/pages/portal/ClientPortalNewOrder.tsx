@@ -335,18 +335,28 @@ export default function ClientPortalNewOrder() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="md:col-span-2">
                       <Label htmlFor="product">Produto</Label>
-                      <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                        <SelectTrigger id="product">
-                          <SelectValue placeholder="Selecione um produto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products?.map((p: any) => (
-                            <SelectItem key={p.id} value={p.id.toString()}>
-                              {p.sku} - {p.description}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="product"
+                        list="products-list"
+                        placeholder="Digite SKU ou descrição..."
+                        value={selectedProductId ? products?.find(p => p.id === parseInt(selectedProductId))?.sku + ' - ' + products?.find(p => p.id === parseInt(selectedProductId))?.description : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const product = products?.find(p => 
+                            (p.sku + ' - ' + p.description).toLowerCase().includes(value.toLowerCase())
+                          );
+                          if (product) {
+                            setSelectedProductId(product.id.toString());
+                          } else {
+                            setSelectedProductId('');
+                          }
+                        }}
+                      />
+                      <datalist id="products-list">
+                        {products?.map((p: any) => (
+                          <option key={p.id} value={`${p.sku} - ${p.description}`} />
+                        ))}
+                      </datalist>
                     </div>
                     
                     <div>
