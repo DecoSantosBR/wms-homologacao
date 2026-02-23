@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
 import { useBusinessError } from "@/hooks/useBusinessError";
+import { ClientPortalLayout } from "@/components/ClientPortalLayout";
 
 interface ProductItem {
   productId: number;
@@ -258,6 +259,7 @@ export default function ClientPortalNewOrder() {
   };
   
   return (
+    <ClientPortalLayout>
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container max-w-5xl">
         {/* Header */}
@@ -456,5 +458,6 @@ export default function ClientPortalNewOrder() {
         />
       </div>
     </div>
+    </ClientPortalLayout>
   );
 }

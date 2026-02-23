@@ -2641,3 +2641,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar função de ajuste automático de quantidades
 - [x] Integrar com ImportOrdersDialog na aba Importação
 - [ ] Testar criação de pedido pelo portal
+
+
+## Bug - Portal do Cliente - 24/02/2026 00:20
+
+- [x] /portal/pedidos/novo está redirecionando para login OAuth (Manus) ao invés de usar autenticação do Portal do Cliente
+- [x] Corrigir para usar ClientPortalLayout e useClientPortalAuth
+  - Solução: Envolvido componente com ClientPortalLayout que gerencia autenticação automaticamente
