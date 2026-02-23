@@ -2518,3 +2518,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Adicionar validações de formulário
 - [ ] Testar criação individual de pedido
 - [ ] Testar importação em lote via Excel
+
+
+## Bug Reportado - 22/02/2026 21:25
+
+- [x] Erro ao cadastrar endereços: "Unexpected token '<', "<!doctype "... is not valid JSON" - servidor retornando HTML ao invés de JSON
+  - Causa: Campo tenantId é obrigatório no banco mas o formulário permitia "Compartilhado" (valor 0)
+  - Solução: Removida opção "Compartilhado" e tornado campo Cliente obrigatório

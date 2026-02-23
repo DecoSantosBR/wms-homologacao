@@ -183,13 +183,14 @@ export function CreateLocationDialog() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="tenantId">Cliente (Reserva)</Label>
+              <Label htmlFor="tenantId">
+                Cliente <span className="text-red-500">*</span>
+              </Label>
               <Select value={formData.tenantId} onValueChange={(value) => setFormData({ ...formData, tenantId: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Compartilhado (todos os clientes)" />
+                  <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Compartilhado</SelectItem>
                   {tenants?.map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
@@ -197,7 +198,6 @@ export function CreateLocationDialog() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">Deixe em branco para endereço compartilhado</p>
             </div>
 
             <div className="grid gap-2">
