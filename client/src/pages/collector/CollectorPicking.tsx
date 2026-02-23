@@ -205,7 +205,7 @@ export function CollectorPicking() {
   // ── Mutations ──────────────────────────────────────────────────────────────
   const startOrResumeMut = trpc.collectorPicking.startOrResume.useMutation({
     onSuccess: (data) => {
-      setOrderInfo(data.order as any);
+      setOrderInfo(data.wave as any);
       setRoute(data.route as RouteLocation[]);
       setIsResume(data.isResume);
 
@@ -482,7 +482,7 @@ export function CollectorPicking() {
                 className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all active:scale-[0.98] shadow-sm"
                 onClick={() => {
                   setSelectedOrderId(order.id);
-                  startOrResumeMut.mutate({ pickingOrderId: order.id });
+                  startOrResumeMut.mutate({ waveId: order.id });
                 }}
                 disabled={startOrResumeMut.isPending}
               >

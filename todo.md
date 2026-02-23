@@ -2988,3 +2988,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Atualizar CollectorPicking.tsx para exibir ondas (waveNumber, totalOrders, totalItems)
 - [x] Substituir todas as referências a orderNumber por waveNumber
 - [ ] Testar fluxo completo (aguardando teste do usuário)
+
+
+## Bug: startOrResume ainda busca pedido ao invés de onda - 24/02/2026
+- [x] Modificar startOrResume para buscar pickingWaves ao invés de pickingOrders
+- [x] Buscar todos os pedidos associados à onda
+- [x] Gerar alocações para todos os pedidos da onda
+- [x] Construir rota consolidada agrupando alocações por endereço
+- [x] Atualizar frontend para usar wave ao invés de order
+- [x] Corrigir status de pickingWaves para "picking" ao invés de "in_progress"
+- [ ] Testar fluxo completo de início de onda (aguardando teste do usuário)

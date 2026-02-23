@@ -211,7 +211,7 @@ export const collectorPickingRouter = {
    * - Retorna a rota completa + progresso salvo
    */
   startOrResume: protectedProcedure
-    .input(z.object({ pickingOrderId: z.number() }))
+    .input(z.object({ waveId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
@@ -220,89 +220,132 @@ export const collectorPickingRouter = {
           message: "Database unavailable",
         });
 
-      // Validar pedido
-      const [order] = await db
+      // Validar onda
+      const [wave] = await db
         .select()
-        .from(pickingOrders)
-        .where(eq(pickingOrders.id, input.pickingOrderId))
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.waveId))
         .limit(1);
 
-      if (!order) {
+      if (!wave) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pedido não encontrado",
+          message: "Onda não encontrada",
         });
       }
 
-      // Verificar tenant
+      if (!["pending", "in_progress"].includes(wave.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Onda não pode ser iniciada (status: ${wave.status})`,
+        });
+      }
+
+      // Buscar pedidos da onda
+      const waveOrders = await db
+        .select()
+        .from(pickingOrders)
+        .where(eq(pickingOrders.waveId, input.waveId));
+
+      if (waveOrders.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Nenhum pedido encontrado na onda",
+        });
+      }
+
+      // Verificar tenant (usar primeiro pedido como referência)
+      const firstOrder = waveOrders[0];
       if (
         ctx.user.role !== "admin" &&
         ctx.user.tenantId !== null &&
-        order.tenantId !== ctx.user.tenantId
+        firstOrder.tenantId !== ctx.user.tenantId
       ) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Pedido pertence a outro cliente",
+          message: "Onda pertence a outro cliente",
         });
       }
 
-      if (!["pending", "in_progress", "paused"].includes(order.status)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Pedido não pode ser iniciado (status: ${order.status})`,
-        });
-      }
+      // Gerar alocações para todos os pedidos da onda (se necessário)
+      const { generatePickingAllocations } = await import(
+        "./pickingAllocation"
+      );
+      
+      for (const order of waveOrders) {
+        const existingAllocs = await db
+          .select({ id: pickingAllocations.id })
+          .from(pickingAllocations)
+          .where(eq(pickingAllocations.pickingOrderId, order.id))
+          .limit(1);
 
-      // Verificar se já existem alocações
-      const existingAllocs = await db
-        .select({ id: pickingAllocations.id })
-        .from(pickingAllocations)
-        .where(eq(pickingAllocations.pickingOrderId, input.pickingOrderId))
-        .limit(1);
-
-      if (existingAllocs.length === 0) {
-        // Gerar alocações
-        const { generatePickingAllocations } = await import(
-          "./pickingAllocation"
-        );
-        const result = await generatePickingAllocations({
-          pickingOrderId: input.pickingOrderId,
-          tenantId: order.tenantId,
-        });
-
-        if (!result.success) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: result.message ?? "Falha ao gerar alocações de picking",
+        if (existingAllocs.length === 0) {
+          const result = await generatePickingAllocations({
+            pickingOrderId: order.id,
+            tenantId: order.tenantId,
           });
-        }
-      } else {
-        // Marcar como in_progress se ainda pendente
-        if (order.status === "pending") {
-          await db
-            .update(pickingOrders)
-            .set({ status: "in_progress" })
-            .where(eq(pickingOrders.id, input.pickingOrderId));
+
+          if (!result.success) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: result.message ?? `Falha ao gerar alocações para pedido ${order.orderNumber}`,
+            });
+          }
         }
       }
 
-      const progress = await ensureProgress(db, input.pickingOrderId);
-      const route = await buildRoute(db, input.pickingOrderId);
+      // Atualizar status da onda para picking
+      if (wave.status === "pending") {
+        await db
+          .update(pickingWaves)
+          .set({ status: "picking" })
+          .where(eq(pickingWaves.id, input.waveId));
+      }
+
+      // Atualizar status dos pedidos para in_progress
+      await db
+        .update(pickingOrders)
+        .set({ status: "in_progress" })
+        .where(eq(pickingOrders.waveId, input.waveId));
+
+      // Construir rota consolidada para todos os pedidos da onda
+      const allAllocations = await db
+        .select()
+        .from(pickingAllocations)
+        .where(
+          sql`${pickingAllocations.pickingOrderId} IN (${sql.join(
+            waveOrders.map((o) => sql`${o.id}`),
+            sql`, `
+          )})`
+        )
+        .orderBy(pickingAllocations.sequence);
+
+      // Agrupar alocações por endereço
+      const routeMap = new Map<string, any[]>();
+      for (const alloc of allAllocations) {
+        if (!routeMap.has(alloc.locationCode)) {
+          routeMap.set(alloc.locationCode, []);
+        }
+        routeMap.get(alloc.locationCode)!.push(alloc);
+      }
+
+      const route = Array.from(routeMap.entries()).map(([locationCode, items]) => ({
+        locationCode,
+        items,
+      }));
 
       return {
-        order: {
-          id: order.id,
-          orderNumber: order.orderNumber,
-          customerOrderNumber: order.customerOrderNumber,
-          customerName: order.customerName,
-          status: order.status,
+        wave: {
+          id: wave.id,
+          waveNumber: wave.waveNumber,
+          status: "picking",
         },
         route,
         progress: {
-          currentSequence: progress.currentSequence,
-          scannedItems: (progress.scannedItems as any[]) ?? [],
+          currentSequence: 0,
+          scannedItems: [],
         },
-        isResume: order.status === "in_progress" || order.status === "paused",
+        isResume: false,
       };
     }),
 
