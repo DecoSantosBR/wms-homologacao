@@ -2998,3 +2998,27 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Atualizar frontend para usar wave ao invés de order
 - [x] Corrigir status de pickingWaves para "picking" ao invés de "in_progress"
 - [ ] Testar fluxo completo de início de onda (aguardando teste do usuário)
+
+
+## Fila de sincronização offline no coletor - 24/02/2026
+- [x] Criar serviço de fila offline com IndexedDB
+  - [x] Definir schema do banco local (operationType, payload, timestamp, status)
+  - [x] Implementar funções de enqueue/dequeue
+  - [x] Adicionar persistência de estado
+- [x] Implementar detecção de conexão e retry automático
+  - [x] Detectar mudanças de conexão com navigator.onLine
+  - [x] Implementar retry exponencial com backoff
+  - [x] Processar fila ao reconectar
+- [x] Adicionar feedback visual de status de sincronização
+  - [x] Indicador verde (sincronizado)
+  - [x] Indicador amarelo (pendente)
+  - [x] Indicador vermelho (offline)
+  - [x] Contador de operações pendentes
+- [x] Integrar fila offline no CollectorPicking
+  - [x] Interceptar mutations de scanProduct
+  - [x] Salvar localmente antes de enviar ao servidor
+  - [x] Atualizar UI com base no status de sincronização
+- [x] Adicionar idempotência no backend
+  - [x] Validar se operação já foi processada
+  - [x] Retornar sucesso para operações duplicadas
+- [ ] Testar fluxo offline completo

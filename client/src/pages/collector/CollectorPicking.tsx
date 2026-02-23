@@ -10,14 +10,16 @@
  *              → location_done → [próximo endereço | all_done]
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { CollectorLayout } from "../../components/CollectorLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { BarcodeScanner } from "../../components/BarcodeScanner";
+import { SyncStatusBadge } from "../../components/SyncStatusIndicator";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
+import { offlineQueue, QueuedOperation } from "../../lib/offlineQueue";
 import {
   MapPin,
   Package,
@@ -240,6 +242,23 @@ export function CollectorPicking() {
     },
   });
 
+  // Configurar função de sincronização offline
+  const trpcUtils = trpc.useUtils();
+  useEffect(() => {
+    offlineQueue.setSyncFunction(async (operation: QueuedOperation) => {
+      if (operation.operationType === 'scanProduct') {
+        try {
+          await trpcUtils.client.collectorPicking.scanProduct.mutate(operation.payload);
+          return true;
+        } catch (error) {
+          console.error('[OfflineSync] Error syncing scanProduct:', error);
+          return false;
+        }
+      }
+      return false;
+    });
+  }, [trpcUtils]);
+
   const scanProductMut = trpc.collectorPicking.scanProduct.useMutation({
     onSuccess: (data) => {
       setProductScanInput("");
@@ -262,10 +281,24 @@ export function CollectorPicking() {
         setTimeout(() => productInputRef.current?.focus(), 100);
       }
     },
-    onError: (err) => {
-      toast.error(err.message, { duration: 5000 });
-      setProductScanInput("");
-      setTimeout(() => productInputRef.current?.focus(), 100);
+    onError: async (err) => {
+      // Se falhar, adicionar à fila offline
+      if (!navigator.onLine) {
+        const operationId = await offlineQueue.enqueue('scanProduct', {
+          pickingOrderId: selectedOrderId!,
+          allocationId: currentItem!.allocationId,
+          scannedCode: productScanInput,
+        });
+        toast.warning('Offline: Operação salva localmente', { duration: 3000 });
+        setProductScanInput("");
+        // Simular sucesso localmente para continuar fluxo
+        refreshRoute();
+        setTimeout(() => productInputRef.current?.focus(), 100);
+      } else {
+        toast.error(err.message, { duration: 5000 });
+        setProductScanInput("");
+        setTimeout(() => productInputRef.current?.focus(), 100);
+      }
     },
   });
 

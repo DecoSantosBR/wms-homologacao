@@ -565,6 +565,21 @@ export const collectorPickingRouter = {
       const newStatus =
         newPickedQuantity >= alloc.quantity ? "picked" : "in_progress";
 
+      // IDEMPOTÊNCIA: Verificar se operação já foi processada
+      // Se quantidade já está no valor esperado, retornar sucesso sem duplicar
+      if (alloc.pickedQuantity === newPickedQuantity) {
+        return {
+          ok: true,
+          requiresManualQuantity: false,
+          quantityAdded: 0, // Já processado
+          pickedQuantity: newPickedQuantity,
+          totalQuantity: alloc.quantity,
+          remainingQuantity: alloc.quantity - newPickedQuantity,
+          allocationCompleted: newStatus === "picked",
+          message: `Operação já processada. Total: ${newPickedQuantity}/${alloc.quantity}.`,
+        };
+      }
+
       await db
         .update(pickingAllocations)
         .set({ pickedQuantity: newPickedQuantity, status: newStatus })
