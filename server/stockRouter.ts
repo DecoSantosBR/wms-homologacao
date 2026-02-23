@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { warehouseLocations } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
+import { warehouseLocations, products, inventory } from "../drizzle/schema";
 import { getDb } from "./db";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import {
@@ -317,5 +317,72 @@ export const stockRouter = router({
       }
 
       return location[0];
+    }),
+
+  /**
+   * Busca produto por código/SKU e retorna dados do estoque no endereço de origem
+   */
+  getProductByCode: protectedProcedure
+    .input(z.object({ 
+      code: z.string(),
+      locationCode: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const dbConn = await getDb();
+      if (!dbConn) throw new Error("Database connection failed");
+
+      // Buscar produto por SKU
+      const product = await dbConn
+        .select({
+          id: products.id,
+          sku: products.sku,
+          description: products.description,
+          unitsPerBox: products.unitsPerBox,
+        })
+        .from(products)
+        .where(eq(products.sku, input.code))
+        .limit(1);
+
+      if (!product[0]) {
+        throw new Error(`Produto ${input.code} não encontrado`);
+      }
+
+      // Se locationCode fornecido, buscar dados do estoque nesse endereço
+      let stockData = null;
+      if (input.locationCode) {
+        const location = await dbConn
+          .select({ id: warehouseLocations.id })
+          .from(warehouseLocations)
+          .where(eq(warehouseLocations.code, input.locationCode))
+          .limit(1);
+
+        if (location[0]) {
+          const stock = await dbConn
+            .select({
+              batch: inventory.batch,
+              quantity: inventory.quantity,
+              expiryDate: inventory.expiryDate,
+            })
+            .from(inventory)
+            .where(
+              and(
+                eq(inventory.productId, product[0].id),
+                eq(inventory.locationId, location[0].id)
+              )
+            )
+            .limit(1);
+
+          if (stock[0]) {
+            stockData = stock[0];
+          }
+        }
+      }
+
+      return {
+        ...product[0],
+        batch: stockData?.batch || null,
+        availableQuantity: stockData?.quantity || 0,
+        expiryDate: stockData?.expiryDate || null,
+      };
     }),
 });

@@ -2595,3 +2595,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Registrar movimentação no histórico
 - [x] Integrar endpoint no frontend CollectorMovement
 - [ ] Testar fluxo completo end-to-end com dados reais
+
+
+## CollectorMovement - Busca Real de Produtos - 23/02/2026
+
+- [x] Criar endpoint stock.getProductByCode para buscar produto por código/SKU
+- [x] Endpoint deve retornar: id, sku, description, unitsPerBox, batch (do estoque)
+- [x] Integrar endpoint no handleAddProduct do CollectorMovement
+- [x] Substituir dados mockados por dados reais da API
+- [x] Adicionar tratamento de erro quando produto não encontrado
+- [ ] Testar busca com produtos reais do banco

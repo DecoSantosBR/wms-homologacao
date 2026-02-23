@@ -80,49 +80,57 @@ export function CollectorMovement() {
     setTimeout(() => codeInputRef.current?.focus(), 100);
   };
 
-  const handleAddProduct = (code: string) => {
+  const handleAddProduct = async (code: string) => {
     if (!code.trim()) {
       toast.error("Escaneie a etiqueta do produto");
       return;
     }
 
-    // TODO: Implementar busca de produto no endereço de origem via API
-    // Por enquanto, permitir adicionar qualquer código escaneado
-    
-    const unitsPerBox = 80; // TODO: Buscar via API
-    
-    // Verificar se já foi escaneado
-    const existing = scannedProducts.find(p => p.code === code);
-    if (existing) {
-      // Incrementar quantidade em 1 caixa fechada
-      setScannedProducts(prev =>
-        prev.map(p =>
-          p.code === code
-            ? { ...p, quantity: p.quantity + unitsPerBox }
-            : p
-        )
-      );
-      toast.success("Caixa adicionada");
-    } else {
-      // Adicionar novo produto com 1 caixa fechada
-      setScannedProducts(prev => [
-        ...prev,
-        {
-          code,
-          productId: 0, // TODO: Buscar via API
-          productName: `Produto ${code}`, // TODO: Buscar via API
-          sku: code,
-          batch: null,
-          availableQuantity: 999, // TODO: Buscar via API
-          quantity: unitsPerBox, // 1 caixa fechada
-          unitsPerBox: unitsPerBox,
-        },
-      ]);
-      toast.success("Produto adicionado (1 caixa)");
-    }
+    try {
+      // Buscar dados reais do produto via API
+      const productData = await utils.client.stock.getProductByCode.query({
+        code,
+        locationCode: originCode,
+      });
 
-    setCurrentProductCode("");
-    codeInputRef.current?.focus();
+      const unitsPerBox = productData.unitsPerBox || 1;
+      
+      // Verificar se já foi escaneado
+      const existing = scannedProducts.find(p => p.sku === productData.sku);
+      if (existing) {
+        // Incrementar quantidade em 1 caixa fechada
+        setScannedProducts(prev =>
+          prev.map(p =>
+            p.sku === productData.sku
+              ? { ...p, quantity: p.quantity + unitsPerBox }
+              : p
+          )
+        );
+        toast.success("Caixa adicionada");
+      } else {
+        // Adicionar novo produto com 1 caixa fechada
+        setScannedProducts(prev => [
+          ...prev,
+          {
+            code,
+            productId: productData.id,
+            productName: productData.description,
+            sku: productData.sku,
+            batch: productData.batch,
+            availableQuantity: productData.availableQuantity,
+            quantity: unitsPerBox, // 1 caixa fechada
+            unitsPerBox: unitsPerBox,
+          },
+        ]);
+        toast.success("Produto adicionado (1 caixa)");
+      }
+
+      setCurrentProductCode("");
+      codeInputRef.current?.focus();
+    } catch (error: any) {
+      toast.error(`Erro ao buscar produto: ${error.message}`);
+      setCurrentProductCode("");
+    }
   };
 
   const handleUpdateQuantity = (code: string, delta: number) => {
