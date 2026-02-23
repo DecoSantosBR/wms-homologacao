@@ -255,7 +255,6 @@ export default function ClientPortalNewOrder() {
     // Nota: sessionToken é enviado automaticamente via cookie client_portal_session
     // O backend extrai via getPortalSession(ctx.req)
     createMutation.mutate({
-      sessionToken: "", // Placeholder - backend usa cookie
       customerOrderNumber,
       priority,
       items: selectedProducts.map((p) => ({

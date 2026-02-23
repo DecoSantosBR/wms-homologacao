@@ -2650,3 +2650,27 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Investigar configuração de rotas no App.tsx - rota correta
 - [x] Identificado problema: query trpc.products.list.useQuery() requer auth OAuth
 - [x] Solução: Substituído por trpc.clientPortal.stockPositions.useQuery() que usa auth do portal
+
+
+## Auditoria Técnica - Fevereiro 2026 - Correções de Bugs
+
+### Bugs Corrigidos (do ZIP wms-medax-bugfixes-v2.zip)
+- [x] BUG-01 (CRÍTICO): FEFO com validade nula inverte ordenação - server/pickingLogic.ts
+- [x] BUG-02 (ALTO): Remover 4 logs [DEBUG] em registerPickedItem - server/waveRouter.ts
+- [x] BUG-03 (ALTO): Remover 6 logs (PICKING DEBUG, UPDATE ORDER, NFE Import) - server/routers.ts
+- [x] BUG-04 (ALTO): Remover 4 logs [DEBUG] de filtros de estoque - server/inventory.ts
+- [x] BUG-05 (MÉDIO): Remover sessionToken inutilizado dos 3 inputs - server/clientPortalRouter.ts
+- [x] BUG-06 (MÉDIO): Remover 3 logs que expõem estrutura XML - server/nfeParser.ts
+- [x] BUG-07 (MÉDIO): Remover 6 logs [DEBUG] em módulos de separação - server/modules/picking.ts + waveDocument.ts
+
+### Melhorias Sugeridas (Prioridade ALTA - Implementar)
+- [x] MEL-01 (ALTA): NÃO APLICÁVEL - Sistema usa OAuth (Manus), não há login com senha
+- [ ] MEL-02 (ALTA): Transação em registerPickedItem (race condition) - server/waveRouter.ts
+  - Tentativa de implementação gerou erros de sintaxe - requer reescrita cuidadosa
+  - Arquivo restaurado para versão do ZIP
+- [x] MEL-03 (MÉDIA): Validação de variáveis de ambiente com Zod - server/_core/env.ts
+
+### Melhorias Sugeridas (Backlog)
+- [ ] MEL-04 (MÉDIA): Logger estruturado com Pino - substituir console.log
+- [ ] MEL-05 (MÉDIA): Consolidar os dois arquivos nfeParser.ts
+- [ ] MEL-06 (BAIXA): Cache de permissões RBAC com TTL

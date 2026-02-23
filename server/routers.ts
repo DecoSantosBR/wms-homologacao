@@ -1357,12 +1357,6 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         try {
-          console.log('[NFE Import] Iniciando importação de XML...', {
-            tipo: input.tipo,
-            xmlSize: input.xmlContent.length,
-            userId: ctx.user?.id
-          });
-
           const db = await getDb();
           if (!db) throw new Error("Database not available");
 
@@ -1371,15 +1365,8 @@ export const appRouter = router({
             throw new Error("XML inválido. O arquivo não é uma NF-e válida.");
           }
 
-          console.log('[NFE Import] XML validado, iniciando parse...');
-
           // Parse do XML
           const nfeData = await parseNFE(input.xmlContent);
-          
-          console.log('[NFE Import] Parse concluído:', {
-            nfeNumero: nfeData.numero,
-            totalProdutos: nfeData.produtos.length
-          });
 
         // Verificar se NF-e já foi importada (entrada ou saída)
         if (input.tipo === "entrada") {
@@ -1568,20 +1555,8 @@ export const appRouter = router({
         }
         } // Fim do if tipo === "entrada"
 
-        console.log('[NFE Import] Importação concluída com sucesso:', {
-          orderId: result.orderId,
-          totalProdutos: result.totalProdutos,
-          produtosNovos: result.produtosNovos.length,
-          erros: result.erros.length
-        });
-
         return result;
         } catch (error: any) {
-          console.error('[NFE Import] Erro fatal na importação:', {
-            message: error.message,
-            stack: error.stack,
-            tipo: input.tipo
-          });
           throw new Error(`Erro ao importar NF-e: ${error.message}`);
         }
       }),
@@ -1803,10 +1778,7 @@ export const appRouter = router({
           // Calcular total disponível
           const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
           
-          console.log(`[PICKING DEBUG] Product: ${product.sku}, Available: ${totalAvailable}, Requested: ${quantityInUnits}`);
-
           if (totalAvailable < quantityInUnits) {
-            console.log(`[PICKING DEBUG] Insufficient stock for ${product.sku}, accumulating error...`);
             
             // Calcular disponível em caixas
             const availableBoxes = product.unitsPerBox && product.unitsPerBox > 0 
@@ -2215,20 +2187,14 @@ export const appRouter = router({
           );
 
           // Criar novas reservas de estoque
-          console.log('[UPDATE ORDER] Criando reservas para items:', input.items);
-          console.log('[UPDATE ORDER] ProductsMap contém:', Array.from(productsMap.keys()));
           for (const item of input.items) {
-            console.log(`[UPDATE ORDER] Buscando produto ID ${item.productId} no map`);
             const product = productsMap.get(item.productId);
             if (!product) {
-              console.error(`[UPDATE ORDER] Produto ID ${item.productId} NÃO ENCONTRADO no map!`);
-              console.error('[UPDATE ORDER] Todos os produtos disponíveis:', productsData);
               throw new TRPCError({
                 code: "NOT_FOUND",
                 message: `Produto ID ${item.productId} não encontrado`
               });
             }
-            console.log(`[UPDATE ORDER] Produto ID ${item.productId} encontrado:`, product);
 
             // Converter quantidade para unidades se solicitado em caixa
             let quantityInUnits = item.requestedQuantity;

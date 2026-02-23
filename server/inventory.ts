@@ -113,16 +113,12 @@ export async function getInventoryPositions(
   const locationTenant = alias(tenants, "locationTenant");
 
   // Se filtro inclui "livre" OU está vazio (todos os status), usar LEFT JOIN para incluir endereços vazios
-  console.log("[DEBUG] statusArray:", statusArray);
-  console.log("[DEBUG] filters.status:", filters.status);
   const includeEmpty = statusArray.length === 0 || statusArray.includes("livre");
-  console.log("[DEBUG] includeEmpty:", includeEmpty);
 
   if (includeEmpty) {
     // LEFT JOIN: inclui endereços sem inventory
     // Quando filtro é APENAS "livre", não filtrar por quantidade no JOIN
     const onlyFreeFilter = statusArray.length === 1 && statusArray[0] === "livre";
-    console.log("[DEBUG] onlyFreeFilter:", onlyFreeFilter);
     
     const inventoryJoinConditions = [
       eq(inventory.locationId, warehouseLocations.id),

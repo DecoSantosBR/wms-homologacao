@@ -127,3 +127,6 @@ list-*.mjs
 
 # Backup files
 *.backup
+
+# Server logs
+nohup.out

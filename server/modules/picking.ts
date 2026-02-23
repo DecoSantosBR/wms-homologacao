@@ -228,7 +228,6 @@ export async function startPicking(pickingOrderId: number, userId: number) {
   // Alocar estoque para cada item pendente
   const pickingInstructions = [];
   
-  console.log('[DEBUG] ===== ORDEM', order.orderNumber, '===== Iniciando alocação para', pendingItems.length, 'itens pendentes');
   
   for (const { item, product } of pendingItems) {
     if (!item || !product) continue;
@@ -276,9 +275,7 @@ export async function startPicking(pickingOrderId: number, userId: number) {
     });
     
     // Salvar fromLocationId no item (usar primeira alocação)
-    console.log('[DEBUG] Item', item.id, 'tem', allocationsWithLocation.length, 'alocações');
     if (allocationsWithLocation.length > 0) {
-      console.log('[DEBUG] Salvando fromLocationId', allocationsWithLocation[0].locationId, 'para item', item.id);
       await db
         .update(pickingOrderItems)
         .set({ 
@@ -287,9 +284,7 @@ export async function startPicking(pickingOrderId: number, userId: number) {
           expiryDate: allocationsWithLocation[0].expiryDate,
         })
         .where(eq(pickingOrderItems.id, item.id));
-      console.log('[DEBUG] fromLocationId salvo com sucesso');
     } else {
-      console.log('[DEBUG] AVISO: Nenhuma alocação disponível para item', item.id);
     }
   }
   

@@ -142,7 +142,6 @@ export async function generateWaveDocument(waveId: number): Promise<Buffer> {
   // Cabeçalho com logo
   const headerY = 40;
   const logoPath = path.join(__dirname, "assets", "logo.jpg");
-  console.log("Logo path:", logoPath, "exists:", fs.existsSync(logoPath));
   
   // Adicionar logo se existir
   if (fs.existsSync(logoPath)) {

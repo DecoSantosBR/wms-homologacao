@@ -98,8 +98,13 @@ export async function suggestPickingLocations(
     // FIFO: Data de entrada mais antiga primeiro
     orderedStock = await stockQuery.orderBy(asc(inventory.createdAt));
   } else if (rule === "FEFO") {
-    // FEFO: Data de validade mais próxima primeiro
-    orderedStock = await stockQuery.orderBy(asc(inventory.expiryDate));
+    // FEFO: Data de validade mais próxima primeiro.
+    // Produtos sem validade (NULL) ficam por ÚLTIMO — MySQL ordena NULLs antes por padrão com ASC,
+    // por isso usamos CASE para empurrá-los ao final.
+    orderedStock = await stockQuery.orderBy(
+      sql`CASE WHEN ${inventory.expiryDate} IS NULL THEN 1 ELSE 0 END ASC`,
+      asc(inventory.expiryDate)
+    );
   } else {
     // Direcionado: sem ordenação automática (cliente define manualmente)
     orderedStock = await stockQuery;

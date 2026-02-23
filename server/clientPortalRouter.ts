@@ -1049,7 +1049,6 @@ export const clientPortalRouter = router({
   createPickingOrder: publicProcedure
     .input(
       z.object({
-        sessionToken: z.string(),
         customerOrderNumber: z.string().optional(),
         deliveryAddress: z.string().optional(),
         priority: z.enum(["emergency", "urgent", "normal", "low"]).default("normal"),
@@ -1126,7 +1125,6 @@ export const clientPortalRouter = router({
   updatePickingOrder: publicProcedure
     .input(
       z.object({
-        sessionToken: z.string(),
         orderId: z.number(),
         customerOrderNumber: z.string().optional(),
         deliveryAddress: z.string().optional(),
@@ -1226,7 +1224,6 @@ export const clientPortalRouter = router({
   cancelPickingOrder: publicProcedure
     .input(
       z.object({
-        sessionToken: z.string(),
         orderId: z.number(),
         reason: z.string().optional(),
       })

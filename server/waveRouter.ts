@@ -277,27 +277,19 @@ export const waveRouter = router({
         .from(pickingWaveItems)
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
-      console.log('[DEBUG] All items:', allItems.map(i => ({ id: i.id, status: i.status, pickedQty: i.pickedQuantity, totalQty: i.totalQuantity })));
-      console.log('[DEBUG] Current item:', { id: input.itemId, isComplete, newPickedQuantity });
-
       // Verificar se todos os itens estão completos
       // Para o item atual, usar o novo status calculado
       // Para os outros, verificar se já estão "picked"
       const allCompleted = allItems.every(item => {
         if (item.id === input.itemId) {
-          // Item atual: verificar se ficou completo com esta operação
           return isComplete;
         } else {
-          // Outros itens: verificar se já estão picked
           return item.status === "picked";
         }
       });
 
-      console.log('[DEBUG] All completed?', allCompleted, '| Items:', allItems.map(i => `${i.id}:${i.id === input.itemId ? (isComplete ? 'picked' : 'picking') : i.status}`).join(', '));
-
       // 7. Atualizar status da onda se todos os itens foram completados (FINALIZAÇÃO AUTOMÁTICA)
       if (allCompleted) {
-        console.log('[DEBUG] Finalizando onda automaticamente! waveId:', input.waveId);
         await db
           .update(pickingWaves)
           .set({ 
