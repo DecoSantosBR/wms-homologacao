@@ -24,6 +24,7 @@ export function CollectorStage() {
   const [showFractionalModal, setShowFractionalModal] = useState(false);
   const [fractionalData, setFractionalData] = useState<any>(null);
   const [fractionalQuantity, setFractionalQuantity] = useState("");
+  const [manualLabelCode, setManualLabelCode] = useState("");
 
   // Query para buscar pedido
   const orderQuery = trpc.stage.getOrderForStage.useQuery(
@@ -311,22 +312,82 @@ export function CollectorStage() {
               <CardHeader>
                 <CardTitle className="text-lg">Bipar Etiqueta</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Bipe a etiqueta do produto para registrar automaticamente
+                  Bipe ou digite o código da etiqueta do produto
                 </p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                {/* Entrada Manual */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite o código da etiqueta"
+                    value={manualLabelCode}
+                    onChange={(e) => setManualLabelCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && manualLabelCode.trim()) {
+                        if (!checkId) {
+                          toast.error("Inicie a conferência primeiro");
+                          return;
+                        }
+                        recordItemMutation.mutate({
+                          stageCheckId: checkId,
+                          labelCode: manualLabelCode.trim(),
+                          autoIncrement: true,
+                        });
+                        setManualLabelCode("");
+                      }
+                    }}
+                    className="h-12 text-lg"
+                    disabled={recordItemMutation.isPending}
+                  />
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => {
+                      if (!manualLabelCode.trim()) {
+                        toast.error("Digite o código da etiqueta");
+                        return;
+                      }
+                      if (!checkId) {
+                        toast.error("Inicie a conferência primeiro");
+                        return;
+                      }
+                      recordItemMutation.mutate({
+                        stageCheckId: checkId,
+                        labelCode: manualLabelCode.trim(),
+                        autoIncrement: true,
+                      });
+                      setManualLabelCode("");
+                    }}
+                    className="h-12 px-6"
+                    disabled={recordItemMutation.isPending || !manualLabelCode.trim()}
+                  >
+                    {recordItemMutation.isPending ? "..." : "OK"}
+                  </Button>
+                </div>
+
+                {/* Botão Scanner */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">ou</span>
+                  </div>
+                </div>
+
                 <Button
                   type="button"
                   size="lg"
+                  variant="outline"
                   onClick={() => {
                     setCurrentField("product");
                     setShowScanner(true);
                   }}
-                  className="w-full h-14"
+                  className="w-full h-12"
                   disabled={recordItemMutation.isPending}
                 >
                   <Camera className="mr-2 h-5 w-5" />
-                  {recordItemMutation.isPending ? "Processando..." : "Escanear Produto"}
+                  Escanear com Câmera
                 </Button>
               </CardContent>
             </Card>

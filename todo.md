@@ -2806,3 +2806,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Feedback visual de sucesso
   - [x] Atualização automática da lista
 - [x] Criar testes vitest para o fluxo de cancelamento (6 testes passando)
+
+
+## Campo de entrada manual em /collector/stage - 24/02/2026
+- [x] Adicionar text box para entrada manual do código da etiqueta
+- [x] Botão "OK" e tecla Enter para processar
+- [x] Limpar campo automaticamente após processar
+- [x] Manter mesmo comportamento do scanner (auto-preenchimento)
+- [x] Separador visual "ou" entre entrada manual e scanner
