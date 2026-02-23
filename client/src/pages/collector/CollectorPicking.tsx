@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CollectorLayout } from "../../components/CollectorLayout";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -23,11 +23,15 @@ export function CollectorPicking() {
   const codeInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
 
-  // Buscar ondas disponíveis
+  // Buscar ondas disponíveis (todas exceto canceladas)
   const { data: waves } = trpc.wave.list.useQuery({
-    status: "picking",
     limit: 50,
   });
+
+  // Debug: log das ondas carregadas
+  useEffect(() => {
+    console.log('[CollectorPicking] Ondas carregadas:', waves?.length || 0, waves);
+  }, [waves]);
 
   // Buscar detalhes da onda selecionada
   const { data: waveData } = trpc.wave.getById.useQuery(
