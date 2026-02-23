@@ -23,8 +23,9 @@ export function CollectorPicking() {
   const codeInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
 
-  // Buscar ondas disponíveis (todas exceto canceladas)
+  // Buscar ondas disponíveis com status "pending"
   const { data: waves } = trpc.wave.list.useQuery({
+    status: "pending",
     limit: 50,
   });
 

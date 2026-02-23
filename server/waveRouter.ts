@@ -13,7 +13,7 @@ export const waveRouter = router({
    */
   list: protectedProcedure
     .input(z.object({
-      status: z.enum(["pending", "picking", "completed", "cancelled"]).optional(),
+      status: z.enum(["pending", "picking", "picked", "staged", "completed", "cancelled"]).optional(),
       limit: z.number().min(1).max(500).default(100),
       tenantId: z.number().optional(),
     }))
