@@ -2758,3 +2758,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 - [ ] /portal/pedidos/novo - Aba Individual: Lista de produtos vazia (não apresenta nenhum produto)
 - [ ] /portal/pedidos/novo - Aba Importação: Pedidos criados não geram reservas de estoque
+
+## Reimplementação do fluxo de picking no coletor
+- [x] Adicionar filtro de tenant na tela de seleção de onda
+- [x] Implementar tela de bipagem de endereço (2ª tela)
+- [x] Implementar tela de bipagem de produto com associação automática (3ª tela)
+- [x] Implementar lógica de finalização e retorno ao início após último item
+- [ ] Testar fluxo completo de separação de onda

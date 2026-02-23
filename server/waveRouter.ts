@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, warehouseLocations } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { generateWaveDocument } from "./waveDocument";
@@ -642,6 +642,211 @@ export const waveRouter = router({
         success: true, 
         message: `Onda ${wave.waveNumber} finalizada com sucesso`,
         waveNumber: wave.waveNumber,
+      };
+    }),
+
+  /**
+   * Validar endereço de separação (usado pelo coletor)
+   */
+  validateLocation: protectedProcedure
+    .input(z.object({
+      waveId: z.number(),
+      locationCode: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Buscar endereço
+      const [location] = await db
+        .select()
+        .from(warehouseLocations)
+        .where(eq(warehouseLocations.code, input.locationCode))
+        .limit(1);
+
+      if (!location) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Endereço não encontrado" });
+      }
+
+      // Buscar itens da onda nesse endereço
+      const items = await db
+        .select()
+        .from(pickingWaveItems)
+        .where(
+          and(
+            eq(pickingWaveItems.waveId, input.waveId),
+            eq(pickingWaveItems.locationId, location.id)
+          )
+        );
+
+      if (items.length === 0) {
+        throw new TRPCError({ 
+          code: "BAD_REQUEST", 
+          message: "Nenhum item da onda neste endereço" 
+        });
+      }
+
+      return {
+        location,
+        itemCount: items.length,
+      };
+    }),
+
+  /**
+   * Escanear produto (usado pelo coletor)
+   * Verifica se etiqueta está associada ou se precisa associar
+   */
+  scanProduct: protectedProcedure
+    .input(z.object({
+      waveId: z.number(),
+      locationId: z.number(),
+      productCode: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Buscar associação existente
+      const [association] = await db
+        .select({
+          id: labelAssociations.id,
+          productId: labelAssociations.productId,
+          labelCode: labelAssociations.labelCode,
+          batch: labelAssociations.batch,
+          expiryDate: labelAssociations.expiryDate,
+        })
+        .from(labelAssociations)
+        .where(eq(labelAssociations.labelCode, input.productCode))
+        .limit(1);
+
+      if (!association) {
+        // Etiqueta nova, precisa associar
+        return {
+          isNewLabel: true,
+          productCode: input.productCode,
+        };
+      }
+
+      // Buscar item da onda com esse produto e endereço
+      const [waveItem] = await db
+        .select()
+        .from(pickingWaveItems)
+        .where(
+          and(
+            eq(pickingWaveItems.waveId, input.waveId),
+            eq(pickingWaveItems.locationId, input.locationId),
+            eq(pickingWaveItems.productId, association.productId)
+          )
+        )
+        .limit(1);
+
+      if (!waveItem) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Produto não pertence a esta onda/endereço",
+        });
+      }
+
+      return {
+        isNewLabel: false,
+        association,
+        waveItem,
+      };
+    }),
+
+  /**
+   * Associar etiqueta com produto (usado pelo coletor)
+   */
+  associateLabel: protectedProcedure
+    .input(z.object({
+      waveId: z.number(),
+      locationId: z.number(),
+      labelCode: z.string(),
+      productId: z.number(),
+      batch: z.string().optional(),
+      expiryDate: z.string().optional(),
+      quantity: z.number().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Verificar se etiqueta já está associada
+      const [existing] = await db
+        .select()
+        .from(labelAssociations)
+        .where(eq(labelAssociations.labelCode, input.labelCode))
+        .limit(1);
+
+      if (existing) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Etiqueta já associada a outro produto",
+        });
+      }
+
+      // Buscar produto
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, input.productId))
+        .limit(1);
+
+      if (!product) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
+      }
+
+      // Criar associação
+      const sessionId = `P${input.waveId}`; // Prefixo P para picking
+      await db.insert(labelAssociations).values({
+        sessionId,
+        labelCode: input.labelCode,
+        productId: input.productId,
+        batch: input.batch || null,
+        expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+        unitsPerPackage: input.quantity,
+        packagesRead: 1,
+        totalUnits: input.quantity,
+        associatedBy: ctx.user.id,
+      });
+
+      // Buscar item da onda
+      const [waveItem] = await db
+        .select()
+        .from(pickingWaveItems)
+        .where(
+          and(
+            eq(pickingWaveItems.waveId, input.waveId),
+            eq(pickingWaveItems.locationId, input.locationId),
+            eq(pickingWaveItems.productId, input.productId)
+          )
+        )
+        .limit(1);
+
+      if (!waveItem) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Produto não pertence a esta onda/endereço",
+        });
+      }
+
+      // Atualizar quantidade separada
+      const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
+      await db
+        .update(pickingWaveItems)
+        .set({ 
+          pickedQuantity: newPickedQuantity,
+          status: newPickedQuantity >= waveItem.totalQuantity ? "picked" : "picking",
+        })
+        .where(eq(pickingWaveItems.id, waveItem.id));
+
+      return {
+        success: true,
+        product,
+        waveItem: {
+          ...waveItem,
+          pickedQuantity: newPickedQuantity,
+        },
       };
     }),
 });
