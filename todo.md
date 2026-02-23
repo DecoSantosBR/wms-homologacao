@@ -2940,3 +2940,20 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Bloco vermelho destacado com mensagem exata do erro
   - [x] Manter foco no input forçando operador a bipar etiqueta correta
   - [x] Limpar erro automaticamente ao tentar novamente
+
+
+## Correção: Eliminar cliente "Compartilhado" - 24/02/2026
+- [x] Identificar todas as posições de estoque com cliente "Compartilhado"
+- [x] Atualizar tenantId para "Albert Einstein" (CNPJ: 60.765.823/0030-54)
+- [x] Validar que não restam registros com conceito de compartilhado
+- [x] Resultado: 0 registros com tenantId null em inventory, warehouseLocations e products
+
+
+## Bug: Vincular etiqueta em /collector/picking não funciona - 24/02/2026
+- [x] Analisar código atual da lógica de vinculação de etiqueta
+- [x] Identificar por que vinculação não está funcionando (linha 463-467 retornava erro ao invés de vincular)
+- [x] Corrigir lógica de vinculação quando item-lote não possui etiqueta
+  - [x] Buscar inventário para obter tenantId e expiryDate
+  - [x] Criar labelAssociation automática com sessionId P{pickingOrderId}
+  - [x] Continuar fluxo normalmente após vinculação
+- [ ] Testar fluxo completo de vinculação (aguardando teste do usuário)

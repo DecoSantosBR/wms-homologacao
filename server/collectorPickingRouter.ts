@@ -461,12 +461,48 @@ export const collectorPickingRouter = {
       // Validar lote — se a alocação definiu um lote, o lote bipado deve corresponder
       if (alloc.batch !== null && alloc.batch !== undefined) {
         if (scannedBatch === null) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Lote não identificado na etiqueta. Esperado: ${alloc.batch}`,
+          // CORREÇÃO: Vincular etiqueta automaticamente ao item-lote
+          const { labelAssociations, inventory } = await import("../drizzle/schema");
+          
+          // Buscar inventário para obter tenantId e expiryDate
+          const [inv] = await db
+            .select({
+              tenantId: inventory.tenantId,
+              expiryDate: inventory.expiryDate,
+            })
+            .from(inventory)
+            .where(
+              and(
+                eq(inventory.productId, alloc.productId),
+                eq(inventory.locationId, alloc.locationId),
+                alloc.batch ? eq(inventory.batch, alloc.batch) : sql`1=1`
+              )
+            )
+            .limit(1);
+
+          if (!inv) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Estoque não encontrado para vincular etiqueta.`,
+            });
+          }
+
+          // Criar nova labelAssociation
+          await db.insert(labelAssociations).values({
+            sessionId: `P${input.pickingOrderId}`, // Prefixo P para picking
+            labelCode: input.scannedCode,
+            productId: alloc.productId,
+            batch: alloc.batch ?? null,
+            expiryDate: inv.expiryDate ?? null,
+            unitsPerPackage: 1, // Padrão 1 unidade por embalagem
+            packagesRead: 0,
+            totalUnits: 0,
+            associatedBy: 0, // Sistema (userId 0)
           });
-        }
-        if (scannedBatch !== alloc.batch) {
+
+          // Atualizar scannedBatch para continuar fluxo
+          scannedBatch = alloc.batch;
+        } else if (scannedBatch !== alloc.batch) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Lote incorreto. Esperado: ${alloc.batch} — Lido: ${scannedBatch}`,
