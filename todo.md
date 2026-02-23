@@ -2546,3 +2546,14 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Implementar validação de produtos separados
 - [x] Adicionar resumo de itens conferidos
 - [x] Implementar finalização da onda
+
+
+## Módulo Coletor - Movimentação Sequencial - 22/02/2026 22:05
+
+- [x] Implementar fluxo de 3 etapas no CollectorMovement
+- [x] Etapa 1: Bipar endereço de origem
+- [x] Etapa 2: Bipar etiqueta(s) do produto com ajuste de quantidade
+- [x] Etapa 3: Bipar endereço de destino e confirmar movimentação
+- [x] Adicionar navegação entre etapas com validações
+- [x] Implementar reset do fluxo após confirmação
+- [ ] Integrar com endpoint de movimentação do backend (pendente)
