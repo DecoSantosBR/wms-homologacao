@@ -2774,3 +2774,8 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 
 ## Bug: Nada acontece após "Iniciar Conferência" em /collector/stage
 - [x] Corrigir transição de tela após clicar em "Iniciar Conferência"
+
+## Implementar geração de etiquetas de volume e movimentação de saldos em /collector/stage
+- [x] Analisar lógica de /stage/check para entender geração de etiquetas
+- [x] Implementar geração de etiquetas de volume no endpoint completeStageCheck
+- [x] Implementar movimentação de saldos de endereço de armazenagem (reserva) para endereço EXP (disponível)

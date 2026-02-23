@@ -7,6 +7,8 @@ import { BarcodeScanner } from "../../components/BarcodeScanner";
 import { Camera, Check, X, AlertCircle } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
+import { Label } from "../../components/ui/label";
 
 export function CollectorStage() {
   const [showScanner, setShowScanner] = useState(false);
@@ -17,6 +19,8 @@ export function CollectorStage() {
   const [productCode, setProductCode] = useState("");
   const [quantity, setQuantity] = useState("");
   const [scannedItems, setScannedItems] = useState<any[]>([]);
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [volumeQuantity, setVolumeQuantity] = useState("");
 
   // Query para buscar pedido
   const orderQuery = trpc.stage.getOrderForStage.useQuery(
@@ -56,15 +60,16 @@ export function CollectorStage() {
       } else {
         toast.success("Conferência finalizada com sucesso!");
       }
-      // Reset
-      setOrderNumber("");
-      setCheckId(null);
-      setScannedItems([]);
+      // Abrir modal de geração de etiquetas
+      setShowVolumeModal(true);
     },
     onError: (error: any) => {
       toast.error(error.message);
     },
   });
+
+  // Mutation para gerar etiquetas de volume
+  const generateLabelsMutation = trpc.stage.generateVolumeLabels.useMutation();
 
   const handleScan = (code: string) => {
     if (currentField === "order") {
@@ -113,6 +118,55 @@ export function CollectorStage() {
     }
 
     completeCheckMutation.mutate({ stageCheckId: checkId });
+  };
+
+  const handleGenerateLabels = async () => {
+    const qty = parseInt(volumeQuantity);
+    if (!qty || qty <= 0) {
+      toast.error("Informe uma quantidade válida de volumes");
+      return;
+    }
+
+    try {
+      const result = await generateLabelsMutation.mutateAsync({
+        customerOrderNumber: orderNumber,
+        customerName: orderQuery.data?.order?.customerName || "N/A",
+        tenantName: orderQuery.data?.tenantName || "N/A",
+        totalVolumes: qty,
+      });
+
+      // Converter base64 para blob e baixar
+      const byteCharacters = atob(result.pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Criar link de download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Etiquetas geradas com sucesso!");
+      
+      // Reset completo
+      setShowVolumeModal(false);
+      setVolumeQuantity("");
+      setOrderNumber("");
+      setCheckId(null);
+      setScannedItems([]);
+      setProductCode("");
+      setQuantity("");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar etiquetas");
+    }
   };
 
   const handleNewOrder = () => {
@@ -320,6 +374,49 @@ export function CollectorStage() {
           </>
         )}
       </div>
+
+      {/* Modal de Geração de Etiquetas de Volume */}
+      <Dialog open={showVolumeModal} onOpenChange={setShowVolumeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerar Etiquetas de Volume</DialogTitle>
+            <DialogDescription>
+              Informe a quantidade de volumes para gerar as etiquetas de identificação
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="volumeQuantity">Quantidade de Volumes</Label>
+              <Input
+                id="volumeQuantity"
+                type="number"
+                placeholder="Ex: 3"
+                value={volumeQuantity}
+                onChange={(e) => setVolumeQuantity(e.target.value)}
+                min="1"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowVolumeModal(false);
+              setVolumeQuantity("");
+              // Reset completo
+              setOrderNumber("");
+              setCheckId(null);
+              setScannedItems([]);
+              setProductCode("");
+              setQuantity("");
+            }}>
+              Pular
+            </Button>
+            <Button onClick={handleGenerateLabels} disabled={generateLabelsMutation.isPending}>
+              {generateLabelsMutation.isPending ? "Gerando..." : "Gerar Etiquetas"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CollectorLayout>
   );
 }
