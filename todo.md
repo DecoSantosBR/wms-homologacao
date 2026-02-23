@@ -2573,3 +2573,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Mostrar quantidade no formato "X cx / Y pc" ao invés de apenas número
 - [x] Calcular quantidade em peças baseado em unidades por caixa
 - [x] Permitir edição manual da quantidade em unidades (input editável para caixas fracionadas)
+
+
+## CollectorMovement - Correção Lógica de Quantidade - 23/02/2026
+
+- [x] Cada leitura de etiqueta deve adicionar 1 caixa fechada (unitsPerBox unidades) ao invés de 1 unidade
+- [x] Botões +/- devem incrementar/decrementar em caixas fechadas
+- [x] Input manual continua permitindo edição em unidades para fracionamento

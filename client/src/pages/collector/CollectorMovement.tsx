@@ -89,20 +89,22 @@ export function CollectorMovement() {
     // TODO: Implementar busca de produto no endereço de origem via API
     // Por enquanto, permitir adicionar qualquer código escaneado
     
+    const unitsPerBox = 80; // TODO: Buscar via API
+    
     // Verificar se já foi escaneado
     const existing = scannedProducts.find(p => p.code === code);
     if (existing) {
-      // Incrementar quantidade
+      // Incrementar quantidade em 1 caixa fechada
       setScannedProducts(prev =>
         prev.map(p =>
           p.code === code
-            ? { ...p, quantity: p.quantity + 1 }
+            ? { ...p, quantity: p.quantity + unitsPerBox }
             : p
         )
       );
-      toast.success("Quantidade incrementada");
+      toast.success("Caixa adicionada");
     } else {
-      // Adicionar novo produto com dados básicos
+      // Adicionar novo produto com 1 caixa fechada
       setScannedProducts(prev => [
         ...prev,
         {
@@ -112,11 +114,11 @@ export function CollectorMovement() {
           sku: code,
           batch: null,
           availableQuantity: 999, // TODO: Buscar via API
-          quantity: 1,
-          unitsPerBox: 80, // TODO: Buscar via API
+          quantity: unitsPerBox, // 1 caixa fechada
+          unitsPerBox: unitsPerBox,
         },
       ]);
-      toast.success("Produto adicionado");
+      toast.success("Produto adicionado (1 caixa)");
     }
 
     setCurrentProductCode("");
@@ -125,14 +127,17 @@ export function CollectorMovement() {
 
   const handleUpdateQuantity = (code: string, delta: number) => {
     setScannedProducts(prev =>
-      prev.map(p =>
-        p.code === code
-          ? {
-              ...p,
-              quantity: Math.max(1, p.quantity + delta),
-            }
-          : p
-      )
+      prev.map(p => {
+        if (p.code === code) {
+          const unitsPerBox = p.unitsPerBox || 80;
+          const newQuantity = p.quantity + (delta * unitsPerBox);
+          return {
+            ...p,
+            quantity: Math.max(unitsPerBox, newQuantity), // Mínimo 1 caixa
+          };
+        }
+        return p;
+      })
     );
   };
 
@@ -315,7 +320,7 @@ export function CollectorMovement() {
                               size="icon"
                               className="h-8 w-8"
                               onClick={() => handleUpdateQuantity(product.code, -1)}
-                              disabled={product.quantity <= 1}
+                              disabled={product.quantity <= (product.unitsPerBox || 80)}
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
