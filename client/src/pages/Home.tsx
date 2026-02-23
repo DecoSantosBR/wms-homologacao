@@ -34,8 +34,15 @@ export default function Home() {
   // Usuário não autenticado - mostrar tela de login
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">
-        <Card className="w-full max-w-md mx-4">
+      <div 
+        className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative"
+        style={{
+          backgroundImage: 'url(https://files.manuscdn.com/user_upload_by_module/session_file/310519663187653950/KsiBngXQYgMVVNPi.jpg)'
+        }}
+      >
+        {/* Overlay escuro para melhorar legibilidade */}
+        <div className="absolute inset-0 bg-black/40"></div>
+        <Card className="w-full max-w-md mx-4 relative z-10">
           <CardHeader className="text-center">
             <div className="mb-4">
               <h1 className="text-4xl font-bold text-primary">Med@x</h1>
