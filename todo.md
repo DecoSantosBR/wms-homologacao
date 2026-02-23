@@ -2957,3 +2957,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Criar labelAssociation automática com sessionId P{pickingOrderId}
   - [x] Continuar fluxo normalmente após vinculação
 - [ ] Testar fluxo completo de vinculação (aguardando teste do usuário)
+
+
+## Correção: Validação de código impede vinculação automática - 24/02/2026
+- [x] Ajustar lógica para não retornar erro quando código não é reconhecido
+- [x] Assumir que código desconhecido é etiqueta nova e vincular ao produto da alocação
+- [ ] Testar com código real "22D08LA129" (aguardando teste do usuário)

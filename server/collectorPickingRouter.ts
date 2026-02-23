@@ -435,13 +435,12 @@ export const collectorPickingRouter = {
         }
       }
 
-      // BUG DETECTADO: Se o código não é uma labelAssociation nem um SKU válido,
-      // o sistema não retornava erro claro. Corrigido abaixo.
+      // CORREÇÃO: Se o código não é reconhecido, assumir que é etiqueta nova
+      // e vincular automaticamente ao produto da alocação
       if (scannedProductId === null) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Código "${input.scannedCode}" não reconhecido. Etiqueta não cadastrada e SKU não encontrado.`,
-        });
+        // Usar produto da alocação como referência
+        scannedProductId = alloc.productId;
+        scannedBatch = null; // Será definido na validação de lote abaixo
       }
 
       // Validar produto
