@@ -2814,3 +2814,52 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Limpar campo automaticamente após processar
 - [x] Manter mesmo comportamento do scanner (auto-preenchimento)
 - [x] Separador visual "ou" entre entrada manual e scanner
+
+
+## Correção: Estorno de estoque ao cancelar expedição - 24/02/2026
+- [x] Implementar reversão de movimentação de estoque no cancelShipping
+  - [x] Buscar movimentações do pedido (inventoryMovements)
+  - [x] Subtrair quantidade do endereço EXP
+  - [x] Devolver quantidade para endereço de armazenagem original
+  - [x] Recriar reservas (pickingReservations)
+  - [x] Registrar movimentação reversa no histórico
+  - [x] Validar IDs de localização antes de processar
+  - [x] Tratar lotes null corretamente com isNull()
+- [x] Criar testes vitest para validar estorno completo (4 testes passando)
+- [x] Validar que pedido pode ser conferido novamente após cancelamento
+
+## Novo fluxo guiado de picking com validação de lote - 24/02/2026
+- [ ] Pré-alocação de lotes e endereços ao gerar pedido
+  - [ ] Implementar seleção por FEFO (validade mais próxima)
+  - [ ] Implementar seleção por FIFO (data entrada mais antiga)
+  - [ ] Implementar seleção Direcionada (manual)
+  - [ ] Ordenar endereços por código crescente
+  - [ ] Marcar itens fracionados na pré-alocação
+  - [ ] Agrupar itens por endereço em ondas multi-pedido
+- [ ] Fluxo guiado em /collector/picking
+  - [ ] Passo 1: Confirmação de endereço (bipar etiqueta)
+  - [ ] Passo 2: Separação de itens com validação de lote
+  - [ ] Passo 3: Conclusão de endereço e navegação
+  - [ ] Reportar problemas (endereço inacessível, etiqueta danificada)
+  - [ ] Reportar falta/avaria com busca de endereço alternativo
+  - [ ] Pausar/retomar pedido com salvamento de progresso
+  - [ ] Barra de progresso visual (endereço X de N, % concluído)
+  - [ ] Notificações ao gerente (push + badge + e-mail)
+- [ ] Validação de lote em /collector/stage
+  - [ ] Validar lote correto ao bipar produto
+  - [ ] Rejeitar lote incorreto com erro
+  - [ ] Permitir conferência sem lote quando produto não tem lote
+- [ ] Painel web do gerente para decisões
+  - [ ] Redirecionar para endereço alternativo
+  - [ ] Aprovar divergência
+  - [ ] Solicitar nova tentativa
+  - [ ] Ajustar quantidades
+- [ ] Testes vitest completos do novo fluxo
+
+
+## Refatoração de testes - Limpeza automática - 24/02/2026
+- [x] Limpar banco de dados poluído (14 clientes, 64 produtos, 115 endereços)
+- [x] Refatorar testes para usar beforeAll() ao invés de beforeEach()
+- [x] Implementar limpeza automática com afterAll()
+- [x] Validar que banco fica limpo após execução dos testes
+- [x] Documentar regras de teste no código

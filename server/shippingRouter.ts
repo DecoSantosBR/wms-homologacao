@@ -24,7 +24,7 @@ import {
 import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, or, sql, desc, inArray, isNull } from "drizzle-orm";
 
 export const shippingRouter = router({
   // ============================================================================
@@ -1270,6 +1270,174 @@ export const shippingRouter = router({
 
         console.log(`[CancelShipping] Desvinculado ${linkedInvoices.length} NF(s) do pedido ${order.orderNumber}`);
       }
+
+      // ========== ESTORNO DE ESTOQUE ==========
+      // Buscar movimentações do pedido (EXP → Armazenagem)
+      const movements = await db
+        .select({
+          id: inventoryMovements.id,
+          productId: inventoryMovements.productId,
+          batch: inventoryMovements.batch,
+          fromLocationId: inventoryMovements.fromLocationId,
+          toLocationId: inventoryMovements.toLocationId,
+          quantity: inventoryMovements.quantity,
+        })
+        .from(inventoryMovements)
+        .where(
+          and(
+            eq(inventoryMovements.referenceType, "picking_order"),
+            eq(inventoryMovements.referenceId, input.orderId),
+            eq(inventoryMovements.movementType, "picking")
+          )
+        );
+
+      console.log(`[CancelShipping] Encontradas ${movements.length} movimentação(ões) para estornar do pedido ${order.orderNumber}`);
+
+      // Reverter cada movimentação: EXP → Endereço de armazenagem
+      for (const movement of movements) {
+        // Validar IDs de localização
+        if (!movement.fromLocationId || !movement.toLocationId) {
+          console.warn(`[CancelShipping] Movimentação ${movement.id} sem localizações válidas, pulando...`);
+          continue;
+        }
+
+        // 1. Subtrair do endereço EXP (destino original)
+        const expConditions = [
+          eq(inventory.locationId, movement.toLocationId as number),
+          eq(inventory.productId, movement.productId),
+          eq(inventory.tenantId, order.tenantId),
+        ];
+        
+        if (movement.batch) {
+          expConditions.push(eq(inventory.batch, movement.batch));
+        } else {
+          expConditions.push(isNull(inventory.batch));
+        }
+
+        const [expInventory] = await db
+          .select()
+          .from(inventory)
+          .where(and(...expConditions))
+          .limit(1);
+
+        if (!expInventory) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Estoque não encontrado no endereço de expedição para produto ${movement.productId}`,
+          });
+        }
+
+        if (expInventory.quantity < movement.quantity) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Estoque insuficiente no endereço de expedição. Disponível: ${expInventory.quantity}, Necessário: ${movement.quantity}`,
+          });
+        }
+
+        await db
+          .update(inventory)
+          .set({
+            quantity: expInventory.quantity - movement.quantity,
+          })
+          .where(eq(inventory.id, expInventory.id));
+
+        // 2. Devolver para endereço de armazenagem (origem original)
+        const storageConditions = [
+          eq(inventory.locationId, movement.fromLocationId as number),
+          eq(inventory.productId, movement.productId),
+          eq(inventory.tenantId, order.tenantId),
+        ];
+        
+        if (movement.batch) {
+          storageConditions.push(eq(inventory.batch, movement.batch));
+        } else {
+          storageConditions.push(isNull(inventory.batch));
+        }
+
+        const [storageInventory] = await db
+          .select()
+          .from(inventory)
+          .where(and(...storageConditions))
+          .limit(1);
+
+        if (storageInventory) {
+          // Adicionar ao estoque existente
+          await db
+            .update(inventory)
+            .set({
+              quantity: storageInventory.quantity + movement.quantity,
+            })
+            .where(eq(inventory.id, storageInventory.id));
+        } else {
+          // Recriar registro de estoque no endereço de armazenagem
+          await db.insert(inventory).values({
+            locationId: movement.fromLocationId,
+            productId: movement.productId,
+            batch: movement.batch || null,
+            expiryDate: expInventory.expiryDate || null,
+            quantity: movement.quantity,
+            tenantId: order.tenantId,
+            status: "available",
+          });
+        }
+
+        // 3. Recriar reserva
+        // Buscar ID do inventário após inserção/atualização
+        let inventoryIdForReservation = storageInventory?.id;
+        
+        if (!inventoryIdForReservation) {
+          const newInventoryConditions = [
+            eq(inventory.locationId, movement.fromLocationId as number),
+            eq(inventory.productId, movement.productId),
+            eq(inventory.tenantId, order.tenantId),
+          ];
+          
+          if (movement.batch) {
+            newInventoryConditions.push(eq(inventory.batch, movement.batch));
+          } else {
+            newInventoryConditions.push(isNull(inventory.batch));
+          }
+
+          const [newInventory] = await db
+            .select({ id: inventory.id })
+            .from(inventory)
+            .where(and(...newInventoryConditions))
+            .limit(1);
+          
+          inventoryIdForReservation = newInventory?.id;
+        }
+        
+        if (!inventoryIdForReservation) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Não foi possível encontrar inventário para recriar reserva do produto ${movement.productId}`,
+          });
+        }
+        
+        await db.insert(pickingReservations).values({
+          pickingOrderId: input.orderId,
+          productId: movement.productId,
+          inventoryId: inventoryIdForReservation,
+          quantity: movement.quantity,
+        });
+
+        // 4. Registrar movimentação reversa no histórico
+        await db.insert(inventoryMovements).values({
+          productId: movement.productId,
+          batch: movement.batch,
+          fromLocationId: movement.toLocationId, // EXP
+          toLocationId: movement.fromLocationId, // Armazenagem
+          quantity: movement.quantity,
+          movementType: "adjustment",
+          referenceType: "picking_order",
+          referenceId: input.orderId,
+          performedBy: ctx.user.id,
+          notes: `Estorno automático - Expedição cancelada do pedido ${order.customerOrderNumber || order.orderNumber}`,
+          tenantId: order.tenantId,
+        });
+      }
+
+      console.log(`[CancelShipping] Estorno de estoque concluído: ${movements.length} movimentação(ões) revertidas`);
 
       // Cancelar conferência de stage
       const stageCheckList = await db
