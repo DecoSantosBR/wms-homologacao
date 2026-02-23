@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { warehouseLocations, products, inventory } from "../drizzle/schema";
+import { warehouseLocations, products, inventory, labelAssociations } from "../drizzle/schema";
 import { getDb } from "./db";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import {
@@ -320,7 +320,7 @@ export const stockRouter = router({
     }),
 
   /**
-   * Busca produto por código/SKU e retorna dados do estoque no endereço de origem
+   * Busca produto por código de etiqueta e retorna dados do estoque no endereço de origem
    */
   getProductByCode: protectedProcedure
     .input(z.object({ 
@@ -331,7 +331,43 @@ export const stockRouter = router({
       const dbConn = await getDb();
       if (!dbConn) throw new Error("Database connection failed");
 
-      // Buscar produto por SKU
+      // Primeiro, tentar buscar por código de etiqueta (labelAssociations)
+      const labelAssoc = await dbConn
+        .select({
+          productId: labelAssociations.productId,
+          batch: labelAssociations.batch,
+          expiryDate: labelAssociations.expiryDate,
+          unitsPerPackage: labelAssociations.unitsPerPackage,
+        })
+        .from(labelAssociations)
+        .where(eq(labelAssociations.labelCode, input.code))
+        .limit(1);
+
+      let productId: number;
+      let labelBatch: string | null = null;
+      let labelUnitsPerBox: number | null = null;
+
+      if (labelAssoc[0]) {
+        // Etiqueta encontrada - usar productId da associação
+        productId = labelAssoc[0].productId;
+        labelBatch = labelAssoc[0].batch || null;
+        labelUnitsPerBox = labelAssoc[0].unitsPerPackage;
+      } else {
+        // Etiqueta não encontrada - tentar buscar diretamente por SKU (fallback)
+        const productBySku = await dbConn
+          .select({ id: products.id })
+          .from(products)
+          .where(eq(products.sku, input.code))
+          .limit(1);
+
+        if (!productBySku[0]) {
+          throw new Error(`Etiqueta ou produto ${input.code} não encontrado`);
+        }
+
+        productId = productBySku[0].id;
+      }
+
+      // Buscar dados do produto
       const product = await dbConn
         .select({
           id: products.id,
@@ -340,11 +376,11 @@ export const stockRouter = router({
           unitsPerBox: products.unitsPerBox,
         })
         .from(products)
-        .where(eq(products.sku, input.code))
+        .where(eq(products.id, productId))
         .limit(1);
 
       if (!product[0]) {
-        throw new Error(`Produto ${input.code} não encontrado`);
+        throw new Error(`Produto não encontrado`);
       }
 
       // Se locationCode fornecido, buscar dados do estoque nesse endereço
@@ -378,9 +414,16 @@ export const stockRouter = router({
         }
       }
 
+      // Priorizar unitsPerBox da etiqueta, depois do produto
+      const finalUnitsPerBox = labelUnitsPerBox || product[0].unitsPerBox || 1;
+
+      // Priorizar batch da etiqueta, depois do estoque
+      const finalBatch = labelBatch || stockData?.batch || null;
+
       return {
         ...product[0],
-        batch: stockData?.batch || null,
+        unitsPerBox: finalUnitsPerBox,
+        batch: finalBatch,
         availableQuantity: stockData?.quantity || 0,
         expiryDate: stockData?.expiryDate || null,
       };

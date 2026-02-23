@@ -2605,3 +2605,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Substituir dados mockados por dados reais da API
 - [x] Adicionar tratamento de erro quando produto não encontrado
 - [ ] Testar busca com produtos reais do banco
+
+
+## Bug - CollectorMovement - 23/02/2026 23:40
+
+- [x] Sistema está buscando produto por SKU ao invés de buscar por código de etiqueta
+- [x] Deve buscar na tabela labelAssociations para encontrar produto/lote associado à etiqueta
+- [x] Modificar endpoint stock.getProductByCode para aceitar labelCode e buscar via labelAssociations
+  - Implementado: busca primeiro por labelCode em labelAssociations
+  - Fallback: se não encontrar, busca por SKU diretamente
+  - Prioriza unitsPerBox e batch da etiqueta sobre dados do produto
