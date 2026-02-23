@@ -2765,3 +2765,6 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Implementar tela de bipagem de produto com associação automática (3ª tela)
 - [x] Implementar lógica de finalização e retorno ao início após último item
 - [ ] Testar fluxo completo de separação de onda
+
+## Bug: Quantidade não incrementa ao bipar produto em /collector/picking
+- [x] Corrigir endpoint scanProduct para incrementar quantidade separada quando etiqueta já está associada

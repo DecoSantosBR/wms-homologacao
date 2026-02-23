@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, warehouseLocations } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, warehouseLocations, labelReadings } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { generateWaveDocument } from "./waveDocument";
@@ -702,7 +702,7 @@ export const waveRouter = router({
       locationId: z.number(),
       productCode: z.string(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -714,6 +714,7 @@ export const waveRouter = router({
           labelCode: labelAssociations.labelCode,
           batch: labelAssociations.batch,
           expiryDate: labelAssociations.expiryDate,
+          unitsPerPackage: labelAssociations.unitsPerPackage,
         })
         .from(labelAssociations)
         .where(eq(labelAssociations.labelCode, input.productCode))
@@ -747,10 +748,42 @@ export const waveRouter = router({
         });
       }
 
+      // Incrementar quantidade separada
+      const unitsPerPackage = association.unitsPerPackage || 1;
+      const newPickedQuantity = waveItem.pickedQuantity + unitsPerPackage;
+
+      // Atualizar pickingWaveItems
+      await db
+        .update(pickingWaveItems)
+        .set({ pickedQuantity: newPickedQuantity })
+        .where(eq(pickingWaveItems.id, waveItem.id));
+
+      // Atualizar labelAssociations
+      await db
+        .update(labelAssociations)
+        .set({
+          packagesRead: sql`${labelAssociations.packagesRead} + 1`,
+          totalUnits: sql`${labelAssociations.totalUnits} + ${unitsPerPackage}`,
+        })
+        .where(eq(labelAssociations.id, association.id));
+
+      // Inserir leitura em labelReadings
+      const sessionId = `P${input.waveId}`;
+      await db.insert(labelReadings).values({
+        sessionId,
+        associationId: association.id,
+        labelCode: input.productCode,
+        readBy: ctx.user.id,
+        unitsAdded: unitsPerPackage,
+      });
+
       return {
         isNewLabel: false,
         association,
-        waveItem,
+        waveItem: {
+          ...waveItem,
+          pickedQuantity: newPickedQuantity,
+        },
       };
     }),
 
