@@ -15,6 +15,7 @@ import {
   pickingOrders,
   pickingAllocations,
   pickingProgress,
+  pickingWaves,
   warehouseLocations,
   products,
   tenants,
@@ -184,48 +185,24 @@ export const collectorPickingRouter = {
 
       const rows = await db
         .select({
-          id: pickingOrders.id,
-          orderNumber: pickingOrders.orderNumber,
-          customerOrderNumber: pickingOrders.customerOrderNumber,
-          customerName: pickingOrders.customerName,
-          status: pickingOrders.status,
-          totalItems: pickingOrders.totalItems,
-          totalQuantity: pickingOrders.totalQuantity,
-          tenantId: pickingOrders.tenantId,
+          id: pickingWaves.id,
+          waveNumber: pickingWaves.waveNumber,
+          status: pickingWaves.status,
+          totalOrders: pickingWaves.totalOrders,
+          totalItems: pickingWaves.totalItems,
+          tenantId: pickingWaves.tenantId,
+          createdAt: pickingWaves.createdAt,
         })
-        .from(pickingOrders)
+        .from(pickingWaves)
         .where(
           and(
-            tenantId ? eq(pickingOrders.tenantId, tenantId) : undefined,
-            // Aceita apenas pedidos pendentes ou pausados — em_progress indica
-            // que já foi iniciado por outro operador mas pode ser retomado
-            eq(pickingOrders.status, "pending")
+            tenantId ? eq(pickingWaves.tenantId, tenantId) : undefined,
+            eq(pickingWaves.status, "pending")
           )
         )
-        .orderBy(asc(pickingOrders.createdAt));
+        .orderBy(asc(pickingWaves.createdAt));
 
-      // Também buscar pedidos in_progress / paused
-      const inProgress = await db
-        .select({
-          id: pickingOrders.id,
-          orderNumber: pickingOrders.orderNumber,
-          customerOrderNumber: pickingOrders.customerOrderNumber,
-          customerName: pickingOrders.customerName,
-          status: pickingOrders.status,
-          totalItems: pickingOrders.totalItems,
-          totalQuantity: pickingOrders.totalQuantity,
-          tenantId: pickingOrders.tenantId,
-        })
-        .from(pickingOrders)
-        .where(
-          and(
-            tenantId ? eq(pickingOrders.tenantId, tenantId) : undefined,
-            eq(pickingOrders.status, "in_progress")
-          )
-        )
-        .orderBy(asc(pickingOrders.createdAt));
-
-      return [...rows, ...inProgress];
+      return rows;
     }),
 
   /**

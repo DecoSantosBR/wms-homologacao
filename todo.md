@@ -2978,3 +2978,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 ## Deletar cliente "Compartilhado" - 24/02/2026
 - [x] Deletar registro do cliente "Compartilhado" da tabela tenants
 - [x] Validar que cliente não aparece mais nos filtros (0 registros encontrados)
+
+
+## Bug: /collector/picking busca pedidos ao invés de ondas - 24/02/2026
+- [x] Analisar código atual do collectorPickingRouter.ts (listOrders buscava pickingOrders)
+- [x] Identificar procedure que busca pedidos com status pending
+- [x] Modificar listOrders para buscar ondas (pickingWaves) com status pending
+- [x] Adicionar pickingWaves ao import do collectorPickingRouter.ts
+- [x] Atualizar CollectorPicking.tsx para exibir ondas (waveNumber, totalOrders, totalItems)
+- [x] Substituir todas as referências a orderNumber por waveNumber
+- [ ] Testar fluxo completo (aguardando teste do usuário)

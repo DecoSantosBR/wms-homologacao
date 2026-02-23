@@ -151,10 +151,10 @@ export function CollectorPicking() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [orderInfo, setOrderInfo] = useState<{
     id: number;
-    orderNumber: string;
-    customerOrderNumber: string | null;
-    customerName: string;
+    waveNumber: string;
     status: string;
+    totalOrders: number;
+    totalItems: number;
   } | null>(null);
 
   // Route state
@@ -490,22 +490,11 @@ export function CollectorPicking() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-gray-900">
-                        {order.customerOrderNumber || order.orderNumber}
+                        Onda {order.waveNumber}
                       </span>
-                      {order.status === "in_progress" && (
-                        <Badge
-                          variant="outline"
-                          className="text-amber-700 border-amber-300 bg-amber-50 text-xs"
-                        >
-                          Em progresso
-                        </Badge>
-                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {order.customerName}
-                    </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {order.totalItems} itens · {order.totalQuantity} un.
+                      {order.totalOrders} pedidos · {order.totalItems} itens
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -539,7 +528,7 @@ export function CollectorPicking() {
               <RotateCcw className="h-6 w-6 text-amber-600 flex-shrink-0" />
               <div>
                 <p className="font-semibold text-amber-900">
-                  Retomando: {orderInfo?.orderNumber}
+                  Retomando: Onda {orderInfo?.waveNumber}
                 </p>
                 <p className="text-sm text-amber-700 mt-0.5">
                   {done} de {total} itens já foram separados
@@ -591,7 +580,7 @@ export function CollectorPicking() {
       <CollectorLayout title="Bipar Endereço">
         <div className="space-y-4">
           <StatusHeader
-            orderNumber={orderInfo?.orderNumber ?? ""}
+            orderNumber={orderInfo?.waveNumber ?? ""}
             locationIndex={locationIdx}
             totalLocations={route.length}
             done={done}
@@ -788,7 +777,7 @@ export function CollectorPicking() {
       <CollectorLayout title="Bipar Produto">
         <div className="space-y-4">
           <StatusHeader
-            orderNumber={orderInfo?.orderNumber ?? ""}
+            orderNumber={orderInfo?.waveNumber ?? ""}
             locationIndex={locationIdx}
             totalLocations={route.length}
             done={done}
@@ -1277,7 +1266,7 @@ export function CollectorPicking() {
             <p className="text-2xl font-black text-green-900">Concluído!</p>
             {orderInfo && (
               <p className="text-sm text-green-700 mt-2">
-                Pedido {orderInfo.orderNumber} finalizado.
+                Onda {orderInfo.waveNumber} finalizada.
               </p>
             )}
           </div>
