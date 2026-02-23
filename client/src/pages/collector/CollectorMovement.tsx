@@ -191,22 +191,52 @@ export function CollectorMovement() {
       const destLocation = await utils.client.stock.getLocationByCode.query({ code: destinationCode });
 
       // Executar movimentações para cada produto
+      let successCount = 0;
       for (const product of scannedProducts) {
-        await registerMovementMutation.mutateAsync({
-          productId: product.productId,
-          fromLocationId: originLocation.id,
-          toLocationId: destLocation.id,
-          quantity: product.quantity,
-          batch: product.batch || undefined,
-          movementType: "transfer" as const,
-          notes: `Movimentação via Coletor: ${originCode} → ${destinationCode}`,
-        });
+        try {
+          await registerMovementMutation.mutateAsync({
+            productId: product.productId,
+            fromLocationId: originLocation.id,
+            toLocationId: destLocation.id,
+            quantity: product.quantity,
+            batch: product.batch || undefined,
+            movementType: "transfer" as const,
+            notes: `Movimentação via Coletor: ${originCode} → ${destinationCode}`,
+          });
+          successCount++;
+        } catch (productError: any) {
+          // Erro específico do produto
+          const errorMsg = productError.message || "Erro desconhecido";
+          
+          // Identificar tipo de erro
+          if (errorMsg.includes("Saldo insuficiente")) {
+            toast.error(`❌ ${product.sku}: Saldo insuficiente no lote ${product.batch || "sem lote"}`);
+          } else if (errorMsg.includes("único item/lote")) {
+            toast.error(`❌ ${product.sku}: Destino já contém outro produto/lote`);
+          } else if (errorMsg.includes("lote")) {
+            toast.error(`❌ ${product.sku}: Erro de validação de lote - ${errorMsg}`);
+          } else {
+            toast.error(`❌ ${product.sku}: ${errorMsg}`);
+          }
+          
+          // Interromper processamento em caso de erro
+          throw productError;
+        }
       }
       
-      toast.success("Movimentação realizada com sucesso!");
-      handleReset();
+      if (successCount === scannedProducts.length) {
+        toast.success(`✅ ${successCount} produto(s) movimentado(s) com sucesso!`);
+        handleReset();
+      }
     } catch (error: any) {
-      toast.error(`Erro: ${error.message}`);
+      // Erro geral (endereços não encontrados, etc)
+      const errorMsg = error.message || "Erro desconhecido";
+      if (errorMsg.includes("Endereço") && errorMsg.includes("não encontrado")) {
+        toast.error(`❌ ${errorMsg}`);
+      } else if (!errorMsg.includes("Saldo") && !errorMsg.includes("lote")) {
+        // Só mostrar erro geral se não for erro de produto (já mostrado acima)
+        toast.error(`❌ Erro: ${errorMsg}`);
+      }
     }
   };
 

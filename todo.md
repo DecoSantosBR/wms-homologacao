@@ -2615,3 +2615,16 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - Implementado: busca primeiro por labelCode em labelAssociations
   - Fallback: se não encontrar, busca por SKU diretamente
   - Prioriza unitsPerBox e batch da etiqueta sobre dados do produto
+
+
+## CollectorMovement - Validação de Lote - 23/02/2026 23:50
+
+- [x] Implementar validação de lote no endpoint stock.registerMovement (já existia)
+- [x] Validar que o lote do produto movimentado existe no endereço de origem
+- [x] Validar que a quantidade movimentada não excede o disponível para aquele lote
+- [x] Retornar erro específico quando lote não encontrado ou quantidade insuficiente
+- [x] Adicionar feedback visual no frontend quando validação falhar
+  - Mensagens específicas por tipo de erro (saldo, lote, regra single-item)
+  - Identificação do produto com problema (SKU)
+  - Contador de sucessos
+- [ ] Testar movimentação com lotes válidos e inválidos
