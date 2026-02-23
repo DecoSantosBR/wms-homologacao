@@ -16,7 +16,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
+import { ClientPortalImportOrdersDialog } from "@/components/ClientPortalImportOrdersDialog";
 import { useBusinessError } from "@/hooks/useBusinessError";
 import { ClientPortalLayout } from "@/components/ClientPortalLayout";
 
@@ -466,9 +466,10 @@ export default function ClientPortalNewOrder() {
         </Tabs>
         
         {/* Dialog de Importação */}
-        <ImportOrdersDialog
+        <ClientPortalImportOrdersDialog
           open={isImportDialogOpen}
           onOpenChange={setIsImportDialogOpen}
+          onSuccess={handleImportSuccess}
         />
       </div>
     </div>

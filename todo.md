@@ -2674,3 +2674,13 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] MEL-04 (MÉDIA): Logger estruturado com Pino - substituir console.log
 - [ ] MEL-05 (MÉDIA): Consolidar os dois arquivos nfeParser.ts
 - [ ] MEL-06 (BAIXA): Cache de permissões RBAC com TTL
+
+
+## Bug - Portal do Cliente - 24/02/2026 01:10
+
+- [x] /portal/pedidos/novo: Importação de arquivo Excel redireciona para login OAuth ao invés de usar autenticação do Portal
+- [x] Investigar componente ImportOrdersDialog - usava trpc.picking.importOrders (OAuth)
+- [x] Verificar endpoint tRPC usado na importação
+- [x] Solução: Criado ClientPortalImportOrdersDialog separado usando apenas clientPortal.importOrders
+  - Portal do Cliente agora usa componente próprio sem referências a OAuth
+  - ImportOrdersDialog original mantido para sistema interno
