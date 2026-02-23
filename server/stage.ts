@@ -226,6 +226,7 @@ export async function startStageCheck(params: {
       productId: item.productId,
       productSku: item.productSku,
       productName: item.productDescription,
+      batch: item.batch ?? null, // ✅ Persistir lote para validação posterior
       expectedQuantity: item.quantity,
       checkedQuantity: 0,
       divergence: 0,
@@ -298,17 +299,56 @@ export async function recordStageItem(params: {
     });
   }
 
-  // Buscar item da conferência
-  const items = await dbConn
-    .select()
-    .from(stageCheckItems)
-    .where(
-      and(
-        eq(stageCheckItems.stageCheckId, params.stageCheckId),
-        eq(stageCheckItems.productId, product.id)
+  // Lote identificado na etiqueta bipada
+  const scannedBatch = label.batch ?? null;
+
+  // ── BUSCA DO ITEM DE CONFERÊNCIA (com suporte a múltiplos lotes) ──────────
+  // CORREÇÃO BUG: A lógica anterior usava limit(1) ao buscar em pickingOrderItems,
+  // o que retornava o lote errado quando o mesmo produto tinha múltiplos lotes no pedido.
+  // Agora o lote é persistido no stageCheckItem (campo batch) e a busca é precisa.
+  let items;
+
+  if (scannedBatch) {
+    // Buscar item com lote correspondente ao bipado
+    items = await dbConn
+      .select()
+      .from(stageCheckItems)
+      .where(
+        and(
+          eq(stageCheckItems.stageCheckId, params.stageCheckId),
+          eq(stageCheckItems.productId, product.id),
+          eq(stageCheckItems.batch, scannedBatch)
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
+
+    // Fallback: mesmo produto mas sem lote cadastrado (aceita qualquer lote)
+    if (items.length === 0) {
+      items = await dbConn
+        .select()
+        .from(stageCheckItems)
+        .where(
+          and(
+            eq(stageCheckItems.stageCheckId, params.stageCheckId),
+            eq(stageCheckItems.productId, product.id),
+            sql`${stageCheckItems.batch} IS NULL`
+          )
+        )
+        .limit(1);
+    }
+  } else {
+    // Etiqueta sem lote: buscar primeiro item do produto sem filtrar lote
+    items = await dbConn
+      .select()
+      .from(stageCheckItems)
+      .where(
+        and(
+          eq(stageCheckItems.stageCheckId, params.stageCheckId),
+          eq(stageCheckItems.productId, product.id)
+        )
+      )
+      .limit(1);
+  }
 
   const item = items[0];
 
@@ -318,6 +358,28 @@ export async function recordStageItem(params: {
       message: `Produto ${product.sku} (etiqueta: ${params.labelCode}) não faz parte deste pedido`,
     });
   }
+
+  // ── VALIDAÇÃO DE LOTE ─────────────────────────────────────────────────────
+  // Regras segundo a spec:
+  //   • item.batch == null  → item sem lote cadastrado → prossegue sem validação
+  //   • item.batch != null e scannedBatch == null → etiqueta sem lote onde lote é esperado → ERRO
+  //   • item.batch != null e scannedBatch != item.batch → lote divergente → ERRO
+  //   • item.batch != null e scannedBatch == item.batch → OK
+  if (item.batch !== null && item.batch !== undefined && item.batch !== "") {
+    if (!scannedBatch) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Lote não identificado na etiqueta. Esperado: ${item.batch}. Bipe a etiqueta correta.`,
+      });
+    }
+    if (scannedBatch !== item.batch) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Lote incorreto. Esperado: ${item.batch} — Lido: ${scannedBatch}. Bipe a etiqueta correta.`,
+      });
+    }
+  }
+  // ── FIM DA VALIDAÇÃO DE LOTE ─────────────────────────────────────────────
 
   // Determinar quantidade a incrementar
   let quantityToAdd = params.quantity || 0;

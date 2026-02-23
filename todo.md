@@ -2863,3 +2863,80 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Implementar limpeza automática com afterAll()
 - [x] Validar que banco fica limpo após execução dos testes
 - [x] Documentar regras de teste no código
+
+
+## Novo fluxo guiado de picking com validação de lote - 24/02/2026
+### Parte 1: Pré-alocação e schema
+- [ ] Adicionar campo `pickingRule` em tenants (FEFO, FIFO, Direcionado)
+- [ ] Criar tabela `pickingAllocations` para persistir lotes/endereços pré-alocados
+- [ ] Adicionar campo `isFractional` em pickingAllocations
+- [ ] Adicionar estados `in_progress`, `paused`, `divergent` em pickingOrders
+
+### Parte 2: Backend - Pré-alocação
+- [ ] Implementar algoritmo FEFO (validade mais próxima, NULL por último)
+- [ ] Implementar algoritmo FIFO (data de entrada mais antiga)
+- [ ] Implementar algoritmo Direcionado (endereços manuais)
+- [ ] Ordenar endereços por código crescente
+- [ ] Marcar itens fracionados automaticamente
+- [ ] Agrupar itens por endereço em ondas consolidadas
+
+### Parte 3: Frontend /collector/picking
+- [ ] Tela de rota: lista ordenada de endereços
+- [ ] Restaurar progresso salvo (pedidos pausados)
+- [ ] PASSO 1: Validação de endereço por bipagem
+- [ ] PASSO 2: Loop de bipagem de produtos com validação de lote
+- [ ] Validar quantidade (bloquear excesso em itens inteiros)
+- [ ] Campo manual para itens fracionados
+- [ ] Botão "Reportar problema no endereço"
+- [ ] Botão "Reportar falta ou avaria"
+- [ ] Busca automática de endereço alternativo
+- [ ] Botão "Pausar pedido" com salvamento de progresso
+- [ ] Barra de progresso visual (X/N endereços, % concluído)
+- [ ] PASSO 3: Conclusão de endereço e navegação
+
+### Parte 4: Validação de lote em /collector/stage
+- [ ] Extrair lote da etiqueta bipada
+- [ ] Validar lote contra lote esperado do pedido
+- [ ] Bloquear bipagem se lote divergente
+- [ ] Permitir conferência sem validação se lote = null
+- [ ] Exibir erro claro: "Lote [X] não corresponde ao esperado [Y]"
+
+### Parte 5: Painel web do gerente
+- [ ] Notificações push + badge + e-mail para divergências
+- [ ] Tela de análise de problemas reportados
+- [ ] Ações: redirecionar, aprovar divergência, solicitar nova tentativa
+- [ ] Relatório de inconsistências (short-picked)
+
+### Parte 6: Testes
+- [ ] Testes de pré-alocação FEFO/FIFO/Direcionado
+- [ ] Testes de validação de lote no picking
+- [ ] Testes de validação de lote no stage
+- [ ] Testes de pausa/retomada de pedido
+- [ ] Testes de busca de endereço alternativo
+
+
+## Correções críticas de bugs - 24/02/2026
+- [x] Bug crítico 1: Lote errado em pedidos com múltiplos lotes (stage.ts)
+  - [x] Adicionar campo `batch` em `stageCheckItems` no schema
+  - [x] Persistir lote no `stageCheckItem` na criação da conferência
+  - [x] Buscar item por `productId + batch` para eliminar ambiguidade
+- [x] Bug crítico 2: Endereço alternativo incluindo o problemático (collectorPickingRouter.ts)
+  - [x] Corrigir query de busca de endereço alternativo para excluir o endereço com problema
+  - [x] Substituir `eq(wl.code, alloc.locationCode)` por `sql\`${wl.code} != ${alloc.locationCode}\``
+- [x] Bug de performance: N+1 queries em buildRoute (collectorPickingRouter.ts)
+  - [x] Substituir loop de queries individuais por uma única query usando `IN` via `sql.join`
+- [x] Bug de UX: Pedidos in_progress não visíveis (collectorPickingRouter.ts)
+  - [x] Garantir que `tenantId` sempre seja aplicado quando operador não é admin
+- [x] Bug de validação: Quantidade fracionada sem limite superior (collectorPickingRouter.ts)
+  - [x] Validar se quantidade informada excede saldo disponível
+  - [x] Frontend bloqueia botão se `qty > fractionalMax`
+- [x] CollectorPicking.tsx: Reescrita completa com fluxo guiado
+  - [x] 8 telas distintas com transições de estado
+  - [x] Progresso visual e aviso antecipado de item fracionado
+  - [x] Reportar problema (endereço ou produto)
+  - [x] Busca de endereço alternativo
+  - [x] Finalização com status `completed` ou `divergent`
+- [x] CollectorStage.tsx: Feedback visual bloqueante para erro de lote
+  - [x] Bloco vermelho destacado com mensagem exata do erro
+  - [x] Manter foco no input forçando operador a bipar etiqueta correta
+  - [x] Limpar erro automaticamente ao tentar novamente

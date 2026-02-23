@@ -22,6 +22,7 @@ import { reportsRouter } from "./reportsRouter.js";
 import { maintenanceRouter } from "./maintenanceRouter";
 import { labelRouter } from "./labelRouter";
 import { clientPortalRouter } from "./clientPortalRouter";
+import { collectorPickingRouter } from "./collectorPickingRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -37,6 +38,7 @@ export const appRouter = router({
   maintenance: maintenanceRouter,
   labels: labelRouter,
   clientPortal: clientPortalRouter,
+  collectorPicking: collectorPickingRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

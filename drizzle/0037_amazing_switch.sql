@@ -1,0 +1,1 @@
+ALTER TABLE `stageCheckItems` ADD `batch` varchar(100);

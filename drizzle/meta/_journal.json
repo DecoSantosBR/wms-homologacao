@@ -253,6 +253,20 @@
       "when": 1771777037471,
       "tag": "0035_breezy_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1771870753687,
+      "tag": "0036_happy_elektra",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1771876856070,
+      "tag": "0037_amazing_switch",
+      "breakpoints": true
     }
   ]
 }

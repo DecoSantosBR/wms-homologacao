@@ -426,7 +426,7 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   customerName: varchar("customerName", { length: 255 }),
   deliveryAddress: text("deliveryAddress"),
   priority: mysqlEnum("priority", ["emergency", "urgent", "normal", "low"]).default("normal").notNull(),
-  status: mysqlEnum("status", ["pending", "validated", "in_wave", "picking", "picked", "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "validated", "in_wave", "in_progress", "paused", "picking", "picked", "divergent", "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
   shippingStatus: mysqlEnum("shippingStatus", ["awaiting_invoice", "invoice_linked", "in_manifest", "shipped"]), // Status de expedição
   totalItems: int("totalItems").default(0).notNull(), // Total de linhas de itens
   totalQuantity: int("totalQuantity").default(0).notNull(), // Quantidade total de unidades
@@ -784,6 +784,56 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
 }));
 
 // ============================================================================
+// MÓDULO 9: PRÉ-ALOCAÇÃO DE PICKING (FEFO/FIFO/Direcionado)
+// ============================================================================
+
+/**
+ * Tabela de pré-alocações de picking
+ * Persiste lotes e endereços pré-alocados ao gerar pedido/onda
+ * Permite fluxo guiado por endereço no coletor
+ */
+export const pickingAllocations = mysqlTable("pickingAllocations", {
+  id: int("id").autoincrement().primaryKey(),
+  pickingOrderId: int("pickingOrderId").notNull(),
+  productId: int("productId").notNull(),
+  productSku: varchar("productSku", { length: 100 }).notNull(),
+  locationId: int("locationId").notNull(), // Endereço pré-alocado
+  locationCode: varchar("locationCode", { length: 50 }).notNull(),
+  batch: varchar("batch", { length: 100 }), // Lote pré-alocado
+  expiryDate: date("expiryDate"), // Validade do lote
+  quantity: int("quantity").notNull(), // Quantidade a separar
+  isFractional: boolean("isFractional").default(false).notNull(), // Item fracionado?
+  sequence: int("sequence").notNull(), // Ordem de visitação (endereços ordenados)
+  status: mysqlEnum("status", ["pending", "in_progress", "picked", "short_picked"]).default("pending").notNull(),
+  pickedQuantity: int("pickedQuantity").default(0).notNull(), // Quantidade efetivamente separada
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  orderIdx: index("allocation_order_idx").on(table.pickingOrderId),
+  locationIdx: index("allocation_location_idx").on(table.locationId),
+  sequenceIdx: index("allocation_sequence_idx").on(table.pickingOrderId, table.sequence),
+}));
+
+/**
+ * Tabela de progresso de picking
+ * Salva estado atual do picking para permitir pausa/retomada
+ */
+export const pickingProgress = mysqlTable("pickingProgress", {
+  id: int("id").autoincrement().primaryKey(),
+  pickingOrderId: int("pickingOrderId").notNull(), // Um progresso por pedido
+  currentSequence: int("currentSequence").default(1).notNull(), // Índice do endereço atual
+  currentLocationId: int("currentLocationId"), // Endereço em que o operador está
+  scannedItems: json("scannedItems"), // JSON com itens já bipados
+  pausedAt: timestamp("pausedAt"),
+  pausedBy: int("pausedBy"), // Operador que pausou
+  resumedAt: timestamp("resumedAt"),
+  resumedBy: int("resumedBy"), // Operador que retomou
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  orderIdx: unique().on(table.pickingOrderId), // Um progresso por pedido
+}));
+
+// ============================================================================
 // MÓDULO 10: STAGE (CONFERÊNCIA DE EXPEDIÇÃO)
 // ============================================================================
 
@@ -820,6 +870,7 @@ export const stageCheckItems = mysqlTable("stageCheckItems", {
   productId: int("productId").notNull(),
   productSku: varchar("productSku", { length: 100 }).notNull(),
   productName: varchar("productName", { length: 255 }).notNull(),
+  batch: varchar("batch", { length: 100 }), // Lote esperado (null = sem validação de lote)
   expectedQuantity: int("expectedQuantity").notNull(), // Quantidade separada
   checkedQuantity: int("checkedQuantity").default(0).notNull(), // Quantidade conferida
   divergence: int("divergence").default(0).notNull(), // Diferença (conferido - esperado)
@@ -992,6 +1043,10 @@ export type ShipmentManifest = typeof shipmentManifests.$inferSelect;
 export type InsertShipmentManifest = typeof shipmentManifests.$inferInsert;
 export type ShipmentManifestItem = typeof shipmentManifestItems.$inferSelect;
 export type InsertShipmentManifestItem = typeof shipmentManifestItems.$inferInsert;
+export type PickingAllocation = typeof pickingAllocations.$inferSelect;
+export type InsertPickingAllocation = typeof pickingAllocations.$inferInsert;
+export type PickingProgress = typeof pickingProgress.$inferSelect;
+export type InsertPickingProgress = typeof pickingProgress.$inferInsert;
 
 
 // ============================================================================

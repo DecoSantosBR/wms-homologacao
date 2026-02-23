@@ -1,213 +1,284 @@
-import { useState } from "react";
+/**
+ * CollectorStage — Conferência de expedição com validação de lote
+ *
+ * Implementa a spec "Parte 2 — /collector/stage: Validação de lote na conferência".
+ * A validação em si ocorre no servidor (server/stage.ts → recordStageItem).
+ * Este componente exibe o feedback de erro de lote de forma clara e bloqueante
+ * para que o operador saiba que precisa bipar a etiqueta correta.
+ *
+ * Regras:
+ *  • Item sem lote cadastrado → prossegue normalmente (sem mudança)
+ *  • Item com lote cadastrado + etiqueta sem lote → ERRO bloqueante
+ *  • Item com lote cadastrado + lote divergente → ERRO bloqueante
+ *  • Item com lote cadastrado + lote correto → OK, saldo decrementado
+ */
+
+import { useState, useRef } from "react";
 import { CollectorLayout } from "../../components/CollectorLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Badge } from "../../components/ui/badge";
 import { BarcodeScanner } from "../../components/BarcodeScanner";
-import { Camera, Check, X, AlertCircle } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
-import { Label } from "../../components/ui/label";
+import {
+  Camera,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Scan,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../../components/ui/dialog";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ScannedItem {
+  productCode: string;
+  productName: string;
+  quantity: number;
+  checkedQuantity: number;
+  remainingQuantity: number;
+  batch: string | null;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function CollectorStage() {
   const [showScanner, setShowScanner] = useState(false);
-  const [currentField, setCurrentField] = useState<"order" | "product" | null>(null);
-  
+  const [currentField, setCurrentField] = useState<"order" | "product" | null>(
+    null
+  );
+
   const [orderNumber, setOrderNumber] = useState("");
   const [checkId, setCheckId] = useState<number | null>(null);
-  const [scannedItems, setScannedItems] = useState<any[]>([]);
-  const [showVolumeModal, setShowVolumeModal] = useState(false);
-  const [volumeQuantity, setVolumeQuantity] = useState("");
-  
+  const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
+
+  // Lote — erro visual bloqueante
+  const [lotErrorData, setLotErrorData] = useState<{
+    message: string;
+    expected?: string;
+    received?: string;
+  } | null>(null);
+
   // Modal de item fracionado
   const [showFractionalModal, setShowFractionalModal] = useState(false);
   const [fractionalData, setFractionalData] = useState<any>(null);
   const [fractionalQuantity, setFractionalQuantity] = useState("");
-  const [manualLabelCode, setManualLabelCode] = useState("");
 
-  // Query para buscar pedido
+  // Modal de volume
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [volumeQuantity, setVolumeQuantity] = useState("");
+
+  const [manualLabelCode, setManualLabelCode] = useState("");
+  const productInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Queries ────────────────────────────────────────────────────────────────
   const orderQuery = trpc.stage.getOrderForStage.useQuery(
     { customerOrderNumber: orderNumber },
     { enabled: !!orderNumber && !checkId }
   );
 
-  // Mutation para iniciar conferência
-  const startCheckMutation = trpc.stage.startStageCheck.useMutation({
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const startCheckMut = trpc.stage.startStageCheck.useMutation({
     onSuccess: (data: any) => {
       setCheckId(data.stageCheckId);
       toast.success("Conferência iniciada!");
+      setTimeout(() => productInputRef.current?.focus(), 200);
     },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  // Mutation para registrar item (com auto-incremento)
-  const recordItemMutation = trpc.stage.recordStageItem.useMutation({
+  const recordItemMut = trpc.stage.recordStageItem.useMutation({
     onSuccess: (data: any) => {
+      // Limpar erro de lote (bipagem foi aceita)
+      setLotErrorData(null);
+
       if (data.isFractional) {
-        // Item fracionado: abrir modal para entrada manual
         setFractionalData(data);
         setShowFractionalModal(true);
-        toast.info(data.message);
       } else {
-        // Item inteiro: incrementado automaticamente
         toast.success(data.message);
-        setScannedItems((prev) => [...prev, {
-          productCode: data.labelCode,
-          productName: data.productName,
-          quantity: data.quantityAdded,
-          checkedQuantity: data.checkedQuantity,
-          remainingQuantity: data.remainingQuantity,
-        }]);
+        setScannedItems((prev) => {
+          // Atualizar se já existe ou adicionar
+          const exists = prev.findIndex(
+            (i) => i.productCode === data.labelCode
+          );
+          const updated: ScannedItem = {
+            productCode: data.labelCode,
+            productName: data.productName,
+            quantity: data.quantityAdded,
+            checkedQuantity: data.checkedQuantity,
+            remainingQuantity: data.remainingQuantity,
+            batch: data.batch ?? null,
+          };
+          if (exists !== -1) {
+            const next = [...prev];
+            next[exists] = updated;
+            return next;
+          }
+          return [...prev, updated];
+        });
+        setTimeout(() => productInputRef.current?.focus(), 100);
       }
     },
-    onError: (error: any) => {
-      toast.error(error.message);
+    onError: (err: any) => {
+      const msg: string = err.message ?? "";
+
+      // Detectar erros de lote para exibir feedback bloqueante
+      if (
+        msg.toLowerCase().includes("lote") ||
+        msg.toLowerCase().includes("batch")
+      ) {
+        setLotErrorData({ message: msg });
+        // Limpar input para forçar nova bipagem
+        setManualLabelCode("");
+        setTimeout(() => productInputRef.current?.focus(), 100);
+      } else {
+        toast.error(msg, { duration: 4000 });
+        setManualLabelCode("");
+        setTimeout(() => productInputRef.current?.focus(), 100);
+      }
     },
   });
 
-  // Mutation para finalizar conferência
-  const completeCheckMutation = trpc.stage.completeStageCheck.useMutation({
+  const completeCheckMut = trpc.stage.completeStageCheck.useMutation({
     onSuccess: (data: any) => {
       if (data.divergences && data.divergences.length > 0) {
-        toast.warning(`Conferência finalizada com ${data.divergences.length} divergência(s)`);
+        toast.warning(
+          `Conferência finalizada com ${data.divergences.length} divergência(s)`
+        );
       } else {
         toast.success("Conferência finalizada com sucesso!");
       }
-      // Abrir modal de geração de etiquetas
       setShowVolumeModal(true);
     },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  // Mutation para gerar etiquetas de volume
-  const generateLabelsMutation = trpc.stage.generateVolumeLabels.useMutation();
+  const generateLabelsMut = trpc.stage.generateVolumeLabels.useMutation();
 
-  const handleScan = (code: string) => {
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  function handleScan(code: string) {
+    setShowScanner(false);
+    setCurrentField(null);
+
     if (currentField === "order") {
       setOrderNumber(code);
       toast.success(`Pedido escaneado: ${code}`);
     } else if (currentField === "product") {
-      // Auto-incremento: chamar backend com autoIncrement = true
-      if (!checkId) {
-        toast.error("Inicie a conferência primeiro");
-        return;
-      }
-      
-      recordItemMutation.mutate({
-        stageCheckId: checkId,
-        labelCode: code,
-        autoIncrement: true,
-      });
+      submitProductCode(code);
     }
-    setShowScanner(false);
-    setCurrentField(null);
-  };
+  }
 
-  const handleStartCheck = () => {
+  function submitProductCode(code: string) {
+    if (!checkId) {
+      toast.error("Inicie a conferência primeiro");
+      return;
+    }
+    // Limpar erro de lote ao tentar novamente
+    setLotErrorData(null);
+    recordItemMut.mutate({
+      stageCheckId: checkId,
+      labelCode: code,
+      autoIncrement: true,
+    });
+  }
+
+  function handleStartCheck() {
     if (!orderNumber || !orderQuery.data) {
       toast.error("Informe o número do pedido");
       return;
     }
-    startCheckMutation.mutate({ 
+    startCheckMut.mutate({
       pickingOrderId: orderQuery.data.order.id,
-      customerOrderNumber: orderNumber 
+      customerOrderNumber: orderNumber,
     });
-  };
+  }
 
-  const handleRecordFractionalItem = () => {
+  function handleRecordFractional() {
     const qty = parseInt(fractionalQuantity);
     if (!qty || qty <= 0) {
       toast.error("Informe uma quantidade válida");
       return;
     }
-
     if (!checkId || !fractionalData) {
       toast.error("Dados inválidos");
       return;
     }
-
-    recordItemMutation.mutate({
+    recordItemMut.mutate({
       stageCheckId: checkId,
       labelCode: fractionalData.labelCode,
       quantity: qty,
       autoIncrement: false,
     });
-
-    // Fechar modal e limpar dados
     setShowFractionalModal(false);
     setFractionalData(null);
     setFractionalQuantity("");
-  };
+  }
 
-  const handleCompleteCheck = () => {
+  function handleCompleteCheck() {
     if (!checkId) return;
-    
     if (scannedItems.length === 0) {
       toast.error("Escaneie pelo menos um item antes de finalizar");
       return;
     }
+    completeCheckMut.mutate({ stageCheckId: checkId });
+  }
 
-    completeCheckMutation.mutate({ stageCheckId: checkId });
-  };
-
-  const handleGenerateLabels = async () => {
+  async function handleGenerateLabels() {
     const qty = parseInt(volumeQuantity);
     if (!qty || qty <= 0) {
       toast.error("Informe uma quantidade válida de volumes");
       return;
     }
-
     try {
-      const result = await generateLabelsMutation.mutateAsync({
+      const result = await generateLabelsMut.mutateAsync({
         customerOrderNumber: orderNumber,
         customerName: orderQuery.data?.order?.customerName || "N/A",
         tenantName: orderQuery.data?.tenantName || "N/A",
         totalVolumes: qty,
       });
 
-      // Converter base64 para blob e baixar
-      const byteCharacters = atob(result.pdfBase64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      
-      // Criar link de download
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const byteChars = atob(result.pdfBase64);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
       link.href = url;
       link.download = result.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
 
-      toast.success("Etiquetas geradas com sucesso!");
-      
-      // Reset completo
-      setShowVolumeModal(false);
-      setVolumeQuantity("");
-      setOrderNumber("");
-      setCheckId(null);
-      setScannedItems([]);
+      toast.success("Etiquetas geradas!");
+      handleNewOrder();
     } catch (error: any) {
       toast.error(error.message || "Erro ao gerar etiquetas");
     }
-  };
+  }
 
-  const handleNewOrder = () => {
+  function handleNewOrder() {
+    setShowVolumeModal(false);
+    setVolumeQuantity("");
     setOrderNumber("");
     setCheckId(null);
     setScannedItems([]);
-  };
+    setLotErrorData(null);
+    setManualLabelCode("");
+  }
 
+  // ── Scanner ───────────────────────────────────────────────────────────────
   if (showScanner) {
     return (
       <BarcodeScanner
@@ -220,10 +291,11 @@ export function CollectorStage() {
     );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <CollectorLayout title="Stage - Conferência">
+    <CollectorLayout title="Stage — Conferência">
       <div className="space-y-4">
-        {/* Seleção de Pedido */}
+        {/* ── Seleção de Pedido ─────────────────────────────────────────── */}
         {!checkId ? (
           <Card>
             <CardHeader>
@@ -249,15 +321,19 @@ export function CollectorStage() {
                   <Camera className="h-5 w-5" />
                 </Button>
               </div>
-              
+
               {orderQuery.isLoading && (
-                <p className="text-sm text-muted-foreground">Carregando pedido...</p>
+                <p className="text-sm text-muted-foreground">
+                  Carregando pedido...
+                </p>
               )}
-              
+
               {orderQuery.data && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <p className="text-sm font-medium text-green-900">
-                    Pedido {orderQuery.data.order.customerOrderNumber || orderQuery.data.order.orderNumber}
+                    Pedido{" "}
+                    {orderQuery.data.order.customerOrderNumber ||
+                      orderQuery.data.order.orderNumber}
                   </p>
                   <p className="text-xs text-green-700 mt-1">
                     Cliente: {orderQuery.data.tenantName}
@@ -267,111 +343,143 @@ export function CollectorStage() {
                   </p>
                 </div>
               )}
-              
+
               {orderQuery.error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-900">{orderQuery.error.message}</p>
+                  <p className="text-sm text-red-900">
+                    {orderQuery.error.message}
+                  </p>
                 </div>
               )}
 
               <Button
                 onClick={handleStartCheck}
-                disabled={!orderQuery.data || startCheckMutation.isPending}
+                disabled={!orderQuery.data || startCheckMut.isPending}
                 size="lg"
                 className="w-full h-12"
               >
-                {startCheckMutation.isPending ? "Iniciando..." : "Iniciar Conferência"}
+                {startCheckMut.isPending ? "Iniciando..." : "Iniciar Conferência"}
               </Button>
             </CardContent>
           </Card>
         ) : (
           <>
-            {/* Resumo do Pedido */}
+            {/* ── Resumo do Pedido ───────────────────────────────────────── */}
             <Card className="bg-blue-50 border-blue-200">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Pedido {orderNumber}</CardTitle>
+                    <CardTitle className="text-lg">
+                      Pedido {orderNumber}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {scannedItems.length} itens conferidos
+                      {scannedItems.length} item(ns) conferido(s)
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNewOrder}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleNewOrder}>
                     Novo Pedido
                   </Button>
                 </div>
               </CardHeader>
             </Card>
 
-            {/* Card de Bipagem */}
-            <Card>
+            {/* ── ERRO DE LOTE — bloco visual bloqueante ─────────────────── */}
+            {lotErrorData && (
+              <div className="bg-red-50 border-2 border-red-500 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <XCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-red-900 text-base">
+                      Lote incorreto — leitura rejeitada
+                    </p>
+                    <p className="text-sm text-red-700 mt-1">
+                      {lotErrorData.message}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-red-100 rounded-lg p-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-700 flex-shrink-0" />
+                  <p className="text-sm font-medium text-red-800">
+                    Bipe a etiqueta com o lote correto para continuar. O saldo
+                    não foi alterado.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Card de Bipagem ────────────────────────────────────────── */}
+            <Card
+              className={
+                lotErrorData ? "border-red-300 ring-2 ring-red-200" : ""
+              }
+            >
               <CardHeader>
-                <CardTitle className="text-lg">Bipar Etiqueta</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Bipar Etiqueta
+                  {lotErrorData && (
+                    <Badge variant="destructive" className="text-xs">
+                      Lote inválido
+                    </Badge>
+                  )}
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Bipe ou digite o código da etiqueta do produto
+                  {lotErrorData
+                    ? "Bipe a etiqueta correta (com o lote esperado)"
+                    : "Bipe ou digite o código da etiqueta do produto"}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Entrada Manual */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Digite o código da etiqueta"
+                    ref={productInputRef}
+                    placeholder="Código da etiqueta"
                     value={manualLabelCode}
                     onChange={(e) => setManualLabelCode(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && manualLabelCode.trim()) {
-                        if (!checkId) {
-                          toast.error("Inicie a conferência primeiro");
-                          return;
-                        }
-                        recordItemMutation.mutate({
-                          stageCheckId: checkId,
-                          labelCode: manualLabelCode.trim(),
-                          autoIncrement: true,
-                        });
+                        submitProductCode(manualLabelCode.trim());
                         setManualLabelCode("");
                       }
                     }}
-                    className="h-12 text-lg"
-                    disabled={recordItemMutation.isPending}
+                    className={`h-12 text-lg ${
+                      lotErrorData
+                        ? "border-red-400 focus:ring-red-300"
+                        : ""
+                    }`}
+                    disabled={recordItemMut.isPending}
+                    autoComplete="off"
                   />
                   <Button
-                    type="button"
                     size="lg"
                     onClick={() => {
-                      if (!manualLabelCode.trim()) {
+                      if (manualLabelCode.trim()) {
+                        submitProductCode(manualLabelCode.trim());
+                        setManualLabelCode("");
+                      } else {
                         toast.error("Digite o código da etiqueta");
-                        return;
                       }
-                      if (!checkId) {
-                        toast.error("Inicie a conferência primeiro");
-                        return;
-                      }
-                      recordItemMutation.mutate({
-                        stageCheckId: checkId,
-                        labelCode: manualLabelCode.trim(),
-                        autoIncrement: true,
-                      });
-                      setManualLabelCode("");
                     }}
                     className="h-12 px-6"
-                    disabled={recordItemMutation.isPending || !manualLabelCode.trim()}
+                    disabled={
+                      recordItemMut.isPending || !manualLabelCode.trim()
+                    }
                   >
-                    {recordItemMutation.isPending ? "..." : "OK"}
+                    {recordItemMut.isPending ? (
+                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Scan className="h-5 w-5" />
+                    )}
                   </Button>
                 </div>
 
-                {/* Botão Scanner */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">ou</span>
+                    <span className="bg-background px-2 text-muted-foreground">
+                      ou
+                    </span>
                   </div>
                 </div>
 
@@ -384,7 +492,7 @@ export function CollectorStage() {
                     setShowScanner(true);
                   }}
                   className="w-full h-12"
-                  disabled={recordItemMutation.isPending}
+                  disabled={recordItemMut.isPending}
                 >
                   <Camera className="mr-2 h-5 w-5" />
                   Escanear com Câmera
@@ -392,7 +500,7 @@ export function CollectorStage() {
               </CardContent>
             </Card>
 
-            {/* Lista de Itens Conferidos */}
+            {/* ── Itens Conferidos ───────────────────────────────────────── */}
             {scannedItems.length > 0 && (
               <Card>
                 <CardHeader>
@@ -405,16 +513,35 @@ export function CollectorStage() {
                         key={index}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                       >
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{item.productCode}</p>
-                          <p className="text-xs text-gray-600">{item.productName}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {item.productCode}
+                          </p>
+                          <p className="text-xs text-gray-600 truncate">
+                            {item.productName}
+                          </p>
+                          {item.batch && (
+                            <p className="text-xs text-blue-600 mt-0.5">
+                              Lote: {item.batch}
+                            </p>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">+{item.quantity}</p>
+                        <div className="text-right ml-2 flex-shrink-0">
+                          <p className="font-bold text-green-600">
+                            +{item.quantity}
+                          </p>
                           <p className="text-xs text-gray-500">
                             Total: {item.checkedQuantity}
-                            {item.remainingQuantity > 0 && ` (falta: ${item.remainingQuantity})`}
+                            {item.remainingQuantity > 0 && (
+                              <span className="text-amber-600">
+                                {" "}
+                                (falta: {item.remainingQuantity})
+                              </span>
+                            )}
                           </p>
+                          {item.remainingQuantity === 0 && (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto mt-0.5" />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -423,27 +550,31 @@ export function CollectorStage() {
               </Card>
             )}
 
-            {/* Botão Finalizar */}
+            {/* ── Finalizar ─────────────────────────────────────────────── */}
             <Button
               onClick={handleCompleteCheck}
-              disabled={completeCheckMutation.isPending || scannedItems.length === 0}
+              disabled={
+                completeCheckMut.isPending || scannedItems.length === 0
+              }
               size="lg"
-              variant="default"
               className="w-full h-14 bg-green-600 hover:bg-green-700"
             >
-              {completeCheckMutation.isPending ? "Finalizando..." : "Finalizar Conferência"}
+              {completeCheckMut.isPending
+                ? "Finalizando..."
+                : "Finalizar Conferência"}
             </Button>
           </>
         )}
       </div>
 
-      {/* Modal de Item Fracionado */}
+      {/* ── Modal: Item Fracionado ─────────────────────────────────────────── */}
       <Dialog open={showFractionalModal} onOpenChange={setShowFractionalModal}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Item Fracionado Detectado</DialogTitle>
             <DialogDescription>
-              A quantidade restante é menor que 1 caixa. Informe a quantidade exata conferida.
+              A quantidade restante é menor que 1 caixa. Informe a quantidade
+              exata conferida.
             </DialogDescription>
           </DialogHeader>
           {fractionalData && (
@@ -453,17 +584,24 @@ export function CollectorStage() {
                   {fractionalData.productName}
                 </p>
                 <p className="text-xs text-yellow-700 mt-1">
-                  SKU: {fractionalData.productSku} | Lote: {fractionalData.batch}
+                  SKU: {fractionalData.productSku}
+                  {fractionalData.batch && ` | Lote: ${fractionalData.batch}`}
                 </p>
                 <p className="text-xs text-yellow-700">
-                  Quantidade restante: <span className="font-bold">{fractionalData.remainingQuantity}</span> unidades
+                  Quantidade restante:{" "}
+                  <span className="font-bold">
+                    {fractionalData.remainingQuantity}
+                  </span>{" "}
+                  unidades
                 </p>
                 <p className="text-xs text-yellow-700">
                   (1 caixa = {fractionalData.unitsPerBox} unidades)
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fractionalQuantity">Quantidade Conferida (unidades)</Label>
+                <Label htmlFor="fractionalQuantity">
+                  Quantidade Conferida (unidades)
+                </Label>
                 <Input
                   id="fractionalQuantity"
                   type="number"
@@ -478,27 +616,34 @@ export function CollectorStage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowFractionalModal(false);
-              setFractionalData(null);
-              setFractionalQuantity("");
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFractionalModal(false);
+                setFractionalData(null);
+                setFractionalQuantity("");
+              }}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleRecordFractionalItem} disabled={recordItemMutation.isPending}>
-              {recordItemMutation.isPending ? "Registrando..." : "Confirmar"}
+            <Button
+              onClick={handleRecordFractional}
+              disabled={recordItemMut.isPending}
+            >
+              {recordItemMut.isPending ? "Registrando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Geração de Etiquetas de Volume */}
+      {/* ── Modal: Etiquetas de Volume ─────────────────────────────────────── */}
       <Dialog open={showVolumeModal} onOpenChange={setShowVolumeModal}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Gerar Etiquetas de Volume</DialogTitle>
             <DialogDescription>
-              Informe a quantidade de volumes para gerar as etiquetas de identificação
+              Informe a quantidade de volumes para gerar as etiquetas de
+              identificação
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -516,18 +661,14 @@ export function CollectorStage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowVolumeModal(false);
-              setVolumeQuantity("");
-              // Reset completo
-              setOrderNumber("");
-              setCheckId(null);
-              setScannedItems([]);
-            }}>
+            <Button variant="outline" onClick={handleNewOrder}>
               Pular
             </Button>
-            <Button onClick={handleGenerateLabels} disabled={generateLabelsMutation.isPending}>
-              {generateLabelsMutation.isPending ? "Gerando..." : "Gerar Etiquetas"}
+            <Button
+              onClick={handleGenerateLabels}
+              disabled={generateLabelsMut.isPending}
+            >
+              {generateLabelsMut.isPending ? "Gerando..." : "Gerar Etiquetas"}
             </Button>
           </DialogFooter>
         </DialogContent>
