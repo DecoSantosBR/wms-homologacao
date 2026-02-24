@@ -1,8 +1,0 @@
-{
-  "query": "SELECT \n  wl.id,\n  wl.code,\n  wl.status,\n  wl.zoneType,\n  COALESCE(SUM(i.quantity), 0) as total_quantity\nFROM warehouseLocations wl\nLEFT JOIN inventory i ON i.locationId = wl.id\nGROUP BY wl.id, wl.code, wl.status, wl.zoneType\nORDER BY wl.code;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  wl.id,\n  wl.code,\n  wl.status,\n  wl.zoneType,\n  COALESCE(SUM(i.quantity), 0) as total_quantity\nFROM warehouseLocations wl\nLEFT JOIN inventory i ON i.locationId = wl.id\nGROUP BY wl.id, wl.code, wl.status, wl.zoneType\nORDER BY wl.code;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'wl.zonetype' in 'group statement'"
-  ]
-}

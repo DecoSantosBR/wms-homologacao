@@ -1,9 +1,0 @@
-{
-  "query": "SELECT \n  pw.id as wave_id,\n  pw.waveNumber,\n  pw.status as wave_status,\n  pw.totalItems,\n  COUNT(pwi.id) as total_items_count,\n  SUM(CASE WHEN pwi.status = 'picked' THEN 1 ELSE 0 END) as picked_items,\n  SUM(CASE WHEN pwi.status = 'pending' THEN 1 ELSE 0 END) as pending_items\nFROM pickingWaves pw\nLEFT JOIN pickingWaveItems pwi ON pw.id = pwi.waveId\nWHERE pw.status IN ('pending', 'picking')\nGROUP BY pw.id\nORDER BY pw.id DESC\nLIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  pw.id as wave_id,\n  pw.waveNumber,\n  pw.status as wave_status,\n  pw.totalItems,\n  COUNT(pwi.id) as total_items_count,\n  SUM(CASE WHEN pwi.status = 'picked' THEN 1 ELSE 0 END) as picked_items,\n  SUM(CASE WHEN pwi.status = 'pending' THEN 1 ELSE 0 END) as pending_items\nFROM pickingWaves pw\nLEFT JOIN pickingWaveItems pwi ON pw.id = pwi.waveId\nWHERE pw.status IN ('pending', 'picking')\nGROUP BY pw.id\nORDER BY pw.id DESC\nLIMIT 5;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 381
-}

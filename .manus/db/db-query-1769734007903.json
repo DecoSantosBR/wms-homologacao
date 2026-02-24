@@ -1,9 +1,0 @@
-{
-  "query": "SELECT \n  po.id,\n  po.orderNumber,\n  po.customerOrderNumber,\n  po.shippingStatus,\n  COUNT(poi.id) as totalItems\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON poi.pickingOrderId = po.id\nWHERE po.shippingStatus = 'invoice_linked'\nGROUP BY po.id, po.orderNumber, po.customerOrderNumber, po.shippingStatus\nLIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  po.id,\n  po.orderNumber,\n  po.customerOrderNumber,\n  po.shippingStatus,\n  COUNT(poi.id) as totalItems\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON poi.pickingOrderId = po.id\nWHERE po.shippingStatus = 'invoice_linked'\nGROUP BY po.id, po.orderNumber, po.customerOrderNumber, po.shippingStatus\nLIMIT 5;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 355
-}

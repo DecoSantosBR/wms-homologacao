@@ -1,1 +1,0 @@
-ALTER TABLE `tenants` ADD `pickingRule` enum('FIFO','FEFO','Direcionado') DEFAULT 'FIFO' NOT NULL;

@@ -1,0 +1,80 @@
+{
+  "query": "SELECT id, waveNumber, status, tenantId, createdAt FROM pickingWaves ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT id, waveNumber, status, tenantId, createdAt FROM pickingWaves ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "600002",
+      "waveNumber": "OS-20260223-0001",
+      "status": "pending",
+      "tenantId": "1269029",
+      "createdAt": "2026-02-23 07:20:33"
+    },
+    {
+      "id": "570010",
+      "waveNumber": "TEST-WAVE-PENDING-1771771037388",
+      "status": "pending",
+      "tenantId": "1",
+      "createdAt": "2026-02-22 14:37:17"
+    },
+    {
+      "id": "570009",
+      "waveNumber": "TEST-WAVE-1771771037289",
+      "status": "completed",
+      "tenantId": "1149002",
+      "createdAt": "2026-02-22 14:37:17"
+    },
+    {
+      "id": "570008",
+      "waveNumber": "AUTO-TEST-PARTIAL-1771771035538",
+      "status": "pending",
+      "tenantId": "1",
+      "createdAt": "2026-02-22 14:37:15"
+    },
+    {
+      "id": "570007",
+      "waveNumber": "AUTO-TEST-1771771035386",
+      "status": "completed",
+      "tenantId": "1149002",
+      "createdAt": "2026-02-22 14:37:15"
+    },
+    {
+      "id": "570005",
+      "waveNumber": "TEST-WAVE-1771770219018",
+      "status": "completed",
+      "tenantId": "999001",
+      "createdAt": "2026-02-22 14:23:39"
+    },
+    {
+      "id": "570006",
+      "waveNumber": "TEST-WAVE-PENDING-1771770219199",
+      "status": "pending",
+      "tenantId": "1",
+      "createdAt": "2026-02-22 14:23:39"
+    },
+    {
+      "id": "570003",
+      "waveNumber": "AUTO-TEST-1771770214134",
+      "status": "completed",
+      "tenantId": "1149002",
+      "createdAt": "2026-02-22 14:23:34"
+    },
+    {
+      "id": "570004",
+      "waveNumber": "AUTO-TEST-PARTIAL-1771770214432",
+      "status": "pending",
+      "tenantId": "1",
+      "createdAt": "2026-02-22 14:23:34"
+    },
+    {
+      "id": "570001",
+      "waveNumber": "AUTO-TEST-1771770194524",
+      "status": "completed",
+      "tenantId": "1149002",
+      "createdAt": "2026-02-22 14:23:14"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twaveNumber\tstatus\ttenantId\tcreatedAt\n600002\tOS-20260223-0001\tpending\t1269029\t2026-02-23 07:20:33\n570010\tTEST-WAVE-PENDING-1771771037388\tpending\t1\t2026-02-22 14:37:17\n570009\tTEST-WAVE-1771771037289\tcompleted\t1149002\t2026-02-22 14:37:17\n570008\tAUTO-TEST-PARTIAL-1771771035538\tpending\t1\t2026-02-22 14:37:15\n570007\tAUTO-TEST-1771771035386\tcompleted\t1149002\t2026-02-22 14:37:15\n570005\tTEST-WAVE-1771770219018\tcompleted\t999001\t2026-02-22 14:23:39\n570006\tTEST-WAVE-PENDING-1771770219199\tpending\t1\t2026-02-22 14:23:39\n570003\tAUTO-TEST-1771770214134\tcompleted\t1149002\t2026-02-22 14:23:34\n570004\tAUTO-TEST-PARTIAL-1771770214432\tpending\t1\t2026-02-22 14:23:34\n570001\tAUTO-TEST-1771770194524\tcompleted\t1149002\t2026-02-22 14:23:14\n",
+  "stderr": "",
+  "execution_time_ms": 93
+}

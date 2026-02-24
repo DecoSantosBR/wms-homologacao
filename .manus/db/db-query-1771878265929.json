@@ -1,0 +1,22 @@
+{
+  "query": "\nSELECT \n  'inventory' as tabela, COUNT(*) as registros_null \nFROM inventory WHERE tenantId IS NULL\nUNION ALL\nSELECT \n  'warehouseLocations' as tabela, COUNT(*) as registros_null \nFROM warehouseLocations WHERE tenantId IS NULL\nUNION ALL\nSELECT \n  'products' as tabela, COUNT(*) as registros_null \nFROM products WHERE tenantId IS NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \nSELECT \n  'inventory' as tabela, COUNT(*) as registros_null \nFROM inventory WHERE tenantId IS NULL\nUNION ALL\nSELECT \n  'warehouseLocations' as tabela, COUNT(*) as registros_null \nFROM warehouseLocations WHERE tenantId IS NULL\nUNION ALL\nSELECT \n  'products' as tabela, COUNT(*) as registros_null \nFROM products WHERE tenantId IS NULL;\n",
+  "rows": [
+    {
+      "tabela": "warehouseLocations",
+      "registros_null": "0"
+    },
+    {
+      "tabela": "products",
+      "registros_null": "0"
+    },
+    {
+      "tabela": "inventory",
+      "registros_null": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\tregistros_null\nwarehouseLocations\t0\nproducts\t0\ninventory\t0\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

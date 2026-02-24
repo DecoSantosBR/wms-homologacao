@@ -1,0 +1,40 @@
+{
+  "query": "\n-- Primeiro, pegar o último pedido criado\nSELECT \n    poi.id, \n    poi.pickingOrderId, \n    poi.productId,\n    p.sku AS productSku,\n    poi.requestedQuantity AS quantity,\n    poi.inventoryId,\n    i.batch AS lot,\n    wl.code AS addressCode\nFROM pickingOrderItems poi\nLEFT JOIN products p ON poi.productId = p.id\nLEFT JOIN inventory i ON poi.inventoryId = i.id\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nWHERE poi.pickingOrderId = (SELECT id FROM pickingOrders WHERE status != 'cancelled' ORDER BY id DESC LIMIT 1)\nORDER BY poi.productId, i.batch;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \n-- Primeiro, pegar o último pedido criado\nSELECT \n    poi.id, \n    poi.pickingOrderId, \n    poi.productId,\n    p.sku AS productSku,\n    poi.requestedQuantity AS quantity,\n    poi.inventoryId,\n    i.batch AS lot,\n    wl.code AS addressCode\nFROM pickingOrderItems poi\nLEFT JOIN products p ON poi.productId = p.id\nLEFT JOIN inventory i ON poi.inventoryId = i.id\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nWHERE poi.pickingOrderId = (SELECT id FROM pickingOrders WHERE status != 'cancelled' ORDER BY id DESC LIMIT 1)\nORDER BY poi.productId, i.batch;\n",
+  "rows": [
+    {
+      "id": "810007",
+      "pickingOrderId": "870003",
+      "productId": "1359003",
+      "productSku": "443060",
+      "quantity": "280",
+      "inventoryId": "NULL",
+      "lot": "NULL",
+      "addressCode": "NULL"
+    },
+    {
+      "id": "810008",
+      "pickingOrderId": "870003",
+      "productId": "1359004",
+      "productSku": "401460P",
+      "quantity": "720",
+      "inventoryId": "NULL",
+      "lot": "NULL",
+      "addressCode": "NULL"
+    },
+    {
+      "id": "810009",
+      "pickingOrderId": "870003",
+      "productId": "1359005",
+      "productSku": "834207",
+      "quantity": "140",
+      "inventoryId": "NULL",
+      "lot": "NULL",
+      "addressCode": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpickingOrderId\tproductId\tproductSku\tquantity\tinventoryId\tlot\taddressCode\n810007\t870003\t1359003\t443060\t280\tNULL\tNULL\tNULL\n810008\t870003\t1359004\t401460P\t720\tNULL\tNULL\tNULL\n810009\t870003\t1359005\t834207\t140\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

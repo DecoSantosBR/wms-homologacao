@@ -1,0 +1,26 @@
+{
+  "query": "\nSELECT DISTINCT i.tenantId, wl.code\nFROM inventory i\nJOIN warehouseLocations wl ON i.locationId = wl.id\nWHERE wl.code LIKE 'Z01-01-%';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \nSELECT DISTINCT i.tenantId, wl.code\nFROM inventory i\nJOIN warehouseLocations wl ON i.locationId = wl.id\nWHERE wl.code LIKE 'Z01-01-%';\n",
+  "rows": [
+    {
+      "tenantId": "1359002",
+      "code": "Z01-01-02"
+    },
+    {
+      "tenantId": "1359002",
+      "code": "Z01-01-03"
+    },
+    {
+      "tenantId": "1359002",
+      "code": "Z01-01-01"
+    },
+    {
+      "tenantId": "1359002",
+      "code": "Z01-01-04"
+    }
+  ],
+  "messages": [],
+  "stdout": "tenantId\tcode\n1359002\tZ01-01-02\n1359002\tZ01-01-03\n1359002\tZ01-01-01\n1359002\tZ01-01-04\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

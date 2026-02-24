@@ -1,0 +1,28 @@
+{
+  "query": "SELECT * FROM systemUsers WHERE tenantId = 1149002 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT * FROM systemUsers WHERE tenantId = 1149002 LIMIT 1;",
+  "rows": [
+    {
+      "id": "60001",
+      "tenantId": "1149002",
+      "fullName": "André ",
+      "login": "decossantos2",
+      "email": "decossantos2@gmail.com",
+      "passwordHash": "d6e063c4dbdc2b6f88d975d848149fa845b346d442fc82d0615187cccb7a78d9",
+      "active": "1",
+      "failedLoginAttempts": "0",
+      "lockedUntil": "NULL",
+      "lastLogin": "2026-02-23 00:11:09",
+      "createdAt": "2026-02-22 19:00:26",
+      "updatedAt": "2026-02-23 00:11:09",
+      "createdBy": "NULL",
+      "approvalStatus": "approved",
+      "approvedBy": "1",
+      "approvedAt": "2026-02-22 19:00:49"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttenantId\tfullName\tlogin\temail\tpasswordHash\tactive\tfailedLoginAttempts\tlockedUntil\tlastLogin\tcreatedAt\tupdatedAt\tcreatedBy\tapprovalStatus\tapprovedBy\tapprovedAt\n60001\t1149002\tAndré \tdecossantos2\tdecossantos2@gmail.com\td6e063c4dbdc2b6f88d975d848149fa845b346d442fc82d0615187cccb7a78d9\t1\t0\tNULL\t2026-02-23 00:11:09\t2026-02-22 19:00:26\t2026-02-23 00:11:09\tNULL\tapproved\t1\t2026-02-22 19:00:49\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

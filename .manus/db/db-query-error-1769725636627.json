@@ -1,8 +1,0 @@
-{
-  "query": "-- Verificar registros com quantity=0 nos endereços problemáticos\nSELECT \n  i.id,\n  i.productId,\n  p.name as productName,\n  i.locationId,\n  wl.code as locationCode,\n  i.batch,\n  i.quantity,\n  i.reservedQuantity,\n  i.createdAt,\n  i.updatedAt\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN products p ON i.productId = p.id\nWHERE wl.code IN ('H01-02-01', 'H01-02-02', 'H01-02-03')\nORDER BY wl.code, i.productId;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute -- Verificar registros com quantity=0 nos endereços problemáticos\nSELECT \n  i.id,\n  i.productId,\n  p.name as productName,\n  i.locationId,\n  wl.code as locationCode,\n  i.batch,\n  i.quantity,\n  i.reservedQuantity,\n  i.createdAt,\n  i.updatedAt\nFROM inventory i\nLEFT JOIN warehouseLocations wl ON i.locationId = wl.id\nLEFT JOIN products p ON i.productId = p.id\nWHERE wl.code IN ('H01-02-01', 'H01-02-02', 'H01-02-03')\nORDER BY wl.code, i.productId;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'p.name' in 'field list'"
-  ]
-}

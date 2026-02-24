@@ -105,28 +105,3 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
-
-# WMS Med@x specific
-.webdev/
-.manus-logs/
-.manus/
-screenshots/
-uploads/
-test-results/
-playwright-report/
-drizzle/migrations/
-zpl-success.txt
-
-# Debug and maintenance scripts (not for production repo)
-debug-*.mjs
-check_*.mjs
-check-*.mjs
-fix_*.mjs
-seed-*.mjs
-list-*.mjs
-
-# Backup files
-*.backup
-
-# Server logs
-nohup.out

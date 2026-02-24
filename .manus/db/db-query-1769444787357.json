@@ -1,9 +1,0 @@
-{
-  "query": "SELECT po.id, po.orderNumber, po.customerOrderNumber, \n       poi.productId, p.sku, poi.requestedQuantity,\n       COUNT(*) as line_count\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nLEFT JOIN products p ON poi.productId = p.id\nWHERE po.status = 'picked'\nGROUP BY po.id, poi.productId, p.sku, poi.requestedQuantity\nHAVING COUNT(*) > 1\nLIMIT 10;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT po.id, po.orderNumber, po.customerOrderNumber, \n       poi.productId, p.sku, poi.requestedQuantity,\n       COUNT(*) as line_count\nFROM pickingOrders po\nLEFT JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nLEFT JOIN products p ON poi.productId = p.id\nWHERE po.status = 'picked'\nGROUP BY po.id, poi.productId, p.sku, poi.requestedQuantity\nHAVING COUNT(*) > 1\nLIMIT 10;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 374
-}

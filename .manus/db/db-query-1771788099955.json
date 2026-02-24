@@ -1,0 +1,210 @@
+{
+  "query": "SELECT \n  i.id,\n  wl.code AS endereco,\n  p.sku AS sku_produto,\n  p.description AS descricao,\n  i.batch AS lote,\n  i.quantity AS quantidade,\n  i.status,\n  i.expiryDate\nFROM inventory i\nJOIN warehouseLocations wl ON i.locationId = wl.id\nJOIN products p ON i.productId = p.id\nWHERE i.tenantId = 1149002\nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  i.id,\n  wl.code AS endereco,\n  p.sku AS sku_produto,\n  p.description AS descricao,\n  i.batch AS lote,\n  i.quantity AS quantidade,\n  i.status,\n  i.expiryDate\nFROM inventory i\nJOIN warehouseLocations wl ON i.locationId = wl.id\nJOIN products p ON i.productId = p.id\nWHERE i.tenantId = 1149002\nLIMIT 20;",
+  "rows": [
+    {
+      "id": "840004",
+      "endereco": "EXP-01-A",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "NULL",
+      "quantidade": "150",
+      "status": "available",
+      "expiryDate": "NULL"
+    },
+    {
+      "id": "600098",
+      "endereco": "M03-02-07",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "579482545K",
+      "quantidade": "320",
+      "status": "available",
+      "expiryDate": "2030-11-30 00:00:00"
+    },
+    {
+      "id": "600090",
+      "endereco": "M03-02-11",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "579482545K",
+      "quantidade": "320",
+      "status": "available",
+      "expiryDate": "2030-11-30 00:00:00"
+    },
+    {
+      "id": "600089",
+      "endereco": "M03-03-29",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "579482545K",
+      "quantidade": "320",
+      "status": "available",
+      "expiryDate": "2030-11-30 00:00:00"
+    },
+    {
+      "id": "600088",
+      "endereco": "M03-01-53",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "579482545K",
+      "quantidade": "320",
+      "status": "available",
+      "expiryDate": "2030-11-30 00:00:00"
+    },
+    {
+      "id": "600087",
+      "endereco": "M03-04-07",
+      "sku_produto": "101384",
+      "descricao": "COMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX",
+      "lote": "579482545K",
+      "quantidade": "320",
+      "status": "available",
+      "expiryDate": "2030-11-30 00:00:00"
+    },
+    {
+      "id": "600114",
+      "endereco": "M03-05-53",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600113",
+      "endereco": "M03-03-15",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600112",
+      "endereco": "M03-02-13",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600111",
+      "endereco": "M03-01-07",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600110",
+      "endereco": "M03-03-13",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600109",
+      "endereco": "A04-02-12",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600108",
+      "endereco": "M03-05-27",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600107",
+      "endereco": "M03-05-29",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600105",
+      "endereco": "M03-03-09",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600104",
+      "endereco": "A04-02-06",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600103",
+      "endereco": "A04-02-08",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600102",
+      "endereco": "M03-05-23",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600100",
+      "endereco": "M03-02-37",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    },
+    {
+      "id": "600099",
+      "endereco": "M03-04-25",
+      "sku_produto": "73780",
+      "descricao": "PAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK",
+      "lote": "1113430125",
+      "quantidade": "280",
+      "status": "available",
+      "expiryDate": "2027-10-28 00:00:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tendereco\tsku_produto\tdescricao\tlote\tquantidade\tstatus\texpiryDate\n840004\tEXP-01-A\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\tNULL\t150\tavailable\tNULL\n600098\tM03-02-07\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\t579482545K\t320\tavailable\t2030-11-30 00:00:00\n600090\tM03-02-11\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\t579482545K\t320\tavailable\t2030-11-30 00:00:00\n600089\tM03-03-29\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\t579482545K\t320\tavailable\t2030-11-30 00:00:00\n600088\tM03-01-53\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\t579482545K\t320\tavailable\t2030-11-30 00:00:00\n600087\tM03-04-07\t101384\tCOMPRESSA CAMPO OPERATORIO 25X28CM CFIO ESTERIL C/5 PROCITEX\t579482545K\t320\tavailable\t2030-11-30 00:00:00\n600114\tM03-05-53\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600113\tM03-03-15\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600112\tM03-02-13\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600111\tM03-01-07\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600110\tM03-03-13\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600109\tA04-02-12\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600108\tM03-05-27\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600107\tM03-05-29\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600105\tM03-03-09\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600104\tA04-02-06\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600103\tA04-02-08\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600102\tM03-05-23\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600100\tM03-02-37\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n600099\tM03-04-25\t73780\tPAPEL HIGIENICO FL SP SCOTT 500M CX 12RL KIMBERLY-CLARK\t1113430125\t280\tavailable\t2027-10-28 00:00:00\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}
