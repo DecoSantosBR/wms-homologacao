@@ -160,7 +160,7 @@ async function buildRoute(
 // Router
 // ---------------------------------------------------------------------------
 
-export const collectorPickingRouter = {
+export const collectorPickingRouter = router({
   /**
    * Listar pedidos disponíveis para picking no coletor
    * Retorna pedidos com status "pending" ou "paused" do tenant do operador
@@ -406,13 +406,18 @@ export const collectorPickingRouter = {
         });
 
       // Buscar alocação
+      console.log(`[scanProduct] Buscando alocação: allocationId=${input.allocationId}, pickingOrderId=${input.pickingOrderId}`);
+      
       const [alloc] = await db
         .select()
         .from(pickingAllocations)
         .where(eq(pickingAllocations.id, input.allocationId))
         .limit(1);
 
+      console.log(`[scanProduct] Alocação encontrada:`, alloc ? `id=${alloc.id}, pickingOrderId=${alloc.pickingOrderId}, productSku=${alloc.productSku}, batch=${alloc.batch}, uniqueCode=${alloc.uniqueCode}` : 'null');
+
       if (!alloc || alloc.pickingOrderId !== input.pickingOrderId) {
+        console.error(`[scanProduct] ERRO: Alocação não encontrada ou pickingOrderId não corresponde. alloc=${!!alloc}, pickingOrderId match=${alloc?.pickingOrderId === input.pickingOrderId}`);
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Alocação não encontrada",
@@ -1129,4 +1134,4 @@ export const collectorPickingRouter = {
 
       return buildRoute(db, input.pickingOrderId);
     }),
-};
+});
