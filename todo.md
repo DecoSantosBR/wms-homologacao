@@ -3310,3 +3310,6 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Checkpoint final
 
 **Objetivo:** Eliminar redundância mantendo rastreabilidade por uniqueCode
+
+## 🐛 BUG: uniqueCode em inventoryMovements no stage
+- [ ] Corrigir INSERT de inventoryMovements em stage.ts para incluir batch e uniqueCode

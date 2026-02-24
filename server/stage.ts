@@ -1,5 +1,6 @@
 import { eq, and, or, desc, sql, like } from "drizzle-orm";
 import { getDb } from "./db";
+import { getUniqueCode } from "./utils/uniqueCode";
 import {
   pickingOrders,
   pickingOrderItems,
@@ -638,8 +639,19 @@ export async function completeStageCheck(params: {
 
       // Buscar estoque origem
       const [sourceInventory] = await dbConn
-        .select()
+        .select({
+          id: inventory.id,
+          locationId: inventory.locationId,
+          productId: inventory.productId,
+          productSku: products.sku,
+          batch: inventory.batch,
+          expiryDate: inventory.expiryDate,
+          quantity: inventory.quantity,
+          tenantId: inventory.tenantId,
+          status: inventory.status,
+        })
         .from(inventory)
+        .leftJoin(products, eq(inventory.productId, products.id))
         .where(eq(inventory.id, reservation.inventoryId))
         .limit(1);
 
@@ -741,6 +753,7 @@ export async function completeStageCheck(params: {
       await dbConn.insert(inventoryMovements).values({
         productId: sourceInventory.productId,
         batch: sourceInventory.batch,
+        uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch), // ✅ Adicionar uniqueCode
         fromLocationId: sourceInventory.locationId,
         toLocationId: shippingLocation.id,
         quantity: quantityToShip,
