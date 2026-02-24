@@ -3046,3 +3046,65 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [x] Corrigir duplicação de SKUs com múltiplos lotes na geração de onda (corrigido leftJoin em waveLogic.ts para usar inventoryId)
 - [ ] Corrigir campo Destinatário na etiqueta de volume (deve mostrar endereço de entrega, não cliente)
 - [ ] Corrigir registro de operador em movimentações de estoque (está registrando usuário-cliente ao invés do operador real)
+
+
+## Refatoração Estrutural - 24/02/2026
+
+### Objetivo
+Simplificar estrutura de tabelas para eliminar redundância e bugs de sincronização
+
+### Módulo de Picking
+- [ ] Criar nova tabela pickingItems (consolidar pickingOrderItems + pickingReservations + pickingWaveItems + pickingAllocations)
+- [ ] Migrar dados existentes para nova estrutura
+- [ ] Atualizar routers (pickingRouter, waveRouter, collectorPickingRouter, stageRouter)
+- [ ] Atualizar lógica de negócio (pickingLogic, waveLogic, pickingAllocation)
+- [ ] Testar fluxo completo (criar pedido → gerar onda → separar → conferir stage)
+- [ ] Remover tabelas antigas (pickingOrderItems, pickingReservations, pickingWaveItems, pickingAllocations)
+
+### Módulo de Recebimento
+- [ ] Criar nova tabela receivingItems (consolidar receivingOrderItems + receivingCheckItems + labelAssociations)
+- [ ] Migrar dados existentes para nova estrutura
+- [ ] Atualizar routers (receivingRouter)
+- [ ] Atualizar lógica de negócio (receiving, blindCheck)
+- [ ] Testar fluxo completo (criar ordem → conferir cega → armazenar)
+- [ ] Remover tabelas antigas (receivingOrderItems, receivingChecks, receivingCheckItems, labelAssociations)
+
+### Benefícios Esperados
+- ✅ Eliminar duplicação de dados
+- ✅ Prevenir bugs de sincronização
+- ✅ Simplificar queries (menos JOINs)
+- ✅ Melhorar performance
+- ✅ Facilitar manutenção
+- [ ] Corrigir erro "Alocação não encontrada" ao bipar etiqueta no coletor (/collector/picking)
+- [ ] Corrigir erro de quantidade divergente ao vincular NF com pedido (Pedido=560 agrupado, NF=160 correto)
+- [ ] Corrigir sobrescrita de lotes no stage - quando há múltiplos lotes do mesmo produto, o último conferido sobrescreve os anteriores
+
+
+## 🔴 BUG CRÍTICO CORRIGIDO - 24/02/2026
+
+### Sobrescrita de lotes na finalização do picking
+
+**Problema identificado:**
+- Quando um pedido tinha múltiplos lotes do mesmo produto (ex: Lote A com 160 unidades + Lote B com 560 unidades)
+- Ao finalizar o picking no coletor, o sistema sobrescrevia todos os lotes com o último processado
+- Causava perda de dados e erro na vinculação de NF-e: "Quantidade divergente para SKU"
+
+**Causa raiz:**
+- Função `complete` em `collectorPickingRouter.ts` (linha 1060-1071)
+- UPDATE em `pickingOrderItems` filtrava apenas por `(pickingOrderId + productId)`
+- Quando havia 2+ lotes do mesmo produto, TODOS eram atualizados com o último lote
+
+**Correção aplicada:**
+- [x] Adicionado `inventoryId` no SELECT das alocações (linha 1049)
+- [x] Adicionado validação `alloc.inventoryId` no IF (linha 1059)
+- [x] Adicionado `eq(pickingOrderItems.inventoryId, alloc.inventoryId)` no WHERE (linha 1072)
+- [x] Agora cada lote é atualizado individualmente, preservando todos os dados
+
+**Arquivos modificados:**
+- `/home/ubuntu/wms-medax/server/collectorPickingRouter.ts` (função `complete`)
+
+**Testes recomendados:**
+- [ ] Criar pedido com 2+ lotes do mesmo produto
+- [ ] Gerar onda e separar no coletor
+- [ ] Finalizar picking e verificar que ambos os lotes estão preservados
+- [ ] Vincular NF-e e confirmar que quantidades batem

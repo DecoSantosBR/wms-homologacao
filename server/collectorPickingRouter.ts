@@ -1056,7 +1056,8 @@ export const collectorPickingRouter = {
       const { pickingOrderItems } = await import("../drizzle/schema");
       for (const alloc of allocsWithBatch) {
         if (alloc.batch) {
-          // Atualizar pickingOrderItems com lote e validade
+          // ✅ CORREÇÃO BUG CRÍTICO: Adicionar batch no WHERE para evitar sobrescrever outros lotes
+          // Quando há múltiplos lotes do mesmo produto, filtrar apenas por productId sobrescreve todos
           await db
             .update(pickingOrderItems)
             .set({
@@ -1066,7 +1067,8 @@ export const collectorPickingRouter = {
             .where(
               and(
                 eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-                eq(pickingOrderItems.productId, alloc.productId)
+                eq(pickingOrderItems.productId, alloc.productId),
+                eq(pickingOrderItems.batch, alloc.batch) // ✅ Filtro por batch para preservar múltiplos lotes
               )
             );
         }
