@@ -3414,3 +3414,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar dados no banco (inventory table)
 - [x] CONCLUSÃO: Tela está correta, banco foi limpo (0 registros)
 - [x] Schema atualizado: campo uniqueCode adicionado em inventoryMovements
+
+
+## 🐛 BUG: Erro ao gerar romaneio - UPDATE inventory falha
+
+**Sintoma:** Erro "Failed query: update inventory set reservedQuantity = ... where id = 30001"
+
+- [x] Investigar código de geração de romaneio (shippingRouter.ts)
+- [x] Verificar se registro id=30001 existe no banco (existe!)
+- [x] Identificar causa: reservedQuantity estava NULL no banco
+- [x] CORREÇÃO: Usar COALESCE para tratar NULL como 0 (linha 631)
+- [ ] Testar geração de romaneio
