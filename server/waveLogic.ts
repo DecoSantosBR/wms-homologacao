@@ -241,7 +241,8 @@ export async function createWave(params: CreateWaveParams) {
     .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .leftJoin(pickingOrderItems, and(
       eq(pickingReservations.pickingOrderId, pickingOrderItems.pickingOrderId),
-      eq(pickingReservations.productId, pickingOrderItems.productId)
+      eq(pickingReservations.productId, pickingOrderItems.productId),
+      eq(pickingReservations.inventoryId, pickingOrderItems.inventoryId) // ✅ Garantir 1:1 entre reserva e item
     ))
     .where(
       and(
