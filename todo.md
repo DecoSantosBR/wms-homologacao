@@ -3362,3 +3362,23 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar UPDATE para mudar status de "available" para "reserved" em EXP
 - [x] CORREÇÃO: Adicionado `status: "reserved"` no UPDATE de createManifest
 - [ ] Testar fluxo completo: separar → conferir → gerar romaneio → verificar status
+
+
+## 🐛 BUG: pickingAllocations não registra uniqueCode
+
+- [ ] Investigar onde pickingAllocations é criada (waveLogic.ts ou pickingAllocation.ts)
+- [ ] Corrigir INSERT para incluir uniqueCode (SKU-Lote)
+- [ ] Popular uniqueCode NULL em registros existentes
+- [ ] Testar geração de onda e verificar uniqueCode nas alocações
+
+
+## 🐛 BUG CRÍTICO: Finalização precoce da onda no coletor
+
+**Sintoma:** Ao bipar primeiro produto no coletor, onda finaliza prematuramente quando há múltiplos lotes do mesmo SKU
+
+- [x] Investigar onde pickedQuantity é atualizado no coletor
+- [x] Investigar lógica de verificação de "onda completa"
+- [x] Identificar se está agrupando por productId ao invés de uniqueCode
+- [x] BUG ENCONTRADO: advanceItem() filtrava itens após refresh e usava índice errado
+- [x] CORREÇÃO: advanceItem() agora busca primeiro item pendente na lista original
+- [ ] Testar fluxo completo no coletor

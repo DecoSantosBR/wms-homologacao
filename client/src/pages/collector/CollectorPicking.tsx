@@ -375,18 +375,28 @@ export function CollectorPicking() {
   }
 
   function advanceItem() {
-    // Re-derive pendingItems after route refresh
-    const updated = currentLocation?.items.filter(
+    // Buscar próximo item pendente no endereço atual
+    const pendingItems = currentLocation?.items.filter(
       (i) => i.status !== "picked" && i.status !== "short_picked"
     ) ?? [];
-    const nextIdx = currentItemIdx + 1;
-    if (nextIdx < updated.length) {
-      setCurrentItemIdx(nextIdx);
-      setScreen("scan_product");
-      setTimeout(() => productInputRef.current?.focus(), 100);
-    } else {
-      setScreen("location_done");
+    
+    if (pendingItems.length > 0) {
+      // Ainda há itens pendentes neste endereço
+      // Encontrar o índice do primeiro item pendente na lista original
+      const nextPendingIdx = currentLocation?.items.findIndex(
+        (i) => i.status !== "picked" && i.status !== "short_picked"
+      ) ?? -1;
+      
+      if (nextPendingIdx >= 0) {
+        setCurrentItemIdx(nextPendingIdx);
+        setScreen("scan_product");
+        setTimeout(() => productInputRef.current?.focus(), 100);
+        return;
+      }
     }
+    
+    // Não há mais itens pendentes neste endereço
+    setScreen("location_done");
   }
 
   function advanceLocation() {
