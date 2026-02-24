@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 type StageItem = {
   productSku: string;
   productName: string;
+  batch: string | null; // ✅ Adicionar lote para diferenciar itens
   checkedQuantity: number;
   scannedAt: Date;
 };
@@ -59,6 +60,7 @@ export default function StageCheck() {
           .map((item: any) => ({
             productSku: item.productSku,
             productName: item.productName,
+            batch: item.batch || null, // ✅ Incluir lote
             checkedQuantity: item.checkedQuantity,
             scannedAt: item.scannedAt,
           }))
@@ -125,8 +127,9 @@ export default function StageCheck() {
       } else {
         // Item inteiro: incrementado automaticamente
         // Adicionar item à lista
+        // ✅ CORREÇÃO: Comparar por SKU+Lote ao invés de apenas SKU
         const existingIndex = scannedItems.findIndex(
-          (item) => item.productSku === result.productSku
+          (item) => item.productSku === result.productSku && item.batch === (result.batch || null)
         );
 
         if (existingIndex >= 0) {
@@ -140,6 +143,7 @@ export default function StageCheck() {
             {
               productSku: result.productSku,
               productName: result.productName,
+              batch: result.batch || null, // ✅ Incluir lote
               checkedQuantity: result.checkedQuantity ?? 0,
               scannedAt: new Date(),
             },
@@ -177,8 +181,9 @@ export default function StageCheck() {
       });
 
       // Adicionar item à lista
+      // ✅ CORREÇÃO: Comparar por SKU+Lote ao invés de apenas SKU
       const existingIndex = scannedItems.findIndex(
-        (item) => item.productSku === result.productSku
+        (item) => item.productSku === result.productSku && item.batch === (result.batch || null)
       );
 
       if (existingIndex >= 0) {
@@ -192,6 +197,7 @@ export default function StageCheck() {
           {
             productSku: result.productSku,
             productName: result.productName,
+            batch: result.batch || null, // ✅ Incluir lote
             checkedQuantity: result.checkedQuantity ?? 0,
             scannedAt: new Date(),
           },
@@ -442,6 +448,11 @@ export default function StageCheck() {
                     <p className="text-sm text-muted-foreground">
                       {item.productName}
                     </p>
+                    {item.batch && (
+                      <p className="text-xs text-blue-600 font-semibold mt-1">
+                        Lote: {item.batch}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg">{item.checkedQuantity}</p>

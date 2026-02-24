@@ -108,12 +108,12 @@ export function CollectorStage() {
       } else {
         toast.success(data.message);
         setScannedItems((prev) => {
-          // Atualizar se já existe ou adicionar
+          // ✅ CORREÇÃO: Atualizar se já existe (comparar por SKU+Lote) ou adicionar
           const exists = prev.findIndex(
-            (i) => i.productCode === data.labelCode
+            (i) => i.productCode === data.productSku && i.batch === (data.batch ?? null)
           );
           const updated: ScannedItem = {
-            productCode: data.labelCode,
+            productCode: data.productSku, // ✅ Usar productSku ao invés de labelCode
             productName: data.productName,
             quantity: data.quantityAdded,
             checkedQuantity: data.checkedQuantity,

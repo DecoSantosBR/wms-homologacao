@@ -3329,3 +3329,12 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Corrigir lógica para evitar criação dupla
 - [ ] Limpar alocações duplicadas do banco
 - [ ] Testar fluxo completo
+
+
+## 🐛 BUG: Agrupamento de lotes diferentes na conferência do Stage
+
+- [x] Identificar causa raiz: frontend agrupava por SKU ao invés de SKU+Lote
+- [x] Corrigir StageCheck.tsx (desktop) para comparar por productSku + batch
+- [x] Corrigir CollectorStage.tsx (mobile) para comparar por productSku + batch
+- [x] Adicionar exibição do lote na interface de itens conferidos
+- [x] Testar fluxo completo: criar pedido com múltiplos lotes → gerar onda → separar → conferir no Stage
