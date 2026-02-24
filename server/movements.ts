@@ -4,6 +4,7 @@ import {
   inventory,
   inventoryMovements,
   warehouseLocations,
+  warehouseZones,
   products,
   systemUsers,
   receivingPreallocations,
