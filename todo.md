@@ -3323,3 +3323,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Remover DELETEs de pickingReservations
 - [ ] Testar fluxo completo
 - [ ] Checkpoint final
+
+## 🐛 BUG CRÍTICO: Duplicação de Itens na Onda
+- [ ] Investigar causa da duplicação de pickingAllocations (criação dupla: pedido + onda)
+- [ ] Corrigir lógica para evitar criação dupla
+- [ ] Limpar alocações duplicadas do banco
+- [ ] Testar fluxo completo

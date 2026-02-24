@@ -264,7 +264,8 @@ export async function createWave(params: CreateWaveParams) {
     .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .leftJoin(pickingOrderItems, and(
       eq(pickingAllocations.pickingOrderId, pickingOrderItems.pickingOrderId),
-      eq(pickingAllocations.productId, pickingOrderItems.productId)
+      eq(pickingAllocations.productId, pickingOrderItems.productId),
+      eq(pickingAllocations.batch, pickingOrderItems.batch) // ✅ Match por batch para evitar duplicação
     ))
     .where(
       and(
