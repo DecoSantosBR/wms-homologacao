@@ -9,6 +9,7 @@ import {
   tenants,
 } from "../drizzle/schema";
 import { eq, and, isNull, or, sql, gt } from "drizzle-orm";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 /**
  * Pré-alocação de lotes e endereços para picking
@@ -106,6 +107,7 @@ export async function generatePickingAllocations(
             locationCode: inv.locationCode,
             batch: inv.batch,
             expiryDate: inv.expiryDate,
+            uniqueCode: getUniqueCode(product.sku, inv.batch), // ✅ Adicionar uniqueCode
             quantity: quantityNeeded,
             isFractional,
             sequence: sequence++,
@@ -238,6 +240,7 @@ export async function generatePickingAllocations(
         locationCode: inv.locationCode,
         batch: inv.batch,
         expiryDate: inv.expiryDate,
+        uniqueCode: getUniqueCode(product.sku, inv.batch), // ✅ Adicionar uniqueCode
         quantity: allocatedQuantity,
         isFractional,
         sequence: sequence++,
