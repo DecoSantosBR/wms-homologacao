@@ -3195,3 +3195,19 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - [x] Arquivo modificado: server/stage.ts
 - [x] Verificação completa: Todos os 101 pontos de busca por productId foram revisados
 - [x] Confirmação: waveLogic.ts, shippingRouter.ts e outros módulos críticos já estavam corretos
+
+
+## 🔧 REFATORAÇÃO SOLICITADA - 24/02/2026 08:45
+
+### Implementar coluna uniqueCode (SKU+Lote) em todas as tabelas
+- [ ] 1. Identificar todas as tabelas que possuem campos de SKU e Lote
+- [ ] 2. Adicionar coluna `uniqueCode` (varchar) em cada tabela identificada
+- [ ] 3. Criar índice único em `uniqueCode` para performance
+- [ ] 4. Criar migração para popular `uniqueCode = ${sku}-${batch}` nos dados existentes
+- [ ] 5. Refatorar TODO o código para usar `uniqueCode` ao invés de filtros compostos por SKU
+- [ ] 6. Substituir todos os `.find()`, `.where()`, `eq()` que usam SKU por `uniqueCode`
+- [ ] 7. Testar fluxo completo end-to-end após refatoração
+- [ ] 8. Validar que não há mais agrupamentos incorretos em nenhum módulo
+
+### Objetivo
+Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando chave única ao invés de filtros compostos

@@ -73,12 +73,12 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
     .where(inArray(pickingOrderItems.pickingOrderId, orderIds));
 
-  // ✅ CORREÇÃO: Consolidar por produto + lote (chave composta)
+  // ✅ CORREÇÃO: Consolidar por uniqueCode (SKU+Lote)
   const consolidated = new Map<string, ConsolidatedItem>();
 
   for (const item of items) {
-    // Criar chave composta: productId + batch
-    const key = `${item.productId}-${item.batch || 'null'}`;
+    // Usar uniqueCode do banco (já calculado: SKU-LOTE)
+    const key = item.uniqueCode || `${item.productSku}-${item.batch || 'null'}`;
     const existing = consolidated.get(key);
     if (existing) {
       existing.totalQuantity += item.quantity;

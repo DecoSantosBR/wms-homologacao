@@ -382,6 +382,7 @@ export const inventory = mysqlTable("inventory", {
   locationId: int("locationId").notNull(),
   batch: varchar("batch", { length: 50 }),
   expiryDate: timestamp("expiryDate"),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   serialNumber: varchar("serialNumber", { length: 100 }),
   quantity: int("quantity").default(0).notNull(),
   reservedQuantity: int("reservedQuantity").default(0).notNull(), // Quantidade reservada para separação
@@ -398,6 +399,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   tenantId: int("tenantId"),
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 50 }),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   serialNumber: varchar("serialNumber", { length: 100 }),
   fromLocationId: int("fromLocationId"),
   toLocationId: int("toLocationId"),
@@ -460,6 +462,7 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   pickedUM: mysqlEnum("pickedUM", ["unit", "box", "pallet"]).default("unit").notNull(),
   batch: varchar("batch", { length: 50 }), // Lote separado (FEFO)
   expiryDate: timestamp("expiryDate"), // Validade do lote
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única para rastreabilidade)
   serialNumber: varchar("serialNumber", { length: 100 }),
   fromLocationId: int("fromLocationId"), // Endereço de origem
   inventoryId: int("inventoryId"), // Referência ao registro de estoque usado
@@ -480,6 +483,8 @@ export const pickingReservations = mysqlTable("pickingReservations", {
   pickingOrderId: int("pickingOrderId").notNull(),
   productId: int("productId").notNull(),
   inventoryId: int("inventoryId").notNull(), // Posição de estoque reservada
+  batch: varchar("batch", { length: 50 }), // Lote reservado (copiado do inventory)
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   quantity: int("quantity").notNull(), // Quantidade reservada desta posição
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -773,6 +778,7 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   locationCode: varchar("locationCode", { length: 50 }).notNull(), // Código do endereço (ex: H01-08-02)
   batch: varchar("batch", { length: 100 }), // Lote sugerido
   expiryDate: date("expiryDate"), // Validade do lote
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   status: mysqlEnum("status", ["pending", "picking", "picked"]).default("pending").notNull(),
   pickedAt: timestamp("pickedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -801,6 +807,7 @@ export const pickingAllocations = mysqlTable("pickingAllocations", {
   locationCode: varchar("locationCode", { length: 50 }).notNull(),
   batch: varchar("batch", { length: 100 }), // Lote pré-alocado
   expiryDate: date("expiryDate"), // Validade do lote
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   quantity: int("quantity").notNull(), // Quantidade a separar
   isFractional: boolean("isFractional").default(false).notNull(), // Item fracionado?
   sequence: int("sequence").notNull(), // Ordem de visitação (endereços ordenados)
@@ -871,6 +878,7 @@ export const stageCheckItems = mysqlTable("stageCheckItems", {
   productSku: varchar("productSku", { length: 100 }).notNull(),
   productName: varchar("productName", { length: 255 }).notNull(),
   batch: varchar("batch", { length: 100 }), // Lote esperado (null = sem validação de lote)
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   expectedQuantity: int("expectedQuantity").notNull(), // Quantidade separada
   checkedQuantity: int("checkedQuantity").default(0).notNull(), // Quantidade conferida
   divergence: int("divergence").default(0).notNull(), // Diferença (conferido - esperado)

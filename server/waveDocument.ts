@@ -87,7 +87,7 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
           )
         );
 
-      // Agrupar itens por SKU + Lote (chave composta para preservar múltiplos lotes)
+      // Agrupar itens por uniqueCode (SKU+Lote) para preservar múltiplos lotes
       const skuMap = new Map<string, {
         productName: string;
         sku: string;
@@ -97,8 +97,8 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
       }>();
 
       orderItems.forEach((item) => {
-        // ✅ Usar chave composta: SKU + Lote para diferenciar lotes do mesmo produto
-        const key = `${item.sku}-${item.batch || 'null'}`;
+        // ✅ Usar uniqueCode do banco (já calculado: SKU-LOTE)
+        const key = item.uniqueCode || `${item.sku}-${item.batch || 'null'}`;
         if (!skuMap.has(key)) {
           skuMap.set(key, {
             productName: item.productName,

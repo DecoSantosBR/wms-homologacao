@@ -72,6 +72,7 @@ async function buildRoute(
       productSku: pickingAllocations.productSku,
       batch: pickingAllocations.batch,
       expiryDate: pickingAllocations.expiryDate,
+      uniqueCode: (pickingAllocations as any).uniqueCode, // ✅ Incluir uniqueCode
       quantity: pickingAllocations.quantity,
       pickedQuantity: pickingAllocations.pickedQuantity,
       isFractional: pickingAllocations.isFractional,
@@ -599,8 +600,12 @@ export const collectorPickingRouter = {
           .where(
             and(
               eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-              eq(pickingOrderItems.productId, alloc.productId),
-              alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+              // ✅ Usar uniqueCode para garantir correspondência exata SKU+Lote
+              (alloc as any).uniqueCode ? eq((pickingOrderItems as any).uniqueCode, (alloc as any).uniqueCode) : 
+                and(
+                  eq(pickingOrderItems.productId, alloc.productId),
+                  alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+                )
             )
           )
           .limit(1);
@@ -705,8 +710,12 @@ export const collectorPickingRouter = {
           .where(
             and(
               eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-              eq(pickingOrderItems.productId, alloc.productId),
-              alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+              // ✅ Usar uniqueCode para garantir correspondência exata SKU+Lote
+              (alloc as any).uniqueCode ? eq((pickingOrderItems as any).uniqueCode, (alloc as any).uniqueCode) : 
+                and(
+                  eq(pickingOrderItems.productId, alloc.productId),
+                  alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+                )
             )
           )
           .limit(1);
@@ -1048,6 +1057,7 @@ export const collectorPickingRouter = {
           productId: pickingAllocations.productId,
           batch: pickingAllocations.batch,
           expiryDate: pickingAllocations.expiryDate,
+                 uniqueCode: (pickingAllocations as any).uniqueCode, // ✅ Incluir uniqueCodede
         })
         .from(pickingAllocations)
         .where(eq(pickingAllocations.pickingOrderId, input.pickingOrderId));
@@ -1067,8 +1077,12 @@ export const collectorPickingRouter = {
             .where(
               and(
                 eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-                eq(pickingOrderItems.productId, alloc.productId),
-                eq(pickingOrderItems.batch, alloc.batch) // ✅ Filtro por batch para preservar múltiplos lotes
+                // ✅ Usar uniqueCode para garantir correspondência exata SKU+Lote
+                (alloc as any).uniqueCode ? eq((pickingOrderItems as any).uniqueCode, (alloc as any).uniqueCode) :
+                  and(
+                    eq(pickingOrderItems.productId, alloc.productId),
+                    eq(pickingOrderItems.batch, alloc.batch)
+                  )
               )
             );
         }
