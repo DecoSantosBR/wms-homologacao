@@ -3450,3 +3450,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir erro "warehouseZones is not defined" ao finalizar conferência de recebimento
 
 - [x] 🚨 CRÍTICO: Corrigir erro warehouseZones em /collector/movement (estoque estava seguro, import adicionado)
+
+- [x] 🚨 CRÍTICO: 280 unidades da NF 7777.xml recuperadas - bug em registerMovement (não criava registro no destino)
