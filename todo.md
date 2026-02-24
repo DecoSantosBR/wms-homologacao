@@ -3183,3 +3183,15 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - [x] Arquivo modificado: server/shippingRouter.tsU+Lote (linhas 280-285)
 - [x] Agora validação compara cada lote da NF com o lote correspondente do pedido
 - [x] Arquivo modificado: server/shippingRouter.ts
+
+
+## 🔴 BUG CRÍTICO - 24/02/2026 08:35 - RESOLVIDO
+
+### Baixa de estoque no Stage agrupa por SKU ao invés de SKU+Lote
+- [x] Erro: "Estoque insuficiente no endereço de expedição para o produto 401460P. Faltam 160 unidades"
+- [x] Problema: Sistema estava tentando baixar 720un de um único lote ao invés de baixar 160un + 560un de lotes separados
+- [x] Causa: Busca de reservas em stage.ts (linha 623) filtrava apenas por productId, ignorando batch
+- [x] Solução: Adicionado filtro condicional por batch nas linhas 617-620
+- [x] Arquivo modificado: server/stage.ts
+- [x] Verificação completa: Todos os 101 pontos de busca por productId foram revisados
+- [x] Confirmação: waveLogic.ts, shippingRouter.ts e outros módulos críticos já estavam corretos

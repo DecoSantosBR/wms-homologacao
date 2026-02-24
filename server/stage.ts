@@ -608,7 +608,17 @@ export async function completeStageCheck(params: {
   // Movimentar para expedição (EXP)
   // Para cada item, movimentar quantidade conferida das reservas para endereço de expedição
   for (const item of items) {
-    // Buscar reservas do produto para este pedido
+    // Buscar reservas do produto+lote para este pedido
+    const reservationConditions = [
+      eq(pickingReservations.pickingOrderId, stageCheck.pickingOrderId),
+      eq(inventory.productId, item.productId),
+    ];
+    
+    // ✅ FILTRAR POR LOTE se o item tiver batch
+    if (item.batch) {
+      reservationConditions.push(eq(inventory.batch, item.batch));
+    }
+    
     const reservations = await dbConn
       .select({
         id: pickingReservations.id,
@@ -617,12 +627,7 @@ export async function completeStageCheck(params: {
       })
       .from(pickingReservations)
       .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
-      .where(
-        and(
-          eq(pickingReservations.pickingOrderId, stageCheck.pickingOrderId),
-          eq(inventory.productId, item.productId)
-        )
-      );
+      .where(and(...reservationConditions));
 
     let remainingToShip = item.checkedQuantity;
 
