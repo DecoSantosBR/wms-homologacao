@@ -92,6 +92,7 @@ CREATE TABLE `inventory` (
 	`locationId` int NOT NULL,
 	`batch` varchar(50),
 	`expiryDate` timestamp,
+	`uniqueCode` varchar(200),
 	`serialNumber` varchar(100),
 	`quantity` int NOT NULL DEFAULT 0,
 	`reservedQuantity` int NOT NULL DEFAULT 0,
@@ -144,6 +145,7 @@ CREATE TABLE `inventoryMovements` (
 	`tenantId` int,
 	`productId` int NOT NULL,
 	`batch` varchar(50),
+	`uniqueCode` varchar(200),
 	`serialNumber` varchar(100),
 	`fromLocationId` int,
 	`toLocationId` int,
@@ -242,6 +244,7 @@ CREATE TABLE `pickingAllocations` (
 	`locationCode` varchar(50) NOT NULL,
 	`batch` varchar(100),
 	`expiryDate` date,
+	`uniqueCode` varchar(200),
 	`quantity` int NOT NULL,
 	`isFractional` boolean NOT NULL DEFAULT false,
 	`sequence` int NOT NULL,
@@ -264,6 +267,23 @@ CREATE TABLE `pickingAuditLogs` (
 	CONSTRAINT `pickingAuditLogs_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
+CREATE TABLE `pickingInvoiceItems` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`invoiceId` int NOT NULL,
+	`productId` int,
+	`sku` varchar(100) NOT NULL,
+	`productName` varchar(255) NOT NULL,
+	`batch` varchar(50),
+	`expiryDate` timestamp,
+	`uniqueCode` varchar(200),
+	`quantity` int NOT NULL,
+	`unitValue` decimal(15,4),
+	`totalValue` decimal(15,2),
+	`ncm` varchar(10),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `pickingInvoiceItems_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
 CREATE TABLE `pickingOrderItems` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`pickingOrderId` int NOT NULL,
@@ -276,6 +296,7 @@ CREATE TABLE `pickingOrderItems` (
 	`pickedUM` enum('unit','box','pallet') NOT NULL DEFAULT 'unit',
 	`batch` varchar(50),
 	`expiryDate` timestamp,
+	`uniqueCode` varchar(200),
 	`serialNumber` varchar(100),
 	`fromLocationId` int,
 	`inventoryId` int,
@@ -342,6 +363,8 @@ CREATE TABLE `pickingReservations` (
 	`pickingOrderId` int NOT NULL,
 	`productId` int NOT NULL,
 	`inventoryId` int NOT NULL,
+	`batch` varchar(50),
+	`uniqueCode` varchar(200),
 	`quantity` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `pickingReservations_id` PRIMARY KEY(`id`)
@@ -362,6 +385,7 @@ CREATE TABLE `pickingWaveItems` (
 	`locationCode` varchar(50) NOT NULL,
 	`batch` varchar(100),
 	`expiryDate` date,
+	`uniqueCode` varchar(200),
 	`status` enum('pending','picking','picked') NOT NULL DEFAULT 'pending',
 	`pickedAt` timestamp,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
@@ -498,6 +522,7 @@ CREATE TABLE `receivingConferences` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`receivingOrderItemId` int NOT NULL,
 	`batch` varchar(50),
+	`uniqueCode` varchar(200),
 	`quantityConferenced` int NOT NULL,
 	`conferencedBy` int NOT NULL,
 	`conferencedAt` timestamp NOT NULL DEFAULT (now()),
@@ -514,6 +539,7 @@ CREATE TABLE `receivingDivergences` (
 	`receivedQuantity` int NOT NULL,
 	`differenceQuantity` int NOT NULL,
 	`batch` varchar(50),
+	`uniqueCode` varchar(200),
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
 	`reportedBy` int NOT NULL,
 	`reportedAt` timestamp NOT NULL DEFAULT (now()),
@@ -524,6 +550,25 @@ CREATE TABLE `receivingDivergences` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `receivingDivergences_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `receivingInvoiceItems` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`receivingOrderId` int NOT NULL,
+	`nfeKey` varchar(44),
+	`nfeNumber` varchar(20),
+	`productId` int,
+	`sku` varchar(100) NOT NULL,
+	`productName` varchar(255) NOT NULL,
+	`batch` varchar(50),
+	`expiryDate` timestamp,
+	`uniqueCode` varchar(200),
+	`quantity` int NOT NULL,
+	`unitValue` decimal(15,4),
+	`totalValue` decimal(15,2),
+	`ncm` varchar(10),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `receivingInvoiceItems_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `receivingOrderItems` (
@@ -542,6 +587,7 @@ CREATE TABLE `receivingOrderItems` (
 	`batch` varchar(50),
 	`expiryDate` timestamp,
 	`serialNumber` varchar(100),
+	`uniqueCode` varchar(200),
 	`status` enum('pending','in_quarantine','approved','rejected','awaiting_approval') NOT NULL DEFAULT 'pending',
 	`rejectionReason` text,
 	`approvedBy` int,
@@ -578,6 +624,7 @@ CREATE TABLE `receivingPreallocations` (
 	`locationId` int NOT NULL,
 	`batch` varchar(50),
 	`quantity` int NOT NULL,
+	`uniqueCode` varchar(200),
 	`status` enum('pending','allocated','cancelled') NOT NULL DEFAULT 'pending',
 	`createdBy` int NOT NULL,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
@@ -707,6 +754,7 @@ CREATE TABLE `stageCheckItems` (
 	`productSku` varchar(100) NOT NULL,
 	`productName` varchar(255) NOT NULL,
 	`batch` varchar(100),
+	`uniqueCode` varchar(200),
 	`expectedQuantity` int NOT NULL,
 	`checkedQuantity` int NOT NULL DEFAULT 0,
 	`divergence` int NOT NULL DEFAULT 0,
@@ -797,6 +845,21 @@ CREATE TABLE `userRoles` (
 	CONSTRAINT `userRoles_userId_roleId_unique` UNIQUE(`userId`,`roleId`)
 );
 --> statement-breakpoint
+CREATE TABLE `users` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`openId` varchar(64) NOT NULL,
+	`name` text,
+	`email` varchar(320),
+	`loginMethod` varchar(64),
+	`role` enum('user','admin','operator','quality','manager') NOT NULL DEFAULT 'user',
+	`tenantId` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`lastSignedIn` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `users_id` PRIMARY KEY(`id`),
+	CONSTRAINT `users_openId_unique` UNIQUE(`openId`)
+);
+--> statement-breakpoint
 CREATE TABLE `warehouseLocations` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`zoneId` int NOT NULL,
@@ -844,8 +907,6 @@ CREATE TABLE `warehouses` (
 	CONSTRAINT `warehouses_code_unique` UNIQUE(`code`)
 );
 --> statement-breakpoint
-ALTER TABLE `users` MODIFY COLUMN `role` enum('user','admin','operator','quality','manager') NOT NULL DEFAULT 'user';--> statement-breakpoint
-ALTER TABLE `users` ADD `tenantId` int;--> statement-breakpoint
 CREATE INDEX `tenant_user_idx` ON `auditLogs` (`tenantId`,`userId`);--> statement-breakpoint
 CREATE INDEX `entity_idx` ON `auditLogs` (`entityType`,`entityId`);--> statement-breakpoint
 CREATE INDEX `audit_created_at_idx` ON `auditLogs` (`createdAt`);--> statement-breakpoint
@@ -872,6 +933,9 @@ CREATE INDEX `allocation_sequence_idx` ON `pickingAllocations` (`pickingOrderId`
 CREATE INDEX `picking_audit_order_idx` ON `pickingAuditLogs` (`pickingOrderId`);--> statement-breakpoint
 CREATE INDEX `picking_audit_tenant_idx` ON `pickingAuditLogs` (`tenantId`);--> statement-breakpoint
 CREATE INDEX `picking_audit_rule_idx` ON `pickingAuditLogs` (`pickingRule`);--> statement-breakpoint
+CREATE INDEX `picking_invoice_items_invoice_idx` ON `pickingInvoiceItems` (`invoiceId`);--> statement-breakpoint
+CREATE INDEX `picking_invoice_items_product_idx` ON `pickingInvoiceItems` (`productId`);--> statement-breakpoint
+CREATE INDEX `picking_invoice_items_unique_code_idx` ON `pickingInvoiceItems` (`uniqueCode`);--> statement-breakpoint
 CREATE INDEX `wave_item_wave_idx` ON `pickingWaveItems` (`waveId`);--> statement-breakpoint
 CREATE INDEX `wave_item_product_idx` ON `pickingWaveItems` (`productId`);--> statement-breakpoint
 CREATE INDEX `wave_item_location_idx` ON `pickingWaveItems` (`locationId`);--> statement-breakpoint
@@ -883,6 +947,10 @@ CREATE INDEX `product_label_product_idx` ON `productLabels` (`productId`);--> st
 CREATE INDEX `product_label_sku_batch_idx` ON `productLabels` (`productSku`,`batch`);--> statement-breakpoint
 CREATE INDEX `product_idx` ON `productLocationMapping` (`productId`);--> statement-breakpoint
 CREATE INDEX `tenant_product_idx` ON `productLocationMapping` (`tenantId`,`productId`);--> statement-breakpoint
+CREATE INDEX `receiving_invoice_items_order_idx` ON `receivingInvoiceItems` (`receivingOrderId`);--> statement-breakpoint
+CREATE INDEX `receiving_invoice_items_product_idx` ON `receivingInvoiceItems` (`productId`);--> statement-breakpoint
+CREATE INDEX `receiving_invoice_items_unique_code_idx` ON `receivingInvoiceItems` (`uniqueCode`);--> statement-breakpoint
+CREATE INDEX `receiving_invoice_items_nfe_key_idx` ON `receivingInvoiceItems` (`nfeKey`);--> statement-breakpoint
 CREATE INDEX `reportFavorites_userId_idx` ON `reportFavorites` (`userId`);--> statement-breakpoint
 CREATE INDEX `reportFavorites_reportType_idx` ON `reportFavorites` (`reportType`);--> statement-breakpoint
 CREATE INDEX `reportLogs_tenantId_idx` ON `reportLogs` (`tenantId`);--> statement-breakpoint

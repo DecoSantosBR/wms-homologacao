@@ -3403,3 +3403,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir todos os INSERTs para incluir uniqueCode
 - [x] Popular uniqueCode NULL em registros existentes
 - [ ] Testar conferência Stage
+
+
+## 🔍 INVESTIGAÇÃO: Tela de Posições de Estoque mostra 0 registros
+
+**Sintoma:** Tela "Posições de Estoque" exibe 0 posições mesmo após movimentações
+
+- [x] Investigar código da tela (StockPositions.tsx)
+- [x] Verificar filtros aplicados na query (está correto)
+- [x] Verificar dados no banco (inventory table)
+- [x] CONCLUSÃO: Tela está correta, banco foi limpo (0 registros)
+- [x] Schema atualizado: campo uniqueCode adicionado em inventoryMovements

@@ -1,1 +1,0 @@
-ALTER TABLE `pickingOrders` ADD `customerOrderNumber` varchar(100);

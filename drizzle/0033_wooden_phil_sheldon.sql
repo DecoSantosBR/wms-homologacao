@@ -1,1 +1,0 @@
-ALTER TABLE `warehouseLocations` MODIFY COLUMN `status` enum('livre','available','occupied','blocked','counting') NOT NULL DEFAULT 'livre';

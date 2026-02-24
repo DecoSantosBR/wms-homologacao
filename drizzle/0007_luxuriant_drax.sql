@@ -1,1 +1,0 @@
-ALTER TABLE `inventoryMovements` MODIFY COLUMN `movementType` enum('receiving','put_away','picking','transfer','adjustment','return','disposal','quality') NOT NULL;
