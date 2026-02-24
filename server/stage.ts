@@ -656,6 +656,32 @@ export async function completeStageCheck(params: {
         })
         .where(eq(inventory.id, reservation.inventoryId));
 
+      // ✅ ATUALIZAR STATUS DO ENDEREÇO SE FICOU VAZIO
+      const newQuantity = sourceInventory.quantity - quantityToShip;
+      if (newQuantity === 0) {
+        // Verificar se não há outros produtos neste endereço
+        const [otherProducts] = await dbConn
+          .select({ count: sql<number>`count(*)` })
+          .from(inventory)
+          .where(
+            and(
+              eq(inventory.locationId, sourceInventory.locationId),
+              sql`${inventory.quantity} > 0`,
+              sql`${inventory.id} != ${sourceInventory.id}`
+            )
+          );
+
+        // Se não há outros produtos, mudar status para "livre"
+        if (otherProducts && otherProducts.count === 0) {
+          await dbConn
+            .update(warehouseLocations)
+            .set({
+              status: "livre",
+            })
+            .where(eq(warehouseLocations.id, sourceInventory.locationId));
+        }
+      }
+
       // Verificar se já existe estoque no endereço de expedição para este produto/lote
       const conditions = [
         eq(inventory.locationId, shippingLocation.id),

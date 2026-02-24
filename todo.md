@@ -3030,3 +3030,4 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Modificar endpoint picking.update
   - [x] Modificar clientPortalRouter (criar pedidos do portal)
   - [x] Modificar picking.import (importação de planilha)
+- [x] Implementar lógica para mudar status de endereços vazios para "Livre" após finalização do stage
