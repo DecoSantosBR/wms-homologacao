@@ -1223,10 +1223,11 @@ export const clientPortalRouter = router({
       const orderId = Number(order.insertId);
 
       // PASSO 3: Criar itens e reservar estoque
+      // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
       for (const validation of stockValidations) {
         const { item, product, availableStock, quantityInUnits } = validation;
 
-        // Reservar estoque em múltiplas posições (FEFO)
+        // Reservar estoque e criar um pickingOrderItem para CADA LOTE
         let remainingToReserve = quantityInUnits;
         for (const stock of availableStock) {
           if (remainingToReserve <= 0) break;
@@ -1249,18 +1250,21 @@ export const clientPortalRouter = router({
             quantity: toReserve,
           });
 
+          // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+          await db.insert(pickingOrderItems).values({
+            pickingOrderId: orderId,
+            productId: item.productId,
+            requestedQuantity: toReserve, // ✅ Quantidade deste lote
+            requestedUM: "unit",
+            unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+            batch: stock.batch, // ✅ Lote específico
+            expiryDate: stock.expiryDate, // ✅ Validade
+            inventoryId: stock.id, // ✅ Vínculo com inventário
+            status: "pending" as const,
+          });
+
           remainingToReserve -= toReserve;
         }
-
-        // Criar item do pedido
-        await db.insert(pickingOrderItems).values({
-          pickingOrderId: orderId,
-          productId: item.productId,
-          requestedQuantity: quantityInUnits,
-          requestedUM: "unit",
-          unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-          status: "pending" as const,
-        });
       }
 
       return {
@@ -1632,10 +1636,11 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
             const orderId = Number(order.insertId);
 
             // PASSO 3: Criar itens e reservar estoque
+            // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
             for (const validation of stockValidations) {
               const { productId, availableStock, quantityInUnits, requestedUM } = validation;
 
-              // Reservar estoque em múltiplas posições (FEFO)
+              // Reservar estoque e criar um pickingOrderItem para CADA LOTE
               let remainingToReserve = quantityInUnits;
               for (const stock of availableStock) {
                 if (remainingToReserve <= 0) break;
@@ -1658,18 +1663,21 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   quantity: toReserve,
                 });
 
+                // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+                await db.insert(pickingOrderItems).values({
+                  pickingOrderId: orderId,
+                  productId,
+                  requestedQuantity: toReserve, // ✅ Quantidade deste lote
+                  requestedUM: "unit",
+                  unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+                  batch: stock.batch, // ✅ Lote específico
+                  expiryDate: stock.expiryDate, // ✅ Validade
+                  inventoryId: stock.id, // ✅ Vínculo com inventário
+                  status: "pending" as const,
+                });
+
                 remainingToReserve -= toReserve;
               }
-
-              // Criar item do pedido
-              await db.insert(pickingOrderItems).values({
-                pickingOrderId: orderId,
-                productId,
-                requestedQuantity: quantityInUnits,
-                requestedUM: "unit",
-                unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-                status: "pending" as const,
-              });
             }
 
             results.success.push({

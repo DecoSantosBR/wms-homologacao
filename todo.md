@@ -3024,3 +3024,9 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Testar fluxo offline completo
 - [x] Corrigir erro allocationId undefined ao bipar produto no coletor
 - [x] Corrigir erro de chaves duplicadas no React (key=2) no CollectorPicking
+- [ ] Corrigir campo Destinatário na etiqueta de volume (deve mostrar endereço de entrega, não cliente)
+- [x] Modificar criação de pedidos para criar pickingOrderItems separados por lote (ao invés de agrupar por SKU)
+  - [x] Modificar endpoint picking.create
+  - [x] Modificar endpoint picking.update
+  - [x] Modificar clientPortalRouter (criar pedidos do portal)
+  - [x] Modificar picking.import (importação de planilha)

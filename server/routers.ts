@@ -1833,10 +1833,11 @@ export const appRouter = router({
           .limit(1);
 
         // PASSO 3: Criar itens e reservar estoque
+        // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE ao invés de agrupar por SKU
         for (const validation of stockValidations) {
           const { item, product, availableStock, quantityInUnits } = validation as any;
 
-          // Reservar estoque e registrar reservas (em unidades)
+          // Reservar estoque e criar um pickingOrderItem para CADA LOTE
           let remainingToReserve = quantityInUnits;
           for (const stock of availableStock) {
             if (remainingToReserve <= 0) break;
@@ -1859,21 +1860,23 @@ export const appRouter = router({
               quantity: toReserve,
             });
 
+            // ✅ CRIAR UM pickingOrderItem PARA CADA LOTE (ao invés de agrupar)
+            await db.insert(pickingOrderItems).values({
+              pickingOrderId: order.id,
+              productId: item.productId,
+              requestedQuantity: toReserve, // ✅ Quantidade DESTE lote específico
+              requestedUM: "unit",
+              unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+              unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined,
+              batch: stock.batch, // ✅ Lote específico
+              expiryDate: stock.expiryDate, // ✅ Validade do lote
+              inventoryId: stock.id, // ✅ Vínculo com inventário
+              pickedQuantity: 0,
+              status: "pending",
+            });
+
             remainingToReserve -= toReserve;
           }
-
-          // Criar item do pedido
-          // CORREÇÃO: Sempre registrar quantidades em UNIDADES (UN)
-          await db.insert(pickingOrderItems).values({
-            pickingOrderId: order.id,
-            productId: item.productId,
-            requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
-            requestedUM: "unit", // ✅ Sempre "unit" pois quantidade já foi convertida
-            unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade ORIGINAL do pedido (para referência)
-            unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined, // Unidades por caixa (para referência)
-            pickedQuantity: 0,
-            status: "pending",
-          });
         }
 
         return { success: true, orderId: order.id, orderNumber };
@@ -2134,13 +2137,14 @@ export const appRouter = router({
           .delete(pickingOrderItems)
           .where(eq(pickingOrderItems.pickingOrderId, input.id));
 
-        // Inserir novos itens
+        // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
         if (input.items.length > 0) {
-          // Buscar dados dos produtos para preencher unit e unitsPerBox
+          // Buscar dados dos produtos
           const productIds = input.items.map(item => item.productId);
           const productsData = await db
             .select({
               id: products.id,
+              sku: products.sku,
               unitsPerBox: products.unitsPerBox,
             })
             .from(products)
@@ -2148,31 +2152,7 @@ export const appRouter = router({
           
           const productsMap = new Map(productsData.map(p => [p.id, p]));
 
-          // CORREÇÃO: Converter quantidades para unidades antes de inserir
-          await db.insert(pickingOrderItems).values(
-            input.items.map((item) => {
-              const product = productsMap.get(item.productId);
-              
-              // Converter para unidades se necessário
-              let quantityInUnits = item.requestedQuantity;
-              if (item.requestedUnit === "box" && product?.unitsPerBox) {
-                quantityInUnits = item.requestedQuantity * product.unitsPerBox;
-              }
-              
-              return {
-                pickingOrderId: input.id,
-                productId: item.productId,
-                requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
-                requestedUM: "unit" as const, // ✅ Sempre "unit"
-                unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade ORIGINAL
-                unitsPerBox: item.requestedUnit === "box" && product ? product.unitsPerBox : undefined,
-                pickedQuantity: 0,
-                status: "pending" as const,
-              };
-            })
-          );
-
-          // Criar novas reservas de estoque
+          // Criar itens e reservas SEPARADOS POR LOTE
           for (const item of input.items) {
             const product = productsMap.get(item.productId);
             if (!product) {
@@ -2188,16 +2168,18 @@ export const appRouter = router({
               if (!product.unitsPerBox || product.unitsPerBox <= 0) {
                 throw new TRPCError({
                   code: "BAD_REQUEST",
-                  message: `Produto ID ${item.productId} não possui quantidade por caixa configurada`
+                  message: `Produto ${product.sku} não possui quantidade por caixa configurada`
                 });
               }
               quantityInUnits = item.requestedQuantity * product.unitsPerBox;
             }
 
-            // Buscar estoque disponível (FIFO/FEFO)
+            // Buscar estoque disponível (FEFO) com informações de lote
             const availableStock = await db
               .select({
                 id: inventory.id,
+                batch: inventory.batch,
+                expiryDate: inventory.expiryDate,
                 quantity: inventory.quantity,
                 reservedQuantity: inventory.reservedQuantity,
                 availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
@@ -2222,11 +2204,11 @@ export const appRouter = router({
             if (totalAvailable < quantityInUnits) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `Estoque insuficiente para produto ID ${item.productId}. Disponível: ${totalAvailable}, Solicitado: ${quantityInUnits}`
+                message: `Estoque insuficiente para produto ${product.sku}. Disponível: ${totalAvailable}, Solicitado: ${quantityInUnits}`
               });
             }
 
-            // Reservar estoque
+            // ✅ Reservar estoque e criar pickingOrderItem PARA CADA LOTE
             let remainingToReserve = quantityInUnits;
             for (const stock of availableStock) {
               if (remainingToReserve <= 0) break;
@@ -2241,12 +2223,27 @@ export const appRouter = router({
                 })
                 .where(eq(inventory.id, stock.id));
 
-              // Registrar reserva na tabela pickingReservations
+              // Registrar reserva
               await db.insert(pickingReservations).values({
                 pickingOrderId: input.id,
                 productId: item.productId,
                 inventoryId: stock.id,
                 quantity: toReserve,
+              });
+
+              // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+              await db.insert(pickingOrderItems).values({
+                pickingOrderId: input.id,
+                productId: item.productId,
+                requestedQuantity: toReserve, // ✅ Quantidade deste lote
+                requestedUM: "unit",
+                unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+                unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined,
+                batch: stock.batch, // ✅ Lote específico
+                expiryDate: stock.expiryDate, // ✅ Validade
+                inventoryId: stock.id, // ✅ Vínculo com inventário
+                pickedQuantity: 0,
+                status: "pending",
               });
 
               remainingToReserve -= toReserve;
@@ -3028,41 +3025,8 @@ export const appRouter = router({
                 throw new Error("Falha ao criar pedido");
               }
 
-              // Buscar dados dos produtos para converter quantidades
-              const productIdsForImport = orderItems.map(item => item.productId);
-              const productsForImport = await db
-                .select({
-                  id: products.id,
-                  unitsPerBox: products.unitsPerBox,
-                })
-                .from(products)
-                .where(inArray(products.id, productIdsForImport));
-              
-              const productsMapForImport = new Map(productsForImport.map(p => [p.id, p]));
-
-              // CORREÇÃO: Converter quantidades para unidades antes de criar itens
-              await db.insert(pickingOrderItems).values(
-                orderItems.map((item) => {
-                  const product = productsMapForImport.get(item.productId);
-                  
-                  // Converter para unidades se necessário
-                  let quantityInUnits = item.requestedQuantity;
-                  if (item.requestedUnit === "box" && product?.unitsPerBox) {
-                    quantityInUnits = item.requestedQuantity * product.unitsPerBox;
-                  }
-                  
-                  return {
-                    pickingOrderId: order.id,
-                    productId: item.productId,
-                    requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
-                    requestedUM: "unit" as const, // ✅ Sempre "unit"
-                    pickedQuantity: 0,
-                    status: "pending" as const,
-                  };
-                })
-              );
-
-              // Reservar estoque (FEFO)
+              // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
+              // Reservar estoque e criar itens simultaneamente (FEFO)
               for (const item of orderItems) {
                 const itemAny = item as any;
                 const availableStock = await db
@@ -3105,6 +3069,19 @@ export const appRouter = router({
                     productId: item.productId,
                     inventoryId: stock.id,
                     quantity: quantityToReserve,
+                  });
+
+                  // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+                  await db.insert(pickingOrderItems).values({
+                    pickingOrderId: order.id,
+                    productId: item.productId,
+                    requestedQuantity: quantityToReserve, // ✅ Quantidade deste lote
+                    requestedUM: "unit",
+                    batch: stock.batch, // ✅ Lote específico
+                    expiryDate: stock.expiryDate, // ✅ Validade
+                    inventoryId: stock.id, // ✅ Vínculo com inventário
+                    pickedQuantity: 0,
+                    status: "pending",
                   });
 
                   remainingToReserve -= quantityToReserve;
