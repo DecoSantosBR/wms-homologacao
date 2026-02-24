@@ -3052,6 +3052,22 @@ export const appRouter = router({
               // Reservar estoque e criar itens simultaneamente (FEFO)
               for (const item of orderItems) {
                 const itemAny = item as any;
+                
+                // Buscar dados do produto para obter sku e unitsPerBox
+                const [product] = await db
+                  .select({
+                    id: products.id,
+                    sku: products.sku,
+                    unitsPerBox: products.unitsPerBox,
+                  })
+                  .from(products)
+                  .where(eq(products.id, item.productId))
+                  .limit(1);
+                
+                if (!product) {
+                  throw new Error(`Produto não encontrado: ${item.productId}`);
+                }
+                
                 const availableStock = await db
                   .select({
                     id: inventory.id,
@@ -3059,9 +3075,12 @@ export const appRouter = router({
                     reservedQuantity: inventory.reservedQuantity,
                     batch: inventory.batch,
                     expiryDate: inventory.expiryDate,
+                    locationId: inventory.locationId,
+                    locationCode: warehouseLocations.code,
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
                   })
                   .from(inventory)
+                  .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
                   .where(
                     and(
                       eq(inventory.tenantId, tenant.id),
@@ -3087,17 +3106,36 @@ export const appRouter = router({
                     .where(eq(inventory.id, stock.id));
 
                   // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
-                  // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
                   await db.insert(pickingOrderItems).values({
                     pickingOrderId: order.id,
                     productId: item.productId,
                     requestedQuantity: quantityToReserve, // ✅ Quantidade deste lote
                     requestedUM: "unit",
+                    unit: (itemAny.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+                    unitsPerBox: itemAny.requestedUnit === "box" ? product.unitsPerBox : undefined,
                     batch: stock.batch, // ✅ Lote específico
                     expiryDate: stock.expiryDate, // ✅ Validade
                     inventoryId: stock.id, // ✅ Vínculo com inventário
                     pickedQuantity: 0,
                     status: "pending",
+                    uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
+                  });
+
+                  // ✅ CRIAR pickingAllocation para este lote
+                  await db.insert(pickingAllocations).values({
+                    pickingOrderId: order.id,
+                    productId: item.productId,
+                    productSku: product.sku,
+                    locationId: stock.locationId,
+                    locationCode: stock.locationCode,
+                    batch: stock.batch,
+                    expiryDate: stock.expiryDate,
+                    uniqueCode: getUniqueCode(product.sku, stock.batch),
+                    quantity: quantityToReserve,
+                    isFractional: false,
+                    sequence: 0,
+                    status: "pending",
+                    pickedQuantity: 0,
                   });
 
                   remainingToReserve -= quantityToReserve;

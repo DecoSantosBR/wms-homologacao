@@ -3313,3 +3313,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 ## 🐛 BUG: uniqueCode em inventoryMovements no stage
 - [ ] Corrigir INSERT de inventoryMovements em stage.ts para incluir batch e uniqueCode
+
+## 🚀 MIGRAÇÃO COMPLETA (para conclusão durante o sono do usuário)
+- [ ] Popular uniqueCode NULL em pickingWaveItems
+- [ ] Popular unitsPerBox NULL em pickingWaveItems
+- [ ] Corrigir INSERT de pickingWaveItems em waveLogic.ts
+- [ ] Completar 5 INSERTs pendentes de pickingAllocations
+- [ ] Refatorar leituras em waveLogic.ts, stage.ts, inventory.ts, movements.ts
+- [ ] Remover DELETEs de pickingReservations
+- [ ] Testar fluxo completo
+- [ ] Checkpoint final
