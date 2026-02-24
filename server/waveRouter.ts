@@ -99,80 +99,46 @@ export const waveRouter = router({
       const items = await db
         .select({
           id: pickingWaveItems.id,
-          waveId: pickingWaveItems.waveId,
-          productId: pickingWaveItems.productId,
-          productName: pickingWaveItems.productName,
           productSku: pickingWaveItems.productSku,
-          totalQuantity: pickingWaveItems.totalQuantity,
+          productName: pickingWaveItems.productName,
+          quantity: pickingWaveItems.totalQuantity,
           pickedQuantity: pickingWaveItems.pickedQuantity,
-          unit: pickingWaveItems.unit, // Unidade do pedido original
-          unitsPerBox: pickingWaveItems.unitsPerBox, // Unidades por caixa
-          locationId: pickingWaveItems.locationId,
-          locationCode: pickingWaveItems.locationCode,
-          batch: pickingWaveItems.batch,
-          expiryDate: pickingWaveItems.expiryDate,
           status: pickingWaveItems.status,
-          pickedAt: pickingWaveItems.pickedAt,
-          createdAt: pickingWaveItems.createdAt,
-          orderNumber: pickingOrders.customerOrderNumber, // Número do pedido (cliente)
+          orderNumber: pickingOrders.orderNumber,
         })
         .from(pickingWaveItems)
-        .leftJoin(
-          pickingOrders,
-          eq(pickingWaveItems.pickingOrderId, pickingOrders.id)
-        )
-        .where(eq(pickingWaveItems.waveId, input.waveId));
-
-      // Buscar labelCode para cada item (da tabela labelAssociations)
-      const itemsWithLabels = await Promise.all(
-        items.map(async (item) => {
-          if (!item.batch) return { ...item, labelCode: undefined };
-
-          // Buscar etiqueta associada ao produto/lote
-          const [label] = await db
-            .select({ labelCode: labelAssociations.labelCode })
-            .from(labelAssociations)
-            .where(
-              and(
-                eq(labelAssociations.productId, item.productId),
-                eq(labelAssociations.batch, item.batch)
-              )
-            )
-            .limit(1);
-
-          return { ...item, labelCode: label?.labelCode };
-        })
-      );
+        .leftJoin(pickingOrders, eq(pickingWaveItems.pickingOrderId, pickingOrders.id))
+        .where(eq(pickingWaveItems.waveId, input.waveId))
+        .orderBy(pickingWaveItems.productSku);
 
       // Calcular progresso
-      const totalItems = itemsWithLabels.length;
-      const completedItems = itemsWithLabels.filter(item => item.status === "picked").length;
-      const totalQuantity = itemsWithLabels.reduce((sum, item) => sum + item.totalQuantity, 0);
-      const pickedQuantity = itemsWithLabels.reduce((sum, item) => sum + item.pickedQuantity, 0);
+      const totalItems = items.length;
+      const completedItems = items.filter(item => 
+        item.status === "picked"
+      ).length;
+      const percentComplete = totalItems > 0 
+        ? Math.round((completedItems / totalItems) * 100) 
+        : 0;
 
       return {
         wave,
-        items: itemsWithLabels,
+        items,
         progress: {
           totalItems,
           completedItems,
-          totalQuantity,
-          pickedQuantity,
-          percentComplete: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
+          percentComplete,
         },
       };
     }),
 
   /**
-   * Registrar item separado (escanear etiqueta)
-   * Atualiza quantidade separada e status do item
+   * Registrar bipagem de um item durante a separação
    */
-  registerPickedItem: protectedProcedure
+  registerItem: protectedProcedure
     .input(z.object({
       waveId: z.number(),
-      itemId: z.number(), // ID do pickingWaveItem
-      scannedCode: z.string(), // Código escaneado (etiqueta)
-      quantity: z.number().min(1),
+      itemId: z.number(),
+      scannedCode: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -180,178 +146,143 @@ export const waveRouter = router({
 
       // 1. Buscar item da onda
       const [waveItem] = await db
-        .select({
-          id: pickingWaveItems.id,
-          waveId: pickingWaveItems.waveId,
-          productId: pickingWaveItems.productId,
-          productSku: pickingWaveItems.productSku,
-          totalQuantity: pickingWaveItems.totalQuantity,
-          pickedQuantity: pickingWaveItems.pickedQuantity,
-          locationId: pickingWaveItems.locationId,
-          batch: pickingWaveItems.batch,
-          status: pickingWaveItems.status,
-        })
+        .select()
         .from(pickingWaveItems)
         .where(eq(pickingWaveItems.id, input.itemId))
         .limit(1);
 
       if (!waveItem) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Item da onda não encontrado" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Item não encontrado" });
       }
 
-      // 2. Validar que o código escaneado corresponde à etiqueta armazenada
-      if (waveItem.batch) {
-        // Buscar etiqueta associada ao produto/lote em labelAssociations
-        // (tanto recebimento "R..." quanto picking "P...")
-        const [labelRecord] = await db
-          .select({ labelCode: labelAssociations.labelCode })
-          .from(labelAssociations)
-          .where(
-            and(
-              eq(labelAssociations.productId, waveItem.productId),
-              eq(labelAssociations.batch, waveItem.batch)
-            )
-          )
-          .limit(1);
+      // 2. Buscar produto para validar código
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.sku, waveItem.productSku))
+        .limit(1);
 
-        if (labelRecord) {
-          // Se há labelCode armazenado, comparar diretamente
-          if (input.scannedCode.trim() !== labelRecord.labelCode.trim()) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Etiqueta incorreta! Esperado: ${labelRecord.labelCode}, mas foi escaneado: "${input.scannedCode}"`,
-            });
-          }
-        } else {
-          // Fallback: se não houver labelCode, validar pelo SKU OU lote
-          const scannedCode = input.scannedCode.trim();
-          const isMatchingBatch = waveItem.batch && scannedCode === waveItem.batch;
-          const isMatchingSku = scannedCode.startsWith(waveItem.productSku);
-          
-          if (!isMatchingBatch && !isMatchingSku) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Produto/Lote incorreto! Esperado SKU: ${waveItem.productSku}${waveItem.batch ? ` ou Lote: ${waveItem.batch}` : ''}`,
-            });
-          }
-        }
-      } else {
-        // Se não há lote, validar apenas pelo SKU
-        const skuLength = waveItem.productSku.length;
-        const scannedSku = input.scannedCode.substring(0, skuLength);
-        
-        if (scannedSku !== waveItem.productSku) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Produto incorreto! Esperado SKU: ${waveItem.productSku}`,
-          });
-        }
+      if (!product) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
       }
 
-      // 3. Validar que não excede a quantidade alocada para este waveItem
-      // A validação real de estoque é feita na reserva (criação do pedido)
-      // Aqui apenas validamos que o operador não separe mais do que foi alocado
+      // 3. Validar código escaneado (simplificado - apenas SKU)
+      const isValidSku = input.scannedCode === product.sku;
 
-      // 4. Validar quantidade total da onda
-      const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
-      if (newPickedQuantity > waveItem.totalQuantity) {
+      if (!isValidSku) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Quantidade excede o solicitado! Solicitado: ${waveItem.totalQuantity}, já separado: ${waveItem.pickedQuantity}, tentando adicionar: ${input.quantity}`,
+          message: `Código inválido. Esperado: ${product.sku}`,
         });
       }
 
-      // 5. Atualizar item da onda
-      const isComplete = newPickedQuantity === waveItem.totalQuantity;
+      // 4. Atualizar quantidade separada
+      const newPickedQty = waveItem.pickedQuantity + 1;
+      const isComplete = newPickedQty >= waveItem.totalQuantity;
+
       await db
         .update(pickingWaveItems)
         .set({
-          pickedQuantity: newPickedQuantity,
+          pickedQuantity: newPickedQty,
           status: isComplete ? "picked" : "picking",
         })
         .where(eq(pickingWaveItems.id, input.itemId));
 
-      // 6. Verificar se todos os itens da onda foram completados
-      const allItems = await db
+      // 5. Atualizar status da onda se necessário
+      const [wave] = await db
         .select()
-        .from(pickingWaveItems)
-        .where(eq(pickingWaveItems.waveId, input.waveId));
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.waveId))
+        .limit(1);
 
-      // Verificar se todos os itens estão completos
-      // Para o item atual, usar o novo status calculado
-      // Para os outros, verificar se já estão "picked"
-      const allCompleted = allItems.every(item => {
-        if (item.id === input.itemId) {
-          return isComplete;
-        } else {
-          return item.status === "picked";
-        }
-      });
-
-      // 7. Atualizar status da onda se todos os itens foram completados (FINALIZAÇÃO AUTOMÁTICA)
-      if (allCompleted) {
-        await db
-          .update(pickingWaves)
-          .set({ 
-            status: "completed",
-            pickedBy: ctx.user.id,
-            pickedAt: new Date(),
-          })
-          .where(eq(pickingWaves.id, input.waveId));
-
-        // Atualizar status dos pedidos associados
-        await db
-          .update(pickingOrders)
-          .set({ 
-            status: "picked",
-            pickedBy: ctx.user.id,
-            pickedAt: new Date(),
-          })
-          .where(eq(pickingOrders.waveId, input.waveId));
-      } else {
-        // Atualizar status da onda para "picking" se ainda não estiver
+      if (wave && wave.status === "pending") {
         await db
           .update(pickingWaves)
           .set({ status: "picking" })
-          .where(
-            and(
-              eq(pickingWaves.id, input.waveId),
-              eq(pickingWaves.status, "pending")
-            )
-          );
+          .where(eq(pickingWaves.id, input.waveId));
       }
 
       return {
         success: true,
-        itemCompleted: isComplete,
-        waveCompleted: allCompleted,
-        pickedQuantity: newPickedQuantity,
+        pickedQuantity: newPickedQty,
         totalQuantity: waveItem.totalQuantity,
+        isComplete,
       };
     }),
 
   /**
-   * Cancelar onda (apenas ondas pending/picking)
+   * Cancelar onda em andamento
+   * Reverte status para cancelled e libera pedidos (mantém reservas)
    */
   cancel: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Atualizar status da onda
+      // 1. Buscar onda
+      const [wave] = await db
+        .select()
+        .from(pickingWaves)
+        .where(eq(pickingWaves.id, input.id))
+        .limit(1);
+
+      if (!wave) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
+      }
+
+      // 2. Validar status (apenas ondas pending ou picking podem ser canceladas)
+      if (wave.status !== "pending" && wave.status !== "picking") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas ondas pendentes ou em andamento podem ser canceladas"
+        });
+      }
+
+      // 3. Verificar permissão (apenas admin ou gerente pode cancelar)
+      if (ctx.user?.role !== "admin" && ctx.user?.role !== "manager") {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Apenas administradores ou gerentes podem cancelar ondas" 
+        });
+      }
+
+      // 4. Zerar quantidades separadas nos waveItems
+      await db
+        .update(pickingWaveItems)
+        .set({ 
+          pickedQuantity: 0,
+          status: "pending"
+        })
+        .where(eq(pickingWaveItems.waveId, input.id));
+
+      // 5. Cancelar onda
       await db
         .update(pickingWaves)
-        .set({ status: "cancelled" })
+        .set({ 
+          status: "cancelled",
+          updatedAt: new Date()
+        })
         .where(eq(pickingWaves.id, input.id));
 
-      // Liberar pedidos associados
+      // 6. Liberar pedidos (voltar para pending, mantendo reservas)
       await db
         .update(pickingOrders)
-        .set({ status: "pending", waveId: null })
+        .set({ 
+          status: "pending",
+          waveId: null
+        })
         .where(eq(pickingOrders.waveId, input.id));
 
-      return { success: true };
+      console.info(
+        `[WAVE] Onda ${wave.waveNumber} (ID: ${wave.id}) cancelada por usuário ${ctx.user.id}. ` +
+        `Pedidos liberados e reservas mantidas.`
+      );
+
+      return { 
+        success: true, 
+        message: `Onda ${wave.waveNumber} cancelada com sucesso. Pedidos voltaram para pending.`
+      };
     }),
 
   /**
@@ -448,7 +379,6 @@ export const waveRouter = router({
 
       // 2. Atualizar quantidades dos itens
       for (const item of input.items) {
-        // Buscar waveItem
         const [waveItem] = await db
           .select()
           .from(pickingWaveItems)
@@ -462,46 +392,28 @@ export const waveRouter = router({
           });
         }
 
-        // Validar que nova quantidade não excede o total solicitado
-        if (item.newPickedQuantity > waveItem.totalQuantity) {
-          throw new TRPCError({ 
-            code: "BAD_REQUEST", 
-            message: `Quantidade separada (${item.newPickedQuantity}) não pode exceder quantidade solicitada (${waveItem.totalQuantity}) para o item ${waveItem.productSku}` 
-          });
+        // Determinar novo status baseado na quantidade
+        let newStatus: "pending" | "picking" | "picked" = "pending";
+        if (item.newPickedQuantity === 0) {
+          newStatus = "pending";
+        } else if (item.newPickedQuantity < waveItem.totalQuantity) {
+          newStatus = "picking";
+        } else {
+          newStatus = "picked";
         }
 
-        // Atualizar pickedQuantity
-        const newStatus = item.newPickedQuantity === waveItem.totalQuantity ? "picked" : "picking";
         await db
           .update(pickingWaveItems)
           .set({ 
             pickedQuantity: item.newPickedQuantity,
-            status: newStatus as "pending" | "picking" | "picked"
+            status: newStatus
           })
           .where(eq(pickingWaveItems.id, item.waveItemId));
       }
 
-      // 3. Recalcular status da onda
-      const allWaveItems = await db
-        .select()
-        .from(pickingWaveItems)
-        .where(eq(pickingWaveItems.waveId, input.waveId));
-
-      const allCompleted = allWaveItems.every(
-        item => item.pickedQuantity === item.totalQuantity
-      );
-
-      const newStatus = allCompleted ? "completed" : "picking";
-
-      await db
-        .update(pickingWaves)
-        .set({ status: newStatus })
-        .where(eq(pickingWaves.id, input.waveId));
-
       return { 
         success: true, 
-        message: `Onda ${wave.waveNumber} atualizada com sucesso`,
-        newStatus
+        message: `Quantidades da onda ${wave.waveNumber} atualizadas com sucesso`
       };
     }),
 
@@ -602,290 +514,71 @@ export const waveRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
       }
 
-      // 2. Verificar se todos os itens foram separados
-      const allItems = await db
+      // 2. Buscar itens da onda
+      const items = await db
         .select()
         .from(pickingWaveItems)
         .where(eq(pickingWaveItems.waveId, input.waveId));
 
-      const allCompleted = allItems.every(item => item.status === "picked");
+      // 3. Verificar se há itens pendentes
+      const pendingItems = items.filter(item => 
+        item.status !== "picked"
+      );
 
-      if (!allCompleted) {
-        const pendingCount = allItems.filter(item => item.status !== "picked").length;
-        throw new TRPCError({ 
-          code: "PRECONDITION_FAILED", 
-          message: `Ainda há ${pendingCount} item(ns) pendente(s) de separação` 
+      if (pendingItems.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Ainda há ${pendingItems.length} item(ns) pendente(s) de separação`
         });
       }
 
-      // 3. Atualizar status da onda para "completed"
+      // 4. Verificar se há divergências (quantidade parcial)
+      const partialItems = items.filter(item => 
+        item.pickedQuantity > 0 && item.pickedQuantity < item.totalQuantity
+      );
+      const hasDivergences = partialItems.length > 0;
+
+      // 5. Atualizar status da onda
       await db
         .update(pickingWaves)
         .set({ 
           status: "completed",
-          pickedBy: ctx.user.id,
           pickedAt: new Date(),
         })
         .where(eq(pickingWaves.id, input.waveId));
 
-      // 4. Atualizar status dos pedidos associados para "picked"
+      // 6. Atualizar status dos pedidos
       await db
         .update(pickingOrders)
-        .set({ 
-          status: "picked",
-          pickedBy: ctx.user.id,
-          pickedAt: new Date(),
-        })
+        .set({ status: "picked" })
         .where(eq(pickingOrders.waveId, input.waveId));
 
-      return { 
-        success: true, 
-        message: `Onda ${wave.waveNumber} finalizada com sucesso`,
-        waveNumber: wave.waveNumber,
-      };
-    }),
-
-  /**
-   * Validar endereço de separação (usado pelo coletor)
-   */
-  validateLocation: protectedProcedure
-    .input(z.object({
-      waveId: z.number(),
-      locationCode: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-
-      // Buscar endereço
-      const [location] = await db
-        .select()
-        .from(warehouseLocations)
-        .where(eq(warehouseLocations.code, input.locationCode))
-        .limit(1);
-
-      if (!location) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Endereço não encontrado" });
+      // 7. Atualizar quantidades separadas nos itens dos pedidos
+      for (const waveItem of items) {
+        const isPartial = waveItem.pickedQuantity < waveItem.totalQuantity;
+        await db
+          .update(pickingOrderItems)
+          .set({ 
+            pickedQuantity: waveItem.pickedQuantity,
+            status: isPartial ? "pending" : "picked"
+          })
+          .where(
+            and(
+              eq(pickingOrderItems.pickingOrderId, waveItem.pickingOrderId),
+              eq(pickingOrderItems.productId, waveItem.productId)
+            )
+          );
       }
 
-      // Buscar itens da onda nesse endereço
-      const items = await db
-        .select()
-        .from(pickingWaveItems)
-        .where(
-          and(
-            eq(pickingWaveItems.waveId, input.waveId),
-            eq(pickingWaveItems.locationId, location.id)
-          )
-        );
-
-      if (items.length === 0) {
-        throw new TRPCError({ 
-          code: "BAD_REQUEST", 
-          message: "Nenhum item da onda neste endereço" 
-        });
-      }
-
-      return {
-        location,
-        itemCount: items.length,
-      };
-    }),
-
-  /**
-   * Escanear produto (usado pelo coletor)
-   * Verifica se etiqueta está associada ou se precisa associar
-   */
-  scanProduct: protectedProcedure
-    .input(z.object({
-      waveId: z.number(),
-      locationId: z.number(),
-      productCode: z.string(),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-
-      // Buscar associação existente
-      const [association] = await db
-        .select({
-          id: labelAssociations.id,
-          productId: labelAssociations.productId,
-          labelCode: labelAssociations.labelCode,
-          batch: labelAssociations.batch,
-          expiryDate: labelAssociations.expiryDate,
-          unitsPerPackage: labelAssociations.unitsPerPackage,
-        })
-        .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.productCode))
-        .limit(1);
-
-      if (!association) {
-        // Etiqueta nova, precisa associar
-        return {
-          isNewLabel: true,
-          productCode: input.productCode,
-        };
-      }
-
-      // Buscar item da onda com esse produto e endereço
-      const [waveItem] = await db
-        .select()
-        .from(pickingWaveItems)
-        .where(
-          and(
-            eq(pickingWaveItems.waveId, input.waveId),
-            eq(pickingWaveItems.locationId, input.locationId),
-            eq(pickingWaveItems.productId, association.productId)
-          )
-        )
-        .limit(1);
-
-      if (!waveItem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Produto não pertence a esta onda/endereço",
-        });
-      }
-
-      // Incrementar quantidade separada
-      const unitsPerPackage = association.unitsPerPackage || 1;
-      const newPickedQuantity = waveItem.pickedQuantity + unitsPerPackage;
-
-      // Determinar novo status
-      const newStatus = newPickedQuantity >= waveItem.totalQuantity ? "picked" : "pending";
-
-      // Atualizar pickingWaveItems
-      await db
-        .update(pickingWaveItems)
-        .set({ 
-          pickedQuantity: newPickedQuantity,
-          status: newStatus
-        })
-        .where(eq(pickingWaveItems.id, waveItem.id));
-
-      // Atualizar labelAssociations
-      await db
-        .update(labelAssociations)
-        .set({
-          packagesRead: sql`${labelAssociations.packagesRead} + 1`,
-          totalUnits: sql`${labelAssociations.totalUnits} + ${unitsPerPackage}`,
-        })
-        .where(eq(labelAssociations.id, association.id));
-
-      // Inserir leitura em labelReadings
-      const sessionId = `P${input.waveId}`;
-      await db.insert(labelReadings).values({
-        sessionId,
-        associationId: association.id,
-        labelCode: input.productCode,
-        readBy: ctx.user.id,
-        unitsAdded: unitsPerPackage,
-      });
-
-      return {
-        isNewLabel: false,
-        association,
-        waveItem: {
-          ...waveItem,
-          pickedQuantity: newPickedQuantity,
-        },
-      };
-    }),
-
-  /**
-   * Associar etiqueta com produto (usado pelo coletor)
-   */
-  associateLabel: protectedProcedure
-    .input(z.object({
-      waveId: z.number(),
-      locationId: z.number(),
-      labelCode: z.string(),
-      productId: z.number(),
-      batch: z.string().optional(),
-      expiryDate: z.string().optional(),
-      quantity: z.number().min(1),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-
-      // Verificar se etiqueta já está associada
-      const [existing] = await db
-        .select()
-        .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.labelCode))
-        .limit(1);
-
-      if (existing) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Etiqueta já associada a outro produto",
-        });
-      }
-
-      // Buscar produto
-      const [product] = await db
-        .select()
-        .from(products)
-        .where(eq(products.id, input.productId))
-        .limit(1);
-
-      if (!product) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
-      }
-
-      // Criar associação
-      const sessionId = `P${input.waveId}`; // Prefixo P para picking
-      await db.insert(labelAssociations).values({
-        sessionId,
-        labelCode: input.labelCode,
-        productId: input.productId,
-        batch: input.batch || null,
-        expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        unitsPerPackage: input.quantity,
-        packagesRead: 1,
-        totalUnits: input.quantity,
-        associatedBy: ctx.user.id,
-      });
-
-      // Buscar item da onda
-      const [waveItem] = await db
-        .select()
-        .from(pickingWaveItems)
-        .where(
-          and(
-            eq(pickingWaveItems.waveId, input.waveId),
-            eq(pickingWaveItems.locationId, input.locationId),
-            eq(pickingWaveItems.productId, input.productId)
-          )
-        )
-        .limit(1);
-
-      if (!waveItem) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Produto não pertence a esta onda/endereço",
-        });
-      }
-
-      // Atualizar quantidade separada
-      const newPickedQuantity = waveItem.pickedQuantity + input.quantity;
-      await db
-        .update(pickingWaveItems)
-        .set({ 
-          pickedQuantity: newPickedQuantity,
-          status: newPickedQuantity >= waveItem.totalQuantity ? "picked" : "picking",
-        })
-        .where(eq(pickingWaveItems.id, waveItem.id));
+      const message = hasDivergences
+        ? `Onda ${wave.waveNumber} finalizada com ${partialItems.length} divergência(s). Revise os itens com falta.`
+        : `Onda ${wave.waveNumber} finalizada com sucesso!`;
 
       return {
         success: true,
-        product,
-        waveItem: {
-          ...waveItem,
-          pickedQuantity: newPickedQuantity,
-        },
+        message,
+        hasDivergences,
+        divergenceCount: partialItems.length,
       };
     }),
 });

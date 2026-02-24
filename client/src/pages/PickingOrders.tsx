@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves, Edit, Printer } from "lucide-react";
+import { Plus, Package, Clock, CheckCircle2, AlertCircle, Truck, Trash2, X, Waves, Edit, Printer, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -136,6 +136,17 @@ export default function PickingOrders() {
     },
     onError: (error) => {
       alert(`Erro ao excluir onda: ${error.message}`);
+    },
+  });
+
+  const cancelWaveMutation = trpc.wave.cancel.useMutation({
+    onSuccess: (result) => {
+      refetchWaves();
+      refetch(); // Atualizar lista de pedidos também
+      alert(result.message);
+    },
+    onError: (error) => {
+      alert(`Erro ao cancelar onda: ${error.message}`);
     },
   });
 
@@ -1382,6 +1393,24 @@ export default function PickingOrders() {
                         </Link>
                       )}
                       
+                      {/* Botões para ondas picking (em andamento) */}
+                      {wave.status === "picking" && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Tem certeza que deseja cancelar a onda ${wave.waveNumber}? O progresso será perdido e os pedidos voltam para pending.`)) {
+                              cancelWaveMutation.mutate({ id: wave.id });
+                            }
+                          }}
+                          disabled={cancelWaveMutation.isPending}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Cancelar
+                        </Button>
+                      )}
+
                       {/* Botões para ondas completed */}
                       {wave.status === "completed" && (
                         <>
