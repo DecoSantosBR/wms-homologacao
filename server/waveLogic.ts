@@ -15,6 +15,8 @@ interface ConsolidatedItem {
   productId: number;
   productSku: string;
   productName: string;
+  batch: string | null; // ✅ Lote específico
+  expiryDate: Date | null; // ✅ Validade do lote
   totalQuantity: number;
   orders: Array<{ orderId: number; quantity: number }>; // Rastreabilidade
 }
@@ -64,24 +66,30 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
       productSku: products.sku,
       productName: products.description,
       quantity: pickingOrderItems.requestedQuantity,
+      batch: pickingOrderItems.batch, // ✅ Incluir lote
+      expiryDate: pickingOrderItems.expiryDate, // ✅ Incluir validade
     })
     .from(pickingOrderItems)
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
     .where(inArray(pickingOrderItems.pickingOrderId, orderIds));
 
-  // Consolidar por produto
-  const consolidated = new Map<number, ConsolidatedItem>();
+  // ✅ CORREÇÃO: Consolidar por produto + lote (chave composta)
+  const consolidated = new Map<string, ConsolidatedItem>();
 
   for (const item of items) {
-    const existing = consolidated.get(item.productId);
+    // Criar chave composta: productId + batch
+    const key = `${item.productId}-${item.batch || 'null'}`;
+    const existing = consolidated.get(key);
     if (existing) {
       existing.totalQuantity += item.quantity;
       existing.orders.push({ orderId: item.orderId, quantity: item.quantity });
     } else {
-      consolidated.set(item.productId, {
+      consolidated.set(key, {
         productId: item.productId,
         productSku: item.productSku!,
         productName: item.productName!,
+        batch: item.batch, // ✅ Preservar lote
+        expiryDate: item.expiryDate, // ✅ Preservar validade
         totalQuantity: item.quantity,
         orders: [{ orderId: item.orderId, quantity: item.quantity }],
       });
@@ -109,6 +117,19 @@ async function allocateLocations(
     // Buscar TODOS os lotes disponíveis do produto ordenado por FIFO ou FEFO
     const orderBy = pickingRule === "FEFO" ? asc(inventory.expiryDate) : asc(inventory.createdAt);
 
+    // ✅ CORREÇÃO: Filtrar também por lote específico do item
+    const whereConditions = [
+      eq(inventory.tenantId, tenantId),
+      eq(inventory.productId, item.productId),
+      eq(inventory.status, "available"),
+      sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+    ];
+
+    // Se o item tem lote definido, filtrar apenas por esse lote
+    if (item.batch) {
+      whereConditions.push(eq(inventory.batch, item.batch));
+    }
+
     const availableStock = await db
       .select({
         inventoryId: inventory.id,
@@ -122,15 +143,8 @@ async function allocateLocations(
       })
       .from(inventory)
       .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
-      .where(
-        and(
-          eq(inventory.tenantId, tenantId),
-          eq(inventory.productId, item.productId),
-          eq(inventory.status, "available"),
-          sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0` // Considerar apenas quantidade disponível
-        )
-      )
-      .orderBy(orderBy); // Buscar TODOS os lotes, não apenas o primeiro
+      .where(and(...whereConditions))
+      .orderBy(orderBy);
 
     if (availableStock.length === 0) {
       throw new Error(`Estoque insuficiente para produto ${item.productSku} (${item.productName})`);

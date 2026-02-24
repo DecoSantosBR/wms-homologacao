@@ -290,6 +290,7 @@ export const shippingRouter = router({
         }
 
         // Validar quantidade (NF sempre vem em unidades)
+        // ✅ VALIDAÇÃO REABILITADA (24/02/2026) - Bug de agrupamento corrigido em waveLogic.ts
         if (expectedQuantity !== nfeProd.quantidade) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -298,17 +299,13 @@ export const shippingRouter = router({
         }
 
         // Validar lote
-        // ⚠️ VALIDAÇÃO TEMPORARIAMENTE DESABILITADA (24/02/2026)
-        // Motivo: Bug de sobrescrita de lotes no picking está sendo corrigido
-        // TODO: Reabilitar após correção completa do fluxo de múltiplos lotes
-        /*
+        // ✅ VALIDAÇÃO REABILITADA (24/02/2026) - Bug de agrupamento corrigido em waveLogic.ts
         if (orderItem.batch && nfeProd.lote && orderItem.batch !== nfeProd.lote) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Lote divergente para SKU ${nfeProd.codigo}: Pedido=${orderItem.batch}, NF=${nfeProd.lote}`,
           });
         }
-        */
       }
 
       // Validar volumes (comparar com total esperado do pedido)

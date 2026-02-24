@@ -3128,3 +3128,26 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - [x] Permitir vinculação de NF-e sem validar correspondência de lotes
 - [x] Arquivo modificado: server/shippingRouter.ts
 - [x] Validação comentada com TODO para reabilitar após correção completa
+
+
+## 🔴 ERRO CRÍTICO - 24/02/2026 07:46
+
+### Quantidade divergente ao vincular NF-e - CAUSA RAIZ IDENTIFICADA
+- [x] Erro: "Quantidade divergente para SKU 401460P: Pedido=560 unidades, NF=160 unidades"
+- [x] Problema: Sistema está mostrando apenas 560 unidades (último lote) ao invés de 720 (160 + 560)
+- [x] Causa raiz: Agrupamento incorreto na criação do pedido (agrupa por SKU ao invés de SKU+Lote)
+- [x] Solução temporária: Validações desabilitadas
+
+### Plano de Correção Definitiva
+- [x] 1. Verificar agrupamento em routers.ts - JÁ ESTAVA CORRETO (cria 1 linha por lote)
+- [x] 2. Verificar agrupamento em clientPortalRouter.ts - JÁ ESTAVA CORRETO
+- [x] 3. Corrigir geração de alocações em waveLogic.ts - CORRIGIDO
+  - consolidateItems: Agora agrupa por productId + batch (chave composta)
+  - allocateLocations: Agora filtra estoque por batch específico
+- [x] 4. Verificar propagação de lote em stage.ts - JÁ ESTAVA CORRETO
+- [x] 5. Reabilitar validações - REABILITADAS em shippingRouter.ts
+
+### Arquivos Modificados
+- server/waveLogic.ts: Interface ConsolidatedItem + consolidateItems + allocateLocations
+- server/shippingRouter.ts: Validações de quantidade e lote reabilitadas
+- server/collectorPickingRouter.ts: Filtro por batch no UPDATE (correção anterior)
