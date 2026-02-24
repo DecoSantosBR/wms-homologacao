@@ -9,6 +9,7 @@ import {
   products,
   inventory,
   pickingReservations,
+  pickingAllocations,
   labelAssociations,
   tenants,
   warehouseLocations,
@@ -609,26 +610,27 @@ export async function completeStageCheck(params: {
   // Movimentar para expedição (EXP)
   // Para cada item, movimentar quantidade conferida das reservas para endereço de expedição
   for (const item of items) {
-    // Buscar reservas do produto+lote para este pedido
-    const reservationConditions = [
-      eq(pickingReservations.pickingOrderId, stageCheck.pickingOrderId),
-      eq(inventory.productId, item.productId),
+    // Buscar alocações do produto+lote para este pedido
+    const allocationConditions = [
+      eq(pickingAllocations.pickingOrderId, stageCheck.pickingOrderId),
+      eq(pickingAllocations.productId, item.productId),
     ];
     
     // ✅ FILTRAR POR LOTE se o item tiver batch
     if (item.batch) {
-      reservationConditions.push(eq(inventory.batch, item.batch));
+      allocationConditions.push(eq(pickingAllocations.batch, item.batch));
     }
     
     const reservations = await dbConn
       .select({
-        id: pickingReservations.id,
-        inventoryId: pickingReservations.inventoryId,
-        quantity: pickingReservations.quantity,
+        id: pickingAllocations.id,
+        inventoryId: sql<number>`NULL`.as('inventoryId'), // Não mais usado
+        quantity: pickingAllocations.quantity,
+        locationId: pickingAllocations.locationId,
+        batch: pickingAllocations.batch,
       })
-      .from(pickingReservations)
-      .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
-      .where(and(...reservationConditions));
+      .from(pickingAllocations)
+      .where(and(...allocationConditions));
 
     let remainingToShip = item.checkedQuantity;
 
@@ -765,10 +767,7 @@ export async function completeStageCheck(params: {
         tenantId: pickingOrder.tenantId,
       });
 
-      // Remover reserva
-      await dbConn
-        .delete(pickingReservations)
-        .where(eq(pickingReservations.id, reservation.id));
+      // Alocação já foi processada (não precisa deletar)
 
       remainingToShip -= quantityToShip;
     }

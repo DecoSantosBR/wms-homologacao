@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, productLabels, printSettings, invoices } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, pickingAllocations, productLabels, printSettings, invoices } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -2138,11 +2138,6 @@ export const appRouter = router({
             .where(eq(inventory.id, reservation.inventoryId));
         }
 
-        // Excluir registros de reserva
-        await db
-          .delete(pickingReservations)
-          .where(eq(pickingReservations.pickingOrderId, input.id));
-
         // Excluir itens antigos
         await db
           .delete(pickingOrderItems)
@@ -2345,10 +2340,7 @@ export const appRouter = router({
                 .where(eq(inventory.id, reservation.inventoryId));
             }
 
-            // Excluir registros de reserva
-            await db
-              .delete(pickingReservations)
-              .where(eq(pickingReservations.pickingOrderId, orderId));
+            // Reservas já foram excluídas automaticamente (CASCADE)
           } else {
             // CORREÇÃO: Se não há reservas mas o pedido existe, pode haver reservas órfãs
             // Buscar itens do pedido para identificar posições de estoque afetadas

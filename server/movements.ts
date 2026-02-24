@@ -8,6 +8,7 @@ import {
   systemUsers,
   receivingPreallocations,
   pickingReservations,
+  pickingAllocations,
 } from "../drizzle/schema";
 
 export interface RegisterMovementInput {
@@ -79,14 +80,13 @@ export async function registerMovement(input: RegisterMovementInput) {
 
   // Calcular quantidade reservada para picking
   const reservedStock = await dbConn
-    .select({ total: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)` })
-    .from(pickingReservations)
-    .innerJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
+    .select({ total: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)` })
+    .from(pickingAllocations)
     .where(
       and(
-        eq(inventory.locationId, input.fromLocationId),
-        eq(inventory.productId, input.productId),
-        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
+        eq(pickingAllocations.locationId, input.fromLocationId),
+        eq(pickingAllocations.productId, input.productId),
+        input.batch ? eq(pickingAllocations.batch, input.batch) : sql`1=1`
       )
     );
 
@@ -404,13 +404,14 @@ export async function getLocationProducts(locationId: number, tenantId?: number 
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,
       totalQuantity: inventory.quantity,
-      reservedQuantity: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)`,
+      reservedQuantity: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)`,
       status: inventory.status,
       tenantId: products.tenantId,
     })
     .from(inventory)
     .innerJoin(products, eq(inventory.productId, products.id))
-    .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
+    .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+    .leftJoin(pickingAllocations, eq(pickingAllocations.locationId, warehouseLocations.id))
     .where(and(...whereConditions))
     .groupBy(
       inventory.id,

@@ -9,6 +9,7 @@ import {
   tenants,
   receivingPreallocations,
   pickingReservations,
+  pickingAllocations,
 } from "../drizzle/schema";
 
 export interface InventoryFilters {
@@ -335,12 +336,12 @@ export async function getLocationsWithStock(tenantId?: number | null) {
       zoneName: warehouseZones.name,
       zoneCode: warehouseZones.code,
       totalQuantity: sql<number>`SUM(${inventory.quantity})`,
-      reservedQuantity: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)`,
+      reservedQuantity: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)`,
     })
     .from(inventory)
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-    .leftJoin(pickingReservations, eq(pickingReservations.inventoryId, inventory.id))
+    .leftJoin(pickingAllocations, eq(pickingAllocations.locationId, inventory.locationId))
     .where(and(...whereConditions))
     .groupBy(
       inventory.locationId,

@@ -25,6 +25,7 @@ import {
   pickingOrders,
   pickingOrderItems,
   pickingReservations,
+  pickingAllocations,
   receivingOrders,
   receivingOrderItems,
   inventoryMovements,

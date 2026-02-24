@@ -302,6 +302,20 @@
       "when": 1771925185144,
       "tag": "0042_grey_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1771932554261,
+      "tag": "0043_new_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1771932572987,
+      "tag": "0044_dark_shadowcat",
+      "breakpoints": true
     }
   ]
 }
