@@ -3452,3 +3452,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] 🚨 CRÍTICO: Corrigir erro warehouseZones em /collector/movement (estoque estava seguro, import adicionado)
 
 - [x] 🚨 CRÍTICO: 280 unidades da NF 7777.xml recuperadas - bug em registerMovement (não criava registro no destino)
+
+- [ ] Analisar se bug de movimentação ocorre apenas no coletor ou também na web
