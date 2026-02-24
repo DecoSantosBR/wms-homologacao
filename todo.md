@@ -3383,3 +3383,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] CORREÇÃO 1: advanceItem() agora busca primeiro item pendente na lista original
 - [x] CORREÇÃO 2: isLast agora verifica se há itens pendentes em TODA a rota
 - [ ] Testar fluxo completo no coletor
+
+
+## 🐛 BUG: Erro ao finalizar conferência Stage - INSERT inventoryMovements
+
+**Sintoma:** Erro "Failed query: insert into inventoryMovements" ao finalizar conferência
+
+- [x] Investigar INSERT em stage.ts (linha ~758)
+- [x] Identificar ordem incorreta de parâmetros (serialNumber estava faltando)
+- [x] Corrigir ordem dos campos (adicionado serialNumber: null e tenantId no início)
+- [ ] Testar finalização de conferência

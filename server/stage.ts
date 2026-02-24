@@ -762,15 +762,17 @@ export async function completeStageCheck(params: {
           quantity: quantityToShip,
           tenantId: pickingOrder.tenantId,
           status: "available",
-          uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch), // ✅ Adicionar uniqueCode
+          uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
         });
       }
 
       // Registrar movimentação
       await dbConn.insert(inventoryMovements).values({
+        tenantId: pickingOrder.tenantId,
         productId: sourceInventory.productId,
         batch: sourceInventory.batch,
-        uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch), // ✅ Adicionar uniqueCode
+        uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
+        serialNumber: null, // ✅ Adicionar explicitamente para evitar deslocamento
         fromLocationId: sourceInventory.locationId,
         toLocationId: shippingLocation.id,
         quantity: quantityToShip,
@@ -779,7 +781,6 @@ export async function completeStageCheck(params: {
         referenceId: stageCheck.pickingOrderId,
         performedBy: stageCheck.operatorId,
         notes: `Movimentação automática após conferência Stage - Pedido ${pickingOrder.customerOrderNumber}`,
-        tenantId: pickingOrder.tenantId,
       });
 
       // Alocação já foi processada (não precisa deletar)
