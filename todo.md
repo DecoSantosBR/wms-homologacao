@@ -3380,5 +3380,6 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Investigar lógica de verificação de "onda completa"
 - [x] Identificar se está agrupando por productId ao invés de uniqueCode
 - [x] BUG ENCONTRADO: advanceItem() filtrava itens após refresh e usava índice errado
-- [x] CORREÇÃO: advanceItem() agora busca primeiro item pendente na lista original
+- [x] CORREÇÃO 1: advanceItem() agora busca primeiro item pendente na lista original
+- [x] CORREÇÃO 2: isLast agora verifica se há itens pendentes em TODA a rota
 - [ ] Testar fluxo completo no coletor

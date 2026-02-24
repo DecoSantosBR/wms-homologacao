@@ -1247,7 +1247,13 @@ export function CollectorPicking() {
   // SCREEN: LOCATION DONE
   // ══════════════════════════════════════════════════════════════════════════
   if (screen === "location_done") {
-    const isLast = locationIdx >= route.length - 1;
+    // Verificar se há itens pendentes em TODA a rota (não apenas no endereço atual)
+    const hasPendingItems = route.some(location => 
+      location.items.some(item => 
+        item.status === "pending" || item.status === "in_progress"
+      )
+    );
+    const isLast = !hasPendingItems;
     return (
       <CollectorLayout title="Endereço Concluído">
         <div className="space-y-4">
