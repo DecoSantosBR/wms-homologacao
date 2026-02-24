@@ -3172,4 +3172,14 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - [x] **PROBLEMA ESTAVA NA VISUALIZAÇÃO/DOCUMENTO,** não na persistência
 - [x] Localizado código: waveDocument.ts linhas 90-112
 - [x] Corrigido agrupamento: chave composta `${sku}-${batch}` ao invés de apenas `sku`
-- [x] Arquivo modificado: server/waveDocument.ts
+- [x] Arquivo modificado: server/waveDocument.ts## 🔴 BUG CRÍTICO - 24/02/2026 08:25 - RESOLVIDO
+
+### Validação de quantidade compara lote individual ao invés de total
+- [x] Erro: "Quantidade divergente para SKU 401460P: Pedido=560 unidades, NF=160 unidades"
+- [x] Problema: Validação estava comparando 1 lote (160un) com outro lote (560un) ao invés de validar lote por lote
+- [x] Causa: Validação em shippingRouter.ts buscava apenas por SKU, sempre encontrando o primeiro lote
+- [x] Solução: Modificada busca para usar chave composta SKU+Lote (linhas 280-285)
+- [x] Agora validação compara cada lote da NF com o lote correspondente do pedido
+- [x] Arquivo modificado: server/shippingRouter.tsU+Lote (linhas 280-285)
+- [x] Agora validação compara cada lote da NF com o lote correspondente do pedido
+- [x] Arquivo modificado: server/shippingRouter.ts

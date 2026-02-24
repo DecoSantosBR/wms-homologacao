@@ -275,13 +275,21 @@ export const shippingRouter = router({
         });
       }
 
-      // Validar quantidades e lotes
+      // Validar quantidades e lotes (LOTE POR LOTE)
       for (const nfeProd of nfeData.produtos) {
-        const orderItem = orderItems.find(item => 
-          item.sku === nfeProd.codigo || item.supplierCode === nfeProd.codigo
-        );
+        // ✅ BUSCAR POR SKU + LOTE (chave composta) para encontrar o lote específico
+        const orderItem = orderItems.find(item => {
+          const skuMatch = item.sku === nfeProd.codigo || item.supplierCode === nfeProd.codigo;
+          const batchMatch = !nfeProd.lote || item.batch === nfeProd.lote;
+          return skuMatch && batchMatch;
+        });
 
-        if (!orderItem) continue;
+        if (!orderItem) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Produto ${nfeProd.codigo} (Lote: ${nfeProd.lote || 'N/A'}) da NF não encontrado no pedido`,
+          });
+        }
 
         // Normalizar quantidade do pedido para unidades
         let expectedQuantity = orderItem.requestedQuantity;
@@ -289,17 +297,15 @@ export const shippingRouter = router({
           expectedQuantity = orderItem.requestedQuantity * orderItem.unitsPerBox;
         }
 
-        // Validar quantidade (NF sempre vem em unidades)
-        // ✅ VALIDAÇÃO REABILITADA (24/02/2026) - Bug de agrupamento corrigido em waveLogic.ts
+        // Validar quantidade (NF sempre vem em unidades) - LOTE POR LOTE
         if (expectedQuantity !== nfeProd.quantidade) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Quantidade divergente para SKU ${nfeProd.codigo}: Pedido=${expectedQuantity} unidades, NF=${nfeProd.quantidade} unidades`,
+            message: `Quantidade divergente para SKU ${nfeProd.codigo} Lote ${nfeProd.lote || 'N/A'}: Pedido=${expectedQuantity} unidades, NF=${nfeProd.quantidade} unidades`,
           });
         }
 
-        // Validar lote
-        // ✅ VALIDAÇÃO REABILITADA (24/02/2026) - Bug de agrupamento corrigido em waveLogic.ts
+        // Validar lote (já validado no find acima, mas mantido para clareza)
         if (orderItem.batch && nfeProd.lote && orderItem.batch !== nfeProd.lote) {
           throw new TRPCError({
             code: "BAD_REQUEST",
