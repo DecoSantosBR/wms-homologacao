@@ -458,6 +458,14 @@ export function CollectorPicking() {
       } else if (screen === "scan_product") {
         setProductScanInput(code);
         if (!selectedOrderId || !currentItem) return;
+        
+        // Validação tripla: currentItem existe e tem allocationId válido
+        if (!currentItem.allocationId) {
+          toast.error("Erro: ID de alocação inválido. Atualizando rota...");
+          refreshRoute();
+          return;
+        }
+        
         scanProductMut.mutate({
           pickingOrderId: selectedOrderId,
           allocationId: currentItem.allocationId,
@@ -912,6 +920,13 @@ export function CollectorPicking() {
                     selectedOrderId &&
                     currentItem
                   ) {
+                    // Validação de allocationId antes de enviar
+                    if (!currentItem.allocationId) {
+                      toast.error("Erro: ID de alocação inválido. Atualizando rota...");
+                      refreshRoute();
+                      return;
+                    }
+                    
                     scanProductMut.mutate({
                       pickingOrderId: selectedOrderId,
                       allocationId: currentItem.allocationId,
@@ -940,6 +955,14 @@ export function CollectorPicking() {
                 }
                 onClick={() => {
                   if (!selectedOrderId || !currentItem) return;
+                  
+                  // Validação de allocationId antes de enviar
+                  if (!currentItem.allocationId) {
+                    toast.error("Erro: ID de alocação inválido. Atualizando rota...");
+                    refreshRoute();
+                    return;
+                  }
+                  
                   scanProductMut.mutate({
                     pickingOrderId: selectedOrderId,
                     allocationId: currentItem.allocationId,

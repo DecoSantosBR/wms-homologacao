@@ -308,31 +308,35 @@ export const collectorPickingRouter = {
         .set({ status: "in_progress" })
         .where(eq(pickingOrders.waveId, input.waveId));
 
-      // Construir rota consolidada para todos os pedidos da onda
-      const allAllocations = await db
-        .select()
-        .from(pickingAllocations)
-        .where(
-          sql`${pickingAllocations.pickingOrderId} IN (${sql.join(
-            waveOrders.map((o) => sql`${o.id}`),
-            sql`, `
-          )})`
-        )
-        .orderBy(pickingAllocations.sequence);
-
-      // Agrupar alocações por endereço
-      const routeMap = new Map<string, any[]>();
-      for (const alloc of allAllocations) {
-        if (!routeMap.has(alloc.locationCode)) {
-          routeMap.set(alloc.locationCode, []);
-        }
-        routeMap.get(alloc.locationCode)!.push(alloc);
+      // Construir rota consolidada usando buildRoute para cada pedido
+      // e depois mesclar por endereço
+      const allRoutes: any[] = [];
+      for (const order of waveOrders) {
+        const orderRoute = await buildRoute(db, order.id);
+        allRoutes.push(...orderRoute);
       }
 
-      const route = Array.from(routeMap.entries()).map(([locationCode, items]) => ({
-        locationCode,
-        items,
-      }));
+      // Mesclar rotas por locationCode
+      const routeMap = new Map<string, any>();
+      for (const loc of allRoutes) {
+        if (!routeMap.has(loc.locationCode)) {
+          routeMap.set(loc.locationCode, {
+            locationId: loc.locationId,
+            locationCode: loc.locationCode,
+            sequence: loc.sequence,
+            hasFractional: loc.hasFractional,
+            allDone: loc.allDone,
+            items: [],
+          });
+        }
+        const merged = routeMap.get(loc.locationCode)!;
+        merged.items.push(...loc.items);
+        if (loc.hasFractional) merged.hasFractional = true;
+        if (!loc.allDone) merged.allDone = false;
+        if (loc.sequence < merged.sequence) merged.sequence = loc.sequence;
+      }
+
+      const route = Array.from(routeMap.values()).sort((a, b) => a.sequence - b.sequence);
 
       return {
         wave: {

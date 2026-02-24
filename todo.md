@@ -3022,3 +3022,5 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Validar se operação já foi processada
   - [x] Retornar sucesso para operações duplicadas
 - [ ] Testar fluxo offline completo
+- [x] Corrigir erro allocationId undefined ao bipar produto no coletor
+- [x] Corrigir erro de chaves duplicadas no React (key=2) no CollectorPicking
