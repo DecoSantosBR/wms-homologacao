@@ -323,6 +323,14 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
         batchGroups.set(batchKey, existing);
       }
       
+      // Buscar SKU do produto para gerar uniqueCode
+      const product = await dbConn.select({ sku: products.sku })
+        .from(products)
+        .where(eq(products.id, item.productId))
+        .limit(1);
+
+      const { getUniqueCode } = await import("../utils/uniqueCode");
+
       // Criar registro de estoque para cada lote
       for (const [batch, data] of Array.from(batchGroups)) {
         // CORREÇÃO CRÍTICA: Criar estoque com status 'quarantine' ao invés de 'available'
@@ -336,6 +344,7 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
           batch: batch === "SEM_LOTE" ? null : batch,
           expiryDate: data.expiryDate,
           status: "quarantine", // Alterado de 'available' para 'quarantine'
+          uniqueCode: getUniqueCode(product[0]?.sku || "", batch === "SEM_LOTE" ? null : batch), // ✅ Adicionar uniqueCode
         });
         
         // Registrar movimentação

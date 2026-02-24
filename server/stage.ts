@@ -748,6 +748,7 @@ export async function completeStageCheck(params: {
           quantity: quantityToShip,
           tenantId: pickingOrder.tenantId,
           status: "available",
+          uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch), // ✅ Adicionar uniqueCode
         });
       }
 

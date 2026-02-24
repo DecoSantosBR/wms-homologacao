@@ -3338,3 +3338,11 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir CollectorStage.tsx (mobile) para comparar por productSku + batch
 - [x] Adicionar exibição do lote na interface de itens conferidos
 - [x] Testar fluxo completo: criar pedido com múltiplos lotes → gerar onda → separar → conferir no Stage
+
+
+## 🐛 BUG: Tabela inventory não registra uniqueCode
+
+- [x] Investigar INSERTs em inventory (receiving, movements, stage)
+- [x] Corrigir todos os INSERTs para incluir uniqueCode
+- [x] Popular uniqueCode NULL em registros existentes
+- [x] Testar fluxo completo

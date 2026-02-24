@@ -102,8 +102,18 @@ export async function recalculateInventoryBalances(): Promise<{
   let created = 0;
   const recordsToInsert = [];
 
+  // Buscar SKUs de todos os produtos de uma vez
+  const productIds = Array.from(new Set(Array.from(balances.values()).map(b => b.productId)));
+  const productSkus = await db.select({ id: products.id, sku: products.sku })
+    .from(products)
+    .where(sql`${products.id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`);  
+
+  const skuMap = new Map(productSkus.map(p => [p.id, p.sku]));
+  const { getUniqueCode } = await import("../utils/uniqueCode");
+
   for (const [key, balance] of Array.from(balances.entries())) {
     if (balance.totalQuantity > 0) {
+      const sku = skuMap.get(balance.productId) || "";
       recordsToInsert.push({
         productId: balance.productId,
         locationId: balance.locationId,
@@ -113,6 +123,7 @@ export async function recalculateInventoryBalances(): Promise<{
         quantity: balance.totalQuantity,
         tenantId: balance.tenantId,
         status: "available" as const,
+        uniqueCode: getUniqueCode(sku, balance.batch), // ✅ Adicionar uniqueCode
       });
     }
   }
@@ -208,6 +219,14 @@ export async function updateInventoryBalance(
       throw new Error('tenantId é obrigatório para criar inventory. Verifique o fluxo de chamada.');
     }
     
+    // Buscar SKU do produto para gerar uniqueCode
+    const product = await db.select({ sku: products.sku })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+
+    const { getUniqueCode } = await import("../utils/uniqueCode");
+
     // Criar novo registro
     await db.insert(inventory).values({
       productId,
@@ -217,6 +236,7 @@ export async function updateInventoryBalance(
       serialNumber,
       quantity: quantityChange,
       tenantId,
+      uniqueCode: getUniqueCode(product[0]?.sku || "", batch), // ✅ Adicionar uniqueCode
       status: "available",
     });
   }

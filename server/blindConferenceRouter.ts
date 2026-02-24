@@ -533,6 +533,14 @@ export const blindConferenceRouter = router({
           throw new Error(`Erro ao finalizar conferência: ${validation.reason}`);
         }
 
+        // Buscar SKU do produto para gerar uniqueCode
+        const product = await db.select({ sku: products.sku })
+          .from(products)
+          .where(eq(products.id, assoc.productId))
+          .limit(1);
+
+        const { getUniqueCode } = await import("./utils/uniqueCode");
+
         await db.insert(inventory).values({
           tenantId: session[0].tenantId || null,
           productId: assoc.productId,
@@ -541,6 +549,7 @@ export const blindConferenceRouter = router({
           expiryDate: assoc.expiryDate,
           quantity: assoc.totalUnits,
           status: "available", // Disponível após conferência
+          uniqueCode: getUniqueCode(product[0]?.sku || "", assoc.batch), // ✅ Adicionar uniqueCode
         });
       }
 

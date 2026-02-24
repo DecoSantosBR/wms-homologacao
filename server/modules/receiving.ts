@@ -163,6 +163,14 @@ export async function moveToQuarantine(
     throw new Error("Ordem de recebimento não encontrada");
   }
   
+  // Buscar SKU do produto para gerar uniqueCode
+  const product = await db.select({ sku: products.sku })
+    .from(products)
+    .where(eq(products.id, item[0].productId))
+    .limit(1);
+
+  const { getUniqueCode } = await import("../utils/uniqueCode");
+
   // Criar registro de inventário em quarentena (locationId = 1 como quarentena temporária)
   const inventoryResult = await db.insert(inventory).values({
     tenantId: order[0].tenantId,
@@ -173,6 +181,7 @@ export async function moveToQuarantine(
     serialNumber,
     quantity,
     status: "quarantine",
+    uniqueCode: getUniqueCode(product[0]?.sku || "", batch), // ✅ Adicionar uniqueCode
   });
   
   // Registrar movimentação

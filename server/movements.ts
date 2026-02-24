@@ -210,6 +210,14 @@ export async function registerMovement(input: RegisterMovementInput) {
         })
         .where(eq(inventory.id, toInventory[0].id));
     } else {
+      // Buscar SKU do produto para gerar uniqueCode
+      const product = await dbConn.select({ sku: products.sku })
+        .from(products)
+        .where(eq(products.id, input.productId))
+        .limit(1);
+
+      const { getUniqueCode } = await import("./utils/uniqueCode");
+
       // Criar novo registro (validação já foi feita na FASE 1)
       await dbConn.insert(inventory).values({
         productId: input.productId,
@@ -219,6 +227,7 @@ export async function registerMovement(input: RegisterMovementInput) {
         expiryDate: fromInventory[0]?.expiryDate || null,
         status: "available",
         tenantId: tenantId || null,
+        uniqueCode: getUniqueCode(product[0]?.sku || "", input.batch || null), // ✅ Adicionar uniqueCode
       });
     }
   }

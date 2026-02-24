@@ -1377,6 +1377,14 @@ export const shippingRouter = router({
             })
             .where(eq(inventory.id, storageInventory.id));
         } else {
+          // Buscar SKU do produto para gerar uniqueCode
+          const product = await db.select({ sku: products.sku })
+            .from(products)
+            .where(eq(products.id, movement.productId))
+            .limit(1);
+
+          const { getUniqueCode } = await import("./utils/uniqueCode");
+
           // Recriar registro de estoque no endereço de armazenagem
           await db.insert(inventory).values({
             locationId: movement.fromLocationId,
@@ -1386,6 +1394,7 @@ export const shippingRouter = router({
             quantity: movement.quantity,
             tenantId: order.tenantId,
             status: "available",
+            uniqueCode: getUniqueCode(product[0]?.sku || "", movement.batch || null), // ✅ Adicionar uniqueCode
           });
         }
 
