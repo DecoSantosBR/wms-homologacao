@@ -3346,3 +3346,19 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir todos os INSERTs para incluir uniqueCode
 - [x] Popular uniqueCode NULL em registros existentes
 - [x] Testar fluxo completo
+
+
+## 🐛 BUG: Movimentação de estoque em EXP
+
+**Problema 1: Finalização da onda não movimenta para EXP**
+- [x] Investigar completeStageCheck em stage.ts
+- [x] Identificar onde deveria ocorrer a movimentação de armazenagem → EXP
+- [x] Corrigir lógica para movimentar saldos ao finalizar conferência
+- [x] BUG ENCONTRADO: Código usava `inventoryId = NULL` para buscar estoque
+- [x] CORREÇÃO: Buscar inventory usando productId + locationId + batch
+
+**Problema 2: Geração de romaneio não reserva saldo em EXP**
+- [x] Investigar código de geração de romaneio (shippingRouter.ts)
+- [x] Adicionar UPDATE para mudar status de "available" para "reserved" em EXP
+- [x] CORREÇÃO: Adicionado `status: "reserved"` no UPDATE de createManifest
+- [ ] Testar fluxo completo: separar → conferir → gerar romaneio → verificar status

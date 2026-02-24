@@ -639,7 +639,18 @@ export async function completeStageCheck(params: {
 
       const quantityToShip = Math.min(remainingToShip, reservation.quantity);
 
-      // Buscar estoque origem
+      // Buscar estoque origem usando productId + locationId + batch
+      const inventoryConditions = [
+        eq(inventory.productId, item.productId),
+        eq(inventory.locationId, reservation.locationId),
+      ];
+      
+      if (reservation.batch) {
+        inventoryConditions.push(eq(inventory.batch, reservation.batch));
+      } else {
+        inventoryConditions.push(isNull(inventory.batch));
+      }
+      
       const [sourceInventory] = await dbConn
         .select({
           id: inventory.id,
@@ -654,10 +665,13 @@ export async function completeStageCheck(params: {
         })
         .from(inventory)
         .leftJoin(products, eq(inventory.productId, products.id))
-        .where(eq(inventory.id, reservation.inventoryId))
+        .where(and(...inventoryConditions))
         .limit(1);
 
-      if (!sourceInventory) continue;
+      if (!sourceInventory) {
+        console.error(`[STAGE] Estoque não encontrado para produto ${item.productSku}, lote ${reservation.batch}, endereço ${reservation.locationId}`);
+        continue;
+      }
 
       // Validar se há estoque suficiente
       if (sourceInventory.quantity < quantityToShip) {
@@ -673,7 +687,7 @@ export async function completeStageCheck(params: {
         .set({
           quantity: sourceInventory.quantity - quantityToShip,
         })
-        .where(eq(inventory.id, reservation.inventoryId));
+        .where(eq(inventory.id, sourceInventory.id)); // ✅ Usar sourceInventory.id ao invés de reservation.inventoryId
 
       // ✅ ATUALIZAR STATUS DO ENDEREÇO SE FICOU VAZIO
       const newQuantity = sourceInventory.quantity - quantityToShip;

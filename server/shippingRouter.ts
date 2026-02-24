@@ -624,11 +624,12 @@ export const shippingRouter = router({
             throw new Error(`Erro de integridade: reserva excederia estoque físico. Produto ${item.productId}, Endereço ${stock.locationId}`);
           }
           
-          // Atualizar reservedQuantity
+          // Atualizar reservedQuantity e status
           await db
             .update(inventory)
             .set({ 
-              reservedQuantity: sql`${inventory.reservedQuantity} + ${quantityToReserve}` 
+              reservedQuantity: sql`${inventory.reservedQuantity} + ${quantityToReserve}`,
+              status: "reserved" // ✅ Mudar status para "reserved" ao criar romaneio
             })
             .where(eq(inventory.id, stock.inventoryId));
           
