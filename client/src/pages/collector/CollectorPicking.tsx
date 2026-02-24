@@ -457,16 +457,7 @@ export function CollectorPicking() {
         });
       } else if (screen === "scan_product") {
         setProductScanInput(code);
-        if (!selectedOrderId || !currentItem) {
-          toast.error('Item não encontrado. Atualizando rota...');
-          refreshRoute();
-          return;
-        }
-        if (!currentItem.allocationId) {
-          toast.error('ID de alocação inválido. Atualizando rota...');
-          refreshRoute();
-          return;
-        }
+        if (!selectedOrderId || !currentItem) return;
         scanProductMut.mutate({
           pickingOrderId: selectedOrderId,
           allocationId: currentItem.allocationId,
@@ -919,17 +910,13 @@ export function CollectorPicking() {
                     e.key === "Enter" &&
                     productScanInput.trim() &&
                     selectedOrderId &&
-                    currentItem &&
-                    currentItem.allocationId
+                    currentItem
                   ) {
                     scanProductMut.mutate({
                       pickingOrderId: selectedOrderId,
                       allocationId: currentItem.allocationId,
                       scannedCode: productScanInput.trim(),
                     });
-                  } else if (e.key === "Enter" && (!currentItem || !currentItem.allocationId)) {
-                    toast.error('Item não encontrado. Atualizando rota...');
-                    refreshRoute();
                   }
                 }}
                 placeholder="Código / etiqueta do produto"
@@ -952,16 +939,7 @@ export function CollectorPicking() {
                   !productScanInput.trim() || scanProductMut.isPending
                 }
                 onClick={() => {
-                  if (!selectedOrderId || !currentItem) {
-                    toast.error('Item não encontrado. Atualizando rota...');
-                    refreshRoute();
-                    return;
-                  }
-                  if (!currentItem.allocationId) {
-                    toast.error('ID de alocação inválido. Atualizando rota...');
-                    refreshRoute();
-                    return;
-                  }
+                  if (!selectedOrderId || !currentItem) return;
                   scanProductMut.mutate({
                     pickingOrderId: selectedOrderId,
                     allocationId: currentItem.allocationId,
