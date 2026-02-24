@@ -3108,3 +3108,23 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - [ ] Gerar onda e separar no coletor
 - [ ] Finalizar picking e verificar que ambos os lotes estão preservados
 - [ ] Vincular NF-e e confirmar que quantidades batem
+
+
+## 🐛 BUG REPORTADO - 24/02/2026 07:29
+
+### Erro na página /picking
+- [x] Corrigir erro "No procedure found on path wave.list" - RESOLVIDO: Servidor reiniciado
+- [x] Página: /picking
+- [x] Usuário: admin (André Santos)
+- [x] Causa: Cache do servidor após mudanças anteriores
+- [x] Solução: Reinicialização do servidor de desenvolvimento
+
+
+## 🔧 AJUSTE SOLICITADO - 24/02/2026 07:42
+
+### Desabilitar validação de lote na vinculação de NF-e
+- [x] Localizar código de validação de lote no módulo shipping (linhas 300-306)
+- [x] Desabilitar/comentar validação temporariamente
+- [x] Permitir vinculação de NF-e sem validar correspondência de lotes
+- [x] Arquivo modificado: server/shippingRouter.ts
+- [x] Validação comentada com TODO para reabilitar após correção completa
