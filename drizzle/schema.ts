@@ -302,6 +302,7 @@ export const receivingOrderItems = mysqlTable("receivingOrderItems", {
   batch: varchar("batch", { length: 50 }),
   expiryDate: timestamp("expiryDate"),
   serialNumber: varchar("serialNumber", { length: 100 }),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   status: mysqlEnum("status", ["pending", "in_quarantine", "approved", "rejected", "awaiting_approval"]).default("pending").notNull(),
   rejectionReason: text("rejectionReason"),
   approvedBy: int("approvedBy"),
@@ -318,6 +319,7 @@ export const receivingPreallocations = mysqlTable("receivingPreallocations", {
   locationId: int("locationId").notNull(), // Endereço de armazenagem pré-definido
   batch: varchar("batch", { length: 50 }),
   quantity: int("quantity").notNull(),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   status: mysqlEnum("status", ["pending", "allocated", "cancelled"]).default("pending").notNull(),
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -329,6 +331,7 @@ export const receivingConferences = mysqlTable("receivingConferences", {
   id: int("id").autoincrement().primaryKey(),
   receivingOrderItemId: int("receivingOrderItemId").notNull(),
   batch: varchar("batch", { length: 50 }),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   quantityConferenced: int("quantityConferenced").notNull(), // Quantidade conferida nesta conferência
   conferencedBy: int("conferencedBy").notNull(), // Operador que fez a conferência
   conferencedAt: timestamp("conferencedAt").defaultNow().notNull(),
@@ -345,6 +348,7 @@ export const receivingDivergences = mysqlTable("receivingDivergences", {
   receivedQuantity: int("receivedQuantity").notNull(),
   differenceQuantity: int("differenceQuantity").notNull(), // Diferença (positivo = sobra, negativo = falta)
   batch: varchar("batch", { length: 50 }),
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
   reportedBy: int("reportedBy").notNull(), // Operador que reportou
   reportedAt: timestamp("reportedAt").defaultNow().notNull(),
@@ -964,6 +968,57 @@ export const invoices = mysqlTable("invoices", {
 });
 
 /**
+ * Itens de Notas Fiscais de Saída (Picking Invoice Items)
+ * Armazena itens individuais da NF-e de saída para rastreabilidade e queries eficientes
+ */
+export const pickingInvoiceItems = mysqlTable("pickingInvoiceItems", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull(), // Referência à NF-e
+  productId: int("productId"), // Produto vinculado (pode ser null se não encontrado)
+  sku: varchar("sku", { length: 100 }).notNull(), // SKU/Código do produto na NF-e
+  productName: varchar("productName", { length: 255 }).notNull(), // Nome do produto
+  batch: varchar("batch", { length: 50 }), // Lote
+  expiryDate: timestamp("expiryDate"), // Validade
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  quantity: int("quantity").notNull(), // Quantidade (sempre em unidades)
+  unitValue: decimal("unitValue", { precision: 15, scale: 4 }), // Valor unitário
+  totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total do item
+  ncm: varchar("ncm", { length: 10 }), // Código NCM
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  invoiceIdx: index("picking_invoice_items_invoice_idx").on(table.invoiceId),
+  productIdx: index("picking_invoice_items_product_idx").on(table.productId),
+  uniqueCodeIdx: index("picking_invoice_items_unique_code_idx").on(table.uniqueCode),
+}));
+
+/**
+ * Itens de Notas Fiscais de Entrada (Receiving Invoice Items)
+ * Armazena itens individuais da NF-e de entrada para rastreabilidade e queries eficientes
+ */
+export const receivingInvoiceItems = mysqlTable("receivingInvoiceItems", {
+  id: int("id").autoincrement().primaryKey(),
+  receivingOrderId: int("receivingOrderId").notNull(), // Referência ao pedido de recebimento
+  nfeKey: varchar("nfeKey", { length: 44 }), // Chave da NF-e (44 dígitos)
+  nfeNumber: varchar("nfeNumber", { length: 20 }), // Número da NF-e
+  productId: int("productId"), // Produto vinculado (pode ser null se não encontrado)
+  sku: varchar("sku", { length: 100 }).notNull(), // SKU/Código do produto na NF-e
+  productName: varchar("productName", { length: 255 }).notNull(), // Nome do produto
+  batch: varchar("batch", { length: 50 }), // Lote
+  expiryDate: timestamp("expiryDate"), // Validade
+  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  quantity: int("quantity").notNull(), // Quantidade (sempre em unidades)
+  unitValue: decimal("unitValue", { precision: 15, scale: 4 }), // Valor unitário
+  totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total do item
+  ncm: varchar("ncm", { length: 10 }), // Código NCM
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  receivingOrderIdx: index("receiving_invoice_items_order_idx").on(table.receivingOrderId),
+  productIdx: index("receiving_invoice_items_product_idx").on(table.productId),
+  uniqueCodeIdx: index("receiving_invoice_items_unique_code_idx").on(table.uniqueCode),
+  nfeKeyIdx: index("receiving_invoice_items_nfe_key_idx").on(table.nfeKey),
+}));
+
+/**
  * Romaneios de Transporte (Shipment Manifests)
  * Consolida múltiplos pedidos e NFs para uma transportadora
  */
@@ -1047,6 +1102,10 @@ export type PrintSettings = typeof printSettings.$inferSelect;
 export type InsertPrintSettings = typeof printSettings.$inferInsert;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = typeof invoices.$inferInsert;
+export type PickingInvoiceItem = typeof pickingInvoiceItems.$inferSelect;
+export type InsertPickingInvoiceItem = typeof pickingInvoiceItems.$inferInsert;
+export type ReceivingInvoiceItem = typeof receivingInvoiceItems.$inferSelect;
+export type InsertReceivingInvoiceItem = typeof receivingInvoiceItems.$inferInsert;
 export type ShipmentManifest = typeof shipmentManifests.$inferSelect;
 export type InsertShipmentManifest = typeof shipmentManifests.$inferInsert;
 export type ShipmentManifestItem = typeof shipmentManifestItems.$inferSelect;

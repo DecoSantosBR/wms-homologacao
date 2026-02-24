@@ -3221,3 +3221,17 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] 4. Remover type assertions (as any) após regenerar tipos Drizzle
 - [ ] 5. Testar fluxo completo: Criar pedido → Gerar onda → Separar → Conferir → Vincular NF-e
 - [ ] 6. Refatorar validação de NF-e para usar uniqueCode ao invés de filtros compostos
+
+## 🔧 ADICIONAR UNIQUECODE EM TABELAS DE RECEBIMENTO - 24/02/2026 09:15
+
+### Adicionar uniqueCode nas tabelas de recebimento para rastreabilidade completa
+- [ ] 1. Adicionar coluna uniqueCode em receivingOrderItems
+- [ ] 2. Adicionar coluna uniqueCode em receivingDivergences
+- [ ] 3. Adicionar coluna uniqueCode em receivingConferences
+- [ ] 4. Adicionar coluna uniqueCode em receivingPreallocations
+- [ ] 5. Popular uniqueCode nas 4 tabelas com dados existentes
+- [ ] 6. Refatorar código de recebimento para usar uniqueCode
+- [ ] 7. Criar tabela invoiceItems com uniqueCode para rastreabilidade de NF-e
+- [ ] 8. Refatorar importação de NF-e para popular invoiceItems
+- [ ] 9. Renomear invoiceItems para pickingInvoiceItems (NF-e de saída)
+- [ ] 10. Criar receivingInvoiceItems (NF-e de entrada)

@@ -288,6 +288,20 @@
       "when": 1771923575474,
       "tag": "0040_unusual_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1771925088017,
+      "tag": "0041_supreme_silhouette",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1771925185144,
+      "tag": "0042_grey_hannibal_king",
+      "breakpoints": true
     }
   ]
 }
