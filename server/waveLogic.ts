@@ -15,8 +15,8 @@ interface ConsolidatedItem {
   productId: number;
   productSku: string;
   productName: string;
-  batch: string | null; // ✅ Lote específico
-  expiryDate: Date | null; // ✅ Validade do lote
+  batch: string | null; // ✅ Lote específico (null quando produto não tem lote)
+  expiryDate: Date | null; // ✅ Validade do lote (null quando não tem validade)
   totalQuantity: number;
   orders: Array<{ orderId: number; quantity: number }>; // Rastreabilidade
 }
@@ -107,11 +107,11 @@ async function allocateLocations(
   tenantId: number,
   consolidatedItems: ConsolidatedItem[],
   pickingRule: "FIFO" | "FEFO" | "Direcionado"
-): Promise<Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; batch?: string; expiryDate?: Date; allocatedQuantity: number }>> {
+): Promise<Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; allocatedQuantity: number }>> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const allocated: Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; batch?: string; expiryDate?: Date; allocatedQuantity: number }> = [];
+  const allocated: Array<ConsolidatedItem & { inventoryId: number; locationId: number; locationCode: string; allocatedQuantity: number }> = [];
 
   for (const item of consolidatedItems) {
     // Buscar TODOS os lotes disponíveis do produto ordenado por FIFO ou FEFO
@@ -168,14 +168,22 @@ async function allocateLocations(
 
       const quantityToAllocate = Math.min(location.availableQuantity, remainingQuantity);
 
+      // Garantir tipos corretos para batch e expiryDate (leftJoin retorna undefined, converter para null)
+      const batchValue: string | null = location.batch !== undefined ? location.batch : (item.batch !== undefined ? item.batch : null);
+      const expiryValue: Date | null = location.expiryDate !== undefined ? location.expiryDate : (item.expiryDate !== undefined ? item.expiryDate : null);
+
       allocated.push({
-        ...item,
-        inventoryId: location.inventoryId, // ID do registro de inventory para atualizar reservedQuantity
+        productId: item.productId,
+        productSku: item.productSku,
+        productName: item.productName,
+        batch: batchValue,
+        expiryDate: expiryValue,
+        totalQuantity: item.totalQuantity,
+        orders: item.orders,
+        inventoryId: location.inventoryId,
         locationId: location.locationId,
         locationCode: location.locationCode!,
-        batch: location.batch || undefined,
-        expiryDate: location.expiryDate || undefined,
-        allocatedQuantity: quantityToAllocate, // Quantidade alocada DESTE lote
+        allocatedQuantity: quantityToAllocate,
       });
 
       remainingQuantity -= quantityToAllocate;

@@ -3151,3 +3151,25 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 - server/waveLogic.ts: Interface ConsolidatedItem + consolidateItems + allocateLocations
 - server/shippingRouter.ts: Validações de quantidade e lote reabilitadas
 - server/collectorPickingRouter.ts: Filtro por batch no UPDATE (correção anterior)
+
+
+## 🔴 BUG CRÍTICO - 24/02/2026 08:03
+
+### Sobrescrita de lotes ao gerar onda (documento mostra apenas 1 lote)
+- [ ] Problema: Documento da onda mostra SKU 401460P com 720un e lote 22D08LB108
+- [ ] Esperado: 2 linhas - Lote 22D08LB108 (160un) + Lote 22D14LA124 (560un)
+- [ ] Investigar: Código de geração de documento da onda e inserção em pickingWaveItems
+- [ ] Possível causa: Inserção em pickingWaveItems pode estar agrupando por SKU
+
+
+## 🔴 BUG CRÍTICO - 24/02/2026 08:18 - RESOLVIDO
+
+### Sobrescrita de lotes na visualização da onda
+- [x] Documento da onda mostra apenas 1 lote (720un) ao invés de 2 (160un + 560un)
+- [x] SKU 401460P - Lote 22D08LB108 aparece com 720un (deveria ser 160un)
+- [x] Lote 22D14LA124 (560un) não aparece no documento
+- [x] **BANCO DE DADOS ESTÁ CORRETO:** pickingWaveItems tem 2 registros separados (confirmado via SQL)
+- [x] **PROBLEMA ESTAVA NA VISUALIZAÇÃO/DOCUMENTO,** não na persistência
+- [x] Localizado código: waveDocument.ts linhas 90-112
+- [x] Corrigido agrupamento: chave composta `${sku}-${batch}` ao invés de apenas `sku`
+- [x] Arquivo modificado: server/waveDocument.ts
