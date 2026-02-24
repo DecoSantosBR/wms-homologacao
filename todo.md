@@ -3446,3 +3446,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Testar geração de romaneio
 
 - [x] Corrigir duplicação de estoque: zerar reservedQuantity ao mover de armazenagem para EXP
+
+- [x] Corrigir erro "warehouseZones is not defined" ao finalizar conferência de recebimento

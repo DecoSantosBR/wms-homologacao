@@ -5,7 +5,9 @@ import {
   receivingOrderItems,
   inventory,
   inventoryMovements,
-  products
+  products,
+  warehouseLocations,
+  warehouseZones
 } from "../../drizzle/schema";
 
 // ============================================================================
