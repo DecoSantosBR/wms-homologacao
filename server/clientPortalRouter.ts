@@ -1156,6 +1156,7 @@ export const clientPortalRouter = router({
           .select({
             id: inventory.id,
             locationId: inventory.locationId,
+            locationCode: warehouseLocations.code,
             quantity: inventory.quantity,
             reservedQuantity: inventory.reservedQuantity,
             batch: inventory.batch,
@@ -1243,17 +1244,35 @@ export const clientPortalRouter = router({
             .where(eq(inventory.id, stock.id));
 
           // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
-          // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
           await db.insert(pickingOrderItems).values({
             pickingOrderId: orderId,
             productId: item.productId,
             requestedQuantity: toReserve, // ✅ Quantidade deste lote
             requestedUM: "unit",
             unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+            unitsPerBox: item.requestedUM === "box" ? product.unitsPerBox : undefined,
             batch: stock.batch, // ✅ Lote específico
             expiryDate: stock.expiryDate, // ✅ Validade
             inventoryId: stock.id, // ✅ Vínculo com inventário
             status: "pending" as const,
+            uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
+          });
+
+          // ✅ CRIAR pickingAllocation para este lote
+          await db.insert(pickingAllocations).values({
+            pickingOrderId: orderId,
+            productId: item.productId,
+            productSku: product.sku,
+            locationId: stock.locationId,
+            locationCode: stock.locationCode,
+            batch: stock.batch,
+            expiryDate: stock.expiryDate,
+            uniqueCode: getUniqueCode(product.sku, stock.batch),
+            quantity: toReserve,
+            isFractional: false,
+            sequence: 0,
+            status: "pending",
+            pickedQuantity: 0,
           });
 
           remainingToReserve -= toReserve;
@@ -1566,6 +1585,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 .select({
                   id: inventory.id,
                   locationId: inventory.locationId,
+                  locationCode: warehouseLocations.code,
                   quantity: inventory.quantity,
                   reservedQuantity: inventory.reservedQuantity,
                   batch: inventory.batch,
@@ -1649,17 +1669,35 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   .where(eq(inventory.id, stock.id));
 
                 // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
-                // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
                 await db.insert(pickingOrderItems).values({
                   pickingOrderId: orderId,
                   productId,
                   requestedQuantity: toReserve, // ✅ Quantidade deste lote
                   requestedUM: "unit",
                   unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+                  unitsPerBox: requestedUM === "box" ? product.unitsPerBox : undefined,
                   batch: stock.batch, // ✅ Lote específico
                   expiryDate: stock.expiryDate, // ✅ Validade
                   inventoryId: stock.id, // ✅ Vínculo com inventário
                   status: "pending" as const,
+                  uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
+                });
+
+                // ✅ CRIAR pickingAllocation para este lote
+                await db.insert(pickingAllocations).values({
+                  pickingOrderId: orderId,
+                  productId,
+                  productSku: product.sku,
+                  locationId: stock.locationId,
+                  locationCode: stock.locationCode,
+                  batch: stock.batch,
+                  expiryDate: stock.expiryDate,
+                  uniqueCode: getUniqueCode(product.sku, stock.batch),
+                  quantity: toReserve,
+                  isFractional: false,
+                  sequence: 0,
+                  status: "pending",
+                  pickedQuantity: 0,
                 });
 
                 remainingToReserve -= toReserve;

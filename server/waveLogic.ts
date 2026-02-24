@@ -242,35 +242,33 @@ export async function createWave(params: CreateWaveParams) {
 
   const pickingRule = tenant.pickingRule as "FIFO" | "FEFO" | "Direcionado";
 
-  // 3. Buscar reservas dos pedidos (já alocadas durante criação do pedido)
+  // 3. Buscar alocações dos pedidos (já criadas durante criação do pedido)
   const reservations = await db
     .select({
-      pickingOrderId: pickingReservations.pickingOrderId, // ID do pedido de origem
-      productId: pickingReservations.productId,
-      inventoryId: pickingReservations.inventoryId,
-      quantity: pickingReservations.quantity,
-      productSku: products.sku,
+      pickingOrderId: pickingAllocations.pickingOrderId, // ID do pedido de origem
+      productId: pickingAllocations.productId,
+      inventoryId: sql<number>`NULL`.as('inventoryId'), // Não mais usado
+      quantity: pickingAllocations.quantity,
+      productSku: pickingAllocations.productSku,
       productName: products.description,
-      locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
-      batch: inventory.batch,
-      expiryDate: inventory.expiryDate,
+      locationId: pickingAllocations.locationId,
+      locationCode: pickingAllocations.locationCode,
+      batch: pickingAllocations.batch,
+      expiryDate: pickingAllocations.expiryDate,
       unit: pickingOrderItems.unit, // Unidade do pedido original
       unitsPerBox: pickingOrderItems.unitsPerBox, // Unidades por caixa
     })
-    .from(pickingReservations)
-    .leftJoin(products, eq(pickingReservations.productId, products.id))
-    .leftJoin(inventory, eq(pickingReservations.inventoryId, inventory.id))
-    .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+    .from(pickingAllocations)
+    .leftJoin(products, eq(pickingAllocations.productId, products.id))
+    .leftJoin(warehouseLocations, eq(pickingAllocations.locationId, warehouseLocations.id))
     .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .leftJoin(pickingOrderItems, and(
-      eq(pickingReservations.pickingOrderId, pickingOrderItems.pickingOrderId),
-      eq(pickingReservations.productId, pickingOrderItems.productId),
-      eq(pickingReservations.inventoryId, pickingOrderItems.inventoryId) // ✅ Garantir 1:1 entre reserva e item
+      eq(pickingAllocations.pickingOrderId, pickingOrderItems.pickingOrderId),
+      eq(pickingAllocations.productId, pickingOrderItems.productId)
     ))
     .where(
       and(
-        inArray(pickingReservations.pickingOrderId, params.orderIds),
+        inArray(pickingAllocations.pickingOrderId, params.orderIds),
         // Excluir zonas especiais (Expedição, Recebimento, Não Conformidades, Devoluções)
         sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
       )
