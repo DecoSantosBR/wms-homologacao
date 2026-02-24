@@ -1833,10 +1833,11 @@ export const appRouter = router({
           .limit(1);
 
         // PASSO 3: Criar itens e reservar estoque
+        // CORREÇÃO BUG 2: Criar UMA linha em pickingOrderItems por LOTE, não por produto
         for (const validation of stockValidations) {
           const { item, product, availableStock, quantityInUnits } = validation as any;
 
-          // Reservar estoque e registrar reservas (em unidades)
+          // Reservar estoque, registrar reservas E criar itens do pedido (em unidades)
           let remainingToReserve = quantityInUnits;
           for (const stock of availableStock) {
             if (remainingToReserve <= 0) break;
@@ -1859,21 +1860,21 @@ export const appRouter = router({
               quantity: toReserve,
             });
 
+            // ✅ NOVO: Criar item do pedido POR LOTE
+            await db.insert(pickingOrderItems).values({
+              pickingOrderId: order.id,
+              productId: item.productId,
+              inventoryId: stock.id, // ✅ Vincular ao lote específico
+              requestedQuantity: toReserve, // ✅ Quantidade DESTE lote
+              requestedUM: "unit",
+              unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
+              unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined,
+              pickedQuantity: 0,
+              status: "pending",
+            });
+
             remainingToReserve -= toReserve;
           }
-
-          // Criar item do pedido
-          // CORREÇÃO: Sempre registrar quantidades em UNIDADES (UN)
-          await db.insert(pickingOrderItems).values({
-            pickingOrderId: order.id,
-            productId: item.productId,
-            requestedQuantity: quantityInUnits, // ✅ Convertido para unidades
-            requestedUM: "unit", // ✅ Sempre "unit" pois quantidade já foi convertida
-            unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit", // Unidade ORIGINAL do pedido (para referência)
-            unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined, // Unidades por caixa (para referência)
-            pickedQuantity: 0,
-            status: "pending",
-          });
         }
 
         return { success: true, orderId: order.id, orderNumber };

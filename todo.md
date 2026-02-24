@@ -3052,9 +3052,11 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
 - [ ] Validar condição de conclusão (pickedQuantity >= quantity)
 - [ ] Testar com múltiplas bipagens do mesmo produto
 
-## Bug 2 - 24/02/2026 (20:05) - Agrupamento incorreto de lotes ao concluir onda
+## Bug 2 - 24/02/2026 (20:05) - Agrupamento incorreto de lotes
 - [x] Investigar função generatePickingAllocations (correto - cria alocações separadas)
 - [x] Verificar pedido vs onda (pedido agrupa, onda separa - comportamento esperado)
 - [x] Investigar endpoint de conclusão de onda (encontrado bug: sobrescreve ao invés de somar)
-- [x] Corrigir lógica de atualização de pickingOrderItems (agrupar antes de atualizar)
-- [x] Implementar soma de quantidades de múltiplos lotes do mesmo produto
+- [x] Corrigir lógica de atualização de pickingOrderItems ao concluir onda (parcial)
+- [x] Investigar endpoint picking.create (causa raiz: cria 1 linha ao invés de N linhas por lote)
+- [x] Refatorar picking.create para criar pickingOrderItems separados por lote
+- [x] Vincular cada pickingOrderItem ao inventoryId específico
