@@ -3243,3 +3243,37 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Adicionar campo labelCode na tabela pickingAllocations
 - [ ] Atualizar geração de alocações para incluir labelCode
 - [ ] Atualizar validação de cipagem para usar labelCode diretamente
+
+## 🔄 REFATORAÇÃO CRÍTICA: Eliminar pickingAllocations - 24/02/2026
+
+**Problema identificado:** Tabela pickingAllocations é redundante e engessa o processo
+
+**Analogia bancária:** "Não importa de qual cofre vem o dinheiro, importa que esteja lá na hora do saque"
+
+**Solução:**
+- [ ] Adicionar campos em pickingReservations: pickedQuantity, status, labelCode, sequence
+- [ ] Refatorar cálculo de rota para usar pickingReservations (via inventoryId → locationId)
+- [ ] Atualizar endpoints do coletor (scanProduct, recordPicked, etc)
+- [ ] Remover todas as referências a pickingAllocations no código
+- [ ] Deletar tabela pickingAllocations do schema
+- [ ] Testar fluxo completo de picking
+
+**Benefícios:**
+- ✅ Simplicidade: uma tabela ao invés de duas
+- ✅ Flexibilidade: sistema ajusta endereços automaticamente
+- ✅ Rastreabilidade: labelCode registra etiqueta cipada
+- ✅ Performance: menos JOINs, menos complexidade
+
+## 🔄 REVERSÃO DE ESTRATÉGIA - 24/02/2026
+
+**Decisão do usuário:** Manter pickingAllocations (mais completa) e eliminar pickingReservations (redundante)
+
+**Ações:**
+- [ ] Reverter alterações em pickingReservations (remover campos pickedQuantity, status, labelCode, sequence)
+- [ ] Adicionar campo batch em pickingAllocations
+- [ ] Migrar lógica de reserva para criar pickingAllocations ao invés de pickingReservations
+- [ ] Remover todas as referências a pickingReservations no código
+- [ ] Deletar tabela pickingReservations do schema
+- [ ] Testar fluxo completo
+
+**Justificativa:** pickingAllocations já possui locationCode, sequence, status, pickedQuantity - estrutura mais completa para o processo de separação

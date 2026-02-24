@@ -1247,6 +1247,8 @@ export const clientPortalRouter = router({
             pickingOrderId: orderId,
             productId: item.productId,
             inventoryId: stock.id,
+            batch: stock.batch, // ✅ Copiar batch do inventory
+            uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
             quantity: toReserve,
           });
 
@@ -1660,6 +1662,8 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   pickingOrderId: orderId,
                   productId,
                   inventoryId: stock.id,
+                  batch: stock.batch, // ✅ Copiar batch do inventory
+                  uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
                   quantity: toReserve,
                 });
 

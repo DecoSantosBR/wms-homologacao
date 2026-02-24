@@ -1858,6 +1858,8 @@ export const appRouter = router({
               pickingOrderId: order.id,
               productId: item.productId,
               inventoryId: stock.id,
+              batch: stock.batch, // ✅ Copiar batch do inventory
+              uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
               quantity: toReserve,
             });
 
@@ -2230,6 +2232,8 @@ export const appRouter = router({
                 pickingOrderId: input.id,
                 productId: item.productId,
                 inventoryId: stock.id,
+                batch: stock.batch, // ✅ Copiar batch do inventory
+                uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
                 quantity: toReserve,
               });
 
@@ -3071,6 +3075,8 @@ export const appRouter = router({
                     pickingOrderId: order.id,
                     productId: item.productId,
                     inventoryId: stock.id,
+                    batch: stock.batch, // ✅ Copiar batch do inventory
+                    uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
                     quantity: quantityToReserve,
                   });
 
