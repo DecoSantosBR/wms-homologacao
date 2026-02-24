@@ -632,15 +632,7 @@ export const shippingRouter = router({
             })
             .where(eq(inventory.id, stock.inventoryId));
           
-          // Registrar reserva na tabela pickingReservations
-          // Usar primeiro pedido do romaneio como referência (simplificado)
-          await db.insert(pickingReservations).values({
-            pickingOrderId: input.orderIds[0],
-            productId: item.productId,
-            inventoryId: stock.inventoryId,
-            quantity: quantityToReserve,
-          });
-          
+          // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
           console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do produto ${item.productId} no estoque ${stock.inventoryId} para romaneio ${manifestId}`);
         }
       }
@@ -1430,12 +1422,7 @@ export const shippingRouter = router({
           });
         }
         
-        await db.insert(pickingReservations).values({
-          pickingOrderId: input.orderId,
-          productId: movement.productId,
-          inventoryId: inventoryIdForReservation,
-          quantity: movement.quantity,
-        });
+        // NOTA: pickingAllocations serão recriadas automaticamente ao gerar nova onda
 
         // 4. Registrar movimentação reversa no histórico
         await db.insert(inventoryMovements).values({

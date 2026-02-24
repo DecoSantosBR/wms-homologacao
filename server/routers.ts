@@ -1853,16 +1853,6 @@ export const appRouter = router({
               })
               .where(eq(inventory.id, stock.id));
 
-            // Registrar reserva na tabela pickingReservations
-            await db.insert(pickingReservations).values({
-              pickingOrderId: order.id,
-              productId: item.productId,
-              inventoryId: stock.id,
-              batch: stock.batch, // ✅ Copiar batch do inventory
-              uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
-              quantity: toReserve,
-            });
-
             // ✅ CRIAR UM pickingOrderItem PARA CADA LOTE (ao invés de agrupar)
             await db.insert(pickingOrderItems).values({
               pickingOrderId: order.id,
@@ -1877,6 +1867,23 @@ export const appRouter = router({
               pickedQuantity: 0,
               status: "pending",
               uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
+            });
+
+            // ✅ CRIAR pickingAllocation para este lote
+            await db.insert(pickingAllocations).values({
+              pickingOrderId: order.id,
+              productId: item.productId,
+              productSku: product.sku,
+              locationId: stock.locationId,
+              locationCode: stock.locationCode,
+              batch: stock.batch,
+              expiryDate: stock.expiryDate,
+              uniqueCode: getUniqueCode(product.sku, stock.batch),
+              quantity: toReserve,
+              isFractional: false, // TODO: calcular baseado em unitsPerBox
+              sequence: 0, // Será recalculado ao gerar onda
+              status: "pending",
+              pickedQuantity: 0,
             });
 
             remainingToReserve -= toReserve;
@@ -2182,6 +2189,8 @@ export const appRouter = router({
             const availableStock = await db
               .select({
                 id: inventory.id,
+                locationId: inventory.locationId,
+                locationCode: warehouseLocations.code,
                 batch: inventory.batch,
                 expiryDate: inventory.expiryDate,
                 quantity: inventory.quantity,
@@ -2227,16 +2236,6 @@ export const appRouter = router({
                 })
                 .where(eq(inventory.id, stock.id));
 
-              // Registrar reserva
-              await db.insert(pickingReservations).values({
-                pickingOrderId: input.id,
-                productId: item.productId,
-                inventoryId: stock.id,
-                batch: stock.batch, // ✅ Copiar batch do inventory
-                uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
-                quantity: toReserve,
-              });
-
               // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
               await db.insert(pickingOrderItems).values({
                 pickingOrderId: input.id,
@@ -2251,6 +2250,23 @@ export const appRouter = router({
                 pickedQuantity: 0,
                 status: "pending",
                 uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
+              });
+
+              // ✅ CRIAR pickingAllocation para este lote
+              await db.insert(pickingAllocations).values({
+                pickingOrderId: input.id,
+                productId: item.productId,
+                productSku: product.sku,
+                locationId: stock.locationId,
+                locationCode: stock.locationCode,
+                batch: stock.batch,
+                expiryDate: stock.expiryDate,
+                uniqueCode: getUniqueCode(product.sku, stock.batch),
+                quantity: toReserve,
+                isFractional: false,
+                sequence: 0,
+                status: "pending",
+                pickedQuantity: 0,
               });
 
               remainingToReserve -= toReserve;
@@ -3070,17 +3086,8 @@ export const appRouter = router({
                     })
                     .where(eq(inventory.id, stock.id));
 
-                  // Registrar reserva
-                  await db.insert(pickingReservations).values({
-                    pickingOrderId: order.id,
-                    productId: item.productId,
-                    inventoryId: stock.id,
-                    batch: stock.batch, // ✅ Copiar batch do inventory
-                    uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
-                    quantity: quantityToReserve,
-                  });
-
                   // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+                  // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
                   await db.insert(pickingOrderItems).values({
                     pickingOrderId: order.id,
                     productId: item.productId,

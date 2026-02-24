@@ -1242,17 +1242,8 @@ export const clientPortalRouter = router({
             })
             .where(eq(inventory.id, stock.id));
 
-          // Registrar reserva na tabela pickingReservations
-          await db.insert(pickingReservations).values({
-            pickingOrderId: orderId,
-            productId: item.productId,
-            inventoryId: stock.id,
-            batch: stock.batch, // ✅ Copiar batch do inventory
-            uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
-            quantity: toReserve,
-          });
-
           // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+          // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
           await db.insert(pickingOrderItems).values({
             pickingOrderId: orderId,
             productId: item.productId,
@@ -1657,17 +1648,8 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   })
                   .where(eq(inventory.id, stock.id));
 
-                // Registrar reserva na tabela pickingReservations
-                await db.insert(pickingReservations).values({
-                  pickingOrderId: orderId,
-                  productId,
-                  inventoryId: stock.id,
-                  batch: stock.batch, // ✅ Copiar batch do inventory
-                  uniqueCode: stock.uniqueCode, // ✅ Copiar uniqueCode do inventory
-                  quantity: toReserve,
-                });
-
                 // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+                // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
                 await db.insert(pickingOrderItems).values({
                   pickingOrderId: orderId,
                   productId,

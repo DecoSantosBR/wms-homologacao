@@ -3277,3 +3277,36 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Testar fluxo completo
 
 **Justificativa:** pickingAllocations já possui locationCode, sequence, status, pickedQuantity - estrutura mais completa para o processo de separação
+
+## 🎯 PLANO DE GUERRA: Refatoração pickingReservations → pickingAllocations
+
+### FASE 1: Mapeamento e Análise ✅ EM ANDAMENTO
+- [ ] Mapear TODOS os arquivos que usam pickingReservations
+- [ ] Verificar campos de pickingAllocations vs pickingReservations
+- [ ] Criar interface TypeScript unificada
+- [ ] Documentar mapeamento de colunas (quantity, batch, uniqueCode, etc)
+
+### FASE 2: Migração de Dados
+- [ ] Criar script SQL para migrar reservas órfãs → alocações
+- [ ] Executar migração e validar integridade
+- [ ] ⚠️ NÃO deletar pickingReservations ainda
+
+### FASE 3: Refatoração de Código
+- [ ] waveLogic.ts: Mudar de pickingReservations → pickingAllocations
+- [ ] stage_export.ts: Conferências usam pickingAllocations
+- [ ] routers.ts: Criar pickingAllocations ao invés de pickingReservations
+- [ ] clientPortalRouter.ts: Idem
+- [ ] Outros arquivos identificados no mapeamento
+- [ ] Ajustar nomes de colunas conforme necessário
+
+### FASE 4: Testes e Validação
+- [ ] Testar: criar pedido → onda → separação → conferência
+- [ ] Validar uniqueCode funcionando em todo fluxo
+- [ ] Verificar que não há regressões
+
+### FASE 5: Limpeza Final
+- [ ] Deletar tabela pickingReservations do schema
+- [ ] Remover imports e referências do código
+- [ ] Checkpoint final
+
+**Objetivo:** Eliminar redundância mantendo rastreabilidade por uniqueCode
