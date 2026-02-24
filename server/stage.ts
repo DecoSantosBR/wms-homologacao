@@ -229,6 +229,7 @@ export async function startStageCheck(params: {
       productSku: item.productSku,
       productName: item.productDescription,
       batch: item.batch ?? null, // ✅ Persistir lote para validação posterior
+      uniqueCode: getUniqueCode(item.productSku, item.batch || ""), // ✅ Adicionar uniqueCode
       expectedQuantity: item.quantity,
       checkedQuantity: 0,
       divergence: 0,

@@ -3393,3 +3393,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Identificar ordem incorreta de parâmetros (serialNumber estava faltando)
 - [x] Corrigir ordem dos campos (adicionado serialNumber: null e tenantId no início)
 - [ ] Testar finalização de conferência
+
+
+## 🐛 BUG: stageCheckItems não registra uniqueCode
+
+**Sintoma:** Campo uniqueCode está NULL em registros de stageCheckItems
+
+- [x] Investigar INSERTs em stageCheckItems (stage.ts linha 226)
+- [x] Corrigir todos os INSERTs para incluir uniqueCode
+- [x] Popular uniqueCode NULL em registros existentes
+- [ ] Testar conferência Stage
