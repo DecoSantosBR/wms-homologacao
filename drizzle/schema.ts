@@ -388,6 +388,7 @@ export const inventory = mysqlTable("inventory", {
   expiryDate: timestamp("expiryDate"),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   serialNumber: varchar("serialNumber", { length: 100 }),
+  locationZone: varchar("locationZone", { length: 10 }), // Zona do endereço (EXP, REC, NCG, DEV, etc.)
   quantity: int("quantity").default(0).notNull(),
   reservedQuantity: int("reservedQuantity").default(0).notNull(), // Quantidade reservada para separação
   status: mysqlEnum("status", ["available", "quarantine", "blocked", "damaged", "expired"]).default("available").notNull(),

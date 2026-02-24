@@ -441,6 +441,13 @@ export async function executeAddressing(
         throw new Error(`Pré-alocação inválida: ${validation.reason}`);
       }
 
+      // Buscar zona do endereço de destino (pré-alocação)
+      const destLocation = await dbConn.select({ zoneCode: warehouseZones.code })
+        .from(warehouseLocations)
+        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+        .where(eq(warehouseLocations.id, prealloc.locationId))
+        .limit(1);
+
       // Criar novo registro de estoque
       await dbConn.insert(inventory).values({
         tenantId: order.tenantId,
@@ -451,6 +458,7 @@ export async function executeAddressing(
         quantity: quantityToMove,
         status: "available",
         uniqueCode: getUniqueCode(prealloc.productSku, prealloc.batch), // ✅ Adicionar uniqueCode
+        locationZone: destLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
       });
     }
 

@@ -106,14 +106,26 @@ export async function recalculateInventoryBalances(): Promise<{
   const productIds = Array.from(new Set(Array.from(balances.values()).map(b => b.productId)));
   const productSkus = await db.select({ id: products.id, sku: products.sku })
     .from(products)
-    .where(sql`${products.id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`);  
+    .where(sql`${products.id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`);
+
+  // Buscar zonas de todos os endereços de uma vez
+  const locationIds = Array.from(new Set(Array.from(balances.values()).map(b => b.locationId)));
+  const locationZones = await db.select({ 
+    locationId: warehouseLocations.id, 
+    zoneCode: warehouseZones.code 
+  })
+    .from(warehouseLocations)
+    .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(sql`${warehouseLocations.id} IN (${sql.join(locationIds.map(id => sql`${id}`), sql`, `)})`);
 
   const skuMap = new Map(productSkus.map(p => [p.id, p.sku]));
+  const zoneMap = new Map(locationZones.map(l => [l.locationId, l.zoneCode]));
   const { getUniqueCode } = await import("../utils/uniqueCode");
 
   for (const [key, balance] of Array.from(balances.entries())) {
     if (balance.totalQuantity > 0) {
       const sku = skuMap.get(balance.productId) || "";
+      const zoneCode = zoneMap.get(balance.locationId) || null;
       recordsToInsert.push({
         productId: balance.productId,
         locationId: balance.locationId,
@@ -124,6 +136,7 @@ export async function recalculateInventoryBalances(): Promise<{
         tenantId: balance.tenantId,
         status: "available" as const,
         uniqueCode: getUniqueCode(sku, balance.batch), // ✅ Adicionar uniqueCode
+        locationZone: zoneCode, // ✅ Adicionar locationZone
       });
     }
   }
@@ -225,6 +238,13 @@ export async function updateInventoryBalance(
       .where(eq(products.id, productId))
       .limit(1);
 
+    // Buscar zona do endereço
+    const location = await db.select({ zoneCode: warehouseZones.code })
+      .from(warehouseLocations)
+      .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+      .where(eq(warehouseLocations.id, locationId))
+      .limit(1);
+
     const { getUniqueCode } = await import("../utils/uniqueCode");
 
     // Criar novo registro
@@ -237,6 +257,7 @@ export async function updateInventoryBalance(
       quantity: quantityChange,
       tenantId,
       uniqueCode: getUniqueCode(product[0]?.sku || "", batch), // ✅ Adicionar uniqueCode
+      locationZone: location[0]?.zoneCode || null, // ✅ Adicionar locationZone
       status: "available",
     });
   }

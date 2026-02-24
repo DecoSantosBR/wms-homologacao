@@ -682,17 +682,19 @@ export async function completeStageCheck(params: {
         });
       }
 
-      // Subtrair do estoque origem
+      // Subtrair do estoque origem E zerar reserva
+      const newQuantityInStorage = sourceInventory.quantity - quantityToShip;
       await dbConn
         .update(inventory)
         .set({
-          quantity: sourceInventory.quantity - quantityToShip,
+          quantity: newQuantityInStorage,
+          reservedQuantity: 0, // ✅ Zerar reserva após mover para EXP
+          status: newQuantityInStorage === 0 ? "available" : sourceInventory.status, // ✅ Se esvaziou, volta para available
         })
         .where(eq(inventory.id, sourceInventory.id)); // ✅ Usar sourceInventory.id ao invés de reservation.inventoryId
 
       // ✅ ATUALIZAR STATUS DO ENDEREÇO SE FICOU VAZIO
-      const newQuantity = sourceInventory.quantity - quantityToShip;
-      if (newQuantity === 0) {
+      if (newQuantityInStorage === 0) {
         // Verificar se não há outros produtos neste endereço
         const [otherProducts] = await dbConn
           .select({ count: sql<number>`count(*)` })
@@ -764,6 +766,7 @@ export async function completeStageCheck(params: {
           tenantId: pickingOrder.tenantId,
           status: "available",
           uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
+          locationZone: "EXP", // ✅ Adicionar locationZone (sempre EXP neste ponto)
         });
       }
 

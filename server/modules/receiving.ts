@@ -169,6 +169,13 @@ export async function moveToQuarantine(
     .where(eq(products.id, item[0].productId))
     .limit(1);
 
+  // Buscar zona do endereço de quarentena (locationId = 1)
+  const quarantineLocation = await db.select({ zoneCode: warehouseZones.code })
+    .from(warehouseLocations)
+    .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+    .where(eq(warehouseLocations.id, 1))
+    .limit(1);
+
   const { getUniqueCode } = await import("../utils/uniqueCode");
 
   // Criar registro de inventário em quarentena (locationId = 1 como quarentena temporária)
@@ -182,6 +189,7 @@ export async function moveToQuarantine(
     quantity,
     status: "quarantine",
     uniqueCode: getUniqueCode(product[0]?.sku || "", batch), // ✅ Adicionar uniqueCode
+    locationZone: quarantineLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
   });
   
   // Registrar movimentação

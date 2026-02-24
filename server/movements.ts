@@ -216,6 +216,13 @@ export async function registerMovement(input: RegisterMovementInput) {
         .where(eq(products.id, input.productId))
         .limit(1);
 
+      // Buscar zona do endereço de destino
+      const toLocation = await dbConn.select({ zoneCode: warehouseZones.code })
+        .from(warehouseLocations)
+        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+        .where(eq(warehouseLocations.id, input.toLocationId))
+        .limit(1);
+
       const { getUniqueCode } = await import("./utils/uniqueCode");
 
       // Criar novo registro (validação já foi feita na FASE 1)
@@ -228,6 +235,7 @@ export async function registerMovement(input: RegisterMovementInput) {
         status: "available",
         tenantId: tenantId || null,
         uniqueCode: getUniqueCode(product[0]?.sku || "", input.batch || null), // ✅ Adicionar uniqueCode
+        locationZone: toLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
       });
     }
   }

@@ -539,6 +539,13 @@ export const blindConferenceRouter = router({
           .where(eq(products.id, assoc.productId))
           .limit(1);
 
+        // Buscar zona do endereço de recebimento
+        const location = await db.select({ zoneCode: warehouseZones.code })
+          .from(warehouseLocations)
+          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+          .where(eq(warehouseLocations.id, recLocationId))
+          .limit(1);
+
         const { getUniqueCode } = await import("./utils/uniqueCode");
 
         await db.insert(inventory).values({
@@ -550,6 +557,7 @@ export const blindConferenceRouter = router({
           quantity: assoc.totalUnits,
           status: "available", // Disponível após conferência
           uniqueCode: getUniqueCode(product[0]?.sku || "", assoc.batch), // ✅ Adicionar uniqueCode
+          locationZone: location[0]?.zoneCode || null, // ✅ Adicionar locationZone
         });
       }
 

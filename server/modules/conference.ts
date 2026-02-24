@@ -331,6 +331,13 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
 
       const { getUniqueCode } = await import("../utils/uniqueCode");
 
+      // Buscar zona do endereço de recebimento
+      const recLocation = await dbConn.select({ zoneCode: warehouseZones.code })
+        .from(warehouseLocations)
+        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+        .where(eq(warehouseLocations.id, order.receivingLocationId))
+        .limit(1);
+
       // Criar registro de estoque para cada lote
       for (const [batch, data] of Array.from(batchGroups)) {
         // CORREÇÃO CRÍTICA: Criar estoque com status 'quarantine' ao invés de 'available'
@@ -345,6 +352,7 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
           expiryDate: data.expiryDate,
           status: "quarantine", // Alterado de 'available' para 'quarantine'
           uniqueCode: getUniqueCode(product[0]?.sku || "", batch === "SEM_LOTE" ? null : batch), // ✅ Adicionar uniqueCode
+          locationZone: recLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
         });
         
         // Registrar movimentação

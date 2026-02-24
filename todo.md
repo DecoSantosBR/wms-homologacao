@@ -3425,3 +3425,24 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Identificar causa: reservedQuantity estava NULL no banco
 - [x] CORREÇÃO: Usar COALESCE para tratar NULL como 0 (linha 631)
 - [ ] Testar geração de romaneio
+
+
+## 🔧 REFATORAÇÃO: Busca de estoque em EXP para romaneio
+
+**Problema:** Código busca estoque por ID fixo que pode não existir após movimentação do Stage
+
+- [ ] Investigar query atual em shippingRouter.ts (createManifest)
+- [ ] Refatorar para buscar por uniqueCode + locationCode (EXP) + status disponível
+- [ ] Remover dependência de ID fixo
+- [ ] Testar geração de romaneio com múltiplos lotes
+
+
+## 🔧 REFATORAÇÃO: Adicionar locationZone à inventory
+
+- [ ] Adicionar coluna locationZone no schema (drizzle/schema.ts)
+- [ ] Aplicar migração no banco
+- [ ] Popular locationZone em registros existentes (JOIN com warehouseLocations)
+- [ ] Refatorar createManifest para buscar por uniqueCode + locationZone='EXP'
+- [ ] Testar geração de romaneio
+
+- [x] Corrigir duplicação de estoque: zerar reservedQuantity ao mover de armazenagem para EXP

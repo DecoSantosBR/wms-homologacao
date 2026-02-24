@@ -568,10 +568,12 @@ export const shippingRouter = router({
       // RESERVA AUTOMÁTICA DE ESTOQUE NO ENDEREÇO EXP
       // ========================================================================
       
-      // 1. Buscar todos os itens dos pedidos vinculados ao romaneio
+      // 1. Buscar todos os itens dos pedidos vinculados ao romaneio (com uniqueCode)
       const orderItems = await db
         .select({
           productId: pickingOrderItems.productId,
+          uniqueCode: pickingOrderItems.uniqueCode,
+          batch: pickingOrderItems.batch,
           requestedQuantity: pickingOrderItems.requestedQuantity,
           unitsPerBox: products.unitsPerBox,
           totalUnits: sql<number>`${pickingOrderItems.requestedQuantity} * COALESCE(${products.unitsPerBox}, 1)`,
@@ -580,26 +582,24 @@ export const shippingRouter = router({
         .innerJoin(products, eq(pickingOrderItems.productId, products.id))
         .where(inArray(pickingOrderItems.pickingOrderId, input.orderIds));
 
-      // 2. Para cada item, localizar estoque na zona EXP e reservar
+      // 2. Para cada item, localizar estoque na zona EXP por uniqueCode e reservar
       for (const item of orderItems) {
-        // Buscar estoque disponível na zona EXP para este produto
+        // 🎯 Buscar estoque disponível na zona EXP usando uniqueCode + locationZone
         const expStock = await db
           .select({
             inventoryId: inventory.id,
             locationId: inventory.locationId,
             quantity: inventory.quantity,
             reservedQuantity: inventory.reservedQuantity,
-            availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
+            availableQuantity: sql<number>`${inventory.quantity} - COALESCE(${inventory.reservedQuantity}, 0)`,
           })
           .from(inventory)
-          .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
-          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
           .where(
             and(
-              eq(inventory.productId, item.productId),
+              eq(inventory.uniqueCode, item.uniqueCode), // 🎯 Busca por uniqueCode (SKU-LOTE)
+              eq(inventory.locationZone, "EXP"), // 🎯 Busca direta por locationZone (sem JOIN)
               eq(inventory.status, "available"),
-              eq(warehouseZones.code, "EXP"), // Apenas zona de expedição
-              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0` // Saldo disponível
+              sql`${inventory.quantity} - COALESCE(${inventory.reservedQuantity}, 0) > 0` // Saldo disponível
             )
           )
           .limit(1); // Pegar primeiro endereço disponível
@@ -610,18 +610,18 @@ export const shippingRouter = router({
           
           // VALIDAÇÃO PREVENTIVA: Garantir que reserva não exceda estoque disponível
           if (quantityToReserve <= 0) {
-            console.warn(`[RESERVA] Estoque insuficiente na zona EXP para produto ${item.productId}. Necessário: ${item.totalUnits}, Disponível: ${stock.availableQuantity}`);
+            console.warn(`[RESERVA] Estoque insuficiente na zona EXP para uniqueCode ${item.uniqueCode}. Necessário: ${item.totalUnits}, Disponível: ${stock.availableQuantity}`);
             continue; // Pular este item
           }
           
           // Validar que a nova reserva total não excederá a quantidade física
-          const newReservedQuantity = stock.reservedQuantity + quantityToReserve;
+          const newReservedQuantity = (stock.reservedQuantity || 0) + quantityToReserve;
           if (newReservedQuantity > stock.quantity) {
             console.error(`[RESERVA] ERRO CRÍTICO: Tentativa de reservar mais do que existe fisicamente!`);
-            console.error(`  Produto: ${item.productId}, Estoque ID: ${stock.inventoryId}`);
-            console.error(`  Quantidade física: ${stock.quantity}, Já reservado: ${stock.reservedQuantity}, Tentando reservar: ${quantityToReserve}`);
+            console.error(`  UniqueCode: ${item.uniqueCode}, Estoque ID: ${stock.inventoryId}`);
+            console.error(`  Quantidade física: ${stock.quantity}, Já reservado: ${stock.reservedQuantity || 0}, Tentando reservar: ${quantityToReserve}`);
             console.error(`  Nova reserva total seria: ${newReservedQuantity} (EXCEDE O ESTOQUE!)`);
-            throw new Error(`Erro de integridade: reserva excederia estoque físico. Produto ${item.productId}, Endereço ${stock.locationId}`);
+            throw new Error(`Erro de integridade: reserva excederia estoque físico. UniqueCode ${item.uniqueCode}, Endereço ${stock.locationId}`);
           }
           
           // Atualizar reservedQuantity e status
@@ -634,7 +634,14 @@ export const shippingRouter = router({
             .where(eq(inventory.id, stock.inventoryId));
           
           // NOTA: pickingAllocations serão criadas automaticamente por pickingAllocation.ts ao gerar onda
-          console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do produto ${item.productId} no estoque ${stock.inventoryId} para romaneio ${manifestId}`);
+          console.log(`[RESERVA] Reservado ${quantityToReserve} unidades do uniqueCode ${item.uniqueCode} (lote ${item.batch}) no estoque ${stock.inventoryId} para romaneio ${manifestId}`);
+        } else {
+          // ⚠️ Estoque insuficiente na zona EXP para este lote
+          console.error(`[RESERVA] Estoque insuficiente no Stage para o lote ${item.batch} (uniqueCode: ${item.uniqueCode}). Necessário: ${item.totalUnits} unidades.`);
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: `Estoque insuficiente no Stage para o lote ${item.batch}. Verifique se a conferência foi finalizada.` 
+          });
         }
       }
 
@@ -1384,6 +1391,13 @@ export const shippingRouter = router({
             .where(eq(products.id, movement.productId))
             .limit(1);
 
+          // Buscar zona do endereço de armazenagem (origem da movimentação)
+          const storageLocation = await db.select({ zoneCode: warehouseZones.code })
+            .from(warehouseLocations)
+            .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+            .where(eq(warehouseLocations.id, movement.fromLocationId))
+            .limit(1);
+
           const { getUniqueCode } = await import("./utils/uniqueCode");
 
           // Recriar registro de estoque no endereço de armazenagem
@@ -1396,6 +1410,7 @@ export const shippingRouter = router({
             tenantId: order.tenantId,
             status: "available",
             uniqueCode: getUniqueCode(product[0]?.sku || "", movement.batch || null), // ✅ Adicionar uniqueCode
+            locationZone: storageLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
           });
         }
 

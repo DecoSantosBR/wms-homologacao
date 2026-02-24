@@ -8,6 +8,13 @@
       "when": 1771959482278,
       "tag": "0000_known_colossus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771964295144,
+      "tag": "0001_curious_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }
