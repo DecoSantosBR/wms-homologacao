@@ -3044,3 +3044,17 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Integrar com mutation tRPC wave.cancel
   - [x] Atualizar lista de ondas e pedidos após cancelamento
 - [ ] Testar fluxo completo de cancelamento
+
+
+## Bug 1 - 24/02/2026 (20:00) - Finalização prematura em /collector/picking
+- [ ] Investigar lógica de scanProduct no backend
+- [ ] Verificar incremento de pickedQuantity (deve somar, não substituir)
+- [ ] Validar condição de conclusão (pickedQuantity >= quantity)
+- [ ] Testar com múltiplas bipagens do mesmo produto
+
+## Bug 2 - 24/02/2026 (20:05) - Agrupamento incorreto de lotes ao concluir onda
+- [x] Investigar função generatePickingAllocations (correto - cria alocações separadas)
+- [x] Verificar pedido vs onda (pedido agrupa, onda separa - comportamento esperado)
+- [x] Investigar endpoint de conclusão de onda (encontrado bug: sobrescreve ao invés de somar)
+- [x] Corrigir lógica de atualização de pickingOrderItems (agrupar antes de atualizar)
+- [x] Implementar soma de quantidades de múltiplos lotes do mesmo produto

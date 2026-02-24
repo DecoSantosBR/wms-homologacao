@@ -261,6 +261,12 @@ export function CollectorPicking() {
 
   const scanProductMut = trpc.collectorPicking.scanProduct.useMutation({
     onSuccess: (data) => {
+      console.log('[CollectorPicking] scanProduct success:', {
+        allocationCompleted: data.allocationCompleted,
+        pickedQuantity: data.pickedQuantity,
+        totalQuantity: data.totalQuantity,
+        remainingQuantity: data.remainingQuantity,
+      });
       setProductScanInput("");
 
       if (data.requiresManualQuantity) {
@@ -275,9 +281,12 @@ export function CollectorPicking() {
       toast.success(data.message);
       refreshRoute();
 
+      console.log('[CollectorPicking] Before advanceItem check');
       if (data.allocationCompleted) {
+        console.log('[CollectorPicking] Calling advanceItem()');
         advanceItem();
       } else {
+        console.log('[CollectorPicking] Allocation NOT completed, staying on same item');
         setTimeout(() => productInputRef.current?.focus(), 100);
       }
     },
@@ -374,16 +383,22 @@ export function CollectorPicking() {
   }
 
   function advanceItem() {
+    console.log('[CollectorPicking] advanceItem() called');
     // Re-derive pendingItems after route refresh
     const updated = currentLocation?.items.filter(
       (i) => i.status !== "picked" && i.status !== "short_picked"
     ) ?? [];
+    console.log('[CollectorPicking] Pending items after filter:', updated.length);
+    console.log('[CollectorPicking] Current location items:', currentLocation?.items);
     const nextIdx = currentItemIdx + 1;
+    console.log('[CollectorPicking] Next index:', nextIdx, 'Updated length:', updated.length);
     if (nextIdx < updated.length) {
+      console.log('[CollectorPicking] Moving to next item');
       setCurrentItemIdx(nextIdx);
       setScreen("scan_product");
       setTimeout(() => productInputRef.current?.focus(), 100);
     } else {
+      console.log('[CollectorPicking] No more items in location, showing location_done');
       setScreen("location_done");
     }
   }

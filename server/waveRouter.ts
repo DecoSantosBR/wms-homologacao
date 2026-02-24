@@ -554,18 +554,34 @@ export const waveRouter = router({
         .where(eq(pickingOrders.waveId, input.waveId));
 
       // 7. Atualizar quantidades separadas nos itens dos pedidos
-      for (const waveItem of items) {
-        const isPartial = waveItem.pickedQuantity < waveItem.totalQuantity;
+      // CORREÇÃO: Agrupar por pedido+produto antes de atualizar para somar lotes corretamente
+      const groupedByOrderProduct = items.reduce((acc, waveItem) => {
+        const key = `${waveItem.pickingOrderId}-${waveItem.productId}`;
+        if (!acc[key]) {
+          acc[key] = {
+            pickingOrderId: waveItem.pickingOrderId,
+            productId: waveItem.productId,
+            totalPicked: 0,
+            totalRequested: waveItem.totalQuantity, // Será sobrescrito se houver múltiplos lotes
+          };
+        }
+        acc[key].totalPicked += waveItem.pickedQuantity;
+        acc[key].totalRequested += waveItem.totalQuantity;
+        return acc;
+      }, {} as Record<string, { pickingOrderId: number; productId: number; totalPicked: number; totalRequested: number }>);
+
+      for (const group of Object.values(groupedByOrderProduct)) {
+        const isPartial = group.totalPicked < group.totalRequested;
         await db
           .update(pickingOrderItems)
           .set({ 
-            pickedQuantity: waveItem.pickedQuantity,
+            pickedQuantity: group.totalPicked, // ✅ Soma de todos os lotes
             status: isPartial ? "pending" : "picked"
           })
           .where(
             and(
-              eq(pickingOrderItems.pickingOrderId, waveItem.pickingOrderId),
-              eq(pickingOrderItems.productId, waveItem.productId)
+              eq(pickingOrderItems.pickingOrderId, group.pickingOrderId),
+              eq(pickingOrderItems.productId, group.productId)
             )
           );
       }
