@@ -197,7 +197,7 @@ export const collectorPickingRouter = {
         .where(
           and(
             tenantId ? eq(pickingWaves.tenantId, tenantId) : undefined,
-            eq(pickingWaves.status, "pending")
+            sql`${pickingWaves.status} IN ('pending', 'in_progress')` // ✅ Incluir ondas interrompidas
           )
         )
         .orderBy(asc(pickingWaves.createdAt));
@@ -589,6 +589,48 @@ export const collectorPickingRouter = {
         .set({ pickedQuantity: newPickedQuantity, status: newStatus })
         .where(eq(pickingAllocations.id, alloc.id));
 
+      // ✅ ATUALIZAR pickingOrderItems se alocação foi completada
+      if (newStatus === "picked") {
+        const { pickingOrderItems } = await import("../drizzle/schema");
+        
+        const [orderItem] = await db
+          .select()
+          .from(pickingOrderItems)
+          .where(
+            and(
+              eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
+              eq(pickingOrderItems.productId, alloc.productId),
+              alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+            )
+          )
+          .limit(1);
+
+        if (orderItem && orderItem.status !== "picked") {
+          const allAllocations = await db
+            .select()
+            .from(pickingAllocations)
+            .where(
+              and(
+                eq(pickingAllocations.pickingOrderId, input.pickingOrderId),
+                eq(pickingAllocations.productId, alloc.productId),
+                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+              )
+            );
+
+          const allPicked = allAllocations.every(a => a.status === "picked");
+
+          if (allPicked) {
+            await db
+              .update(pickingOrderItems)
+              .set({
+                status: "picked",
+                pickedQuantity: orderItem.requestedQuantity,
+              })
+              .where(eq(pickingOrderItems.id, orderItem.id));
+          }
+        }
+      }
+
       return {
         ok: true,
         requiresManualQuantity: false,
@@ -652,6 +694,48 @@ export const collectorPickingRouter = {
         .update(pickingAllocations)
         .set({ pickedQuantity: newPickedQuantity, status: newStatus })
         .where(eq(pickingAllocations.id, alloc.id));
+
+      // ✅ ATUALIZAR pickingOrderItems se alocação foi completada
+      if (newStatus === "picked") {
+        const { pickingOrderItems } = await import("../drizzle/schema");
+        
+        const [orderItem] = await db
+          .select()
+          .from(pickingOrderItems)
+          .where(
+            and(
+              eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
+              eq(pickingOrderItems.productId, alloc.productId),
+              alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+            )
+          )
+          .limit(1);
+
+        if (orderItem && orderItem.status !== "picked") {
+          const allAllocations = await db
+            .select()
+            .from(pickingAllocations)
+            .where(
+              and(
+                eq(pickingAllocations.pickingOrderId, input.pickingOrderId),
+                eq(pickingAllocations.productId, alloc.productId),
+                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+              )
+            );
+
+          const allPicked = allAllocations.every(a => a.status === "picked");
+
+          if (allPicked) {
+            await db
+              .update(pickingOrderItems)
+              .set({
+                status: "picked",
+                pickedQuantity: orderItem.requestedQuantity,
+              })
+              .where(eq(pickingOrderItems.id, orderItem.id));
+          }
+        }
+      }
 
       return {
         ok: true,

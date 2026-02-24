@@ -3031,3 +3031,7 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Modificar clientPortalRouter (criar pedidos do portal)
   - [x] Modificar picking.import (importação de planilha)
 - [x] Implementar lógica para mudar status de endereços vazios para "Livre" após finalização do stage
+- [ ] Corrigir registro de operador em movimentações de estoque (está registrando usuário-cliente ao invés do operador real)
+- [x] Corrigir duplicação de SKUs com múltiplos lotes na geração de onda
+- [x] Corrigir atualização de status de pickingOrderItems após separação no coletor
+- [x] Corrigir filtro de ondas no coletor - separações interrompidas (in_progress) não aparecem para retomar

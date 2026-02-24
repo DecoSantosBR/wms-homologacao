@@ -69,6 +69,55 @@ export async function generatePickingAllocations(
     const productId = item.productId;
     const quantityNeeded = item.requestedQuantity;
 
+    // ✅ CORREÇÃO: Se o item já tem batch e inventoryId, significa que foi criado com a nova lógica
+    // (separado por lote). Neste caso, criar apenas 1 alocação direta para este lote específico.
+    if (item.batch && item.inventoryId) {
+      // Buscar dados do inventário específico
+      const [inv] = await db
+        .select({
+          id: inventory.id,
+          locationId: inventory.locationId,
+          locationCode: warehouseLocations.code,
+          batch: inventory.batch,
+          expiryDate: inventory.expiryDate,
+          quantity: inventory.quantity,
+        })
+        .from(inventory)
+        .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+        .where(eq(inventory.id, item.inventoryId))
+        .limit(1);
+
+      if (inv) {
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(eq(products.id, productId))
+          .limit(1);
+
+        if (product) {
+          const unitsPerBox = product.unitsPerBox || 1;
+          const isFractional = quantityNeeded < unitsPerBox;
+
+          allocations.push({
+            pickingOrderId,
+            productId,
+            productSku: product.sku,
+            locationId: inv.locationId,
+            locationCode: inv.locationCode,
+            batch: inv.batch,
+            expiryDate: inv.expiryDate,
+            quantity: quantityNeeded,
+            isFractional,
+            sequence: sequence++,
+            status: "pending",
+            pickedQuantity: 0,
+          });
+        }
+      }
+      continue; // Pular para o próximo item
+    }
+
+    // ⚠️ LEGADO: Item sem batch (criado com código antigo, agrupado por SKU)
     // Buscar produto para verificar unitsPerBox
     const [product] = await db
       .select()
