@@ -23,6 +23,7 @@ import {
 } from "../drizzle/schema.js";
 import { parseNFE } from "./nfeParser.js";
 import { TRPCError } from "@trpc/server";
+import { getUniqueCode } from "./utils/uniqueCode.js";
 import { z } from "zod";
 import { eq, and, or, sql, desc, inArray, isNull } from "drizzle-orm";
 
@@ -255,6 +256,7 @@ export const shippingRouter = router({
           requestedUM: pickingOrderItems.requestedUM,
           unitsPerBox: products.unitsPerBox,
           batch: pickingOrderItems.batch,
+          uniqueCode: (pickingOrderItems as any).uniqueCode, // ✅ Incluir uniqueCode
         })
         .from(pickingOrderItems)
         .leftJoin(products, eq(pickingOrderItems.productId, products.id))
@@ -277,8 +279,14 @@ export const shippingRouter = router({
 
       // Validar quantidades e lotes (LOTE POR LOTE)
       for (const nfeProd of nfeData.produtos) {
-        // ✅ BUSCAR POR SKU + LOTE (chave composta) para encontrar o lote específico
+        // ✅ BUSCAR POR UNIQUECODE (chave única SKU+Lote)
+        const nfeUniqueCode = getUniqueCode(nfeProd.codigo, nfeProd.lote);
         const orderItem = orderItems.find(item => {
+          // Tentar match por uniqueCode primeiro (mais eficiente)
+          if (item.uniqueCode) {
+            return item.uniqueCode === nfeUniqueCode;
+          }
+          // Fallback para match manual (dados antigos sem uniqueCode)
           const skuMatch = item.sku === nfeProd.codigo || item.supplierCode === nfeProd.codigo;
           const batchMatch = !nfeProd.lote || item.batch === nfeProd.lote;
           return skuMatch && batchMatch;

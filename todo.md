@@ -3211,3 +3211,13 @@ Simplificar estrutura de tabelas para eliminar redundância e bugs de sincroniza
 
 ### Objetivo
 Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando chave única ao invés de filtros compostos
+
+## 🔧 REFATORAÇÃO UNIQUECODE - CONTINUAÇÃO - 24/02/2026 09:10
+
+### Refatorar todos os pontos de inserção e atualização para usar uniqueCode
+- [ ] 1. Identificar todos os INSERTs nas 7 tabelas (inventory, pickingOrderItems, pickingWaveItems, pickingAllocations, stageCheckItems, pickingReservations, inventoryMovements)
+- [ ] 2. Modificar cada INSERT para calcular uniqueCode usando getUniqueCode(sku, batch)
+- [ ] 3. Refatorar queries de busca para usar uniqueCode ao invés de filtros compostos
+- [ ] 4. Remover type assertions (as any) após regenerar tipos Drizzle
+- [ ] 5. Testar fluxo completo: Criar pedido → Gerar onda → Separar → Conferir → Vincular NF-e
+- [ ] 6. Refatorar validação de NF-e para usar uniqueCode ao invés de filtros compostos

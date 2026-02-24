@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, warehouseZones, tenants, pickingReservations } from "../drizzle/schema";
 import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 /**
  * Lógica de geração e gerenciamento de ondas de separação (Wave Picking)
@@ -64,10 +65,11 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
       orderId: pickingOrderItems.pickingOrderId,
       productId: pickingOrderItems.productId,
       productSku: products.sku,
-      productName: products.description,
+      productName: products.name,
       quantity: pickingOrderItems.requestedQuantity,
       batch: pickingOrderItems.batch, // ✅ Incluir lote
       expiryDate: pickingOrderItems.expiryDate, // ✅ Incluir validade
+      uniqueCode: (pickingOrderItems as any).uniqueCode, // ✅ Incluir uniqueCode
     })
     .from(pickingOrderItems)
     .leftJoin(products, eq(pickingOrderItems.productId, products.id))
@@ -78,7 +80,7 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
 
   for (const item of items) {
     // Usar uniqueCode do banco (já calculado: SKU-LOTE)
-    const key = item.uniqueCode || `${item.productSku}-${item.batch || 'null'}`;
+    const key = (item as any).uniqueCode || `${item.productSku}-${item.batch || 'null'}`;
     const existing = consolidated.get(key);
     if (existing) {
       existing.totalQuantity += item.quantity;
@@ -329,6 +331,7 @@ export async function createWave(params: CreateWaveParams) {
     batch: item.batch,
     expiryDate: item.expiryDate,
     status: "pending" as const,
+    uniqueCode: getUniqueCode(item.productSku, item.batch), // ✅ Adicionar uniqueCode
   }));
 
   await db.insert(pickingWaveItems).values(waveItemsData);

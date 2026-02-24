@@ -78,6 +78,7 @@ async function fetchWaveData(waveId: number): Promise<WaveDocumentData> {
           batch: pickingWaveItems.batch,
           expiryDate: pickingWaveItems.expiryDate,
           quantity: pickingWaveItems.totalQuantity,
+          uniqueCode: (pickingWaveItems as any).uniqueCode, // ✅ Incluir uniqueCode
         })
         .from(pickingWaveItems)
         .where(

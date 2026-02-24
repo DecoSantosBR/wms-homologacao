@@ -23,6 +23,7 @@ import { maintenanceRouter } from "./maintenanceRouter";
 import { labelRouter } from "./labelRouter";
 import { clientPortalRouter } from "./clientPortalRouter";
 import { collectorPickingRouter } from "./collectorPickingRouter";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1873,6 +1874,7 @@ export const appRouter = router({
               inventoryId: stock.id, // ✅ Vínculo com inventário
               pickedQuantity: 0,
               status: "pending",
+              uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
             });
 
             remainingToReserve -= toReserve;
@@ -2244,6 +2246,7 @@ export const appRouter = router({
                 inventoryId: stock.id, // ✅ Vínculo com inventário
                 pickedQuantity: 0,
                 status: "pending",
+                uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
               });
 
               remainingToReserve -= toReserve;
