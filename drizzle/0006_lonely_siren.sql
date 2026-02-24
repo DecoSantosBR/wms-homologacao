@@ -1,0 +1,1 @@
+ALTER TABLE `products` MODIFY COLUMN `status` enum('active','inactive','discontinued') NOT NULL DEFAULT 'active';

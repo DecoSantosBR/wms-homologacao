@@ -1,0 +1,34 @@
+{
+  "query": "\n-- Buscar romaneios criados recentemente (últimas 24h)\nSELECT \n  sm.id as romaneioId,\n  sm.manifestNumber,\n  sm.status,\n  sm.createdAt,\n  sm.updatedAt,\n  COUNT(DISTINCT smi.pickingOrderId) as totalPedidos\nFROM shipmentManifests sm\nLEFT JOIN shipmentManifestItems smi ON sm.id = smi.manifestId\nWHERE sm.createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)\nGROUP BY sm.id, sm.manifestNumber, sm.status, sm.createdAt, sm.updatedAt\nORDER BY sm.createdAt DESC\nLIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \n-- Buscar romaneios criados recentemente (últimas 24h)\nSELECT \n  sm.id as romaneioId,\n  sm.manifestNumber,\n  sm.status,\n  sm.createdAt,\n  sm.updatedAt,\n  COUNT(DISTINCT smi.pickingOrderId) as totalPedidos\nFROM shipmentManifests sm\nLEFT JOIN shipmentManifestItems smi ON sm.id = smi.manifestId\nWHERE sm.createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)\nGROUP BY sm.id, sm.manifestNumber, sm.status, sm.createdAt, sm.updatedAt\nORDER BY sm.createdAt DESC\nLIMIT 10;\n",
+  "rows": [
+    {
+      "romaneioId": "270001",
+      "manifestNumber": "ROM-1769763003561",
+      "status": "shipped",
+      "createdAt": "2026-01-30 08:50:03",
+      "updatedAt": "2026-01-30 08:50:38",
+      "totalPedidos": "1"
+    },
+    {
+      "romaneioId": "240004",
+      "manifestNumber": "ROM-1769738328102",
+      "status": "shipped",
+      "createdAt": "2026-01-30 01:58:48",
+      "updatedAt": "2026-01-30 01:59:13",
+      "totalPedidos": "1"
+    },
+    {
+      "romaneioId": "180001",
+      "manifestNumber": "ROM-1769711848386",
+      "status": "shipped",
+      "createdAt": "2026-01-29 18:37:28",
+      "updatedAt": "2026-01-29 18:38:23",
+      "totalPedidos": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "romaneioId\tmanifestNumber\tstatus\tcreatedAt\tupdatedAt\ttotalPedidos\n270001\tROM-1769763003561\tshipped\t2026-01-30 08:50:03\t2026-01-30 08:50:38\t1\n240004\tROM-1769738328102\tshipped\t2026-01-30 01:58:48\t2026-01-30 01:59:13\t1\n180001\tROM-1769711848386\tshipped\t2026-01-29 18:37:28\t2026-01-29 18:38:23\t1\n",
+  "stderr": "",
+  "execution_time_ms": 347
+}

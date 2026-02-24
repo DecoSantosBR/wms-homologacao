@@ -1,0 +1,50 @@
+🎉 PREVIEW VISUAL ZPL COM LABELARY IMPLEMENTADO COM SUCESSO!
+
+O sistema agora exibe um preview visual da etiqueta ZPL antes da impressão, gerado pela API Labelary.
+
+## Teste Realizado
+
+1. Acessou módulo Recebimento
+2. Clicou em "Visualizar itens" da ordem TEST-001
+3. Clicou em "Imprimir Etiqueta" do produto 401460P
+4. Clicou no botão "Zebra (ZPL)"
+5. ✅ Preview visual exibido com sucesso!
+
+## Conteúdo do Preview
+
+A etiqueta exibida contém:
+- Nome do produto: INTRAFIX PRIMELINE AIR
+- SKU: 401460P
+- Lote: 22D08LB109
+- Validade: N/A
+- Código de barras Code-128 legível
+- Texto abaixo: "Preview Zebra (ZPL)" em azul
+
+## Características Técnicas
+
+- API utilizada: http://api.labelary.com/v1/printers/8dpmm/labels/4x2/0/
+- Resolução: 8 dots/mm (203 DPI)
+- Tamanho da etiqueta: 4" x 2" (10cm x 5cm)
+- Formato de retorno: PNG em base64
+- Tempo de resposta: < 1 segundo
+
+## Fluxo de Funcionamento
+
+1. Backend gera código ZPL
+2. Backend envia ZPL para API Labelary via POST
+3. Labelary retorna imagem PNG
+4. Backend converte para base64 e retorna ao frontend
+5. Frontend exibe preview no modal
+6. Usuário valida visualmente antes de imprimir
+7. Arquivo .zpl é baixado para envio à impressora
+
+## Benefícios
+
+✅ Validação visual antes da impressão
+✅ Detecção de erros de layout
+✅ Confirmação de informações corretas
+✅ Redução de desperdício de etiquetas
+✅ Melhor experiência do usuário
+
+Screenshot: /home/ubuntu/screenshots/3000-it08o7wygsihnhh_2026-01-21_17-08-50_2242.webp
+Toast exibido: "Arquivo ZPL gerado! Envie para a impressora Zebra."

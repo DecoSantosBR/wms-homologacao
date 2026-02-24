@@ -1,0 +1,19 @@
+{
+  "query": "SELECT \n  wz.id as zoneId,\n  wz.code as zoneCode,\n  wz.name as zoneName,\n  COUNT(DISTINCT wl.id) as totalLocations,\n  COUNT(DISTINCT i.id) as totalInventoryRecords,\n  SUM(i.quantity) as totalQuantity,\n  SUM(i.reservedQuantity) as totalReserved\nFROM warehouseZones wz\nLEFT JOIN warehouseLocations wl ON wl.zoneId = wz.id\nLEFT JOIN inventory i ON i.locationId = wl.id\nWHERE wz.code = 'EXP'\nGROUP BY wz.id, wz.code, wz.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  wz.id as zoneId,\n  wz.code as zoneCode,\n  wz.name as zoneName,\n  COUNT(DISTINCT wl.id) as totalLocations,\n  COUNT(DISTINCT i.id) as totalInventoryRecords,\n  SUM(i.quantity) as totalQuantity,\n  SUM(i.reservedQuantity) as totalReserved\nFROM warehouseZones wz\nLEFT JOIN warehouseLocations wl ON wl.zoneId = wz.id\nLEFT JOIN inventory i ON i.locationId = wl.id\nWHERE wz.code = 'EXP'\nGROUP BY wz.id, wz.code, wz.name;",
+  "rows": [
+    {
+      "zoneId": "3",
+      "zoneCode": "EXP",
+      "zoneName": "Expedição",
+      "totalLocations": "2",
+      "totalInventoryRecords": "3",
+      "totalQuantity": "580",
+      "totalReserved": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "zoneId\tzoneCode\tzoneName\ttotalLocations\ttotalInventoryRecords\ttotalQuantity\ttotalReserved\n3\tEXP\tExpedição\t2\t3\t580\t0\n",
+  "stderr": "",
+  "execution_time_ms": 350
+}

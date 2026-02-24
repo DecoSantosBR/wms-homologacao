@@ -1,8 +1,0 @@
-{
-  "query": "INSERT INTO systemUsers (tenantId, name, login, password, email, createdAt) VALUES (1149002, 'Portal AESC', 'aesc', '$2b$10$YQZ8Z8Z8Z8Z8Z8Z8Z8Z8ZuO8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8', 'portal@aesc.com', NOW()) ON DUPLICATE KEY UPDATE login=login;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute INSERT INTO systemUsers (tenantId, name, login, password, email, createdAt) VALUES (1149002, 'Portal AESC', 'aesc', '$2b$10$YQZ8Z8Z8Z8Z8Z8Z8Z8Z8ZuO8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8', 'portal@aesc.com', NOW()) ON DUPLICATE KEY UPDATE login=login;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'name' in 'field list'"
-  ]
-}

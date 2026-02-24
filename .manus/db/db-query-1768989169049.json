@@ -1,0 +1,16 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM pickingOrders) as pedidos,\n  (SELECT COUNT(*) FROM pickingWaves) as ondas,\n  (SELECT COUNT(*) FROM pickingWaveItems) as itens_onda,\n  (SELECT COUNT(*) FROM pickingReservations) as reservas;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  (SELECT COUNT(*) FROM pickingOrders) as pedidos,\n  (SELECT COUNT(*) FROM pickingWaves) as ondas,\n  (SELECT COUNT(*) FROM pickingWaveItems) as itens_onda,\n  (SELECT COUNT(*) FROM pickingReservations) as reservas;",
+  "rows": [
+    {
+      "pedidos": "0",
+      "ondas": "0",
+      "itens_onda": "0",
+      "reservas": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "pedidos\tondas\titens_onda\treservas\n0\t0\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

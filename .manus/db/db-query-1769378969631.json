@@ -1,0 +1,9 @@
+{
+  "query": "SELECT orderNumber, customerOrderNumber, status, shippingStatus, tenantId, createdAt FROM pickingOrders WHERE customerOrderNumber = '0005' OR orderNumber = 'PED-005' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT orderNumber, customerOrderNumber, status, shippingStatus, tenantId, createdAt FROM pickingOrders WHERE customerOrderNumber = '0005' OR orderNumber = 'PED-005' LIMIT 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 350
+}

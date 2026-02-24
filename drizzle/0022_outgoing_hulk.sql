@@ -1,0 +1,1 @@
+ALTER TABLE `pickingOrders` MODIFY COLUMN `status` enum('pending','validated','in_wave','picking','picked','checking','packed','staged','invoiced','shipped','cancelled') NOT NULL DEFAULT 'pending';

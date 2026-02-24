@@ -1,0 +1,20 @@
+{
+  "query": "-- Estoque atual\nSELECT \n  i.tenantId as estoque_tenant_id,\n  t.name as estoque_dono,\n  COUNT(*) as posicoes\nFROM inventory i\nLEFT JOIN tenants t ON i.tenantId = t.id\nGROUP BY i.tenantId, t.name\n\nUNION ALL\n\n-- Cliente Hapvida\nSELECT \n  id as estoque_tenant_id,\n  CONCAT('CLIENTE: ', name) as estoque_dono,\n  0 as posicoes\nFROM tenants\nWHERE name LIKE '%Hapvida%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute -- Estoque atual\nSELECT \n  i.tenantId as estoque_tenant_id,\n  t.name as estoque_dono,\n  COUNT(*) as posicoes\nFROM inventory i\nLEFT JOIN tenants t ON i.tenantId = t.id\nGROUP BY i.tenantId, t.name\n\nUNION ALL\n\n-- Cliente Hapvida\nSELECT \n  id as estoque_tenant_id,\n  CONCAT('CLIENTE: ', name) as estoque_dono,\n  0 as posicoes\nFROM tenants\nWHERE name LIKE '%Hapvida%';",
+  "rows": [
+    {
+      "estoque_tenant_id": "60006",
+      "estoque_dono": "CLIENTE: Hapvida",
+      "posicoes": "0"
+    },
+    {
+      "estoque_tenant_id": "NULL",
+      "estoque_dono": "NULL",
+      "posicoes": "8"
+    }
+  ],
+  "messages": [],
+  "stdout": "estoque_tenant_id\testoque_dono\tposicoes\n60006\tCLIENTE: Hapvida\t0\nNULL\tNULL\t8\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

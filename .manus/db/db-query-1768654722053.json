@@ -1,0 +1,15 @@
+{
+  "query": "\nSELECT status, LENGTH(status) as len, HEX(status) as hex_value \nFROM pickingOrders \nLIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \nSELECT status, LENGTH(status) as len, HEX(status) as hex_value \nFROM pickingOrders \nLIMIT 1;\n",
+  "rows": [
+    {
+      "status": "in_wave",
+      "len": "7",
+      "hex_value": "696E5F77617665"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\tlen\thex_value\nin_wave\t7\t696E5F77617665\n",
+  "stderr": "",
+  "execution_time_ms": 363
+}

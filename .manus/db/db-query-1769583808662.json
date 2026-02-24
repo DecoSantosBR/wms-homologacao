@@ -1,0 +1,37 @@
+{
+  "query": "SELECT \n  po.id,\n  po.orderNumber,\n  po.status,\n  poi.requestedQuantity,\n  poi.pickedQuantity,\n  po.createdAt,\n  po.updatedAt\nFROM pickingOrders po\nINNER JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nINNER JOIN products p ON poi.productId = p.id\nWHERE p.sku = '443060'\nORDER BY po.createdAt DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  po.id,\n  po.orderNumber,\n  po.status,\n  poi.requestedQuantity,\n  poi.pickedQuantity,\n  po.createdAt,\n  po.updatedAt\nFROM pickingOrders po\nINNER JOIN pickingOrderItems poi ON po.id = poi.pickingOrderId\nINNER JOIN products p ON poi.productId = p.id\nWHERE p.sku = '443060'\nORDER BY po.createdAt DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "390001",
+      "orderNumber": "PK1769582843043",
+      "status": "shipped",
+      "requestedQuantity": "2",
+      "pickedQuantity": "0",
+      "createdAt": "2026-01-28 06:47:23",
+      "updatedAt": "2026-01-28 06:53:04"
+    },
+    {
+      "id": "330004",
+      "orderNumber": "PK1769567530952",
+      "status": "shipped",
+      "requestedQuantity": "2",
+      "pickedQuantity": "0",
+      "createdAt": "2026-01-28 02:32:10",
+      "updatedAt": "2026-01-28 03:09:21"
+    },
+    {
+      "id": "330001",
+      "orderNumber": "PK1769564753715",
+      "status": "shipped",
+      "requestedQuantity": "2",
+      "pickedQuantity": "0",
+      "createdAt": "2026-01-28 01:45:53",
+      "updatedAt": "2026-01-28 01:52:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\tstatus\trequestedQuantity\tpickedQuantity\tcreatedAt\tupdatedAt\n390001\tPK1769582843043\tshipped\t2\t0\t2026-01-28 06:47:23\t2026-01-28 06:53:04\n330004\tPK1769567530952\tshipped\t2\t0\t2026-01-28 02:32:10\t2026-01-28 03:09:21\n330001\tPK1769564753715\tshipped\t2\t0\t2026-01-28 01:45:53\t2026-01-28 01:52:25\n",
+  "stderr": "",
+  "execution_time_ms": 357
+}

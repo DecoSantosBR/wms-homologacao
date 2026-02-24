@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, orderNumber, customerName, tenantId, status, createdAt FROM pickingOrders WHERE status = 'pending' ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT id, orderNumber, customerName, tenantId, status, createdAt FROM pickingOrders WHERE status = 'pending' ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "90011",
+      "orderNumber": "PK1768124460861",
+      "customerName": "H3",
+      "tenantId": "60006",
+      "status": "pending",
+      "createdAt": "2026-01-11 09:41:00"
+    },
+    {
+      "id": "90009",
+      "orderNumber": "PK1768121361030",
+      "customerName": "H1",
+      "tenantId": "60006",
+      "status": "pending",
+      "createdAt": "2026-01-11 08:49:21"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\tcustomerName\ttenantId\tstatus\tcreatedAt\n90011\tPK1768124460861\tH3\t60006\tpending\t2026-01-11 09:41:00\n90009\tPK1768121361030\tH1\t60006\tpending\t2026-01-11 08:49:21\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

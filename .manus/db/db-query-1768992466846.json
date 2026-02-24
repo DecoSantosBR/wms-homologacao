@@ -1,0 +1,46 @@
+{
+  "query": "SELECT \n  po.id, \n  po.orderNumber, \n  po.customerOrderNumber,\n  po.status as order_status,\n  po.waveId,\n  pw.waveNumber,\n  pw.status as wave_status\nFROM pickingOrders po\nLEFT JOIN pickingWaves pw ON po.waveId = pw.id\nORDER BY po.id DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  po.id, \n  po.orderNumber, \n  po.customerOrderNumber,\n  po.status as order_status,\n  po.waveId,\n  pw.waveNumber,\n  pw.status as wave_status\nFROM pickingOrders po\nLEFT JOIN pickingWaves pw ON po.waveId = pw.id\nORDER BY po.id DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "90034",
+      "orderNumber": "PK1768990501434",
+      "customerOrderNumber": "PED-004",
+      "order_status": "staged",
+      "waveId": "60019",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed"
+    },
+    {
+      "id": "90033",
+      "orderNumber": "PK1768990500929",
+      "customerOrderNumber": "PED-003",
+      "order_status": "staged",
+      "waveId": "60019",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed"
+    },
+    {
+      "id": "90032",
+      "orderNumber": "PK1768990500429",
+      "customerOrderNumber": "PED-002",
+      "order_status": "staged",
+      "waveId": "60019",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed"
+    },
+    {
+      "id": "90031",
+      "orderNumber": "PK1768990499696",
+      "customerOrderNumber": "PED-001",
+      "order_status": "staged",
+      "waveId": "60019",
+      "waveNumber": "OS-20260121-0001",
+      "wave_status": "completed"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\tcustomerOrderNumber\torder_status\twaveId\twaveNumber\twave_status\n90034\tPK1768990501434\tPED-004\tstaged\t60019\tOS-20260121-0001\tcompleted\n90033\tPK1768990500929\tPED-003\tstaged\t60019\tOS-20260121-0001\tcompleted\n90032\tPK1768990500429\tPED-002\tstaged\t60019\tOS-20260121-0001\tcompleted\n90031\tPK1768990499696\tPED-001\tstaged\t60019\tOS-20260121-0001\tcompleted\n",
+  "stderr": "",
+  "execution_time_ms": 399
+}

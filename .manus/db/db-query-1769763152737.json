@@ -1,0 +1,37 @@
+{
+  "query": "\n-- Verificar romaneios recentes e seus status\nSELECT \n  sm.id as romaneioId,\n  sm.manifestNumber,\n  sm.status as statusRomaneio,\n  sm.createdAt as criadoEm,\n  sm.updatedAt as atualizadoEm,\n  GROUP_CONCAT(DISTINCT po.status) as statusPedidos,\n  COUNT(DISTINCT smi.pickingOrderId) as totalPedidos\nFROM shipmentManifests sm\nLEFT JOIN shipmentManifestItems smi ON sm.id = smi.manifestId\nLEFT JOIN pickingOrders po ON smi.pickingOrderId = po.id\nWHERE sm.createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)\nGROUP BY sm.id, sm.manifestNumber, sm.status, sm.createdAt, sm.updatedAt\nORDER BY sm.createdAt DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \n-- Verificar romaneios recentes e seus status\nSELECT \n  sm.id as romaneioId,\n  sm.manifestNumber,\n  sm.status as statusRomaneio,\n  sm.createdAt as criadoEm,\n  sm.updatedAt as atualizadoEm,\n  GROUP_CONCAT(DISTINCT po.status) as statusPedidos,\n  COUNT(DISTINCT smi.pickingOrderId) as totalPedidos\nFROM shipmentManifests sm\nLEFT JOIN shipmentManifestItems smi ON sm.id = smi.manifestId\nLEFT JOIN pickingOrders po ON smi.pickingOrderId = po.id\nWHERE sm.createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)\nGROUP BY sm.id, sm.manifestNumber, sm.status, sm.createdAt, sm.updatedAt\nORDER BY sm.createdAt DESC;\n",
+  "rows": [
+    {
+      "romaneioId": "270001",
+      "manifestNumber": "ROM-1769763003561",
+      "statusRomaneio": "shipped",
+      "criadoEm": "2026-01-30 08:50:03",
+      "atualizadoEm": "2026-01-30 08:50:38",
+      "statusPedidos": "shipped",
+      "totalPedidos": "1"
+    },
+    {
+      "romaneioId": "240004",
+      "manifestNumber": "ROM-1769738328102",
+      "statusRomaneio": "shipped",
+      "criadoEm": "2026-01-30 01:58:48",
+      "atualizadoEm": "2026-01-30 01:59:13",
+      "statusPedidos": "shipped",
+      "totalPedidos": "1"
+    },
+    {
+      "romaneioId": "180001",
+      "manifestNumber": "ROM-1769711848386",
+      "statusRomaneio": "shipped",
+      "criadoEm": "2026-01-29 18:37:28",
+      "atualizadoEm": "2026-01-29 18:38:23",
+      "statusPedidos": "shipped",
+      "totalPedidos": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "romaneioId\tmanifestNumber\tstatusRomaneio\tcriadoEm\tatualizadoEm\tstatusPedidos\ttotalPedidos\n270001\tROM-1769763003561\tshipped\t2026-01-30 08:50:03\t2026-01-30 08:50:38\tshipped\t1\n240004\tROM-1769738328102\tshipped\t2026-01-30 01:58:48\t2026-01-30 01:59:13\tshipped\t1\n180001\tROM-1769711848386\tshipped\t2026-01-29 18:37:28\t2026-01-29 18:38:23\tshipped\t1\n",
+  "stderr": "",
+  "execution_time_ms": 358
+}

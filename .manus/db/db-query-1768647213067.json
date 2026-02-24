@@ -1,0 +1,91 @@
+{
+  "query": "\nSELECT \n  pwi.id,\n  pwi.productName,\n  pwi.locationId,\n  i.id as inventory_id,\n  pr.id as reservation_id,\n  pr.pickingOrderId,\n  po.customerOrderNumber\nFROM pickingWaveItems pwi\nLEFT JOIN inventory i ON pwi.locationId = i.locationId\nLEFT JOIN pickingReservations pr ON i.id = pr.inventoryId\nLEFT JOIN pickingOrders po ON pr.pickingOrderId = po.id\nWHERE pwi.waveId = (SELECT id FROM pickingWaves ORDER BY id DESC LIMIT 1)\nLIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \nSELECT \n  pwi.id,\n  pwi.productName,\n  pwi.locationId,\n  i.id as inventory_id,\n  pr.id as reservation_id,\n  pr.pickingOrderId,\n  po.customerOrderNumber\nFROM pickingWaveItems pwi\nLEFT JOIN inventory i ON pwi.locationId = i.locationId\nLEFT JOIN pickingReservations pr ON i.id = pr.inventoryId\nLEFT JOIN pickingOrders po ON pr.pickingOrderId = po.id\nWHERE pwi.waveId = (SELECT id FROM pickingWaves ORDER BY id DESC LIMIT 1)\nLIMIT 10;\n",
+  "rows": [
+    {
+      "id": "30010",
+      "productName": "PERFUSOR SET 60 CM",
+      "locationId": "4",
+      "inventory_id": "30008",
+      "reservation_id": "1",
+      "pickingOrderId": "30001",
+      "customerOrderNumber": "PED-001"
+    },
+    {
+      "id": "30009",
+      "productName": "PERFUSOR SET 60 CM",
+      "locationId": "4",
+      "inventory_id": "30008",
+      "reservation_id": "1",
+      "pickingOrderId": "30001",
+      "customerOrderNumber": "PED-001"
+    },
+    {
+      "id": "30008",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "locationId": "2",
+      "inventory_id": "30006",
+      "reservation_id": "2",
+      "pickingOrderId": "30001",
+      "customerOrderNumber": "PED-001"
+    },
+    {
+      "id": "30007",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "locationId": "2",
+      "inventory_id": "30006",
+      "reservation_id": "2",
+      "pickingOrderId": "30001",
+      "customerOrderNumber": "PED-001"
+    },
+    {
+      "id": "30006",
+      "productName": "EXTENSOFIX 60 CM",
+      "locationId": "1",
+      "inventory_id": "30005",
+      "reservation_id": "3",
+      "pickingOrderId": "30002",
+      "customerOrderNumber": "PED-002"
+    },
+    {
+      "id": "30010",
+      "productName": "PERFUSOR SET 60 CM",
+      "locationId": "4",
+      "inventory_id": "30008",
+      "reservation_id": "4",
+      "pickingOrderId": "30003",
+      "customerOrderNumber": "PED-003"
+    },
+    {
+      "id": "30009",
+      "productName": "PERFUSOR SET 60 CM",
+      "locationId": "4",
+      "inventory_id": "30008",
+      "reservation_id": "4",
+      "pickingOrderId": "30003",
+      "customerOrderNumber": "PED-003"
+    },
+    {
+      "id": "30008",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "locationId": "2",
+      "inventory_id": "30006",
+      "reservation_id": "5",
+      "pickingOrderId": "30004",
+      "customerOrderNumber": "PED-004"
+    },
+    {
+      "id": "30007",
+      "productName": "INTRAFIX PRIMELINE AIR",
+      "locationId": "2",
+      "inventory_id": "30006",
+      "reservation_id": "5",
+      "pickingOrderId": "30004",
+      "customerOrderNumber": "PED-004"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductName\tlocationId\tinventory_id\treservation_id\tpickingOrderId\tcustomerOrderNumber\n30010\tPERFUSOR SET 60 CM\t4\t30008\t1\t30001\tPED-001\n30009\tPERFUSOR SET 60 CM\t4\t30008\t1\t30001\tPED-001\n30008\tINTRAFIX PRIMELINE AIR\t2\t30006\t2\t30001\tPED-001\n30007\tINTRAFIX PRIMELINE AIR\t2\t30006\t2\t30001\tPED-001\n30006\tEXTENSOFIX 60 CM\t1\t30005\t3\t30002\tPED-002\n30010\tPERFUSOR SET 60 CM\t4\t30008\t4\t30003\tPED-003\n30009\tPERFUSOR SET 60 CM\t4\t30008\t4\t30003\tPED-003\n30008\tINTRAFIX PRIMELINE AIR\t2\t30006\t5\t30004\tPED-004\n30007\tINTRAFIX PRIMELINE AIR\t2\t30006\t5\t30004\tPED-004\n",
+  "stderr": "",
+  "execution_time_ms": 376
+}

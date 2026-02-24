@@ -1,0 +1,28 @@
+{
+  "query": "SELECT \n  i.id,\n  p.sku,\n  p.description,\n  i.quantity,\n  i.reservedQuantity,\n  wl.code as locationCode,\n  wz.code as zoneCode\nFROM inventory i\nJOIN products p ON p.id = i.productId\nJOIN warehouseLocations wl ON wl.id = i.locationId\nJOIN warehouseZones wz ON wz.id = wl.zoneId\nWHERE wz.code = 'EXP'\nAND p.sku IN ('4014609', '443060', '834207')\nORDER BY p.sku;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  i.id,\n  p.sku,\n  p.description,\n  i.quantity,\n  i.reservedQuantity,\n  wl.code as locationCode,\n  wz.code as zoneCode\nFROM inventory i\nJOIN products p ON p.id = i.productId\nJOIN warehouseLocations wl ON wl.id = i.locationId\nJOIN warehouseZones wz ON wz.id = wl.zoneId\nWHERE wz.code = 'EXP'\nAND p.sku IN ('4014609', '443060', '834207')\nORDER BY p.sku;",
+  "rows": [
+    {
+      "id": "390001",
+      "sku": "443060",
+      "description": "EXTENSOFIX 60 CM",
+      "quantity": "280",
+      "reservedQuantity": "2",
+      "locationCode": "EXP-01-A",
+      "zoneCode": "EXP"
+    },
+    {
+      "id": "390003",
+      "sku": "834207",
+      "description": "PERFUSOR SET 60 CM",
+      "quantity": "140",
+      "reservedQuantity": "1",
+      "locationCode": "EXP-01-A",
+      "zoneCode": "EXP"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsku\tdescription\tquantity\treservedQuantity\tlocationCode\tzoneCode\n390001\t443060\tEXTENSOFIX 60 CM\t280\t2\tEXP-01-A\tEXP\n390003\t834207\tPERFUSOR SET 60 CM\t140\t1\tEXP-01-A\tEXP\n",
+  "stderr": "",
+  "execution_time_ms": 356
+}

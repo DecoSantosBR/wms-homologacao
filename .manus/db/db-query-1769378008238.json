@@ -1,0 +1,18 @@
+{
+  "query": "SELECT po.id, po.customerOrderNumber, po.status, po.updatedAt,\n       sc.status as stageCheckStatus, sc.completedAt as stageCompletedAt\nFROM pickingOrders po\nLEFT JOIN stageChecks sc ON po.id = sc.pickingOrderId\nWHERE po.customerOrderNumber = 'PED-005'\nORDER BY sc.id DESC\nLIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT po.id, po.customerOrderNumber, po.status, po.updatedAt,\n       sc.status as stageCheckStatus, sc.completedAt as stageCompletedAt\nFROM pickingOrders po\nLEFT JOIN stageChecks sc ON po.id = sc.pickingOrderId\nWHERE po.customerOrderNumber = 'PED-005'\nORDER BY sc.id DESC\nLIMIT 1;",
+  "rows": [
+    {
+      "id": "210005",
+      "customerOrderNumber": "PED-005",
+      "status": "picked",
+      "updatedAt": "2026-01-25 16:19:24",
+      "stageCheckStatus": "divergent",
+      "stageCompletedAt": "2026-01-25 21:50:58"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcustomerOrderNumber\tstatus\tupdatedAt\tstageCheckStatus\tstageCompletedAt\n210005\tPED-005\tpicked\t2026-01-25 16:19:24\tdivergent\t2026-01-25 21:50:58\n",
+  "stderr": "",
+  "execution_time_ms": 424
+}

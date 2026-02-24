@@ -1,8 +1,0 @@
-{
-  "query": "SELECT \n  sp.id,\n  sp.tenantId,\n  l.code AS endereco,\n  p.name AS produto,\n  p.sku,\n  sp.internalCode AS codigoInterno,\n  sp.quantity AS quantidade,\n  sp.fractionalAvailable AS fracionadoDisponivel,\n  sp.createdAt\nFROM stockPositions sp\nJOIN locations l ON sp.locationId = l.id\nJOIN products p ON sp.productId = p.id\nWHERE sp.tenantId = 1\nORDER BY l.code, p.name, sp.internalCode;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute SELECT \n  sp.id,\n  sp.tenantId,\n  l.code AS endereco,\n  p.name AS produto,\n  p.sku,\n  sp.internalCode AS codigoInterno,\n  sp.quantity AS quantidade,\n  sp.fractionalAvailable AS fracionadoDisponivel,\n  sp.createdAt\nFROM stockPositions sp\nJOIN locations l ON sp.locationId = l.id\nJOIN products p ON sp.productId = p.id\nWHERE sp.tenantId = 1\nORDER BY l.code, p.name, sp.internalCode;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 1: Table 'yb8jbmxfws4i38ecuvjpns.stockPositions' doesn't exist"
-  ]
-}

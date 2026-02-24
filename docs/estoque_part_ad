@@ -1,0 +1,226 @@
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Movimentações de Estoque</h1>
+        <p className="text-muted-foreground">Registre transferências entre endereços</p>
+      </div>
+
+      {/* Formulário */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Nova Movimentação</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Endereço Origem *</label>
+              <Select value={fromLocationId} onValueChange={setFromLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o endereço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationsWithStock.map((loc) => (
+                    <SelectItem key={loc.id} value={String(loc.id)}>
+                      {loc.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Produto *</label>
+              <Select value={productId} onValueChange={setProductId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProducts.map((prod) => (
+                    <SelectItem key={prod.id} value={String(prod.id)}>
+                      {prod.sku} - {prod.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Quantidade *</label>
+              <Input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="Quantidade"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Tipo de Movimentação *</label>
+              <Select value={movementType} onValueChange={(v: any) => setMovementType(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transfer">Transferência</SelectItem>
+                  <SelectItem value="adjustment">Ajuste</SelectItem>
+                  <SelectItem value="return">Devolução</SelectItem>
+                  <SelectItem value="disposal">Descarte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Endereço Destino *</label>
+              <Select value={toLocationId} onValueChange={setToLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o endereço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={String(loc.id)}>
+                      {loc.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Observações</label>
+              <Input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notas adicionais"
+              />
+            </div>
+          </div>
+
+          <Button
+            onClick={handleRegisterMovement}
+            disabled={registerMovementMutation.isPending}
+            className="w-full"
+          >
+            {registerMovementMutation.isPending ? "Registrando..." : "Registrar Movimentação"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Histórico */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Movimentações</CardTitle>
+          <CardDescription>{movements.length} movimentação(ões)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {movements.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Nenhuma movimentação registrada</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Destino</TableHead>
+                    <TableHead className="text-right">Quantidade</TableHead>
+                    <TableHead>Lote</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {movements.map((mov) => (
+                    <TableRow key={mov.id}>
+                      <TableCell className="text-sm">
+                        {new Date(mov.createdAt).toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell>{getMovementTypeBadge(mov.movementType)}</TableCell>
+                      <TableCell className="font-mono text-sm">{mov.productSku}</TableCell>
+                      <TableCell className="font-mono">{mov.fromLocationCode || "-"}</TableCell>
+                      <TableCell className="font-mono">{mov.toLocationCode || "-"}</TableCell>
+                      <TableCell className="text-right font-bold">{mov.quantity}</TableCell>
+                      <TableCell className="font-mono">{mov.batch || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+---
+
+## Fluxos Operacionais
+
+### Fluxo 1: Consulta de Posição de Estoque
+
+```
+1. Usuário acessa /stock
+2. Sistema carrega todas as posições de estoque
+3. Usuário aplica filtros (cliente, zona, status, etc)
+4. Sistema atualiza tabela em tempo real
+5. Usuário pode exportar para Excel
+6. Sistema gera arquivo .xlsx com dados filtrados
+7. Download automático do arquivo
+```
+
+### Fluxo 2: Movimentação de Estoque
+
+```
+1. Usuário acessa /stock/movements
+2. Seleciona endereço origem
+3. Sistema lista produtos disponíveis no endereço
+4. Usuário seleciona produto e quantidade
+5. Sistema valida saldo disponível
+6. Sistema sugere endereço destino automaticamente
+7. Usuário confirma movimentação
+8. Sistema atualiza saldos em ambos endereços
+9. Sistema registra movimentação no histórico
+10. Sistema atualiza status dos endereços (occupied/available)
+```
+
+### Fluxo 3: Dashboard de Ocupação
+
+```
+1. Usuário acessa /occupancy
+2. Sistema calcula ocupação por zona
+3. Sistema gera gráfico de barras empilhadas
+4. Sistema exibe tabela detalhada
+5. Sistema analisa padrões e gera sugestões
+6. Usuário visualiza sugestões de otimização
+7. Usuário pode clicar em sugestão para detalhes
+```
+
+---
+
+## Integração com Outros Módulos
+
+### Integração com Recebimento
+
+- Após conferência completa de uma ordem de recebimento
+- Sistema cria automaticamente registros em `inventory`
+- Sistema aloca endereço REC automaticamente
+- Sistema registra movimentação tipo "receiving"
+
+### Integração com Separação
+
+- Durante picking, sistema deduz quantidade de `inventory`
+- Sistema registra movimentação tipo "picking"
+- Sistema atualiza status de endereço destino (EXP)
+
+### Integração com Endereçamento
+
+- Função `updateLocationStatus()` chamada após cada movimentação
+- Calcula saldo total do endereço
+- Atualiza status: "occupied" se quantidade > 0, "available" se quantidade = 0
+
+---
+
+**Fim da Documentação - Módulo Estoque**

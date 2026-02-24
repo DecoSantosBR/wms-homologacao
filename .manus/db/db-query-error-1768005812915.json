@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO warehouseLocations (code, zoneId, tenantId, status, capacity, currentOccupancy, createdAt, updatedAt) \nSELECT 'REC-SHARED-01', id, NULL, 'available', 1000, 0, NOW(), NOW() \nFROM warehouseZones \nWHERE name LIKE '%Recebimento%' \nLIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute INSERT INTO warehouseLocations (code, zoneId, tenantId, status, capacity, currentOccupancy, createdAt, updatedAt) \nSELECT 'REC-SHARED-01', id, NULL, 'available', 1000, 0, NOW(), NOW() \nFROM warehouseZones \nWHERE name LIKE '%Recebimento%' \nLIMIT 1;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'capacity' in 'field list'"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM stageCheckItems WHERE stageCheckId IN (SELECT id FROM stageChecks WHERE customerOrderNumber = 'PED-005');\nDELETE FROM stageChecks WHERE customerOrderNumber = 'PED-005';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute DELETE FROM stageCheckItems WHERE stageCheckId IN (SELECT id FROM stageChecks WHERE customerOrderNumber = 'PED-005');\nDELETE FROM stageChecks WHERE customerOrderNumber = 'PED-005';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 413
+}

@@ -1,9 +1,0 @@
-{
-  "query": "\n-- Deletar clientes de teste\nDELETE FROM tenants WHERE name LIKE '%Teste%';\n\n-- Deletar produtos de teste\nDELETE FROM products WHERE sku LIKE 'PROD-%' OR description LIKE '%Teste%';\n\n-- Deletar endereços de teste\nDELETE FROM warehouseLocations WHERE code LIKE '%-TEST-%';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44TTARZqZm4zxSK.6207e12656da --database YB8JBMXFWs4i38ecUvjPnS --execute \n-- Deletar clientes de teste\nDELETE FROM tenants WHERE name LIKE '%Teste%';\n\n-- Deletar produtos de teste\nDELETE FROM products WHERE sku LIKE 'PROD-%' OR description LIKE '%Teste%';\n\n-- Deletar endereços de teste\nDELETE FROM warehouseLocations WHERE code LIKE '%-TEST-%';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 237
-}
