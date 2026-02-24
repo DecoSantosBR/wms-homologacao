@@ -8,6 +8,7 @@ import {
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import * as XLSX from "xlsx";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 export interface PreallocationRow {
   endereco: string;
@@ -449,6 +450,7 @@ export async function executeAddressing(
         expiryDate: stockInRec.expiryDate,
         quantity: quantityToMove,
         status: "available",
+        uniqueCode: getUniqueCode(prealloc.productSku, prealloc.batch), // ✅ Adicionar uniqueCode
       });
     }
 
@@ -456,6 +458,8 @@ export async function executeAddressing(
     await dbConn.insert(inventoryMovements).values({
       tenantId: order.tenantId,
       productId: prealloc.productId,
+      batch: prealloc.batch, // ✅ Adicionar batch
+      uniqueCode: getUniqueCode(prealloc.productSku, prealloc.batch), // ✅ Adicionar uniqueCode
       movementType: "receiving", // TIPO CORRETO: receiving = entrada
       quantity: quantityToMove,
       fromLocationId: recLocationId, // De: REC
