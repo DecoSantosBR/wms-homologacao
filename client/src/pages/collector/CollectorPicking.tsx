@@ -48,6 +48,7 @@ type Screen =
 
 interface RouteItem {
   allocationId: number;
+  pickingOrderId: number; // ✅ Adicionar pickingOrderId
   productId: number;
   productSku: string;
   productName: string;
@@ -285,7 +286,7 @@ export function CollectorPicking() {
       // Se falhar, adicionar à fila offline
       if (!navigator.onLine) {
         const operationId = await offlineQueue.enqueue('scanProduct', {
-          pickingOrderId: selectedOrderId!,
+          pickingOrderId: currentItem!.pickingOrderId, // ✅ Usar pickingOrderId do item
           allocationId: currentItem!.allocationId,
           scannedCode: productScanInput,
         });
@@ -467,7 +468,7 @@ export function CollectorPicking() {
         }
         
         scanProductMut.mutate({
-          pickingOrderId: selectedOrderId,
+          pickingOrderId: currentItem.pickingOrderId, // ✅ Usar pickingOrderId do item
           allocationId: currentItem.allocationId,
           scannedCode: code,
         });
@@ -928,7 +929,7 @@ export function CollectorPicking() {
                     }
                     
                     scanProductMut.mutate({
-                      pickingOrderId: selectedOrderId,
+                      pickingOrderId: currentItem.pickingOrderId, // ✅ Usar pickingOrderId do item
                       allocationId: currentItem.allocationId,
                       scannedCode: productScanInput.trim(),
                     });
@@ -964,7 +965,7 @@ export function CollectorPicking() {
                   }
                   
                   scanProductMut.mutate({
-                    pickingOrderId: selectedOrderId,
+                    pickingOrderId: currentItem.pickingOrderId, // ✅ Usar pickingOrderId do item
                     allocationId: currentItem.allocationId,
                     scannedCode: productScanInput.trim(),
                   });

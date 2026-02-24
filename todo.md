@@ -3235,3 +3235,11 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] 8. Refatorar importação de NF-e para popular invoiceItems
 - [ ] 9. Renomear invoiceItems para pickingInvoiceItems (NF-e de saída)
 - [ ] 10. Criar receivingInvoiceItems (NF-e de entrada)
+
+## 🐛 BUG CRÍTICO: pickingOrderId incorreto no frontend - 24/02/2026
+- [ ] Frontend usa waveId ao invés de pickingOrderId real
+- [ ] Adicionar campo batch na tabela pickingReservations
+- [ ] Corrigir CollectorPicking.tsx para usar pickingOrderId correto
+- [ ] Adicionar campo labelCode na tabela pickingAllocations
+- [ ] Atualizar geração de alocações para incluir labelCode
+- [ ] Atualizar validação de cipagem para usar labelCode diretamente

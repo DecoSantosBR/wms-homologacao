@@ -66,6 +66,7 @@ async function buildRoute(
   const allocs = await db
     .select({
       id: pickingAllocations.id,
+      pickingOrderId: pickingAllocations.pickingOrderId, // ✅ Adicionar pickingOrderId
       locationId: pickingAllocations.locationId,
       locationCode: pickingAllocations.locationCode,
       productId: pickingAllocations.productId,
@@ -109,6 +110,7 @@ async function buildRoute(
       allDone: boolean;
       items: Array<{
         allocationId: number;
+        pickingOrderId: number; // ✅ Adicionar pickingOrderId
         productId: number;
         productSku: string;
         productName: string;
@@ -140,6 +142,7 @@ async function buildRoute(
 
     g.items.push({
       allocationId: a.id,
+      pickingOrderId: a.pickingOrderId, // ✅ Adicionar pickingOrderId
       productId: a.productId,
       productSku: a.productSku,
       productName: productMap[a.productId] ?? a.productSku,
