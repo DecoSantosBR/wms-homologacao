@@ -3022,3 +3022,10 @@ Adicionar visualizações gráficas aos relatórios existentes usando Recharts p
   - [x] Validar se operação já foi processada
   - [x] Retornar sucesso para operações duplicadas
 - [ ] Testar fluxo offline completo
+
+
+## Bug - 24/02/2026 (17:25) - allocationId undefined em /collector/picking
+- [x] Investigar causa do allocationId undefined ao bipar etiqueta
+- [x] Corrigir lógica de obtenção do currentItem
+- [x] Adicionar validações em 3 locais (scanner, Enter, botão OK)
+- [x] Implementar refresh automático ao detectar item inválido
