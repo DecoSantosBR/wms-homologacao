@@ -68,7 +68,6 @@ describe("Stage - Auto-preenchimento de quantidade", () => {
       tenantId,
       orderNumber: `ORD-AUTO-${uniqueSuffix}`,
       customerOrderNumber: `0001-${uniqueSuffix}`,
-      customerId: 1,
       customerName: "Cliente Teste",
       status: "picked",
       createdBy: 1,

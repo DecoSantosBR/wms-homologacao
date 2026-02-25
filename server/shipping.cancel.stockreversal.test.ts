@@ -91,7 +91,6 @@ describe("Shipping - Estorno de estoque ao cancelar", () => {
       tenantId,
       orderNumber: `ORD-CLEAN-${uniqueSuffix}`,
       customerOrderNumber: `0001-CLEAN-${uniqueSuffix}`,
-      customerId: 1,
       customerName: "Cliente Cleanup",
       status: "staged",
       createdBy: 1,

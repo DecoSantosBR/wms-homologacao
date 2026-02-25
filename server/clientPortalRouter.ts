@@ -1198,14 +1198,6 @@ export const clientPortalRouter = router({
         // PASSO 2: Criar pedido
         const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
 
-        const tenant = await tx
-          .select({ name: tenants.name })
-          .from(tenants)
-          .where(eq(tenants.id, session.tenantId))
-          .limit(1);
-
-        const customerName = tenant.length > 0 ? tenant[0].name : "Cliente";
-
         // Calcular totalQuantity em unidades
         const totalQuantityInUnits = stockValidations.reduce((sum, val) => sum + val.quantityInUnits, 0);
 
@@ -1213,8 +1205,7 @@ export const clientPortalRouter = router({
           tenantId: session.tenantId,
           orderNumber,
           customerOrderNumber: input.customerOrderNumber || null,
-          customerId: session.tenantId,
-          customerName,
+          customerName: input.customerName || null, // ✅ Nome do destinatário do pedido original
           deliveryAddress: input.deliveryAddress || null,
           priority: input.priority,
           status: "pending",

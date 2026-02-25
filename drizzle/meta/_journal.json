@@ -29,6 +29,13 @@
       "when": 1771982647183,
       "tag": "0003_exotic_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1771990572980,
+      "tag": "0004_fantastic_talon",
+      "breakpoints": true
     }
   ]
 }

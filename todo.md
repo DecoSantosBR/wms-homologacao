@@ -3512,3 +3512,26 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   - CAUSA: Verificação de idempotência (if alloc.pickedQuantity === newPickedQuantity) bloqueava bips subsequentes
   - CAUSA 2: Sincronização cruzada só acontecia quando status === 'picked'
   - SOLUÇÃO: Incremento atômico SQL em pickingAllocations, pickingWaveItems e pickingOrderItems em TODOS os bips
+
+
+## 🚨 BUG CRÍTICO - Finalização Precoce VOLTOU (25/02/2026 03:15)
+
+- [ ] Finalização precoce voltou a acontecer na onda OS-20260225-0001
+  - Cenário: 3 SKUs / 4 lotes
+  - Comportamento: Onda marca como completa após leitura da etiqueta do PRIMEIRO item
+  - Onda criada APÓS checkpoint 7a0aef21 (com consolidação de pickingWaveItems)
+  - Investigar se consolidação por uniqueCode está funcionando corretamente
+
+
+## 🐛 BUG CONCEITUAL - customerId vs tenantId (25/02/2026 03:20)
+
+- [x] Remover customerId de pickingOrders (confusão entre destinatário e cliente do armazém)
+  - customerId não deveria existir (não há cadastro de destinatários)
+  - customerName deve ser texto livre do pedido original, não vínculo com tabela
+  - Lógica atual sobrescreve customerName com tenantName
+  - Conceito de customerId veio de pickingReservations (tabela deletada)
+- [x] Gerar e aplicar migration para dropar coluna customerId
+- [x] Corrigir lógica de criação de pickingOrders para usar customerName do pedido original
+  - clientPortalRouter.ts: Removida busca de tenant.name, usa input.customerName
+  - routers.ts: Já estava correto (usa input.customerName ou firstItem['Destinatário'])
+  - Testes: Removidas referências a customerId em 4 arquivos de teste

@@ -38,7 +38,6 @@ describe("Shipping - Cancelamento de expedição", () => {
       tenantId,
       orderNumber: `ORD-CANCEL-${uniqueSuffix}`,
       customerOrderNumber: `0001-${uniqueSuffix}`,
-      customerId: 1,
       customerName: "Cliente Teste",
       status: "staged", // Conferido no Stage
       shippingStatus: "awaiting_invoice",
@@ -186,7 +185,6 @@ describe("Shipping - Cancelamento de expedição", () => {
       tenantId,
       orderNumber: `ORD-PICKED-${uniqueSuffix}`,
       customerOrderNumber: `0002-${uniqueSuffix}`,
-      customerId: 1,
       customerName: "Cliente Teste",
       status: "picked", // Não está em staged
       createdBy: 1,

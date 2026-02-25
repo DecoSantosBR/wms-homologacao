@@ -429,8 +429,7 @@ export const pickingOrders = mysqlTable("pickingOrders", {
   tenantId: int("tenantId").notNull(),
   orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
   customerOrderNumber: varchar("customerOrderNumber", { length: 100 }), // Número do pedido do cliente (numeração interna)
-  customerId: int("customerId"), // Relacionamento com cliente (tenant)
-  customerName: varchar("customerName", { length: 255 }),
+  customerName: varchar("customerName", { length: 255 }), // Nome do destinatário (texto livre do pedido original)
   deliveryAddress: text("deliveryAddress"),
   priority: mysqlEnum("priority", ["emergency", "urgent", "normal", "low"]).default("normal").notNull(),
   status: mysqlEnum("status", ["pending", "validated", "in_wave", "in_progress", "paused", "picking", "picked", "divergent", "checking", "packed", "staged", "invoiced", "shipped", "cancelled"]).default("pending").notNull(),
