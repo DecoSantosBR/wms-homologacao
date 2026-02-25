@@ -3486,3 +3486,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Variável `products` não definida em modules/conference.ts (linhas 327-329)
 - [ ] Variáveis `warehouseZones` e `warehouseLocations` não importadas em modules/conference.ts (linhas 335-336)
 - [ ] Erro de overload em clientPortalRouter.ts (linha 1305)
+
+
+## 🐛 BUG CRÍTICO - 25/02/2026 (01:30)
+
+- [x] Bug de finalização precoce da separação voltou a acontecer em /collector/picking (regressão após Operação Faxina) - RESOLVIDO com sincronização cruzada entre pickingAllocations e pickingWaveItems

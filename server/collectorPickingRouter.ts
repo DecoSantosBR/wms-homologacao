@@ -598,9 +598,47 @@ export const collectorPickingRouter = router({
         .set({ pickedQuantity: newPickedQuantity, status: newStatus })
         .where(eq(pickingAllocations.id, alloc.id));
 
-      // ✅ ATUALIZAR pickingOrderItems se alocação foi completada
+      // ✅ SINCRONIZAR pickingWaveItems (Dual-Update para evitar finalização precoce)
       if (newStatus === "picked") {
-        const { pickingOrderItems } = await import("../drizzle/schema");
+        const { pickingOrderItems, pickingWaveItems } = await import("../drizzle/schema");
+        
+        // 🔄 SINCRONIZAÇÃO CRUZADA: Verificar se todas as alocações do waveItem foram concluídas
+        if (alloc.waveId) {
+          const allAllocsForWaveItem = await db
+            .select()
+            .from(pickingAllocations)
+            .where(
+              and(
+                eq(pickingAllocations.waveId, alloc.waveId),
+                eq(pickingAllocations.productId, alloc.productId),
+                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+              )
+            );
+
+          const allWaveItemAllocsPicked = allAllocsForWaveItem.every(a => 
+            a.id === alloc.id ? true : a.status === "picked"
+          );
+
+          if (allWaveItemAllocsPicked) {
+            // Todas as alocações deste waveItem foram concluídas → Atualizar pickingWaveItems
+            const totalPickedQty = allAllocsForWaveItem.reduce((sum, a) => sum + (a.id === alloc.id ? newPickedQuantity : a.pickedQuantity), 0);
+            
+            await db
+              .update(pickingWaveItems)
+              .set({
+                pickedQuantity: totalPickedQty,
+                status: "picked",
+                pickedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(pickingWaveItems.waveId, alloc.waveId),
+                  eq(pickingWaveItems.productId, alloc.productId),
+                  alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
+                )
+              );
+          }
+        }
         
         const [orderItem] = await db
           .select()
@@ -708,9 +746,47 @@ export const collectorPickingRouter = router({
         .set({ pickedQuantity: newPickedQuantity, status: newStatus })
         .where(eq(pickingAllocations.id, alloc.id));
 
-      // ✅ ATUALIZAR pickingOrderItems se alocação foi completada
+      // ✅ SINCRONIZAR pickingWaveItems (Dual-Update para evitar finalização precoce)
       if (newStatus === "picked") {
-        const { pickingOrderItems } = await import("../drizzle/schema");
+        const { pickingOrderItems, pickingWaveItems } = await import("../drizzle/schema");
+        
+        // 🔄 SINCRONIZAÇÃO CRUZADA: Verificar se todas as alocações do waveItem foram concluídas
+        if (alloc.waveId) {
+          const allAllocsForWaveItem = await db
+            .select()
+            .from(pickingAllocations)
+            .where(
+              and(
+                eq(pickingAllocations.waveId, alloc.waveId),
+                eq(pickingAllocations.productId, alloc.productId),
+                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+              )
+            );
+
+          const allWaveItemAllocsPicked = allAllocsForWaveItem.every(a => 
+            a.id === alloc.id ? true : a.status === "picked"
+          );
+
+          if (allWaveItemAllocsPicked) {
+            // Todas as alocações deste waveItem foram concluídas → Atualizar pickingWaveItems
+            const totalPickedQty = allAllocsForWaveItem.reduce((sum, a) => sum + (a.id === alloc.id ? newPickedQuantity : a.pickedQuantity), 0);
+            
+            await db
+              .update(pickingWaveItems)
+              .set({
+                pickedQuantity: totalPickedQty,
+                status: "picked",
+                pickedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(pickingWaveItems.waveId, alloc.waveId),
+                  eq(pickingWaveItems.productId, alloc.productId),
+                  alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
+                )
+              );
+          }
+        }
         
         const [orderItem] = await db
           .select()

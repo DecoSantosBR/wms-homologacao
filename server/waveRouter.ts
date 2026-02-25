@@ -271,6 +271,24 @@ export const waveRouter = router({
         })
         .where(eq(pickingWaveItems.id, input.itemId));
 
+      // 🔄 SINCRONIZAÇÃO CRUZADA: Atualizar pickingAllocations correspondentes
+      if (isComplete) {
+        // Marcar todas as alocações deste waveItem como 'picked'
+        await db
+          .update(pickingAllocations)
+          .set({
+            status: "picked",
+            pickedQuantity: sql`${pickingAllocations.quantity}`, // Marcar como totalmente separado
+          })
+          .where(
+            and(
+              eq(pickingAllocations.waveId, input.waveId),
+              eq(pickingAllocations.productId, waveItem.productId),
+              waveItem.batch ? eq(pickingAllocations.batch, waveItem.batch) : sql`1=1`
+            )
+          );
+      }
+
       // 6. Verificar se todos os itens da onda foram completados
       const allItems = await db
         .select()
