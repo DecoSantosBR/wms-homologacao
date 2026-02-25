@@ -572,114 +572,67 @@ export const collectorPickingRouter = router({
         });
       }
 
-      // Incrementar quantidade separada (1 caixa = unitsPerBox unidades)
+      // 🔄 INCREMENTO ATÔMICO: Usar SQL para evitar race conditions
       const quantityToAdd = Math.min(unitsPerBox, remaining);
-      const newPickedQuantity = alloc.pickedQuantity + quantityToAdd;
-      const newStatus =
-        newPickedQuantity >= alloc.quantity ? "picked" : "in_progress";
-
-      // IDEMPOTÊNCIA: Verificar se operação já foi processada
-      // Se quantidade já está no valor esperado, retornar sucesso sem duplicar
-      if (alloc.pickedQuantity === newPickedQuantity) {
-        return {
-          ok: true,
-          requiresManualQuantity: false,
-          quantityAdded: 0, // Já processado
-          pickedQuantity: newPickedQuantity,
-          totalQuantity: alloc.quantity,
-          remainingQuantity: alloc.quantity - newPickedQuantity,
-          allocationCompleted: newStatus === "picked",
-          message: `Operação já processada. Total: ${newPickedQuantity}/${alloc.quantity}.`,
-        };
-      }
-
+      
+      // Atualizar com incremento atômico SQL
       await db
         .update(pickingAllocations)
-        .set({ pickedQuantity: newPickedQuantity, status: newStatus })
+        .set({ 
+          pickedQuantity: sql`${pickingAllocations.pickedQuantity} + ${quantityToAdd}`,
+          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${quantityToAdd} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'in_progress' END`
+        })
         .where(eq(pickingAllocations.id, alloc.id));
+      
+      // Buscar estado atualizado após incremento
+      const [updatedAlloc] = await db
+        .select()
+        .from(pickingAllocations)
+        .where(eq(pickingAllocations.id, alloc.id))
+        .limit(1);
+      
+      const newPickedQuantity = updatedAlloc.pickedQuantity;
+      const newStatus = updatedAlloc.status;
 
-      // ✅ SINCRONIZAR pickingWaveItems (Dual-Update para evitar finalização precoce)
-      if (newStatus === "picked") {
+      // ✅ SINCRONIZAÇÃO CRUZADA: Incremento atômico em pickingWaveItems e pickingOrderItems
+      {
         const { pickingOrderItems, pickingWaveItems } = await import("../drizzle/schema");
         
-        // 🔄 SINCRONIZAÇÃO CRUZADA: Verificar se todas as alocações do waveItem foram concluídas
+        // 🔄 Atualizar pickingWaveItems com incremento atômico
         if (alloc.waveId) {
-          const allAllocsForWaveItem = await db
-            .select()
-            .from(pickingAllocations)
+          await db
+            .update(pickingWaveItems)
+            .set({
+              pickedQuantity: sql`${pickingWaveItems.pickedQuantity} + ${quantityToAdd}`,
+              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${quantityToAdd} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'in_progress' END`,
+              pickedAt: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${quantityToAdd} >= ${pickingWaveItems.totalQuantity} THEN NOW() ELSE ${pickingWaveItems.pickedAt} END`,
+            })
             .where(
               and(
-                eq(pickingAllocations.waveId, alloc.waveId),
-                eq(pickingAllocations.productId, alloc.productId),
-                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+                eq(pickingWaveItems.waveId, alloc.waveId),
+                eq(pickingWaveItems.productId, alloc.productId),
+                alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
               )
             );
-
-          const allWaveItemAllocsPicked = allAllocsForWaveItem.every(a => 
-            a.id === alloc.id ? true : a.status === "picked"
-          );
-
-          if (allWaveItemAllocsPicked) {
-            // Todas as alocações deste waveItem foram concluídas → Atualizar pickingWaveItems
-            const totalPickedQty = allAllocsForWaveItem.reduce((sum, a) => sum + (a.id === alloc.id ? newPickedQuantity : a.pickedQuantity), 0);
-            
-            await db
-              .update(pickingWaveItems)
-              .set({
-                pickedQuantity: totalPickedQty,
-                status: "picked",
-                pickedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(pickingWaveItems.waveId, alloc.waveId),
-                  eq(pickingWaveItems.productId, alloc.productId),
-                  alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
-                )
-              );
-          }
         }
         
-        const [orderItem] = await db
-          .select()
-          .from(pickingOrderItems)
+        // 🔄 Atualizar pickingOrderItems com incremento atômico
+        await db
+          .update(pickingOrderItems)
+          .set({
+            pickedQuantity: sql`${pickingOrderItems.pickedQuantity} + ${quantityToAdd}`,
+            status: sql`CASE WHEN ${pickingOrderItems.pickedQuantity} + ${quantityToAdd} >= ${pickingOrderItems.requestedQuantity} THEN 'picked' ELSE 'in_progress' END`,
+          })
           .where(
             and(
               eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-              // ✅ Usar uniqueCode para garantir correspondência exata SKU+Lote
               (alloc as any).uniqueCode ? eq((pickingOrderItems as any).uniqueCode, (alloc as any).uniqueCode) : 
                 and(
                   eq(pickingOrderItems.productId, alloc.productId),
                   alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
                 )
             )
-          )
-          .limit(1);
-
-        if (orderItem && orderItem.status !== "picked") {
-          const allAllocations = await db
-            .select()
-            .from(pickingAllocations)
-            .where(
-              and(
-                eq(pickingAllocations.pickingOrderId, input.pickingOrderId),
-                eq(pickingAllocations.productId, alloc.productId),
-                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
-              )
-            );
-
-          const allPicked = allAllocations.every(a => a.status === "picked");
-
-          if (allPicked) {
-            await db
-              .update(pickingOrderItems)
-              .set({
-                status: "picked",
-                pickedQuantity: orderItem.requestedQuantity,
-              })
-              .where(eq(pickingOrderItems.id, orderItem.id));
-          }
-        }
+          );
       }
 
       return {
@@ -737,97 +690,64 @@ export const collectorPickingRouter = router({
         });
       }
 
-      const newPickedQuantity = alloc.pickedQuantity + input.quantity;
-      const newStatus =
-        newPickedQuantity >= alloc.quantity ? "picked" : "in_progress";
-
+      // 🔄 INCREMENTO ATÔMICO: Usar SQL para evitar race conditions
       await db
         .update(pickingAllocations)
-        .set({ pickedQuantity: newPickedQuantity, status: newStatus })
+        .set({ 
+          pickedQuantity: sql`${pickingAllocations.pickedQuantity} + ${input.quantity}`,
+          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${input.quantity} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'in_progress' END`
+        })
         .where(eq(pickingAllocations.id, alloc.id));
+      
+      // Buscar estado atualizado após incremento
+      const [updatedAlloc] = await db
+        .select()
+        .from(pickingAllocations)
+        .where(eq(pickingAllocations.id, alloc.id))
+        .limit(1);
+      
+      const newPickedQuantity = updatedAlloc.pickedQuantity;
+      const newStatus = updatedAlloc.status;
 
-      // ✅ SINCRONIZAR pickingWaveItems (Dual-Update para evitar finalização precoce)
-      if (newStatus === "picked") {
+      // ✅ SINCRONIZAÇÃO CRUZADA: Incremento atômico em pickingWaveItems e pickingOrderItems
+      {
         const { pickingOrderItems, pickingWaveItems } = await import("../drizzle/schema");
         
-        // 🔄 SINCRONIZAÇÃO CRUZADA: Verificar se todas as alocações do waveItem foram concluídas
+        // 🔄 Atualizar pickingWaveItems com incremento atômico
         if (alloc.waveId) {
-          const allAllocsForWaveItem = await db
-            .select()
-            .from(pickingAllocations)
+          await db
+            .update(pickingWaveItems)
+            .set({
+              pickedQuantity: sql`${pickingWaveItems.pickedQuantity} + ${input.quantity}`,
+              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${input.quantity} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'in_progress' END`,
+              pickedAt: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${input.quantity} >= ${pickingWaveItems.totalQuantity} THEN NOW() ELSE ${pickingWaveItems.pickedAt} END`,
+            })
             .where(
               and(
-                eq(pickingAllocations.waveId, alloc.waveId),
-                eq(pickingAllocations.productId, alloc.productId),
-                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
+                eq(pickingWaveItems.waveId, alloc.waveId),
+                eq(pickingWaveItems.productId, alloc.productId),
+                alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
               )
             );
-
-          const allWaveItemAllocsPicked = allAllocsForWaveItem.every(a => 
-            a.id === alloc.id ? true : a.status === "picked"
-          );
-
-          if (allWaveItemAllocsPicked) {
-            // Todas as alocações deste waveItem foram concluídas → Atualizar pickingWaveItems
-            const totalPickedQty = allAllocsForWaveItem.reduce((sum, a) => sum + (a.id === alloc.id ? newPickedQuantity : a.pickedQuantity), 0);
-            
-            await db
-              .update(pickingWaveItems)
-              .set({
-                pickedQuantity: totalPickedQty,
-                status: "picked",
-                pickedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(pickingWaveItems.waveId, alloc.waveId),
-                  eq(pickingWaveItems.productId, alloc.productId),
-                  alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
-                )
-              );
-          }
         }
         
-        const [orderItem] = await db
-          .select()
-          .from(pickingOrderItems)
+        // 🔄 Atualizar pickingOrderItems com incremento atômico
+        await db
+          .update(pickingOrderItems)
+          .set({
+            pickedQuantity: sql`${pickingOrderItems.pickedQuantity} + ${input.quantity}`,
+            status: sql`CASE WHEN ${pickingOrderItems.pickedQuantity} + ${input.quantity} >= ${pickingOrderItems.requestedQuantity} THEN 'picked' ELSE 'in_progress' END`,
+          })
           .where(
             and(
               eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
-              // ✅ Usar uniqueCode para garantir correspondência exata SKU+Lote
               (alloc as any).uniqueCode ? eq((pickingOrderItems as any).uniqueCode, (alloc as any).uniqueCode) : 
                 and(
                   eq(pickingOrderItems.productId, alloc.productId),
                   alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
                 )
             )
-          )
-          .limit(1);
-
-        if (orderItem && orderItem.status !== "picked") {
-          const allAllocations = await db
-            .select()
-            .from(pickingAllocations)
-            .where(
-              and(
-                eq(pickingAllocations.pickingOrderId, input.pickingOrderId),
-                eq(pickingAllocations.productId, alloc.productId),
-                alloc.batch ? eq(pickingAllocations.batch, alloc.batch) : sql`1=1`
-              )
-            );
-
-          const allPicked = allAllocations.every(a => a.status === "picked");
-
-          if (allPicked) {
-            await db
-              .update(pickingOrderItems)
-              .set({
-                status: "picked",
-                pickedQuantity: orderItem.requestedQuantity,
-              })
-              .where(eq(pickingOrderItems.id, orderItem.id));
-          }
-        }
+          );
       }
 
       return {

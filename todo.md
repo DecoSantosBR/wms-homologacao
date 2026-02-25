@@ -3502,3 +3502,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   - Vídeo: 2026-02-2423-03-41.mp4
   - CAUSA: pickingWaveItems criava UM registro por endereço em vez de consolidar por SKU+Lote
   - SOLUÇÃO: Consolidar allocatedItems por uniqueCode antes de criar pickingWaveItems
+
+
+## 🐛 BUG CRÍTICO - Bips Subsequentes Não Registram (25/02/2026 02:45)
+
+- [x] Apenas o PRIMEIRO item bipado atualiza pickedQuantity e status - RESOLVIDO
+  - Primeiro bip: Atualiza pickingAllocations (status "in_progress", pickedQuantity registrado)
+  - Bips subsequentes: NÃO atualizam nenhuma tabela (pickingAllocations, pickingOrderItems, pickingWaveItems)
+  - CAUSA: Verificação de idempotência (if alloc.pickedQuantity === newPickedQuantity) bloqueava bips subsequentes
+  - CAUSA 2: Sincronização cruzada só acontecia quando status === 'picked'
+  - SOLUÇÃO: Incremento atômico SQL em pickingAllocations, pickingWaveItems e pickingOrderItems em TODOS os bips
