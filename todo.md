@@ -3551,3 +3551,11 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 ## 📖 Correção Glossary.md - Definição de STAGE (25/02/2026)
 
 - [x] Corrigir definição de STAGE: "zona de consolidação/preparação de pedidos para serem coletados/expedidos"
+
+
+## 🐛 BUG - Validação de Etiqueta em /collector/picking (25/02/2026)
+
+- [x] Sistema rejeita leitura de uniqueCode (SKU+Lote) esperando apenas SKU - RESOLVIDO
+  - Erro: "Produto incorreto. Esperado: 401460P — Lido: 22D08LB108"
+  - Causa: Query de labelAssociations retornava registro órfão (produto 2 deletado) em vez do registro válido (produto 30002)
+  - Solução: Adicionado filtro por productId + batch na query de labelAssociations (linhas 446-451 collectorPickingRouter.ts)

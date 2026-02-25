@@ -443,7 +443,13 @@ export const collectorPickingRouter = router({
           labelCode: labelAssociations.labelCode,
         })
         .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.scannedCode))
+        .where(
+          and(
+            eq(labelAssociations.labelCode, input.scannedCode),
+            eq(labelAssociations.productId, alloc.productId),
+            alloc.batch ? eq(labelAssociations.batch, alloc.batch) : sql`1=1`
+          )
+        )
         .limit(1);
 
       // Determinar productId e batch do código lido
