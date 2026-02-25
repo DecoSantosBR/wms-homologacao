@@ -1,6 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
+import { getUniqueCode } from "./utils/uniqueCode";
 import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingAllocations, warehouseLocations, labelReadings } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
@@ -135,7 +136,8 @@ export const waveRouter = router({
             .where(
               and(
                 eq(labelAssociations.productId, item.productId),
-                eq(labelAssociations.batch, item.batch)
+                eq(labelAssociations.batch, item.batch),
+                eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
               )
             )
             .limit(1);
@@ -209,7 +211,8 @@ export const waveRouter = router({
           .where(
             and(
               eq(labelAssociations.productId, waveItem.productId),
-              eq(labelAssociations.batch, waveItem.batch)
+              eq(labelAssociations.batch, waveItem.batch),
+              eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
             )
           )
           .limit(1);
@@ -735,7 +738,12 @@ export const waveRouter = router({
           unitsPerPackage: labelAssociations.unitsPerPackage,
         })
         .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.productCode))
+        .where(
+          and(
+            eq(labelAssociations.labelCode, input.productCode),
+            eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
+          )
+        )
         .limit(1);
 
       if (!association) {
@@ -845,16 +853,14 @@ export const waveRouter = router({
       }
 
       // Criar associação
-      const sessionId = `P${input.waveId}`; // Prefixo P para picking
       await db.insert(labelAssociations).values({
-        sessionId,
+        tenantId: ctx.user.tenantId,
         labelCode: input.labelCode,
         productId: input.productId,
         batch: input.batch || null,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         unitsPerPackage: input.quantity,
-        packagesRead: 1,
-        totalUnits: input.quantity,
+        uniqueCode: getUniqueCode(product.sku, input.batch || ""),
         associatedBy: ctx.user.id,
       });
 
@@ -907,6 +913,14 @@ export const waveRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Tenant ID not found in session",
+        });
+      }
+
       return await db.transaction(async (tx) => {
         // 1. 🔒 Lock da Onda para evitar modificações simultâneas
         const [wave] = await tx
@@ -915,7 +929,7 @@ export const waveRouter = router({
           .where(
             and(
               eq(pickingWaves.id, input.waveId),
-              ctx.user?.tenantId ? eq(pickingWaves.tenantId, ctx.user.tenantId) : sql`1=1`
+              eq(pickingWaves.tenantId, tenantId)
             )
           )
           .for('update');
@@ -959,7 +973,7 @@ export const waveRouter = router({
             .where(
               and(
                 eq(inventory.id, allocation.inventoryId),
-                ctx.user?.tenantId ? eq(inventory.tenantId, ctx.user.tenantId) : sql`1=1`
+                eq(inventory.tenantId, tenantId)
               )
             )
             .for('update'); // 🔒 BLOQUEIO PESSIMISTA

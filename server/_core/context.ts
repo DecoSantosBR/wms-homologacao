@@ -11,10 +11,15 @@ export type TrpcContext = {
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
+  console.log("--- DEBUG TRPC CONTEXT START ---");
+  console.log("Headers Authorization:", opts.req.headers['authorization'] ? "Presente" : "Ausente");
+  console.log("Headers Cookie:", opts.req.headers['cookie'] ? "Presente (" + opts.req.headers['cookie'].substring(0, 50) + "...)" : "Ausente");
+
   let user: User | null = null;
 
   // Desabilitar autenticação durante testes E2E
   if (process.env.E2E_TESTING === 'true') {
+    console.log("E2E_TESTING mode: Usando usuário mock");
     // Criar usuário mock para testes
     user = {
       id: 1,
@@ -27,11 +32,21 @@ export async function createContext(
   } else {
     try {
       user = await sdk.authenticateRequest(opts.req);
+      console.log("Sessão encontrada:", user ? "SIM" : "NÃO");
+      if (user) {
+        console.log("User ID:", user.id);
+        console.log("User Name:", user.name);
+        console.log("User Role:", user.role);
+        console.log("Tenant ID:", (user as any).tenantId || "NÃO DEFINIDO");
+      }
     } catch (error) {
+      console.error("ERRO AO AUTENTICAR:", error);
       // Authentication is optional for public procedures.
       user = null;
     }
   }
+
+  console.log("--- DEBUG TRPC CONTEXT END ---");
 
   return {
     req: opts.req,

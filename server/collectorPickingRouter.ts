@@ -11,6 +11,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
+import { getUniqueCode } from "./utils/uniqueCode";
 import {
   pickingOrders,
   pickingAllocations,
@@ -400,13 +401,21 @@ export const collectorPickingRouter = router({
         scannedCode: z.string(), // Código bipado pelo operador
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database unavailable",
         });
+
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Tenant ID not found in session",
+        });
+      }
 
       // Buscar alocação
       console.log(`[scanProduct] Buscando alocação: allocationId=${input.allocationId}, pickingOrderId=${input.pickingOrderId}`);
@@ -447,6 +456,7 @@ export const collectorPickingRouter = router({
           and(
             eq(labelAssociations.labelCode, input.scannedCode),
             eq(labelAssociations.productId, alloc.productId),
+            eq(labelAssociations.status, "AVAILABLE"), // Apenas etiquetas disponíveis para separação
             alloc.batch ? eq(labelAssociations.batch, alloc.batch) : sql`1=1`
           )
         )
@@ -533,7 +543,7 @@ export const collectorPickingRouter = router({
             expiryDate: inv.expiryDate ?? null,
             unitsPerPackage: 1, // Padrão 1 unidade por embalagem
             associatedBy: 0, // Sistema (userId 0)
-            tenantId: input.tenantId,
+            tenantId: tenantId,
             uniqueCode: getUniqueCode(alloc.productSku || "", alloc.batch || "")
           });
 

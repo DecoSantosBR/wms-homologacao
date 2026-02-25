@@ -266,7 +266,12 @@ export async function recordStageItem(params: {
       expiryDate: labelAssociations.expiryDate,
     })
     .from(labelAssociations)
-    .where(eq(labelAssociations.labelCode, params.labelCode))
+    .where(
+      and(
+        eq(labelAssociations.labelCode, params.labelCode),
+        eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis para expedição
+      )
+    )
     .limit(1);
 
   const label = labelResult[0];

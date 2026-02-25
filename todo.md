@@ -3576,3 +3576,79 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar constraint UNIQUE(labelCode) para garantir 1 etiqueta = 1 registro
 - [x] Gerar e aplicar migration (0005_shocking_rachel_grey.sql)
 - [ ] Atualizar código que usa sessionId e packagesRead
+
+
+## Bug - 25/02/2026 (15:40)
+
+- [ ] Erro ao iniciar conferência cega de recebimento: "User not authenticated" (erro 500) - Sistema está usando protectedProcedure mas usuário não está autenticado
+
+
+## Implementação Multi-Tenant (Admin Global) - 25/02/2026 (16:10)
+
+- [ ] Garantir tenantId = 1 para usuário admin no banco
+- [ ] Ajustar lógica em blindConferenceRouter: admin + tenantId=1 = Admin Global
+- [ ] Ajustar schemas Zod para aceitar tenantId opcional no input (apenas para Admin Global)
+- [ ] Testar fluxo completo de conferência cega com Admin Global
+- [ ] Documentar modelo: Admin Global (tenantId=1) vs Admin de Tenant (tenantId>1)
+
+
+## 🏗️ ARQUITETURA REFINADA - CONFERÊNCIA CEGA + MULTI-TENANCY - 25/02/2026
+
+### Fase 1: Campos Adicionados
+- [x] Adicionar `status` em `labelAssociations` (enum: RECEIVING, AVAILABLE, BLOCKED, EXPIRED)
+- [x] Adicionar `tenantId` em `labelAssociations` (multi-tenant)
+- [x] Adicionar `tenantId` em `receivingOrderItems` (multi-tenant)
+- [x] Adicionar `labelCode` em `receivingOrderItems` (vínculo com etiqueta)
+- [x] Adicionar `blockedQuantity` em `receivingOrderItems` (avarias)
+- [x] Popular `uniqueCode` durante importação de NF-e (SKU+Lote)
+
+### Fase 2: Pré-Vínculo Inteligente
+- [x] Implementar busca de etiquetas existentes por `uniqueCode` durante importação
+- [x] Pré-vincular `labelCode` se etiqueta já existe
+- [x] Deixar `labelCode = NULL` para lotes novos (primeira vez)
+- [x] Otimizar query com índices existentes
+
+### Fase 3: Gestão de Status de Etiquetas
+- [x] Criar etiquetas com `status='RECEIVING'` durante conferência
+- [x] Implementar mutation `closeReceivingOrder` para ativação em massa
+- [x] Transição atômica: `RECEIVING` → `AVAILABLE` após fechamento
+
+### Fase 4: Mutation closeReceivingOrder
+- [x] Validar divergências (expected vs received)
+- [x] Calcular saldos: `addressedQuantity = received - blocked`
+- [x] Exigir aprovação admin se houver divergência
+- [x] Atualizar `receivingOrderItems` com saldos finais
+- [x] Ativar etiquetas em massa (UPDATE status)
+- [x] Finalizar ordem de recebimento
+- [x] Transaction atômica (rollback automático em erro)
+
+### Fase 5: Filtros de Segurança (Última Linha de Defesa)
+- [x] Adicionar filtro `status='AVAILABLE'` em `collectorPickingRouter.ts`
+- [x] Adicionar filtro `status='AVAILABLE'` em `waveRouter.ts` (3 pontos)
+- [x] Adicionar filtro `status='AVAILABLE'` em `stockRouter.ts`
+- [x] Adicionar filtro `status='AVAILABLE'` em `stage.ts`
+- [x] Proteger motor de reserva contra produtos em conferência
+
+### Fase 6: Lógica de Admin Global
+- [x] Implementar lógica de Admin Global em todas as 7 funções de `blindConferenceRouter`
+- [x] Adicionar logs de debug (`activeTenantId`, `isGlobalAdmin`)
+- [x] Validar segurança (fail-safe se `activeTenantId = null`)
+
+### Benefícios Implementados
+✅ **Saldo Físico vs Saldo Logístico:** Produtos em conferência invisíveis para picking
+✅ **Rastreabilidade ANVISA:** `uniqueCode` populado desde importação
+✅ **Multi-tenancy nativo:** Isolamento total de dados por cliente
+✅ **Pré-vínculo inteligente:** Conferência rápida para lotes conhecidos
+✅ **Gestão de avarias:** `blockedQuantity` separado de `addressedQuantity`
+✅ **Aprovação de divergências:** Admin obrigatório para fechar com diferenças
+✅ **Atomicidade:** Transaction garante consistência total
+
+### Roteiro de Teste End-to-End (Sugerido)
+1. [ ] Importar XML com lote conhecido (deve pré-vincular) e lote novo (deve vir NULL)
+2. [ ] Tentar criar onda ANTES de conferir (deve barrar: "Estoque insuficiente")
+3. [ ] Conferir itens (novo: vincular etiqueta | conhecido: bipar e confirmar)
+4. [ ] Simular avaria (1 unidade) para testar `blockedQuantity`
+5. [ ] Tentar finalizar com divergência (deve exigir `approvedBy`)
+6. [ ] Finalizar com senha admin (verificar status `AVAILABLE` no banco)
+7. [ ] Criar onda APÓS conferência (deve permitir separação)
+

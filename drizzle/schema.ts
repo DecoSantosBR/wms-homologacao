@@ -286,11 +286,13 @@ export const receivingOrders = mysqlTable("receivingOrders", {
 
 export const receivingOrderItems = mysqlTable("receivingOrderItems", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(), // Multi-tenant: item pertence a um cliente
   receivingOrderId: int("receivingOrderId").notNull(),
   productId: int("productId").notNull(),
   expectedQuantity: int("expectedQuantity").notNull(),
   receivedQuantity: int("receivedQuantity").default(0).notNull(),
-  addressedQuantity: int("addressedQuantity").default(0).notNull(),
+  blockedQuantity: int("blockedQuantity").default(0).notNull(), // Quantidade avariada/bloqueada
+  addressedQuantity: int("addressedQuantity").default(0).notNull(), // Saldo líquido endereçável (received - blocked)
   // Códigos esperados da NF-e
   expectedGtin: varchar("expectedGtin", { length: 14 }),
   expectedSupplierCode: varchar("expectedSupplierCode", { length: 50 }),
@@ -303,6 +305,7 @@ export const receivingOrderItems = mysqlTable("receivingOrderItems", {
   expiryDate: timestamp("expiryDate"),
   serialNumber: varchar("serialNumber", { length: 100 }),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  labelCode: varchar("labelCode", { length: 100 }), // Código da etiqueta vinculada (após conferência)
   status: mysqlEnum("status", ["pending", "in_quarantine", "approved", "rejected", "awaiting_approval"]).default("pending").notNull(),
   rejectionReason: text("rejectionReason"),
   approvedBy: int("approvedBy"),
@@ -686,6 +689,7 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   expiryDate: date("expiryDate"), // Data de validade do lote
   unitsPerPackage: int("unitsPerPackage").notNull(), // Quantidade de unidades por embalagem
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
+  status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no fluxo de recebimento
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
 }, (table) => ({

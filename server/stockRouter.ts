@@ -340,7 +340,12 @@ export const stockRouter = router({
           unitsPerPackage: labelAssociations.unitsPerPackage,
         })
         .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.code))
+        .where(
+          and(
+            eq(labelAssociations.labelCode, input.code),
+            eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
+          )
+        )
         .limit(1);
 
       let productId: number;

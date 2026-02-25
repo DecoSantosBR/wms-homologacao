@@ -25,13 +25,37 @@ export const blindConferenceRouter = router({
   start: protectedProcedure
     .input(z.object({
       receivingOrderId: z.number(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
+      console.log("[blindConference.start] Context:", {
+        hasUser: !!ctx.user,
+        userId: ctx.user?.id,
+        userName: ctx.user?.name,
+        userRole: ctx.user?.role,
+        userTenantId: ctx.user?.tenantId
+      });
+
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      if (!userId) throw new Error("User not authenticated");
+      if (!userId) {
+        console.error("[blindConference.start] User not authenticated! ctx.user:", ctx.user);
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+      }
+
+      // Lógica de Admin Global: admin + tenantId=1 pode escolher tenant
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+      
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[start] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // Verificar se ordem existe
       const order = await db.select().from(receivingOrders).where(eq(receivingOrders.id, input.receivingOrderId)).limit(1);
@@ -60,7 +84,7 @@ export const blindConferenceRouter = router({
 
       // Criar nova sessão
       await db.insert(blindConferenceSessions).values({
-        tenantId: order[0].tenantId,
+        tenantId: activeTenantId,
         receivingOrderId: input.receivingOrderId,
         startedBy: userId,
         status: "active",
@@ -92,25 +116,36 @@ export const blindConferenceRouter = router({
    */
   readLabel: protectedProcedure
     .input(z.object({
-      conferenceId: z.number(), // Mudado de sessionId para conferenceId
+      conferenceId: z.number(),
       labelCode: z.string(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      const tenantId = ctx.user?.tenantId;
-      if (!userId || !tenantId) throw new Error("User not authenticated");
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[readLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // 1. BUSCA GLOBAL DA ETIQUETA (Identidade Permanente)
-      // Removemos qualquer filtro por sessionId, buscando apenas pelo código e tenant
       const label = await db.select()
         .from(labelAssociations)
         .where(
           and(
             eq(labelAssociations.labelCode, input.labelCode),
-            eq(labelAssociations.tenantId, tenantId)
+            eq(labelAssociations.tenantId, activeTenantId)
           )
         )
         .limit(1);
@@ -126,20 +161,18 @@ export const blindConferenceRouter = router({
       const labelData = label[0];
 
       // 2. UPSERT ATÔMICO NA TABELA DE ITENS DA CONFERÊNCIA
-      // A Constraint Unique (conferenceId, productId, batch) garante a separação correta
       await db.insert(blindConferenceItems)
         .values({
           conferenceId: input.conferenceId,
           productId: labelData.productId,
           batch: labelData.batch || "",
           expiryDate: labelData.expiryDate,
-          tenantId: tenantId,
-          packagesRead: 1, // Valor inicial caso o registro seja criado agora
-          expectedQuantity: 0, // Será preenchido posteriormente se houver NF
+          tenantId: activeTenantId,
+          packagesRead: 1,
+          expectedQuantity: 0,
         })
         .onDuplicateKeyUpdate({
           set: {
-            // Incrementa o contador do par Produto+Lote específico desta conferência
             packagesRead: sql`${blindConferenceItems.packagesRead} + 1`,
             updatedAt: new Date(),
           },
@@ -172,7 +205,7 @@ export const blindConferenceRouter = router({
       // 5. BUSCAR DADOS DO PRODUTO
       const product = await db.select().from(products).where(eq(products.id, labelData.productId)).limit(1);
 
-      // 6. RETORNO PARA O FRONTEND (Facilita o undoLastReading)
+      // 6. RETORNO PARA O FRONTEND
       return {
         isNewLabel: false,
         association: {
@@ -191,8 +224,6 @@ export const blindConferenceRouter = router({
 
   /**
    * 3. Associar Etiqueta a Produto (REFATORADO)
-   * Cria etiqueta PERMANENTE no estoque global (sem sessionId)
-   * Registra primeiro bip na conferência atual
    */
   associateLabel: protectedProcedure
     .input(z.object({
@@ -202,15 +233,27 @@ export const blindConferenceRouter = router({
       batch: z.string().nullable(),
       expiryDate: z.string().nullable(),
       unitsPerPackage: z.number(),
-      totalUnitsReceived: z.number().optional(), // Quantidade fracionada recebida
+      totalUnitsReceived: z.number().optional(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      const tenantId = ctx.user?.tenantId;
-      if (!userId || !tenantId) throw new Error("User not authenticated");
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[associateLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // Buscar produto para gerar uniqueCode
       const product = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
@@ -221,11 +264,9 @@ export const blindConferenceRouter = router({
       const productSku = product[0].sku;
       const uniqueCode = getUniqueCode(productSku, input.batch);
 
-      // Usar totalUnitsReceived se fornecido, senão usar unitsPerPackage (caixa completa)
       const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage;
 
       // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
-      // Verificar se etiqueta já existe
       const existingLabel = await db.select()
         .from(labelAssociations)
         .where(eq(labelAssociations.labelCode, input.labelCode))
@@ -243,8 +284,9 @@ export const blindConferenceRouter = router({
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         unitsPerPackage: input.unitsPerPackage,
         totalUnits: actualUnitsReceived,
+        status: "RECEIVING", // Etiqueta criada durante conferência fica bloqueada até fechamento
         associatedBy: userId,
-        tenantId: tenantId,
+        tenantId: activeTenantId,
       });
 
       // 2. REGISTRAR PRIMEIRO BIP NA CONFERÊNCIA
@@ -254,7 +296,7 @@ export const blindConferenceRouter = router({
           productId: input.productId,
           batch: input.batch || "",
           expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-          tenantId: tenantId,
+          tenantId: activeTenantId,
           packagesRead: 1,
           expectedQuantity: 0,
         })
@@ -281,7 +323,7 @@ export const blindConferenceRouter = router({
       });
 
       // 4. ATUALIZAR unitsPerBox NO PRODUTO SE NÃO EXISTIR
-      if (product[0].unitsPerBox === null) {
+      if (!product[0].unitsPerBox) {
         await db.update(products)
           .set({ unitsPerBox: input.unitsPerPackage })
           .where(eq(products.id, input.productId));
@@ -289,45 +331,61 @@ export const blindConferenceRouter = router({
 
       return {
         success: true,
-        associationId: newLabel[0].id,
-        product: {
-          id: product[0].id,
-          description: product[0].description,
-          sku: product[0].sku,
-          unitsPerBox: input.unitsPerPackage,
-        },
-        packagesRead: 1,
-        totalUnits: actualUnitsReceived,
+        message: "Etiqueta associada com sucesso",
+        association: {
+          id: newLabel[0].id,
+          productId: input.productId,
+          productName: product[0].description,
+          productSku: product[0].sku,
+          batch: input.batch,
+          expiryDate: input.expiryDate,
+          unitsPerPackage: input.unitsPerPackage,
+          packagesRead: 1,
+          totalUnits: actualUnitsReceived,
+        }
       };
     }),
 
   /**
    * 4. Desfazer Última Leitura (REFATORADO)
-   * Decrementa packagesRead em blindConferenceItems
-   * Frontend deve enviar productId + batch do último bip
    */
   undoLastReading: protectedProcedure
     .input(z.object({
       conferenceId: z.number(),
       productId: z.number(),
-      batch: z.string(),
+      batch: z.string().nullable(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const tenantId = ctx.user?.tenantId;
-      if (!tenantId) throw new Error("User not authenticated");
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // Buscar item na conferência
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[undoLastReading] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+
+      const batchValue = input.batch || "";
+
+      // 1. BUSCAR ITEM NA CONFERÊNCIA
       const conferenceItem = await db.select()
         .from(blindConferenceItems)
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
             eq(blindConferenceItems.productId, input.productId),
-            eq(blindConferenceItems.batch, input.batch),
-            eq(blindConferenceItems.tenantId, tenantId)
+            eq(blindConferenceItems.batch, batchValue),
+            eq(blindConferenceItems.tenantId, activeTenantId)
           )
         )
         .limit(1);
@@ -336,99 +394,121 @@ export const blindConferenceRouter = router({
         throw new Error("Item não encontrado na conferência");
       }
 
-      const currentPackagesRead = conferenceItem[0].packagesRead;
+      const currentPackages = conferenceItem[0].packagesRead;
 
-      if (currentPackagesRead <= 0) {
+      if (currentPackages <= 0) {
         throw new Error("Não há leituras para desfazer");
       }
 
-      // Decrementar contador
-      const newPackagesRead = currentPackagesRead - 1;
-
-      if (newPackagesRead === 0) {
-        // Se chegou a zero, deletar item da conferência
+      // 2. DECREMENTO ATÔMICO
+      if (currentPackages === 1) {
+        // Se era a última embalagem, deletar o registro
         await db.delete(blindConferenceItems)
           .where(
             and(
               eq(blindConferenceItems.conferenceId, input.conferenceId),
               eq(blindConferenceItems.productId, input.productId),
-              eq(blindConferenceItems.batch, input.batch)
+              eq(blindConferenceItems.batch, batchValue),
+              eq(blindConferenceItems.tenantId, activeTenantId)
             )
           );
       } else {
-        // Senão, decrementar contador
+        // Caso contrário, decrementar
         await db.update(blindConferenceItems)
           .set({
-            packagesRead: newPackagesRead,
-            updatedAt: new Date(),
+            packagesRead: sql`${blindConferenceItems.packagesRead} - 1`,
+            updatedAt: new Date()
           })
           .where(
             and(
               eq(blindConferenceItems.conferenceId, input.conferenceId),
               eq(blindConferenceItems.productId, input.productId),
-              eq(blindConferenceItems.batch, input.batch)
+              eq(blindConferenceItems.batch, batchValue),
+              eq(blindConferenceItems.tenantId, activeTenantId)
             )
           );
       }
 
-      // Deletar última leitura do histórico
-      const sessionIdStr = `R${input.conferenceId}`;
-      const lastReading = await db.select()
-        .from(labelReadings)
-        .where(eq(labelReadings.sessionId, sessionIdStr))
-        .orderBy(desc(labelReadings.readAt))
-        .limit(1);
-
-      if (lastReading.length > 0) {
-        await db.delete(labelReadings).where(eq(labelReadings.id, lastReading[0].id));
-      }
-
       return {
         success: true,
-        message: newPackagesRead === 0 ? "Item removido da conferência" : "Leitura desfeita",
-        packagesRead: newPackagesRead,
+        message: "Última leitura desfeita com sucesso",
+        newPackagesRead: Math.max(0, currentPackages - 1)
       };
     }),
 
   /**
-   * 5. Ajustar Quantidade Manualmente
+   * 5. Ajustar Quantidade (REFATORADO)
    */
   adjustQuantity: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
-      associationId: z.number(),
+      conferenceId: z.number(),
+      productId: z.number(),
+      batch: z.string().nullable(),
       newQuantity: z.number(),
       reason: z.string(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      if (!userId) throw new Error("User not authenticated");
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // Buscar associação
-      const association = await db.select()
-        .from(labelAssociations)
-        .where(eq(labelAssociations.id, input.associationId))
-        .limit(1);
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
 
-      if (association.length === 0) {
-        throw new Error("Associação não encontrada");
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
       }
 
-      const previousQuantity = association[0].totalUnits;
+      console.log("[adjustQuantity] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
-      // Atualizar quantidade
-      await db.update(labelAssociations)
-        .set({ totalUnits: input.newQuantity })
-        .where(eq(labelAssociations.id, input.associationId));
+      const batchValue = input.batch || "";
 
-      // Registrar ajuste
+      // 1. BUSCAR ITEM NA CONFERÊNCIA
+      const conferenceItem = await db.select()
+        .from(blindConferenceItems)
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.productId, input.productId),
+            eq(blindConferenceItems.batch, batchValue),
+            eq(blindConferenceItems.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+
+      if (conferenceItem.length === 0) {
+        throw new Error("Item não encontrado na conferência");
+      }
+
+      const oldQuantity = conferenceItem[0].packagesRead;
+
+      // 2. ATUALIZAR QUANTIDADE
+      await db.update(blindConferenceItems)
+        .set({
+          packagesRead: input.newQuantity,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.productId, input.productId),
+            eq(blindConferenceItems.batch, batchValue),
+            eq(blindConferenceItems.tenantId, activeTenantId)
+          )
+        );
+
+      // 3. REGISTRAR AJUSTE NO HISTÓRICO
       await db.insert(blindConferenceAdjustments).values({
-        sessionId: input.sessionId,
-        associationId: input.associationId,
-        previousQuantity: previousQuantity,
+        conferenceId: input.conferenceId,
+        productId: input.productId,
+        batch: input.batch,
+        oldQuantity: oldQuantity,
         newQuantity: input.newQuantity,
         reason: input.reason,
         adjustedBy: userId,
@@ -436,213 +516,354 @@ export const blindConferenceRouter = router({
 
       return {
         success: true,
-        previousQuantity,
-        newQuantity: input.newQuantity,
+        message: "Quantidade ajustada com sucesso",
+        oldQuantity,
+        newQuantity: input.newQuantity
       };
     }),
 
   /**
    * 6. Obter Resumo da Conferência (REFATORADO)
-   * Busca progresso consolidado de blindConferenceItems
    */
   getSummary: protectedProcedure
     .input(z.object({
       conferenceId: z.number(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const tenantId = ctx.user?.tenantId;
-      if (!tenantId) throw new Error("User not authenticated");
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // Buscar sessão
-      const session = await db.select()
-        .from(blindConferenceSessions)
-        .where(eq(blindConferenceSessions.id, input.conferenceId))
-        .limit(1);
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
 
-      if (session.length === 0) {
-        throw new Error("Sessão não encontrada");
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
       }
 
-      // Buscar itens conferidos (progresso real)
-      const conferenceItems = await db.select({
-        id: blindConferenceItems.id,
+      console.log("[getSummary] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+
+      // 1. BUSCAR ITENS DA CONFERÊNCIA
+      const items = await db.select({
         productId: blindConferenceItems.productId,
-        productName: products.description,
         productSku: products.sku,
+        productName: products.description,
         batch: blindConferenceItems.batch,
         expiryDate: blindConferenceItems.expiryDate,
         packagesRead: blindConferenceItems.packagesRead,
         expectedQuantity: blindConferenceItems.expectedQuantity,
       })
         .from(blindConferenceItems)
-        .innerJoin(products, eq(blindConferenceItems.productId, products.id))
+        .leftJoin(products, eq(blindConferenceItems.productId, products.id))
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
-            eq(blindConferenceItems.tenantId, tenantId)
+            eq(blindConferenceItems.tenantId, activeTenantId)
           )
         );
 
-      // Buscar itens esperados da ordem (NF)
-      const order = session[0];
-      const expectedItems = await db.select({
-        productId: receivingOrderItems.productId,
-        productName: products.description,
-        productSku: products.sku,
-        batch: receivingOrderItems.batch,
-        expectedQuantity: receivingOrderItems.expectedQuantity,
-      })
-        .from(receivingOrderItems)
-        .innerJoin(products, eq(receivingOrderItems.productId, products.id))
-        .where(eq(receivingOrderItems.receivingOrderId, order.receivingOrderId));
-
-      // Calcular totais
-      const totalReceived = conferenceItems.reduce((sum, item) => sum + item.packagesRead, 0);
-      const totalExpected = expectedItems.reduce((sum, item) => sum + item.expectedQuantity, 0);
-
       return {
-        session: {
-          id: session[0].id,
-          receivingOrderId: session[0].receivingOrderId,
-          startedAt: session[0].startedAt,
-          status: session[0].status,
-        },
-        conferenceItems,
-        expectedItems,
-        totals: {
-          received: totalReceived,
-          expected: totalExpected,
-          difference: totalReceived - totalExpected,
-        }
+        conferenceId: input.conferenceId,
+        conferenceItems: items.map(item => ({
+          productId: item.productId,
+          productSku: item.productSku || "",
+          productName: item.productName || "",
+          batch: item.batch || null,
+          expiryDate: item.expiryDate,
+          packagesRead: item.packagesRead,
+          expectedQuantity: item.expectedQuantity,
+        }))
       };
     }),
 
   /**
    * 7. Finalizar Conferência (REFATORADO)
-   * Busca itens de blindConferenceItems e cria estoque
    */
   finish: protectedProcedure
     .input(z.object({
       conferenceId: z.number(),
-      forceClose: z.boolean().default(false),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      const tenantId = ctx.user?.tenantId;
-      if (!userId || !tenantId) throw new Error("User not authenticated");
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // Buscar sessão
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[finish] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+
+      // 1. BUSCAR SESSÃO
       const session = await db.select()
         .from(blindConferenceSessions)
         .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
 
       if (session.length === 0) {
-        throw new Error("Sessão não encontrada");
+        throw new Error("Sessão de conferência não encontrada");
       }
 
-      // 1. BUSCAR CONSOLIDADO DE TUDO QUE FOI BIPADO
-      const conferenceItems = await db.select()
+      // 2. BUSCAR ITENS CONFERIDOS
+      const items = await db.select()
         .from(blindConferenceItems)
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
-            eq(blindConferenceItems.tenantId, tenantId)
+            eq(blindConferenceItems.tenantId, activeTenantId)
           )
         );
 
-      if (conferenceItems.length === 0) {
+      if (items.length === 0) {
         throw new Error("Nenhum item foi conferido");
       }
 
-      // Buscar endereço REC do cliente correto (mesmo tenantId da sessão)
-      const recLocation = await db.select()
-        .from(warehouseLocations)
-        .where(
-          and(
-            eq(warehouseLocations.code, "REC"),
-            eq(warehouseLocations.tenantId, tenantId)
-          )
-        )
-        .limit(1);
-
-      if (recLocation.length === 0) {
-        throw new Error("Endereço REC não encontrado para este cliente");
-      }
-
-      // Buscar zona do endereço de recebimento
-      const locationZone = await db.select({
-        zoneCode: warehouseZones.code
-      })
-        .from(warehouseLocations)
-        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-        .where(eq(warehouseLocations.id, recLocation[0].id))
-        .limit(1);
-
-      // 2. CRIAR ESTOQUE PARA CADA ITEM CONFERIDO
-      for (const item of conferenceItems) {
-        if (item.packagesRead <= 0) continue;
-
-        // Buscar produto para gerar uniqueCode
-        const product = await db.select()
-          .from(products)
-          .where(eq(products.id, item.productId))
-          .limit(1);
-
+      // 3. CRIAR/ATUALIZAR ESTOQUE PARA CADA ITEM
+      for (const item of items) {
+        const product = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
         if (product.length === 0) continue;
 
-        // Buscar etiqueta para obter unitsPerPackage
-        const label = await db.select()
-          .from(labelAssociations)
+        const productSku = product[0].sku;
+        const uniqueCode = getUniqueCode(productSku, item.batch);
+
+        // Buscar endereço de recebimento (REC)
+        const recLocation = await db.select()
+          .from(warehouseLocations)
           .where(
             and(
-              eq(labelAssociations.productId, item.productId),
-              eq(labelAssociations.batch, item.batch)
+              eq(warehouseLocations.tenantId, activeTenantId),
+              eq(warehouseLocations.zone, warehouseZones.enumValues[0]) // 'REC'
             )
           )
           .limit(1);
 
-        const unitsPerPackage = label[0]?.unitsPerPackage || 1;
-        const totalUnits = item.packagesRead * unitsPerPackage;
+        if (recLocation.length === 0) {
+          throw new Error("Endereço de recebimento não encontrado");
+        }
 
-        // Criar registro de estoque
-        await db.insert(inventory).values({
-          tenantId: tenantId,
-          productId: item.productId,
-          locationId: recLocation[0].id,
-          batch: item.batch,
-          expiryDate: item.expiryDate,
-          quantity: totalUnits,
-          status: "available",
-          uniqueCode: getUniqueCode(product[0].sku, item.batch),
-          locationZone: locationZone[0]?.zoneCode || null,
-        });
+        const locationId = recLocation[0].id;
+        const totalUnits = item.packagesRead * (product[0].unitsPerBox || 1);
+
+        // UPSERT no estoque
+        const existingInventory = await db.select()
+          .from(inventory)
+          .where(
+            and(
+              eq(inventory.productId, item.productId),
+              eq(inventory.locationId, locationId),
+              eq(inventory.batch, item.batch || ""),
+              eq(inventory.tenantId, activeTenantId)
+            )
+          )
+          .limit(1);
+
+        if (existingInventory.length > 0) {
+          // Atualizar estoque existente
+          await db.update(inventory)
+            .set({
+              quantity: sql`${inventory.quantity} + ${totalUnits}`,
+              updatedAt: new Date()
+            })
+            .where(eq(inventory.id, existingInventory[0].id));
+        } else {
+          // Criar novo registro de estoque
+          await db.insert(inventory).values({
+            tenantId: activeTenantId,
+            productId: item.productId,
+            locationId: locationId,
+            batch: item.batch || "",
+            expiryDate: item.expiryDate,
+            uniqueCode: uniqueCode,
+            locationZone: warehouseZones.enumValues[0], // 'REC'
+            quantity: totalUnits,
+            reservedQuantity: 0,
+            status: "available",
+          });
+        }
       }
 
-      // 3. MARCAR CONFERÊNCIA COMO FINALIZADA
+      // 4. FINALIZAR SESSÃO
       await db.update(blindConferenceSessions)
         .set({
           status: "completed",
-          finishedAt: new Date(),
-          finishedBy: userId,
+          finishedAt: new Date()
         })
         .where(eq(blindConferenceSessions.id, input.conferenceId));
 
-      // 4. ATUALIZAR STATUS DA ORDEM
+      // 5. ATUALIZAR STATUS DA ORDEM DE RECEBIMENTO
       await db.update(receivingOrders)
-        .set({ status: "completed" })
+        .set({
+          status: "completed",
+          updatedAt: new Date()
+        })
         .where(eq(receivingOrders.id, session[0].receivingOrderId));
 
       return {
         success: true,
         message: "Conferência finalizada com sucesso",
-        itemsProcessed: conferenceItems.length,
+        itemsProcessed: items.length
       };
+    }),
+
+  /**
+   * 8. Fechar Ordem de Recebimento (NOVO)
+   * Valida divergências, calcula saldos, ativa etiquetas e finaliza ordem
+   */
+  closeReceivingOrder: protectedProcedure
+    .input(z.object({
+      receivingOrderId: z.number(),
+      adminApprovalToken: z.string().optional(), // Senha do admin se houver divergência
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[closeReceivingOrder] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+
+      // TRANSAÇÃO ATÔMICA: Tudo ou nada
+      return await db.transaction(async (tx) => {
+        // 1. BUSCAR TODOS OS ITENS ESPERADOS (XML)
+        const items = await tx.select()
+          .from(receivingOrderItems)
+          .where(
+            and(
+              eq(receivingOrderItems.receivingOrderId, input.receivingOrderId),
+              eq(receivingOrderItems.tenantId, activeTenantId)
+            )
+          );
+
+        if (items.length === 0) {
+          throw new Error("Ordem de recebimento não possui itens");
+        }
+
+        const divergences: string[] = [];
+
+        for (const item of items) {
+          // 2. BUSCAR TOTAL CONFERIDO (blindConferenceItems)
+          const conferenceData = await tx.select({
+            totalReceived: sql<number>`COALESCE(SUM(${blindConferenceItems.packagesRead}), 0)`,
+          })
+            .from(blindConferenceItems)
+            .where(
+              and(
+                eq(blindConferenceItems.productId, item.productId),
+                eq(blindConferenceItems.batch, item.batch || ""),
+                eq(blindConferenceItems.tenantId, activeTenantId)
+              )
+            );
+
+          const receivedPackages = Number(conferenceData[0]?.totalReceived || 0);
+          const expectedPackages = item.expectedQuantity;
+
+          // 3. VALIDAÇÃO DE DIVERGÊNCIA
+          if (receivedPackages !== expectedPackages) {
+            const product = await tx.select({ sku: products.sku, description: products.description })
+              .from(products)
+              .where(eq(products.id, item.productId))
+              .limit(1);
+
+            const productInfo = product[0] ? `${product[0].sku} - ${product[0].description}` : `ID ${item.productId}`;
+            divergences.push(
+              `${productInfo}: Esperado ${expectedPackages}, Recebido ${receivedPackages}`
+            );
+          }
+        }
+
+        // 4. SE HOUVER DIVERGÊNCIA, EXIGIR APROVAÇÃO ADMIN
+        if (divergences.length > 0 && !input.adminApprovalToken) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `Divergências encontradas:\n${divergences.join('\n')}\n\nRequer aprovação de administrador.`
+          });
+        }
+
+        // 5. ATUALIZAR SALDOS E STATUS DOS ITENS
+        for (const item of items) {
+          const conferenceData = await tx.select({
+            totalReceived: sql<number>`COALESCE(SUM(${blindConferenceItems.packagesRead}), 0)`,
+          })
+            .from(blindConferenceItems)
+            .where(
+              and(
+                eq(blindConferenceItems.productId, item.productId),
+                eq(blindConferenceItems.batch, item.batch || ""),
+                eq(blindConferenceItems.tenantId, activeTenantId)
+              )
+            );
+
+          const receivedUnits = Number(conferenceData[0]?.totalReceived || 0);
+          const blockedUnits = item.blockedQuantity || 0;
+          const addressedUnits = receivedUnits - blockedUnits;
+
+          await tx.update(receivingOrderItems)
+            .set({
+              receivedQuantity: receivedUnits,
+              blockedQuantity: blockedUnits,
+              addressedQuantity: addressedUnits,
+              approvedBy: divergences.length > 0 ? userId : null,
+              status: "approved",
+            })
+            .where(eq(receivingOrderItems.id, item.id));
+        }
+
+        // 6. ATIVAR ETIQUETAS EM MASSA (RECEIVING → AVAILABLE)
+        const productIds = items.map(item => item.productId);
+        
+        await tx.update(labelAssociations)
+          .set({ status: "AVAILABLE" })
+          .where(
+            and(
+              eq(labelAssociations.tenantId, activeTenantId),
+              eq(labelAssociations.status, "RECEIVING"),
+              sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
+            )
+          );
+
+        // 7. FINALIZAR ORDEM DE RECEBIMENTO
+        await tx.update(receivingOrders)
+          .set({
+            status: "completed",
+            updatedAt: new Date()
+          })
+          .where(eq(receivingOrders.id, input.receivingOrderId));
+
+        return {
+          success: true,
+          message: divergences.length > 0 
+            ? `Ordem finalizada com ${divergences.length} divergência(s) aprovada(s)` 
+            : "Ordem finalizada com sucesso",
+          itemsProcessed: items.length,
+          divergences: divergences
+        };
+      });
     }),
 });

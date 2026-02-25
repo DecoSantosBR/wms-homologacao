@@ -1523,7 +1523,30 @@ export const appRouter = router({
 
             // Criar item da ordem (recebimento ou picking)
             if (input.tipo === "entrada") {
+              // Buscar SKU do produto para gerar uniqueCode
+              const [productData] = await db.select({ sku: products.sku })
+                .from(products)
+                .where(eq(products.id, productId))
+                .limit(1);
+              
+              const uniqueCode = getUniqueCode(productData.sku, produtoNFE.lote);
+              
+              // PRÉ-VÍNCULO INTELIGENTE: Buscar etiqueta existente por uniqueCode
+              const existingLabel = await db.select({ labelCode: labelAssociations.labelCode })
+                .from(labelAssociations)
+                .where(
+                  and(
+                    eq(labelAssociations.uniqueCode, uniqueCode),
+                    eq(labelAssociations.tenantId, input.tenantId)
+                  )
+                )
+                .limit(1);
+              
+              // Se encontrou etiqueta existente, pré-vincular; senão deixar NULL (lote novo)
+              const preLinkedLabelCode = existingLabel.length > 0 ? existingLabel[0].labelCode : null;
+              
               await db.insert(receivingOrderItems).values({
+                tenantId: input.tenantId,
                 receivingOrderId: orderId,
                 productId: productId,
                 expectedQuantity: produtoNFE.quantidade,
@@ -1532,6 +1555,8 @@ export const appRouter = router({
                 batch: produtoNFE.lote || null,
                 expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
                 expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
+                uniqueCode: uniqueCode,
+                labelCode: preLinkedLabelCode, // PRÉ-VÍNCULO: etiqueta já conhecida ou NULL
               });
             }
           } catch (error: any) {
@@ -2258,9 +2283,9 @@ export const appRouter = router({
                 productSku: product.sku,
                 locationId: stock.locationId,
                 locationCode: stock.locationCode,
-                batch: stock.batch,
-                expiryDate: stock.expiryDate,
-                uniqueCode: getUniqueCode(product.sku, stock.batch),
+                batch: stock.batch ?? "",
+                expiryDate: stock.expiryDate ?? null,
+                uniqueCode: getUniqueCode(product.sku, stock.batch ?? ""),
                 quantity: toReserve,
                 isFractional: false,
                 sequence: 0,
@@ -3132,9 +3157,9 @@ export const appRouter = router({
                     productSku: product.sku,
                     locationId: stock.locationId,
                     locationCode: stock.locationCode,
-                    batch: stock.batch,
-                    expiryDate: stock.expiryDate,
-                    uniqueCode: getUniqueCode(product.sku, stock.batch),
+                    batch: stock.batch ?? "",
+                    expiryDate: stock.expiryDate ?? null,
+                    uniqueCode: getUniqueCode(product.sku, stock.batch ?? ""),
                     quantity: quantityToReserve,
                     isFractional: false,
                     sequence: 0,
