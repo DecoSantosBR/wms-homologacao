@@ -26,15 +26,39 @@ export interface RegisterMovementInput {
 
 /**
  * Registra movimentação de estoque com validações
+ * @param input - Dados da movimentação
+ * @param externalTx - Transação externa opcional (para composição atômica)
  */
-export async function registerMovement(input: RegisterMovementInput) {
-  const dbConn = await getDb();
+export async function registerMovement(
+  input: RegisterMovementInput,
+  externalTx?: any
+) {
+  const dbConn = externalTx || (await getDb());
   if (!dbConn) throw new Error("Database connection failed");
+
+  // Se não há transação externa, criar uma nova para garantir atomicidade
+  if (!externalTx) {
+    return await dbConn.transaction(async (tx) => {
+      return await registerMovementInternal(input, tx);
+    });
+  }
+
+  // Se há transação externa, executar diretamente
+  return await registerMovementInternal(input, dbConn);
+}
+
+/**
+ * Lógica interna de movimentação (sempre executada dentro de transação)
+ */
+async function registerMovementInternal(
+  input: RegisterMovementInput,
+  tx: any
+) {
 
   // Buscar tenantId do endereço de origem se não fornecido
   let tenantId = input.tenantId;
   if (tenantId === null || tenantId === undefined) {
-    const fromLocation = await dbConn
+    const fromLocation = await tx
       .select({ tenantId: warehouseLocations.tenantId })
       .from(warehouseLocations)
       .where(eq(warehouseLocations.id, input.fromLocationId))
@@ -44,7 +68,7 @@ export async function registerMovement(input: RegisterMovementInput) {
       tenantId = fromLocation[0].tenantId;
     } else {
       // Se ainda não tiver tenantId, buscar do inventory
-      const inventoryRecord = await dbConn
+      const inventoryRecord = await tx
         .select({ tenantId: inventory.tenantId })
         .from(inventory)
         .where(
@@ -63,24 +87,29 @@ export async function registerMovement(input: RegisterMovementInput) {
     }
   }
 
-  // FASE 1: VALIDAÇÕES (sem modificar dados)
+  // FASE 1: BLOQUEIO PESSIMISTA + VALIDAÇÕES
 
-  // Validar saldo disponível na origem (considerando reservas)
-  const fromStock = await dbConn
-    .select({ total: sql<number>`COALESCE(SUM(${inventory.quantity}), 0)` })
+  // 🔒 Bloquear registros de estoque da origem com SELECT FOR UPDATE
+  // Ordenar por ID para evitar deadlocks
+  const fromInventory = await tx
+    .select()
     .from(inventory)
     .where(
       and(
         eq(inventory.locationId, input.fromLocationId),
         eq(inventory.productId, input.productId),
-        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
+        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`,
+        tenantId ? eq(inventory.tenantId, tenantId) : sql`1=1`
       )
-    );
+    )
+    .orderBy(inventory.id) // Ordenar para evitar deadlocks
+    .for('update'); // 🔒 BLOQUEIO PESSIMISTA
 
-  const totalQuantity = Number(fromStock[0]?.total ?? 0);
+  // Calcular saldo total na origem
+  const totalQuantity = fromInventory.reduce((sum, item) => sum + item.quantity, 0);
 
   // Calcular quantidade reservada para picking
-  const reservedStock = await dbConn
+  const reservedStock = await tx
     .select({ total: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)` })
     .from(pickingAllocations)
     .where(
@@ -94,10 +123,15 @@ export async function registerMovement(input: RegisterMovementInput) {
   const reservedQuantity = Number(reservedStock[0]?.total ?? 0);
   const availableQuantity = totalQuantity - reservedQuantity;
 
+  // ✅ REVALIDAÇÃO PÓS-LOCK (crítico para race conditions)
   if (availableQuantity < input.quantity) {
     throw new Error(
       `Saldo insuficiente. Total: ${totalQuantity}, Reservado: ${reservedQuantity}, Disponível: ${availableQuantity}, Solicitado: ${input.quantity}`
     );
+  }
+
+  if (fromInventory.length === 0) {
+    throw new Error('Estoque não encontrado na origem');
   }
 
   // Validar regra de armazenagem do endereço destino (exceto para descarte)
@@ -106,7 +140,7 @@ export async function registerMovement(input: RegisterMovementInput) {
       throw new Error("Endereço destino é obrigatório para este tipo de movimentação");
     }
 
-    const toLocation = await dbConn
+    const toLocation = await tx
       .select()
       .from(warehouseLocations)
       .where(eq(warehouseLocations.id, input.toLocationId))
@@ -118,7 +152,7 @@ export async function registerMovement(input: RegisterMovementInput) {
 
     // Se endereço é "single" (único item/lote), validar se já contém outro produto/lote
     if (toLocation[0].storageRule === "single") {
-      const existingStock = await dbConn
+      const existingStock = await tx
         .select()
         .from(inventory)
         .where(
@@ -156,40 +190,33 @@ export async function registerMovement(input: RegisterMovementInput) {
     }
   }
 
-  // FASE 2: MODIFICAR DADOS (somente se validações passarem)
+  // FASE 2: MODIFICAR DADOS (estoque já bloqueado)
 
-  // Deduzir estoque da origem
-  const fromInventory = await dbConn
-    .select()
-    .from(inventory)
-    .where(
-      and(
-        eq(inventory.locationId, input.fromLocationId),
-        eq(inventory.productId, input.productId),
-        input.batch ? eq(inventory.batch, input.batch) : sql`1=1`
-      )
-    )
-    .limit(1);
+  // Deduzir estoque da origem (usar registros já bloqueados)
+  let remainingToMove = input.quantity;
+  for (const stockItem of fromInventory) {
+    if (remainingToMove <= 0) break;
 
-  if (fromInventory[0]) {
-    const newQuantity = fromInventory[0].quantity - input.quantity;
+    const toDeduct = Math.min(stockItem.quantity, remainingToMove);
+    const newQuantity = stockItem.quantity - toDeduct;
+
     if (newQuantity <= 0) {
       // Remover registro se quantidade chegar a zero
-      await dbConn
-        .delete(inventory)
-        .where(eq(inventory.id, fromInventory[0].id));
+      await tx.delete(inventory).where(eq(inventory.id, stockItem.id));
     } else {
       // Atualizar quantidade
-      await dbConn
-        .update(inventory)
+      await tx.update(inventory)
         .set({ quantity: newQuantity })
-        .where(eq(inventory.id, fromInventory[0].id));
+        .where(eq(inventory.id, stockItem.id));
     }
+
+    remainingToMove -= toDeduct;
   }
 
   // Adicionar estoque ao destino (exceto para descarte)
   if (input.movementType !== "disposal" && input.toLocationId) {
-    const toInventory = await dbConn
+    // 🔒 Bloquear estoque do destino também
+    const toInventory = await tx
       .select()
       .from(inventory)
       .where(
@@ -203,7 +230,7 @@ export async function registerMovement(input: RegisterMovementInput) {
 
     if (toInventory[0]) {
       // Atualizar quantidade existente
-      await dbConn
+      await tx
         .update(inventory)
         .set({
           quantity: toInventory[0].quantity + input.quantity,
@@ -212,13 +239,13 @@ export async function registerMovement(input: RegisterMovementInput) {
         .where(eq(inventory.id, toInventory[0].id));
     } else {
       // Buscar SKU do produto para gerar uniqueCode
-      const product = await dbConn.select({ sku: products.sku })
+      const product = await tx.select({ sku: products.sku })
         .from(products)
         .where(eq(products.id, input.productId))
         .limit(1);
 
       // Buscar zona do endereço de destino
-      const toLocation = await dbConn.select({ zoneCode: warehouseZones.code })
+      const toLocation = await tx.select({ zoneCode: warehouseZones.code })
         .from(warehouseLocations)
         .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(eq(warehouseLocations.id, input.toLocationId))
@@ -227,7 +254,7 @@ export async function registerMovement(input: RegisterMovementInput) {
       const { getUniqueCode } = await import("./utils/uniqueCode");
 
       // Criar novo registro (validação já foi feita na FASE 1)
-      await dbConn.insert(inventory).values({
+      await tx.insert(inventory).values({
         productId: input.productId,
         locationId: input.toLocationId,
         batch: input.batch || null,
@@ -242,7 +269,7 @@ export async function registerMovement(input: RegisterMovementInput) {
   }
 
   // Registrar movimentação no histórico
-  await dbConn.insert(inventoryMovements).values({
+  await tx.insert(inventoryMovements).values({
     productId: input.productId,
     fromLocationId: input.fromLocationId,
     toLocationId: input.toLocationId || null,
@@ -263,7 +290,7 @@ export async function registerMovement(input: RegisterMovementInput) {
 
   // Atualizar status da pré-alocação (se houver e se não for descarte)
   if (input.toLocationId) {
-    await dbConn
+    await tx
       .update(receivingPreallocations)
       .set({ status: "allocated" })
       .where(

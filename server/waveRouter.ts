@@ -1,7 +1,7 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, warehouseLocations, labelReadings } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingReservations, pickingAllocations, warehouseLocations, labelReadings } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
 import { generateWaveDocument } from "./waveDocument";
@@ -887,5 +887,124 @@ export const waveRouter = router({
           pickedQuantity: newPickedQuantity,
         },
       };
+    }),
+
+  /**
+   * Cancelar onda de separação e reverter reservas atomicamente
+   */
+  cancel: protectedProcedure
+    .input(z.object({ waveId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      return await db.transaction(async (tx) => {
+        // 1. 🔒 Lock da Onda para evitar modificações simultâneas
+        const [wave] = await tx
+          .select()
+          .from(pickingWaves)
+          .where(
+            and(
+              eq(pickingWaves.id, input.waveId),
+              ctx.user?.tenantId ? eq(pickingWaves.tenantId, ctx.user.tenantId) : sql`1=1`
+            )
+          )
+          .for('update');
+
+        if (!wave) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Onda não encontrada ou sem permissão",
+          });
+        }
+
+        // Validar se onda pode ser cancelada
+        if (wave.status === "completed") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Onda já foi concluída e não pode ser cancelada",
+          });
+        }
+
+        if (wave.status === "cancelled") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Onda já foi cancelada",
+          });
+        }
+
+        // 2. Buscar todas as alocações de picking desta onda
+        // 🔒 Ordenar por inventoryId para evitar Deadlock
+        const allocations = await tx
+          .select()
+          .from(pickingAllocations)
+          .where(eq(pickingAllocations.waveId, input.waveId))
+          .orderBy(pickingAllocations.inventoryId); // 🔒 ORDEM CRÍTICA
+
+        // 3. Reverter reservas no inventário atomicamente
+        for (const allocation of allocations) {
+          // 🔒 SELECT FOR UPDATE no item de inventário específico
+          const [invItem] = await tx
+            .select()
+            .from(inventory)
+            .where(
+              and(
+                eq(inventory.id, allocation.inventoryId),
+                ctx.user?.tenantId ? eq(inventory.tenantId, ctx.user.tenantId) : sql`1=1`
+              )
+            )
+            .for('update'); // 🔒 BLOQUEIO PESSIMISTA
+
+          if (invItem) {
+            // ✅ REVALIDAÇÃO PÓS-LOCK
+            if (invItem.reservedQuantity < allocation.quantity) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Inconsistência detectada: reserva maior que saldo reservado (Produto ID: ${allocation.productId})`,
+              });
+            }
+
+            // Reverter reserva
+            await tx
+              .update(inventory)
+              .set({
+                reservedQuantity: sql`${inventory.reservedQuantity} - ${allocation.quantity}`,
+              })
+              .where(eq(inventory.id, invItem.id));
+          }
+        }
+
+        // 4. Limpeza Atômica
+        // Remove as alocações para liberar o inventário para novas ondas
+        await tx
+          .delete(pickingAllocations)
+          .where(eq(pickingAllocations.waveId, input.waveId));
+
+        // Atualiza o status da onda
+        await tx
+          .update(pickingWaves)
+          .set({ status: "cancelled" })
+          .where(eq(pickingWaves.id, input.waveId));
+
+        // Retorna pedidos vinculados para a fila (status pending)
+        await tx
+          .update(pickingOrders)
+          .set({ status: "pending" })
+          .where(
+            inArray(
+              pickingOrders.id,
+              tx
+                .select({ id: pickingWaveItems.pickingOrderId })
+                .from(pickingWaveItems)
+                .where(eq(pickingWaveItems.waveId, input.waveId))
+            )
+          );
+
+        return {
+          success: true,
+          message: "Onda cancelada e reservas revertidas com sucesso",
+          waveId: input.waveId,
+        };
+      });
     }),
 });

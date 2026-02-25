@@ -3454,3 +3454,10 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] 🚨 CRÍTICO: 280 unidades da NF 7777.xml recuperadas - bug em registerMovement (não criava registro no destino)
 
 - [ ] Analisar se bug de movimentação ocorre apenas no coletor ou também na web
+
+
+## 🔒 REFORÇO DE INTEGRIDADE - Race Conditions e Constraints SQL
+
+- [x] Etapa 1: Aplicar constraints SQL (quantity >= 0, reservedQuantity <= quantity)
+- [x] Etapa 2: Implementar SELECT FOR UPDATE em movements.ts, waveRouter.ts (pickingRouter.ts não precisou)
+- [x] Etapa 3: Corrigir cancelamento de onda com reversão atômica de reservas
