@@ -3491,3 +3491,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 ## 🐛 BUG CRÍTICO - 25/02/2026 (01:30)
 
 - [x] Bug de finalização precoce da separação voltou a acontecer em /collector/picking (regressão após Operação Faxina) - RESOLVIDO com sincronização cruzada entre pickingAllocations e pickingWaveItems
+
+
+## 🚨 BUG CRÍTICO PERSISTENTE - 25/02/2026 (01:50)
+
+- [x] Bug de finalização precoce PERSISTE em /collector/picking mesmo após sincronização cruzada - RESOLVIDO
+  - Cenário: 3 SKUs / 4 lotes em 4 endereços
+  - Comportamento: Onda marca como completa logo após escanear PRIMEIRO item
+  - Interface: /collector/picking
+  - Vídeo: 2026-02-2423-03-41.mp4
+  - CAUSA: pickingWaveItems criava UM registro por endereço em vez de consolidar por SKU+Lote
+  - SOLUÇÃO: Consolidar allocatedItems por uniqueCode antes de criar pickingWaveItems

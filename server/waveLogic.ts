@@ -279,23 +279,48 @@ export async function createWave(params: CreateWaveParams) {
     throw new Error("Nenhuma reserva encontrada para os pedidos selecionados");
   }
 
-  // 4. Transformar reservas em formato de allocatedItems
-  const allocatedItems = reservations.map(r => ({
-    pickingOrderId: r.pickingOrderId, // ID do pedido de origem
-    productId: r.productId,
-    productSku: r.productSku!,
-    productName: r.productName!,
-    totalQuantity: r.quantity, // Não usado, mas mantido para compatibilidade
-    allocatedQuantity: r.quantity,
-    orders: [], // Não usado na criação de waveItems
-    inventoryId: r.inventoryId,
-    locationId: r.locationId!,
-    locationCode: r.locationCode!,
-    batch: r.batch || undefined,
-    expiryDate: r.expiryDate || undefined,
-    unit: r.unit || "unit", // Unidade do pedido original
-    unitsPerBox: r.unitsPerBox || undefined, // Unidades por caixa
-  }));
+  // 4. Transformar reservas em formato de allocatedItems E CONSOLIDAR por SKU+Lote
+  // 🔄 CORREÇÃO: Consolidar por uniqueCode para evitar duplicação de pickingWaveItems
+  const allocationsMap = new Map<string, {
+    pickingOrderId: number;
+    productId: number;
+    productSku: string;
+    productName: string;
+    allocatedQuantity: number;
+    locationId: number;
+    locationCode: string;
+    batch: string | undefined;
+    expiryDate: Date | undefined;
+    unit: string;
+    unitsPerBox: number | undefined;
+  }>();
+
+  for (const r of reservations) {
+    const uniqueCode = getUniqueCode(r.productSku!, r.batch);
+    const existing = allocationsMap.get(uniqueCode);
+    
+    if (existing) {
+      // Consolidar quantidade (somar múltiplos endereços do mesmo lote)
+      existing.allocatedQuantity += r.quantity;
+    } else {
+      // Primeiro endereço deste lote
+      allocationsMap.set(uniqueCode, {
+        pickingOrderId: r.pickingOrderId,
+        productId: r.productId,
+        productSku: r.productSku!,
+        productName: r.productName!,
+        allocatedQuantity: r.quantity,
+        locationId: r.locationId!, // Primeiro endereço (para referência)
+        locationCode: r.locationCode!,
+        batch: r.batch || undefined,
+        expiryDate: r.expiryDate || undefined,
+        unit: r.unit || "unit",
+        unitsPerBox: r.unitsPerBox || undefined,
+      });
+    }
+  }
+
+  const allocatedItems = Array.from(allocationsMap.values());
 
   // 5. Gerar número da onda
   const waveNumber = await generateWaveNumber();
