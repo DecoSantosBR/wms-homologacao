@@ -3535,3 +3535,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   - clientPortalRouter.ts: Removida busca de tenant.name, usa input.customerName
   - routers.ts: Já estava correto (usa input.customerName ou firstItem['Destinatário'])
   - Testes: Removidas referências a customerId em 4 arquivos de teste
+
+
+## 📖 NOVA REGRA - Glossary.md (25/02/2026)
+
+- [x] Adicionar Glossary.md ao repositório como guia de padronização
+  - Corrigido erro de sintaxe SQL (linha 64)
+  - Reforçada importância do uniqueCode como garantidor de 100% de rastreabilidade
+  - Adicionado estado "in_progress" em pickingAllocations
+  - Adicionada nota sobre incremento atômico vs bloqueio pessimista
+- [x] Atualizar README.md para referenciar o Glossary.md
+- [ ] **REGRA OBRIGATÓRIA**: Sempre consultar Glossary.md antes de implementar qualquer alteração

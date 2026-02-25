@@ -155,6 +155,16 @@ pnpm test quantity
 pnpm test --watch
 ```
 
+## 📚 Glossário e Padrões
+
+Antes de implementar qualquer alteração, consulte o [Glossary.md](./Glossary.md) para garantir a padronização de termos e conceitos utilizados no projeto. Este documento é a **Constituição Técnica** do WMS Med@x e define:
+
+- Entidades de Governança (Tenant, Customer, User)
+- Gestão de Inventário (Inventory, Batch, Unique Code)
+- Ciclo de Saída (Order, Wave, Picking Allocation, Wave Item)
+- Estados e Fluxos (Pending, In Progress, Picked, Shipped)
+- **Regras de Ouro para Desenvolvedores** (Transacionalidade, Race Conditions, Incremento Atômico, Sincronização Multinível)
+
 ## 📝 Licença
 
 Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](./LICENSE) para detalhes.
