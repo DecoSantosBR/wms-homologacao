@@ -458,7 +458,7 @@ export async function executeAddressing(
         expiryDate: stockInRec.expiryDate,
         quantity: quantityToMove,
         status: "available",
-        uniqueCode: getUniqueCode(prealloc.productSku, prealloc.batch), // ✅ Adicionar uniqueCode
+        uniqueCode: getUniqueCode(prealloc.productSku ?? '', prealloc.batch ?? null), // ✅ Adicionar uniqueCode
         locationZone: destLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
       });
     }
@@ -468,7 +468,7 @@ export async function executeAddressing(
       tenantId: order.tenantId,
       productId: prealloc.productId,
       batch: prealloc.batch, // ✅ Adicionar batch
-      uniqueCode: getUniqueCode(prealloc.productSku, prealloc.batch), // ✅ Adicionar uniqueCode
+      uniqueCode: getUniqueCode(prealloc.productSku ?? '', prealloc.batch ?? null), // ✅ Adicionar uniqueCode
       movementType: "receiving", // TIPO CORRETO: receiving = entrada
       quantity: quantityToMove,
       fromLocationId: recLocationId, // De: REC

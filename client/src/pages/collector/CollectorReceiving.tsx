@@ -28,6 +28,13 @@ export function CollectorReceiving() {
   const [unitsPerPackage, setUnitsPerPackage] = useState<number>(1);
   const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
+  // Estado efêmero para rastrear último item bipado (para undo)
+  const [lastSuccessfulItem, setLastSuccessfulItem] = useState<{
+    productId: number;
+    batch: string;
+    scannedCode: string;
+  } | null>(null);
+  
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
 
@@ -80,6 +87,15 @@ export function CollectorReceiving() {
           setSelectedProductId(orderItems[0].productId);
         }
       } else {
+        // Salvar último item bipado para undo
+        if (data.association) {
+          setLastSuccessfulItem({
+            productId: data.association.productId,
+            batch: data.association.batch || "",
+            scannedCode: labelCode,
+          });
+        }
+        
         toast.success("Etiqueta lida!", {
           description: `${data.association?.productName} - ${data.association?.packagesRead} volumes`,
         });
@@ -213,8 +229,21 @@ export function CollectorReceiving() {
   };
 
   const handleUndo = () => {
-    if (!conferenceId) return;
-    undoLastReadingMutation.mutate({ conferenceId, productId: 0, batch: "" }); // TODO: Armazenar último item lido
+    if (!conferenceId || !lastSuccessfulItem) {
+      toast.error("Nenhum item para desfazer");
+      return;
+    }
+    
+    undoLastReadingMutation.mutate({
+      conferenceId,
+      productId: lastSuccessfulItem.productId,
+      batch: lastSuccessfulItem.batch,
+    }, {
+      onSuccess: () => {
+        setLastSuccessfulItem(null); // Limpa para evitar múltiplos undos
+        toast.info("Leitura estornada com sucesso");
+      }
+    });
   };
 
   const handleFinish = () => {

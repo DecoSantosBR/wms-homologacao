@@ -38,7 +38,7 @@ export async function registerMovement(
 
   // Se não há transação externa, criar uma nova para garantir atomicidade
   if (!externalTx) {
-    return await dbConn.transaction(async (tx) => {
+    return await dbConn.transaction(async (tx: any) => {
       return await registerMovementInternal(input, tx);
     });
   }
@@ -106,7 +106,7 @@ async function registerMovementInternal(
     .for('update'); // 🔒 BLOQUEIO PESSIMISTA
 
   // Calcular saldo total na origem
-  const totalQuantity = fromInventory.reduce((sum, item) => sum + item.quantity, 0);
+  const totalQuantity = fromInventory.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
   // Calcular quantidade reservada para picking
   const reservedStock = await tx
