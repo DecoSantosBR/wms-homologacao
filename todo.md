@@ -3546,3 +3546,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   - Adicionada nota sobre incremento atômico vs bloqueio pessimista
 - [x] Atualizar README.md para referenciar o Glossary.md
 - [ ] **REGRA OBRIGATÓRIA**: Sempre consultar Glossary.md antes de implementar qualquer alteração
+
+
+## 📖 Correção Glossary.md - Definição de STAGE (25/02/2026)
+
+- [x] Corrigir definição de STAGE: "zona de consolidação/preparação de pedidos para serem coletados/expedidos"

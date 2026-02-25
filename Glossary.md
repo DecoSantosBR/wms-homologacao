@@ -75,7 +75,7 @@ Toda coluna de quantidade deve possuir uma constraint CHECK (quantity >= 0) no b
 📍 6. Zonas Especiais
 EXP (Expedição): Zona virtual ou física onde o estoque é baixado do sistema.
 
-STAGE (Área de Conferência): Zona de pulmão onde os itens aguardam após o picking antes do carregamento final.
+STAGE (Área de Conferência): Zona de consolidação/preparação de pedidos para serem coletados/expedidos.
 
 Última Atualização: Fevereiro de 2026
 Objetivo: Garantir que o WMS Med@x seja escalável, atômico e à prova de falhas de concorrência.
