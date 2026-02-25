@@ -25,7 +25,7 @@ export function CollectorReceiving() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [batch, setBatch] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [unitsPerPackage, setUnitsPerPackage] = useState<number>(1);
+  const [unitsPerBox, setUnitsPerBox] = useState<number>(1);
   const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
   // Estado efêmero para rastrear último item bipado (para undo)
@@ -53,13 +53,13 @@ export function CollectorReceiving() {
     { enabled: !!selectedProductId }
   );
 
-  // Preencher unitsPerPackage automaticamente
+  // Preencher unitsPerBox automaticamente
   useEffect(() => {
     if (selectedProduct?.unitsPerBox) {
-      setUnitsPerPackage(selectedProduct.unitsPerBox);
+      setUnitsPerBox(selectedProduct.unitsPerBox);
       setTotalUnitsReceived(selectedProduct.unitsPerBox);
     } else {
-      setUnitsPerPackage(1);
+      setUnitsPerBox(1);
       setTotalUnitsReceived(1);
     }
   }, [selectedProduct]);
@@ -97,7 +97,7 @@ export function CollectorReceiving() {
         }
         
         toast.success("Etiqueta lida!", {
-          description: `${data.association?.productName} - ${data.association?.packagesRead} volumes`,
+          description: `${data.association?.productName} - ${data.association?.packagesRead} caixas (${data.association?.totalUnits || 0} unidades)`,
         });
         setLabelCode("");
         labelInputRef.current?.focus();
@@ -113,7 +113,7 @@ export function CollectorReceiving() {
   const associateLabelMutation = trpc.blindConference.associateLabel.useMutation({
     onSuccess: (data) => {
       toast.success("Etiqueta associada!", {
-        description: `${data.product.description} - ${data.totalUnits} unidades`,
+        description: `${data.association.productName} - ${data.association.totalUnits} unidades`,
       });
       
       setShowAssociationDialog(false);
@@ -121,7 +121,7 @@ export function CollectorReceiving() {
       setSelectedProductId(null);
       setBatch("");
       setExpiryDate("");
-      setUnitsPerPackage(1);
+      setUnitsPerBox(1);
       setTotalUnitsReceived(0);
       setLabelCode("");
       
@@ -207,7 +207,7 @@ export function CollectorReceiving() {
       return;
     }
 
-    if (unitsPerPackage < 1) {
+    if (unitsPerBox < 1) {
       toast.error("Unidades por caixa deve ser maior que zero");
       return;
     }
@@ -223,7 +223,7 @@ export function CollectorReceiving() {
       productId: selectedProductId,
       batch: batch || null,
       expiryDate: expiryDate || null,
-      unitsPerPackage,
+      unitsPerBox,
       totalUnitsReceived,
     });
   };
@@ -258,7 +258,7 @@ export function CollectorReceiving() {
   };
 
   const totalVolumes = summary?.conferenceItems.reduce((sum: number, item: any) => sum + item.packagesRead, 0) || 0;
-  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.packagesRead * (item.unitsPerPackage || 1)), 0) || 0;
+  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.unitsRead || 0), 0) || 0; // Usar unitsRead do backend
 
   if (showScanner) {
     return (
@@ -322,8 +322,8 @@ export function CollectorReceiving() {
                   <Label>Un/Caixa *</Label>
                   <Input
                     type="number"
-                    value={unitsPerPackage}
-                    onChange={(e) => setUnitsPerPackage(parseInt(e.target.value) || 1)}
+                    value={unitsPerBox}
+                    onChange={(e) => setUnitsPerBox(parseInt(e.target.value) || 1)}
                     className="h-12 text-base"
                     min="1"
                   />
@@ -494,7 +494,7 @@ export function CollectorReceiving() {
                     <div className="text-xs text-gray-600 mb-2">{item.productSku}</div>
                     <div className="flex justify-between text-sm">
                       <span>Lote: {item.batch || "-"}</span>
-                      <span className="font-semibold">{item.packagesRead} volumes</span>
+                      <span className="font-semibold">{item.packagesRead} caixas ({item.unitsRead || 0} un.)</span>
                     </div>
                   </div>
                 ))}

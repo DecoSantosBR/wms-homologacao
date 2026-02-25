@@ -3652,3 +3652,39 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 6. [ ] Finalizar com senha admin (verificar status `AVAILABLE` no banco)
 7. [ ] Criar onda APÓS conferência (deve permitir separação)
 
+
+## 🔧 REFATORAÇÃO - RENOMEAR unitsPerPackage → unitsPerBox - 25/02/2026
+
+- [x] Renomear coluna no schema (drizzle/schema.ts)
+- [x] Criar migration SQL (ALTER TABLE)
+- [x] Atualizar referências server-side (blindConferenceRouter, labelRouter, etc.)
+- [x] Atualizar referências client-side (BlindCheckModal.tsx)
+- [ ] Testar fluxo completo após alteração
+
+## 🐛 CORREÇÃO - Erro em CollectorReceiving.tsx após renomeação - 25/02/2026
+
+- [x] Corrigir acesso a `result.product.description` (deve ser `result.association.productName`)
+- [x] Corrigir acesso a `result.totalUnits` (deve ser `result.association.totalUnits`)
+- [x] Corrigir `setUnitsPerPackage` para `setUnitsPerBox` (4 ocorrências)
+- [x] Verificar outras referências quebradas no frontend
+
+## 🔧 ADICIONAR COLUNA - unitsRead em blindConferenceItems - 25/02/2026
+
+- [x] Adicionar coluna `unitsRead` no banco (ALTER TABLE)
+- [x] Atualizar schema em `drizzle/schema.ts`
+- [x] Atualizar lógica de cálculo em `blindConferenceRouter` (readLabel + associateLabel)
+- [x] Atualizar frontend para exibir unitsRead (BlindCheckModal + CollectorReceiving)
+
+## 🐛 CORREÇÃO - getSummary não retorna unitsRead - 25/02/2026
+
+- [x] Verificar query getSummary em blindConferenceRouter
+- [x] Adicionar campo unitsRead no SELECT (linha 564)
+- [x] Adicionar campo unitsRead no retorno (linha 585)
+- [ ] Testar exibição no frontend
+
+## 🐛 CORREÇÃO URGENTE - Erro 500 ao finalizar conferência - 25/02/2026
+
+- [x] Identificar acesso a array vazio na função `finish` (linha 656: warehouseZones.enumValues[0])
+- [x] Corrigir para string literal 'REC' (linhas 656 e 698)
+- [x] Erro de chaves React era efeito colateral do erro 500
+- [ ] Testar finalização de conferência (aguardando teste do usuário)

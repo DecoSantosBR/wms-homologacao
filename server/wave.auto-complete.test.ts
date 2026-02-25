@@ -32,7 +32,7 @@ describe("Wave Auto-Completion", () => {
       productId: testProductId,
       batch: "TEST-BATCH",
       expiryDate: new Date("2026-12-31"),
-      unitsPerPackage: 1,
+      unitsPerBox: 1,
       sessionId: 1,
       associatedBy: 1,
     });

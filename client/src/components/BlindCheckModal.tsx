@@ -39,7 +39,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [batch, setBatch] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [unitsPerPackage, setUnitsPerPackage] = useState<number>(1);
+  const [unitsPerBox, setUnitsPerPackage] = useState<number>(1);
   const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
   // Estado efêmero para rastrear último item bipado (para undo)
@@ -59,7 +59,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     { enabled: !!selectedProductId }
   );
 
-  // Preencher unitsPerPackage e totalUnitsReceived automaticamente quando produto for selecionado
+  // Preencher unitsPerBox e totalUnitsReceived automaticamente quando produto for selecionado
   useEffect(() => {
     if (selectedProduct?.unitsPerBox) {
       setUnitsPerPackage(selectedProduct.unitsPerBox);
@@ -267,7 +267,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       return;
     }
 
-    if (unitsPerPackage < 1) {
+    if (unitsPerBox < 1) {
       toast.error("Unidades por caixa deve ser maior que zero");
       return;
     }
@@ -283,7 +283,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       productId: selectedProductId,
       batch: batch || null,
       expiryDate: expiryDate || null,
-      unitsPerPackage,
+      unitsPerBox,
       totalUnitsReceived, // Enviar quantidade fracionada
     });
   };
@@ -321,7 +321,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
   // Calcular métricas
   const totalVolumes = summary?.conferenceItems.reduce((sum: number, item: any) => sum + item.packagesRead, 0) || 0;
-  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.packagesRead * (item.unitsPerPackage || 1)), 0) || 0;
+  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.unitsRead || 0), 0) || 0; // Usar unitsRead do backend
   const distinctProducts = new Set(summary?.conferenceItems.map((item: any) => item.productId)).size || 0;
 
   return (
@@ -461,8 +461,14 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                               </TableCell>
                               <TableCell>{item.batch || "-"}</TableCell>
                               <TableCell className="text-right">-</TableCell>
-                              <TableCell className="text-right font-semibold">{item.packagesRead}</TableCell>
-                              <TableCell className="text-right font-semibold">{item.packagesRead}</TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {item.packagesRead} caixas
+                                <div className="text-sm text-gray-600">({item.unitsRead || 0} unidades)</div>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {item.packagesRead} caixas
+                                <div className="text-sm text-gray-600">({item.unitsRead || 0} unidades)</div>
+                              </TableCell>
                               <TableCell className="text-center">
                                 <Button variant="ghost" size="icon">
                                   <Edit className="w-4 h-4" />
@@ -559,7 +565,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
               <Input
                 type="number"
                 min="1"
-                value={unitsPerPackage}
+                value={unitsPerBox}
                 onChange={(e) => {
                   const newValue = Number(e.target.value);
                   setUnitsPerPackage(newValue);

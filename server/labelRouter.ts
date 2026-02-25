@@ -94,7 +94,7 @@ export const labelRouter = router({
 
       // 3. Buscar informações do estoque (se houver lote)
       let expiryDate = null;
-      let unitsPerPackage = product.unitsPerBox || 1;
+      let unitsPerBox = product.unitsPerBox || 1;
       
       if (batch) {
         const inventoryRecords = await db.select({
@@ -124,8 +124,8 @@ export const labelRouter = router({
         productId: product.id,
         batch: batch || "",
         expiryDate: expiryDate,
-        unitsPerPackage: unitsPerPackage,
-        totalUnits: unitsPerPackage,
+        unitsPerBox: unitsPerBox,
+        totalUnits: unitsPerBox,
         associatedBy: ctx.user.id,
         tenantId: tenantId,
       });

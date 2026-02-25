@@ -337,7 +337,7 @@ export const stockRouter = router({
           productId: labelAssociations.productId,
           batch: labelAssociations.batch,
           expiryDate: labelAssociations.expiryDate,
-          unitsPerPackage: labelAssociations.unitsPerPackage,
+          unitsPerBox: labelAssociations.unitsPerBox,
         })
         .from(labelAssociations)
         .where(
@@ -356,7 +356,7 @@ export const stockRouter = router({
         // Etiqueta encontrada - usar productId da associação
         productId = labelAssoc[0].productId;
         labelBatch = labelAssoc[0].batch || null;
-        labelUnitsPerBox = labelAssoc[0].unitsPerPackage;
+        labelUnitsPerBox = labelAssoc[0].unitsPerBox;
       } else {
         // Etiqueta não encontrada - tentar buscar diretamente por SKU (fallback)
         const productBySku = await dbConn

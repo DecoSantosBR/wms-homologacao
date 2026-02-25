@@ -26,11 +26,11 @@ describe("Conferência Cega - Recebimento Fracionado", () => {
     console.log(`Unidades por caixa (cadastro): ${originalUnitsPerBox}`);
     console.log("Simulando recebimento fracionado: 80 unidades (caixa de 160 incompleta)");
     
-    // Validar que a lógica aceita totalUnitsReceived diferente de unitsPerPackage
-    const unitsPerPackage = originalUnitsPerBox || 160; // Caixa completa
+    // Validar que a lógica aceita totalUnitsReceived diferente de unitsPerBox
+    const unitsPerBox = originalUnitsPerBox || 160; // Caixa completa
     const totalUnitsReceived = 80; // Caixa incompleta (50%)
     
-    expect(totalUnitsReceived).toBeLessThan(unitsPerPackage);
+    expect(totalUnitsReceived).toBeLessThan(unitsPerBox);
     expect(totalUnitsReceived).toBeGreaterThan(0);
     
     console.log("✅ Quantidade fracionada validada: 80 < 160");
@@ -50,33 +50,33 @@ describe("Conferência Cega - Recebimento Fracionado", () => {
       productId: 1,
       batch: "LOTE-123",
       expiryDate: "2026-12-31",
-      unitsPerPackage: 160, // Cadastro do produto
+      unitsPerBox: 160, // Cadastro do produto
       totalUnitsReceived: 80, // Quantidade fracionada recebida
     };
 
     expect(mockInput.totalUnitsReceived).toBeDefined();
-    expect(mockInput.totalUnitsReceived).toBeLessThan(mockInput.unitsPerPackage);
+    expect(mockInput.totalUnitsReceived).toBeLessThan(mockInput.unitsPerBox);
     
     console.log("✅ Parâmetro totalUnitsReceived aceito pelo backend");
   });
 
-  it("deve usar unitsPerPackage quando totalUnitsReceived não for fornecido", () => {
-    // Lógica: actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage
-    const unitsPerPackage = 160;
+  it("deve usar unitsPerBox quando totalUnitsReceived não for fornecido", () => {
+    // Lógica: actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox
+    const unitsPerBox = 160;
     const totalUnitsReceived = undefined;
     
-    const actualUnitsReceived = totalUnitsReceived || unitsPerPackage;
+    const actualUnitsReceived = totalUnitsReceived || unitsPerBox;
     
     expect(actualUnitsReceived).toBe(160);
-    console.log("✅ Usa unitsPerPackage (160) quando totalUnitsReceived não fornecido");
+    console.log("✅ Usa unitsPerBox (160) quando totalUnitsReceived não fornecido");
   });
 
   it("deve usar totalUnitsReceived quando fornecido (caixa fracionada)", () => {
-    // Lógica: actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage
-    const unitsPerPackage = 160;
+    // Lógica: actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox
+    const unitsPerBox = 160;
     const totalUnitsReceived = 80; // Caixa incompleta
     
-    const actualUnitsReceived = totalUnitsReceived || unitsPerPackage;
+    const actualUnitsReceived = totalUnitsReceived || unitsPerBox;
     
     expect(actualUnitsReceived).toBe(80);
     console.log("✅ Usa totalUnitsReceived (80) quando fornecido - caixa fracionada");

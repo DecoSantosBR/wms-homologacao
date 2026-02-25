@@ -169,11 +169,13 @@ export const blindConferenceRouter = router({
           expiryDate: labelData.expiryDate,
           tenantId: activeTenantId,
           packagesRead: 1,
+          unitsRead: labelData.unitsPerBox, // Primeira leitura: 1 caixa * unitsPerBox
           expectedQuantity: 0,
         })
         .onDuplicateKeyUpdate({
           set: {
             packagesRead: sql`${blindConferenceItems.packagesRead} + 1`,
+            unitsRead: sql`${blindConferenceItems.unitsRead} + ${labelData.unitsPerBox}`, // Incrementa unidades
             updatedAt: new Date(),
           },
         });
@@ -185,7 +187,7 @@ export const blindConferenceRouter = router({
         associationId: labelData.id,
         labelCode: input.labelCode,
         readBy: userId,
-        unitsAdded: labelData.unitsPerPackage,
+        unitsAdded: labelData.unitsPerBox,
       });
 
       // 4. BUSCAR PROGRESSO ATUAL DO ITEM NA CONFERÊNCIA
@@ -215,9 +217,9 @@ export const blindConferenceRouter = router({
           productSku: product[0]?.sku || "",
           batch: labelData.batch,
           expiryDate: labelData.expiryDate,
-          unitsPerPackage: labelData.unitsPerPackage,
+          unitsPerBox: labelData.unitsPerBox,
           packagesRead: currentPackagesRead,
-          totalUnits: currentPackagesRead * labelData.unitsPerPackage,
+          totalUnits: currentPackagesRead * labelData.unitsPerBox,
         }
       };
     }),
@@ -232,7 +234,7 @@ export const blindConferenceRouter = router({
       productId: z.number(),
       batch: z.string().nullable(),
       expiryDate: z.string().nullable(),
-      unitsPerPackage: z.number(),
+      unitsPerBox: z.number(),
       totalUnitsReceived: z.number().optional(),
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
@@ -264,7 +266,7 @@ export const blindConferenceRouter = router({
       const productSku = product[0].sku;
       const uniqueCode = getUniqueCode(productSku, input.batch);
 
-      const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage;
+      const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox;
 
       // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
       const existingLabel = await db.select()
@@ -282,7 +284,7 @@ export const blindConferenceRouter = router({
         productId: input.productId,
         batch: input.batch,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        unitsPerPackage: input.unitsPerPackage,
+        unitsPerBox: input.unitsPerBox,
         totalUnits: actualUnitsReceived,
         status: "RECEIVING", // Etiqueta criada durante conferência fica bloqueada até fechamento
         associatedBy: userId,
@@ -298,11 +300,13 @@ export const blindConferenceRouter = router({
           expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
           tenantId: activeTenantId,
           packagesRead: 1,
+          unitsRead: actualUnitsReceived, // Primeira leitura: actualUnitsReceived (pode ser fracionado)
           expectedQuantity: 0,
         })
         .onDuplicateKeyUpdate({
           set: {
             packagesRead: sql`${blindConferenceItems.packagesRead} + 1`,
+            unitsRead: sql`${blindConferenceItems.unitsRead} + ${actualUnitsReceived}`, // Incrementa unidades
             updatedAt: new Date(),
           },
         });
@@ -325,7 +329,7 @@ export const blindConferenceRouter = router({
       // 4. ATUALIZAR unitsPerBox NO PRODUTO SE NÃO EXISTIR
       if (!product[0].unitsPerBox) {
         await db.update(products)
-          .set({ unitsPerBox: input.unitsPerPackage })
+          .set({ unitsPerBox: input.unitsPerBox })
           .where(eq(products.id, input.productId));
       }
 
@@ -339,7 +343,7 @@ export const blindConferenceRouter = router({
           productSku: product[0].sku,
           batch: input.batch,
           expiryDate: input.expiryDate,
-          unitsPerPackage: input.unitsPerPackage,
+          unitsPerBox: input.unitsPerBox,
           packagesRead: 1,
           totalUnits: actualUnitsReceived,
         }
@@ -557,6 +561,7 @@ export const blindConferenceRouter = router({
         batch: blindConferenceItems.batch,
         expiryDate: blindConferenceItems.expiryDate,
         packagesRead: blindConferenceItems.packagesRead,
+        unitsRead: blindConferenceItems.unitsRead, // CAMPO ADICIONADO
         expectedQuantity: blindConferenceItems.expectedQuantity,
       })
         .from(blindConferenceItems)
@@ -577,6 +582,7 @@ export const blindConferenceRouter = router({
           batch: item.batch || null,
           expiryDate: item.expiryDate,
           packagesRead: item.packagesRead,
+          unitsRead: item.unitsRead, // CAMPO ADICIONADO
           expectedQuantity: item.expectedQuantity,
         }))
       };
@@ -647,7 +653,7 @@ export const blindConferenceRouter = router({
           .where(
             and(
               eq(warehouseLocations.tenantId, activeTenantId),
-              eq(warehouseLocations.zone, warehouseZones.enumValues[0]) // 'REC'
+              eq(warehouseLocations.zone, 'REC') // Zona de recebimento
             )
           )
           .limit(1);
@@ -689,7 +695,7 @@ export const blindConferenceRouter = router({
             batch: item.batch || "",
             expiryDate: item.expiryDate,
             uniqueCode: uniqueCode,
-            locationZone: warehouseZones.enumValues[0], // 'REC'
+            locationZone: 'REC', // Zona de recebimento
             quantity: totalUnits,
             reservedQuantity: 0,
             status: "available",

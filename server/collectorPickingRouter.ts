@@ -541,7 +541,7 @@ export const collectorPickingRouter = router({
             productId: alloc.productId,
             batch: alloc.batch ?? null,
             expiryDate: inv.expiryDate ?? null,
-            unitsPerPackage: 1, // Padrão 1 unidade por embalagem
+            unitsPerBox: 1, // Padrão 1 unidade por embalagem
             associatedBy: 0, // Sistema (userId 0)
             tenantId: tenantId,
             uniqueCode: getUniqueCode(alloc.productSku || "", alloc.batch || "")

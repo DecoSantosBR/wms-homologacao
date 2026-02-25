@@ -57,7 +57,7 @@ describe("Stage (Conferência de Expedição)", () => {
       labelCode: testLabelCode,
       productId: testProductId,
       batch: "LOTE-TEST-001",
-      unitsPerPackage: 1, // 1 unidade por embalagem para teste
+      unitsPerBox: 1, // 1 unidade por embalagem para teste
       packagesRead: 100, // 100 embalagens lidas
       totalUnits: 100, // Total de 100 unidades
       associatedBy: 1,

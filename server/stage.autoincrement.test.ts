@@ -59,7 +59,7 @@ describe("Stage - Auto-preenchimento de quantidade", () => {
       batch: "LOTE001",
       expiryDate: new Date("2026-12-31"),
       locationCode: "H01-01-01",
-      unitsPerPackage: 80,
+      unitsPerBox: 80,
       associatedBy: 1, // Obrigatório
     });
 
@@ -247,7 +247,7 @@ describe("Stage - Auto-preenchimento de quantidade", () => {
       batch: "LOTE002",
       expiryDate: new Date("2026-12-31"),
       locationCode: "H01-01-02",
-      unitsPerPackage: 1,
+      unitsPerBox: 1,
       associatedBy: 1, // Obrigatório
     });
 

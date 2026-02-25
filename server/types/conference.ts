@@ -41,7 +41,7 @@ export const ReadLabelResponseSchema = z.object({
     productSku: z.string(),
     batch: z.string().nullable(),
     expiryDate: z.date().nullable().optional(),
-    unitsPerPackage: z.number(),
+    unitsPerBox: z.number(),
     packagesRead: z.number(),
     totalUnits: z.number(),
   }).nullable(),

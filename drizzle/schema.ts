@@ -667,6 +667,7 @@ export const blindConferenceItems = mysqlTable("blindConferenceItems", {
   batch: varchar("batch", { length: 100 }).notNull(), // Lote do produto
   expiryDate: date("expiryDate"), // Data de validade do lote
   packagesRead: int("packagesRead").default(0).notNull(), // Contador de embalagens bipadas
+  unitsRead: int("unitsRead").default(0).notNull(), // Total de unidades lidas (packagesRead * unitsPerBox)
   expectedQuantity: int("expectedQuantity").default(0).notNull(), // Quantidade esperada (da NF)
   tenantId: int("tenantId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -687,7 +688,7 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 100 }),
   expiryDate: date("expiryDate"), // Data de validade do lote
-  unitsPerPackage: int("unitsPerPackage").notNull(), // Quantidade de unidades por embalagem
+  unitsPerBox: int("unitsPerBox").notNull(), // Quantidade de unidades por caixa
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
   status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no fluxo de recebimento
   associatedBy: int("associatedBy").notNull(), // userId

@@ -735,7 +735,7 @@ export const waveRouter = router({
           labelCode: labelAssociations.labelCode,
           batch: labelAssociations.batch,
           expiryDate: labelAssociations.expiryDate,
-          unitsPerPackage: labelAssociations.unitsPerPackage,
+          unitsPerBox: labelAssociations.unitsPerBox,
         })
         .from(labelAssociations)
         .where(
@@ -775,8 +775,8 @@ export const waveRouter = router({
       }
 
       // Incrementar quantidade separada
-      const unitsPerPackage = association.unitsPerPackage || 1;
-      const newPickedQuantity = waveItem.pickedQuantity + unitsPerPackage;
+      const unitsPerBox = association.unitsPerBox || 1;
+      const newPickedQuantity = waveItem.pickedQuantity + unitsPerBox;
 
       // Determinar novo status
       const newStatus = newPickedQuantity >= waveItem.totalQuantity ? "picked" : "pending";
@@ -797,7 +797,7 @@ export const waveRouter = router({
         associationId: association.id,
         labelCode: input.productCode,
         readBy: ctx.user.id,
-        unitsAdded: unitsPerPackage,
+        unitsAdded: unitsPerBox,
       });
 
       return {
@@ -859,7 +859,7 @@ export const waveRouter = router({
         productId: input.productId,
         batch: input.batch || null,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        unitsPerPackage: input.quantity,
+        unitsPerBox: input.quantity,
         uniqueCode: getUniqueCode(product.sku, input.batch || ""),
         associatedBy: ctx.user.id,
       });
