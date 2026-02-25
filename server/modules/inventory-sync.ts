@@ -6,7 +6,7 @@
  */
 
 import { getDb } from "../db";
-import { inventory, inventoryMovements, products, warehouseLocations } from "../../drizzle/schema";
+import { inventory, inventoryMovements, products, warehouseLocations, warehouseZones } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 interface MovementSummary {

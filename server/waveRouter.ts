@@ -782,15 +782,6 @@ export const waveRouter = router({
         })
         .where(eq(pickingWaveItems.id, waveItem.id));
 
-      // Atualizar labelAssociations
-      await db
-        .update(labelAssociations)
-        .set({
-          packagesRead: sql`${labelAssociations.packagesRead} + 1`,
-          totalUnits: sql`${labelAssociations.totalUnits} + ${unitsPerPackage}`,
-        })
-        .where(eq(labelAssociations.id, association.id));
-
       // Inserir leitura em labelReadings
       const sessionId = `P${input.waveId}`;
       await db.insert(labelReadings).values({

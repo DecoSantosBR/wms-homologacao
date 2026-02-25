@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index, unique, json, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index, unique, uniqueIndex, json, date } from "drizzle-orm/mysql-core";
 
 /**
  * Sistema WMS Med@x - Modelo de Dados Completo
@@ -656,22 +656,42 @@ export const blindConferenceSessions = mysqlTable("blindConferenceSessions", {
   statusIdx: index("blind_conf_status_idx").on(table.status),
 }));
 
+// Itens da conferência cega (progresso por produto)
+export const blindConferenceItems = mysqlTable("blindConferenceItems", {
+  id: int("id").autoincrement().primaryKey(),
+  conferenceId: int("conferenceId").notNull(), // FK para blindConferenceSessions
+  productId: int("productId").notNull(), // FK para products
+  batch: varchar("batch", { length: 100 }).notNull(), // Lote do produto
+  expiryDate: date("expiryDate"), // Data de validade do lote
+  packagesRead: int("packagesRead").default(0).notNull(), // Contador de embalagens bipadas
+  expectedQuantity: int("expectedQuantity").default(0).notNull(), // Quantidade esperada (da NF)
+  tenantId: int("tenantId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").onUpdateNow(),
+}, (table) => ({
+  // CONSTRAINT CRÍTICA: 1 registro por conferência + produto + lote
+  conferenceProductBatchUnique: uniqueIndex("conf_product_batch_idx").on(table.conferenceId, table.productId, table.batch),
+  conferenceIdx: index("blind_conf_items_conf_idx").on(table.conferenceId),
+  productIdx: index("blind_conf_items_product_idx").on(table.productId),
+}));
+
 // Associações de etiquetas a produtos/lotes
 export const labelAssociations = mysqlTable("labelAssociations", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: varchar("sessionId", { length: 20 }).notNull(), // "R10002" (recebimento) ou "P10002" (picking)
-  labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta lida
+  tenantId: int("tenantId").notNull(), // Multi-tenant: etiqueta pertence a um cliente
+  labelCode: varchar("labelCode", { length: 100 }).notNull().unique(), // Código da etiqueta lida (1 etiqueta = 1 registro)
+  uniqueCode: varchar("uniqueCode", { length: 200 }).notNull(), // SKU+Lote (garantidor de 100% rastreabilidade)
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 100 }),
   expiryDate: date("expiryDate"), // Data de validade do lote
   unitsPerPackage: int("unitsPerPackage").notNull(), // Quantidade de unidades por embalagem
-  packagesRead: int("packagesRead").default(0).notNull(), // Quantidade de volumes/embalagens lidos
-  totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades (packagesRead * unitsPerPackage)
+  totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
 }, (table) => ({
-  sessionLabelIdx: index("label_assoc_session_label_idx").on(table.sessionId, table.labelCode),
-  sessionIdx: index("label_assoc_session_idx").on(table.sessionId),
+  labelCodeIdx: index("label_assoc_label_code_idx").on(table.labelCode),
+  uniqueCodeIdx: index("label_assoc_unique_code_idx").on(table.uniqueCode),
+  tenantIdIdx: index("label_assoc_tenant_id_idx").on(table.tenantId),
 }));
 
 // Histórico de leituras de etiquetas

@@ -36,6 +36,27 @@
       "when": 1771990572980,
       "tag": "0004_fantastic_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772040648598,
+      "tag": "0005_shocking_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772041529786,
+      "tag": "0006_faithful_kat_farrell",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1772043169100,
+      "tag": "0007_shallow_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

@@ -28,7 +28,7 @@ interface BlindCheckModalProps {
 }
 
 export function BlindCheckModal({ open, onClose, receivingOrderId, items }: BlindCheckModalProps) {
-  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [conferenceId, setConferenceId] = useState<number | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [labelCode, setLabelCode] = useState("");
   const [showAssociationDialog, setShowAssociationDialog] = useState(false);
@@ -94,7 +94,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   // Iniciar sessão ao abrir modal
   const startSessionMutation = trpc.blindConference.start.useMutation({
     onSuccess: (data) => {
-      setSessionId(data.sessionId);
+      setConferenceId(data.sessionId);
       toast.success(data.message);
     },
     onError: (error: any) => {
@@ -125,7 +125,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
         labelInputRef.current?.focus();
         
         // Atualizar resumo
-        utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+        utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
       }
     },
     onError: (error: any) => {
@@ -156,7 +156,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       labelInputRef.current?.focus();
       
       // Atualizar resumo
-      utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+      utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
     },
     onError: (error: any) => {
       toast.error("Erro ao associar etiqueta", {
@@ -169,7 +169,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const undoLastReadingMutation = trpc.blindConference.undoLastReading.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
-      utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+      utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
     },
     onError: (error: any) => {
       toast.error("Erro ao desfazer leitura", {
@@ -180,8 +180,8 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
   // Obter resumo
   const { data: summary, isLoading: isLoadingSummary } = trpc.blindConference.getSummary.useQuery(
-    { sessionId: sessionId! },
-    { enabled: !!sessionId, refetchInterval: 3000 }
+    { conferenceId: conferenceId! },
+    { enabled: !!conferenceId, refetchInterval: 3000 }
   );
 
   // Finalizar conferência
@@ -202,7 +202,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
   // Iniciar sessão ao abrir modal
   useEffect(() => {
-    if (open && !sessionId) {
+    if (open && !conferenceId) {
       startSessionMutation.mutate({ receivingOrderId });
     }
   }, [open, receivingOrderId]);
@@ -220,13 +220,13 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       return;
     }
 
-    if (!sessionId) {
+    if (!conferenceId) {
       toast.error("Sessão não iniciada");
       return;
     }
 
     readLabelMutation.mutate({
-      sessionId,
+      conferenceId,
       labelCode: labelCode.trim(),
     });
   };
@@ -236,9 +236,9 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     setShowScanner(false);
     
     // Processar automaticamente
-    if (sessionId) {
+    if (conferenceId) {
       readLabelMutation.mutate({
-        sessionId,
+        conferenceId,
         labelCode: code,
       });
     }
@@ -261,7 +261,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     }
 
     associateLabelMutation.mutate({
-      sessionId: sessionId!,
+      conferenceId: conferenceId!,
       labelCode: pendingLabelCode,
       productId: selectedProductId,
       batch: batch || null,
@@ -272,12 +272,12 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   };
 
   const handleUndo = () => {
-    if (!sessionId) return;
-    undoLastReadingMutation.mutate({ sessionId });
+    if (!conferenceId) return;
+    undoLastReadingMutation.mutate({ conferenceId, productId: 0, batch: "" }); // TODO: Armazenar último item lido
   };
 
   const handleFinishClick = () => {
-    if (!summary?.associations.length) {
+    if (!summary?.conferenceItems.length) {
       toast.error("Nenhuma etiqueta foi lida ainda");
       return;
     }
@@ -285,14 +285,14 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   };
 
   const handleConfirmFinish = () => {
-    if (!sessionId) return;
-    finishMutation.mutate({ sessionId });
+    if (!conferenceId) return;
+    finishMutation.mutate({ conferenceId });
   };
 
   // Calcular métricas
-  const totalVolumes = summary?.associations.reduce((sum: number, a: any) => sum + a.packagesRead, 0) || 0;
-  const totalUnits = summary?.associations.reduce((sum: number, a: any) => sum + a.totalUnits, 0) || 0;
-  const distinctProducts = new Set(summary?.associations.map((a: any) => a.productId)).size || 0;
+  const totalVolumes = summary?.conferenceItems.reduce((sum: number, item: any) => sum + item.packagesRead, 0) || 0;
+  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.packagesRead * (item.unitsPerPackage || 1)), 0) || 0;
+  const distinctProducts = new Set(summary?.conferenceItems.map((item: any) => item.productId)).size || 0;
 
   return (
     <>
@@ -319,7 +319,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
             </div>
           </DialogHeader>
 
-          {!sessionId ? (
+          {!conferenceId ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               <span className="ml-2">Iniciando sessão...</span>
@@ -404,7 +404,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
                   {isLoadingSummary ? (
                     <div className="text-center py-8 text-gray-500">Carregando...</div>
-                  ) : !summary?.associations.length ? (
+                  ) : !summary?.conferenceItems.length ? (
                     <div className="text-center py-8 sm:py-12 text-gray-500">
                       <p className="text-base sm:text-lg mb-2">Nenhum produto conferido ainda</p>
                       <p className="text-xs sm:text-sm">Escaneie ou digite o código da primeira etiqueta para começar</p>
@@ -423,16 +423,16 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {summary.associations.map((assoc: any) => (
-                            <TableRow key={assoc.id}>
+                          {summary.conferenceItems.map((item: any) => (
+                            <TableRow key={`${item.productId}-${item.batch}`}>
                               <TableCell>
-                                <div className="font-medium">{assoc.productName}</div>
-                                <div className="text-sm text-gray-600">{assoc.productSku}</div>
+                                <div className="font-medium">{item.productName}</div>
+                                <div className="text-sm text-gray-600">{item.productSku}</div>
                               </TableCell>
-                              <TableCell>{assoc.batch || "-"}</TableCell>
-                              <TableCell className="text-right">{assoc.unitsPerPackage}</TableCell>
-                              <TableCell className="text-right font-semibold">{assoc.packagesRead}</TableCell>
-                              <TableCell className="text-right font-semibold">{assoc.totalUnits}</TableCell>
+                              <TableCell>{item.batch || "-"}</TableCell>
+                              <TableCell className="text-right">-</TableCell>
+                              <TableCell className="text-right font-semibold">{item.packagesRead}</TableCell>
+                              <TableCell className="text-right font-semibold">{item.packagesRead}</TableCell>
                               <TableCell className="text-center">
                                 <Button variant="ghost" size="icon">
                                   <Edit className="w-4 h-4" />
@@ -452,7 +452,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 <Button
                   variant="outline"
                   onClick={handleUndo}
-                  disabled={!summary?.associations.length || undoLastReadingMutation.isPending}
+                  disabled={!summary?.conferenceItems.length || undoLastReadingMutation.isPending}
                   className="min-h-[48px] w-full sm:w-auto"
                 >
                   <Undo className="w-4 h-4 mr-2" />
@@ -460,7 +460,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 </Button>
                 <Button
                   onClick={handleFinishClick}
-                  disabled={!summary?.associations.length}
+                  disabled={!summary?.conferenceItems.length}
                   className="bg-blue-600 hover:bg-blue-700 min-h-[48px] w-full sm:w-auto"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -600,7 +600,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
             </div>
 
             {/* Tabela de resumo com divergências */}
-            {summary && summary.summary.length > 0 && (
+            {summary && summary.conferenceItems.length > 0 && (
               <div>
                 <Table>
                   <TableHeader>
@@ -612,7 +612,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.summary.map((item: any, idx: any) => (
+                    {summary.conferenceItems.map((item: any, idx: any) => (
                       <TableRow key={idx}>
                         <TableCell>
                           <div className="font-medium">{item.productName}</div>

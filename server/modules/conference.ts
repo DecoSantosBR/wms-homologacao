@@ -1,5 +1,5 @@
 import { getDb } from "../db";
-import { receivingConferences, receivingDivergences, receivingOrderItems, receivingOrders, inventory, inventoryMovements, users } from "../../drizzle/schema";
+import { receivingConferences, receivingDivergences, receivingOrderItems, receivingOrders, inventory, inventoryMovements, users, products, warehouseZones, warehouseLocations } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 /**

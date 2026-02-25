@@ -2,6 +2,7 @@ import { protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { 
   blindConferenceSessions, 
+  blindConferenceItems,
   labelAssociations, 
   labelReadings, 
   blindConferenceAdjustments,
@@ -14,6 +15,8 @@ import {
 } from "../drizzle/schema";
 import { eq, and, or, desc, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 export const blindConferenceRouter = router({
   /**
@@ -83,13 +86,13 @@ export const blindConferenceRouter = router({
     }),
 
   /**
-   * 2. Ler Etiqueta
+   * 2. Ler Etiqueta (REFATORADO)
    * Regra: 1 etiqueta = 1 produto + 1 lote específico (ou sem lote)
-   * Busca por sessionId + labelCode
+   * Busca etiqueta global e registra progresso em blindConferenceItems
    */
   readLabel: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
+      conferenceId: z.number(), // Mudado de sessionId para conferenceId
       labelCode: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -97,74 +100,103 @@ export const blindConferenceRouter = router({
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      if (!userId) throw new Error("User not authenticated");
+      const tenantId = ctx.user?.tenantId;
+      if (!userId || !tenantId) throw new Error("User not authenticated");
 
-      // Buscar associação existente
-      const sessionIdStr = `R${input.sessionId}`;
-      const existingAssociation = await db.select()
+      // 1. BUSCA GLOBAL DA ETIQUETA (Identidade Permanente)
+      // Removemos qualquer filtro por sessionId, buscando apenas pelo código e tenant
+      const label = await db.select()
         .from(labelAssociations)
         .where(
           and(
-            eq(labelAssociations.sessionId, sessionIdStr),
-            eq(labelAssociations.labelCode, input.labelCode)
+            eq(labelAssociations.labelCode, input.labelCode),
+            eq(labelAssociations.tenantId, tenantId)
           )
         )
         .limit(1);
 
-      // Se etiqueta é nova
-      if (existingAssociation.length === 0) {
+      // Se etiqueta não existe no sistema
+      if (label.length === 0) {
         return {
           isNewLabel: true,
           association: null
         };
       }
 
-      // Etiqueta já associada - incrementar contagem
-      const association = existingAssociation[0];
-      const newPackagesRead = association.packagesRead + 1;
-      const newTotalUnits = newPackagesRead * association.unitsPerPackage;
+      const labelData = label[0];
 
-      // Atualizar associação
-      await db.update(labelAssociations)
-        .set({
-          packagesRead: newPackagesRead,
-          totalUnits: newTotalUnits,
+      // 2. UPSERT ATÔMICO NA TABELA DE ITENS DA CONFERÊNCIA
+      // A Constraint Unique (conferenceId, productId, batch) garante a separação correta
+      await db.insert(blindConferenceItems)
+        .values({
+          conferenceId: input.conferenceId,
+          productId: labelData.productId,
+          batch: labelData.batch || "",
+          expiryDate: labelData.expiryDate,
+          tenantId: tenantId,
+          packagesRead: 1, // Valor inicial caso o registro seja criado agora
+          expectedQuantity: 0, // Será preenchido posteriormente se houver NF
         })
-        .where(eq(labelAssociations.id, association.id));
+        .onDuplicateKeyUpdate({
+          set: {
+            // Incrementa o contador do par Produto+Lote específico desta conferência
+            packagesRead: sql`${blindConferenceItems.packagesRead} + 1`,
+            updatedAt: new Date(),
+          },
+        });
 
-      // Registrar leitura
+      // 3. REGISTRAR LEITURA NO HISTÓRICO (labelReadings)
+      const sessionIdStr = `R${input.conferenceId}`;
       await db.insert(labelReadings).values({
         sessionId: sessionIdStr,
-        associationId: association.id,
+        associationId: labelData.id,
         labelCode: input.labelCode,
         readBy: userId,
-        unitsAdded: association.unitsPerPackage,
+        unitsAdded: labelData.unitsPerPackage,
       });
 
-      // Buscar dados do produto
-      const product = await db.select().from(products).where(eq(products.id, association.productId)).limit(1);
+      // 4. BUSCAR PROGRESSO ATUAL DO ITEM NA CONFERÊNCIA
+      const conferenceItem = await db.select()
+        .from(blindConferenceItems)
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.productId, labelData.productId),
+            eq(blindConferenceItems.batch, labelData.batch || "")
+          )
+        )
+        .limit(1);
 
+      const currentPackagesRead = conferenceItem[0]?.packagesRead || 1;
+
+      // 5. BUSCAR DADOS DO PRODUTO
+      const product = await db.select().from(products).where(eq(products.id, labelData.productId)).limit(1);
+
+      // 6. RETORNO PARA O FRONTEND (Facilita o undoLastReading)
       return {
         isNewLabel: false,
         association: {
-          id: association.id,
-          productId: association.productId,
+          id: labelData.id,
+          productId: labelData.productId,
           productName: product[0]?.description || "",
           productSku: product[0]?.sku || "",
-          batch: association.batch,
-          unitsPerPackage: association.unitsPerPackage,
-          packagesRead: newPackagesRead,
-          totalUnits: newTotalUnits,
+          batch: labelData.batch,
+          expiryDate: labelData.expiryDate,
+          unitsPerPackage: labelData.unitsPerPackage,
+          packagesRead: currentPackagesRead,
+          totalUnits: currentPackagesRead * labelData.unitsPerPackage,
         }
       };
     }),
 
   /**
-   * 3. Associar Etiqueta a Produto
+   * 3. Associar Etiqueta a Produto (REFATORADO)
+   * Cria etiqueta PERMANENTE no estoque global (sem sessionId)
+   * Registra primeiro bip na conferência atual
    */
   associateLabel: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
+      conferenceId: z.number(),
       labelCode: z.string(),
       productId: z.number(),
       batch: z.string().nullable(),
@@ -177,67 +209,79 @@ export const blindConferenceRouter = router({
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      if (!userId) throw new Error("User not authenticated");
+      const tenantId = ctx.user?.tenantId;
+      if (!userId || !tenantId) throw new Error("User not authenticated");
 
-      // Converter sessionId para string com prefixo "R" (recebimento)
-      const sessionIdStr = `R${input.sessionId}`;
-
-      // Verificar se etiqueta já foi associada nesta sessão
-      const existingAssociation = await db.select()
-        .from(labelAssociations)
-        .where(
-          and(
-            eq(labelAssociations.sessionId, sessionIdStr),
-            eq(labelAssociations.labelCode, input.labelCode)
-          )
-        )
-        .limit(1);
-
-      if (existingAssociation.length > 0) {
-        throw new Error("Etiqueta já associada nesta sessão");
+      // Buscar produto para gerar uniqueCode
+      const product = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
+      if (product.length === 0) {
+        throw new Error("Produto não encontrado");
       }
+
+      const productSku = product[0].sku;
+      const uniqueCode = getUniqueCode(productSku, input.batch);
 
       // Usar totalUnitsReceived se fornecido, senão usar unitsPerPackage (caixa completa)
       const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerPackage;
 
-      // Criar associação
+      // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
+      // Verificar se etiqueta já existe
+      const existingLabel = await db.select()
+        .from(labelAssociations)
+        .where(eq(labelAssociations.labelCode, input.labelCode))
+        .limit(1);
+
+      if (existingLabel.length > 0) {
+        throw new Error("Etiqueta já existe no sistema");
+      }
+
       await db.insert(labelAssociations).values({
-        sessionId: sessionIdStr,
         labelCode: input.labelCode,
+        uniqueCode: uniqueCode,
         productId: input.productId,
         batch: input.batch,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        unitsPerPackage: input.unitsPerPackage, // Mantém cadastro original
-        packagesRead: 1, // Primeira leitura
-        totalUnits: actualUnitsReceived, // Usa quantidade fracionada se fornecida
+        unitsPerPackage: input.unitsPerPackage,
+        totalUnits: actualUnitsReceived,
         associatedBy: userId,
+        tenantId: tenantId,
       });
 
-      // Buscar associação criada
-      const newAssociation = await db.select()
+      // 2. REGISTRAR PRIMEIRO BIP NA CONFERÊNCIA
+      await db.insert(blindConferenceItems)
+        .values({
+          conferenceId: input.conferenceId,
+          productId: input.productId,
+          batch: input.batch || "",
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+          tenantId: tenantId,
+          packagesRead: 1,
+          expectedQuantity: 0,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            packagesRead: sql`${blindConferenceItems.packagesRead} + 1`,
+            updatedAt: new Date(),
+          },
+        });
+
+      // 3. REGISTRAR LEITURA NO HISTÓRICO
+      const sessionIdStr = `R${input.conferenceId}`;
+      const newLabel = await db.select()
         .from(labelAssociations)
-        .where(
-          and(
-            eq(labelAssociations.sessionId, sessionIdStr),
-            eq(labelAssociations.labelCode, input.labelCode)
-          )
-        )
+        .where(eq(labelAssociations.labelCode, input.labelCode))
         .limit(1);
 
-      const associationId = newAssociation[0].id;
-
-      // Registrar primeira leitura
       await db.insert(labelReadings).values({
         sessionId: sessionIdStr,
-        associationId: associationId,
+        associationId: newLabel[0].id,
         labelCode: input.labelCode,
         readBy: userId,
-        unitsAdded: actualUnitsReceived, // Usa quantidade fracionada
+        unitsAdded: actualUnitsReceived,
       });
 
-      // Atualizar unitsPerBox no produto se não existir
-      const product = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
-      if (product.length > 0 && product[0].unitsPerBox === null) {
+      // 4. ATUALIZAR unitsPerBox NO PRODUTO SE NÃO EXISTIR
+      if (product[0].unitsPerBox === null) {
         await db.update(products)
           .set({ unitsPerBox: input.unitsPerPackage })
           .where(eq(products.id, input.productId));
@@ -245,7 +289,7 @@ export const blindConferenceRouter = router({
 
       return {
         success: true,
-        associationId: associationId,
+        associationId: newLabel[0].id,
         product: {
           id: product[0].id,
           description: product[0].description,
@@ -253,92 +297,108 @@ export const blindConferenceRouter = router({
           unitsPerBox: input.unitsPerPackage,
         },
         packagesRead: 1,
-        totalUnits: actualUnitsReceived, // Retorna quantidade fracionada
+        totalUnits: actualUnitsReceived,
       };
     }),
 
   /**
-   * 4. Desfazer Última Leitura
+   * 4. Desfazer Última Leitura (REFATORADO)
+   * Decrementa packagesRead em blindConferenceItems
+   * Frontend deve enviar productId + batch do último bip
    */
   undoLastReading: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
+      conferenceId: z.number(),
+      productId: z.number(),
+      batch: z.string(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Buscar última leitura
-      const sessionIdStr = `R${input.sessionId}`;
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) throw new Error("User not authenticated");
+
+      // Buscar item na conferência
+      const conferenceItem = await db.select()
+        .from(blindConferenceItems)
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.productId, input.productId),
+            eq(blindConferenceItems.batch, input.batch),
+            eq(blindConferenceItems.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+
+      if (conferenceItem.length === 0) {
+        throw new Error("Item não encontrado na conferência");
+      }
+
+      const currentPackagesRead = conferenceItem[0].packagesRead;
+
+      if (currentPackagesRead <= 0) {
+        throw new Error("Não há leituras para desfazer");
+      }
+
+      // Decrementar contador
+      const newPackagesRead = currentPackagesRead - 1;
+
+      if (newPackagesRead === 0) {
+        // Se chegou a zero, deletar item da conferência
+        await db.delete(blindConferenceItems)
+          .where(
+            and(
+              eq(blindConferenceItems.conferenceId, input.conferenceId),
+              eq(blindConferenceItems.productId, input.productId),
+              eq(blindConferenceItems.batch, input.batch)
+            )
+          );
+      } else {
+        // Senão, decrementar contador
+        await db.update(blindConferenceItems)
+          .set({
+            packagesRead: newPackagesRead,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(blindConferenceItems.conferenceId, input.conferenceId),
+              eq(blindConferenceItems.productId, input.productId),
+              eq(blindConferenceItems.batch, input.batch)
+            )
+          );
+      }
+
+      // Deletar última leitura do histórico
+      const sessionIdStr = `R${input.conferenceId}`;
       const lastReading = await db.select()
         .from(labelReadings)
         .where(eq(labelReadings.sessionId, sessionIdStr))
         .orderBy(desc(labelReadings.readAt))
         .limit(1);
 
-      if (lastReading.length === 0) {
-        throw new Error("Nenhuma leitura encontrada para desfazer");
+      if (lastReading.length > 0) {
+        await db.delete(labelReadings).where(eq(labelReadings.id, lastReading[0].id));
       }
 
-      const reading = lastReading[0];
-
-      // Buscar associação
-      const association = await db.select()
-        .from(labelAssociations)
-        .where(eq(labelAssociations.id, reading.associationId))
-        .limit(1);
-
-      if (association.length === 0) {
-        throw new Error("Associação não encontrada");
-      }
-
-      const assoc = association[0];
-
-      // Decrementar contagem
-      const newPackagesRead = assoc.packagesRead - 1;
-      const newTotalUnits = newPackagesRead * assoc.unitsPerPackage;
-
-      if (newPackagesRead === 0) {
-        // Remover associação completamente
-        await db.delete(labelReadings).where(eq(labelReadings.associationId, assoc.id));
-        await db.delete(labelAssociations).where(eq(labelAssociations.id, assoc.id));
-
-        return {
-          success: true,
-          message: "Associação removida completamente",
-          removedCompletely: true,
-        };
-      } else {
-        // Atualizar contagem
-        await db.update(labelAssociations)
-          .set({
-            packagesRead: newPackagesRead,
-            totalUnits: newTotalUnits,
-          })
-          .where(eq(labelAssociations.id, assoc.id));
-
-        // Remover leitura
-        await db.delete(labelReadings).where(eq(labelReadings.id, reading.id));
-
-        return {
-          success: true,
-          message: "Última leitura desfeita",
-          removedCompletely: false,
-          newPackagesRead: newPackagesRead,
-          newTotalUnits: newTotalUnits,
-        };
-      }
+      return {
+        success: true,
+        message: newPackagesRead === 0 ? "Item removido da conferência" : "Leitura desfeita",
+        packagesRead: newPackagesRead,
+      };
     }),
 
   /**
-   * 5. Ajustar Quantidade
+   * 5. Ajustar Quantidade Manualmente
    */
   adjustQuantity: protectedProcedure
     .input(z.object({
       sessionId: z.number(),
       associationId: z.number(),
       newQuantity: z.number(),
-      reason: z.string().nullable(),
+      reason: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -357,8 +417,12 @@ export const blindConferenceRouter = router({
         throw new Error("Associação não encontrada");
       }
 
-      const assoc = association[0];
-      const previousQuantity = assoc.totalUnits;
+      const previousQuantity = association[0].totalUnits;
+
+      // Atualizar quantidade
+      await db.update(labelAssociations)
+        .set({ totalUnits: input.newQuantity })
+        .where(eq(labelAssociations.id, input.associationId));
 
       // Registrar ajuste
       await db.insert(blindConferenceAdjustments).values({
@@ -370,217 +434,215 @@ export const blindConferenceRouter = router({
         adjustedBy: userId,
       });
 
-      // Atualizar associação
-      await db.update(labelAssociations)
-        .set({
-          totalUnits: input.newQuantity,
-        })
-        .where(eq(labelAssociations.id, input.associationId));
-
       return {
         success: true,
-        previousQuantity: previousQuantity,
+        previousQuantity,
         newQuantity: input.newQuantity,
       };
     }),
 
   /**
-   * 6. Obter Resumo da Sessão
+   * 6. Obter Resumo da Conferência (REFATORADO)
+   * Busca progresso consolidado de blindConferenceItems
    */
   getSummary: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
+      conferenceId: z.number(),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) throw new Error("User not authenticated");
 
       // Buscar sessão
       const session = await db.select()
         .from(blindConferenceSessions)
-        .where(eq(blindConferenceSessions.id, input.sessionId))
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
 
       if (session.length === 0) {
         throw new Error("Sessão não encontrada");
       }
 
-      // Buscar associações com produtos
-      const sessionIdStr = `R${input.sessionId}`;
-      const associations = await db.select({
-        id: labelAssociations.id,
-        labelCode: labelAssociations.labelCode,
-        productId: labelAssociations.productId,
+      // Buscar itens conferidos (progresso real)
+      const conferenceItems = await db.select({
+        id: blindConferenceItems.id,
+        productId: blindConferenceItems.productId,
         productName: products.description,
         productSku: products.sku,
-        batch: labelAssociations.batch,
-        unitsPerPackage: labelAssociations.unitsPerPackage,
-        packagesRead: labelAssociations.packagesRead,
-        totalUnits: labelAssociations.totalUnits,
+        batch: blindConferenceItems.batch,
+        expiryDate: blindConferenceItems.expiryDate,
+        packagesRead: blindConferenceItems.packagesRead,
+        expectedQuantity: blindConferenceItems.expectedQuantity,
       })
-        .from(labelAssociations)
-        .innerJoin(products, eq(labelAssociations.productId, products.id))
-        .where(eq(labelAssociations.sessionId, sessionIdStr));
+        .from(blindConferenceItems)
+        .innerJoin(products, eq(blindConferenceItems.productId, products.id))
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.tenantId, tenantId)
+          )
+        );
 
-      // Buscar itens esperados da ordem
+      // Buscar itens esperados da ordem (NF)
+      const order = session[0];
       const expectedItems = await db.select({
-        id: receivingOrderItems.id,
         productId: receivingOrderItems.productId,
         productName: products.description,
         productSku: products.sku,
         batch: receivingOrderItems.batch,
         expectedQuantity: receivingOrderItems.expectedQuantity,
-        unitsPerBox: products.unitsPerBox,
-        expiryDate: receivingOrderItems.expiryDate,
       })
         .from(receivingOrderItems)
         .innerJoin(products, eq(receivingOrderItems.productId, products.id))
-        .where(eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId));
+        .where(eq(receivingOrderItems.receivingOrderId, order.receivingOrderId));
 
-      // Calcular resumo com divergências
-      // IMPORTANTE: Comparar por productId + batch para tratar lotes diferentes separadamente
-      const summary = expectedItems.map(expected => {
-        const conferenced = associations
-          .filter(a => 
-            a.productId === expected.productId && 
-            (a.batch === expected.batch || (a.batch === null && expected.batch === null))
-          )
-          .reduce((sum, a) => sum + a.totalUnits, 0);
-
-        return {
-          productId: expected.productId,
-          productName: expected.productName,
-          batch: expected.batch,
-          quantityConferenced: conferenced,
-          quantityExpected: expected.expectedQuantity,
-          divergence: conferenced - expected.expectedQuantity,
-        };
-      });
-
-      const hasDivergences = summary.some(s => s.divergence !== 0);
+      // Calcular totais
+      const totalReceived = conferenceItems.reduce((sum, item) => sum + item.packagesRead, 0);
+      const totalExpected = expectedItems.reduce((sum, item) => sum + item.expectedQuantity, 0);
 
       return {
-        associations,
+        session: {
+          id: session[0].id,
+          receivingOrderId: session[0].receivingOrderId,
+          startedAt: session[0].startedAt,
+          status: session[0].status,
+        },
+        conferenceItems,
         expectedItems,
-        summary,
-        hasDivergences,
+        totals: {
+          received: totalReceived,
+          expected: totalExpected,
+          difference: totalReceived - totalExpected,
+        }
       };
     }),
 
   /**
-   * 7. Finalizar Conferência
+   * 7. Finalizar Conferência (REFATORADO)
+   * Busca itens de blindConferenceItems e cria estoque
    */
   finish: protectedProcedure
     .input(z.object({
-      sessionId: z.number(),
+      conferenceId: z.number(),
+      forceClose: z.boolean().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const userId = ctx.user?.id;
-      if (!userId) throw new Error("User not authenticated");
+      const tenantId = ctx.user?.tenantId;
+      if (!userId || !tenantId) throw new Error("User not authenticated");
 
       // Buscar sessão
       const session = await db.select()
         .from(blindConferenceSessions)
-        .where(eq(blindConferenceSessions.id, input.sessionId))
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
 
       if (session.length === 0) {
         throw new Error("Sessão não encontrada");
       }
 
-      // Buscar associações
-      const sessionIdStr = `R${input.sessionId}`;
-      const associations = await db.select()
-        .from(labelAssociations)
-        .where(eq(labelAssociations.sessionId, sessionIdStr));
+      // 1. BUSCAR CONSOLIDADO DE TUDO QUE FOI BIPADO
+      const conferenceItems = await db.select()
+        .from(blindConferenceItems)
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.tenantId, tenantId)
+          )
+        );
+
+      if (conferenceItems.length === 0) {
+        throw new Error("Nenhum item foi conferido");
+      }
 
       // Buscar endereço REC do cliente correto (mesmo tenantId da sessão)
-      const sessionTenantId = session[0].tenantId;
-      
-      const recLocations = await db.select()
+      const recLocation = await db.select()
         .from(warehouseLocations)
         .where(
           and(
-            sql`${warehouseLocations.code} LIKE '%REC%'`,
-            sql`${warehouseLocations.tenantId} = ${sessionTenantId}`,
-            or(
-              eq(warehouseLocations.status, 'available'),
-              eq(warehouseLocations.status, 'livre')
-            )
+            eq(warehouseLocations.code, "REC"),
+            eq(warehouseLocations.tenantId, tenantId)
           )
         )
         .limit(1);
 
-      if (recLocations.length === 0) {
-        throw new Error(`Nenhum endereço de recebimento (REC) encontrado para o cliente (tenantId=${sessionTenantId}). Cadastre um endereço REC para este cliente.`);
+      if (recLocation.length === 0) {
+        throw new Error("Endereço REC não encontrado para este cliente");
       }
 
-      const recLocationId = recLocations[0].id;
+      // Buscar zona do endereço de recebimento
+      const locationZone = await db.select({
+        zoneCode: warehouseZones.code
+      })
+        .from(warehouseLocations)
+        .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+        .where(eq(warehouseLocations.id, recLocation[0].id))
+        .limit(1);
 
-      // Criar inventário em endereço REC para cada associação
-      for (const assoc of associations) {
-        // ✅ VALIDAÇÃO: Verificar se endereço REC pode receber este lote
-        const { validateLocationForBatch } = await import("./locationValidation");
-        const validation = await validateLocationForBatch(
-          recLocationId,
-          assoc.productId,
-          assoc.batch
-        );
+      // 2. CRIAR ESTOQUE PARA CADA ITEM CONFERIDO
+      for (const item of conferenceItems) {
+        if (item.packagesRead <= 0) continue;
 
-        if (!validation.allowed) {
-          throw new Error(`Erro ao finalizar conferência: ${validation.reason}`);
-        }
-
-        // Buscar SKU do produto para gerar uniqueCode
-        const product = await db.select({ sku: products.sku })
+        // Buscar produto para gerar uniqueCode
+        const product = await db.select()
           .from(products)
-          .where(eq(products.id, assoc.productId))
+          .where(eq(products.id, item.productId))
           .limit(1);
 
-        // Buscar zona do endereço de recebimento
-        const location = await db.select({ zoneCode: warehouseZones.code })
-          .from(warehouseLocations)
-          .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-          .where(eq(warehouseLocations.id, recLocationId))
+        if (product.length === 0) continue;
+
+        // Buscar etiqueta para obter unitsPerPackage
+        const label = await db.select()
+          .from(labelAssociations)
+          .where(
+            and(
+              eq(labelAssociations.productId, item.productId),
+              eq(labelAssociations.batch, item.batch)
+            )
+          )
           .limit(1);
 
-        const { getUniqueCode } = await import("./utils/uniqueCode");
+        const unitsPerPackage = label[0]?.unitsPerPackage || 1;
+        const totalUnits = item.packagesRead * unitsPerPackage;
 
+        // Criar registro de estoque
         await db.insert(inventory).values({
-          tenantId: session[0].tenantId || null,
-          productId: assoc.productId,
-          locationId: recLocationId,
-          batch: assoc.batch,
-          expiryDate: assoc.expiryDate,
-          quantity: assoc.totalUnits,
-          status: "available", // Disponível após conferência
-          uniqueCode: getUniqueCode(product[0]?.sku || "", assoc.batch), // ✅ Adicionar uniqueCode
-          locationZone: location[0]?.zoneCode || null, // ✅ Adicionar locationZone
+          tenantId: tenantId,
+          productId: item.productId,
+          locationId: recLocation[0].id,
+          batch: item.batch,
+          expiryDate: item.expiryDate,
+          quantity: totalUnits,
+          status: "available",
+          uniqueCode: getUniqueCode(product[0].sku, item.batch),
+          locationZone: locationZone[0]?.zoneCode || null,
         });
       }
 
-      // Atualizar sessão
+      // 3. MARCAR CONFERÊNCIA COMO FINALIZADA
       await db.update(blindConferenceSessions)
         .set({
           status: "completed",
           finishedAt: new Date(),
           finishedBy: userId,
         })
-        .where(eq(blindConferenceSessions.id, input.sessionId));
+        .where(eq(blindConferenceSessions.id, input.conferenceId));
 
-      // Atualizar status da ordem
+      // 4. ATUALIZAR STATUS DA ORDEM
       await db.update(receivingOrders)
-        .set({
-          status: "addressing",
-        })
+        .set({ status: "completed" })
         .where(eq(receivingOrders.id, session[0].receivingOrderId));
 
       return {
         success: true,
-        message: "Conferência finalizada com sucesso. Estoque criado em quarentena.",
+        message: "Conferência finalizada com sucesso",
+        itemsProcessed: conferenceItems.length,
       };
     }),
 });

@@ -5,6 +5,7 @@ import {
   receivingOrders,
   warehouseLocations,
   products,
+  warehouseZones,
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import * as XLSX from "xlsx";

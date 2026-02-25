@@ -3559,3 +3559,20 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   - Erro: "Produto incorreto. Esperado: 401460P — Lido: 22D08LB108"
   - Causa: Query de labelAssociations retornava registro órfão (produto 2 deletado) em vez do registro válido (produto 30002)
   - Solução: Adicionado filtro por productId + batch na query de labelAssociations (linhas 446-451 collectorPickingRouter.ts)
+
+
+## 🧹 LIMPEZA - Registros Órfãos em labelAssociations (25/02/2026)
+
+- [x] Criar script SQL para deletar registros órfãos (etiquetas vinculadas a produtos deletados)
+- [x] Executar script e validar limpeza - 8 registros órfãos deletados
+
+
+## 🔧 REFATORAÇÃO - labelAssociations (25/02/2026)
+
+- [x] Remover coluna sessionId do schema
+- [x] Remover coluna packagesRead do schema
+- [x] Adicionar coluna uniqueCode ao schema
+- [x] Alterar lógica de totalUnits (total de unidades armazenadas, não mais packagesRead * unitsPerPackage)
+- [x] Adicionar constraint UNIQUE(labelCode) para garantir 1 etiqueta = 1 registro
+- [x] Gerar e aplicar migration (0005_shocking_rachel_grey.sql)
+- [ ] Atualizar código que usa sessionId e packagesRead

@@ -7,32 +7,37 @@ import { TRPCError } from "@trpc/server";
 
 export const labelRouter = router({
   /**
-   * Associar etiqueta não vinculada durante picking
-   * Cria associação em labelAssociations com prefixo "P" (picking)
+   * Associar etiqueta não vinculada durante picking (REFATORADO)
+   * Cria etiqueta PERMANENTE em labelAssociations (sem sessionId)
+   * Vínculo com onda de picking é gerenciado por pickingAllocations
    * 
-   * Regra: Sistema usa APENAS labelAssociations para ambos os fluxos:
-   * - Recebimento: sessionId = "R" + blindConferenceSessionId
-   * - Picking: sessionId = "P" + waveId
+   * Regra: Etiqueta é um identificador GLOBAL do item físico
+   * O estado da tarefa (picking/conferência) é armazenado nas tabelas de vínculo
    */
   associateInPicking: protectedProcedure
     .input(z.object({
       labelCode: z.string(),
       productSku: z.string(),
       batch: z.string().nullable(),
-      waveId: z.number(), // ID da onda de picking
+      waveId: z.number(), // ID da onda de picking (usado apenas para log)
     }))
     .mutation(async ({ input, ctx }) => {
       const { labelCode, productSku, batch, waveId } = input;
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      // Criar sessionId com prefixo "P" (picking)
-      const sessionIdStr = `P${waveId}`;
+      const tenantId = ctx.user?.tenantId;
+      if (!tenantId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // 1. Verificar se a etiqueta já existe (qualquer sessão)
+      // 1. Verificar se a etiqueta já existe (busca global)
       const existingLabels = await db.select()
         .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, labelCode))
+        .where(
+          and(
+            eq(labelAssociations.labelCode, labelCode),
+            eq(labelAssociations.tenantId, tenantId)
+          )
+        )
         .limit(1);
       
       const existingLabel = existingLabels[0];
@@ -52,7 +57,7 @@ export const labelRouter = router({
         
         if (isCorrectProduct && isCorrectBatch) {
           // Etiqueta já vinculada corretamente - retornar sucesso
-          console.log(`[PICKING] Etiqueta ${labelCode} já vinculada corretamente ao produto ${productSku}`);
+          console.log(`[PICKING] Etiqueta ${labelCode} já vinculada corretamente ao produto ${productSku} (onda: ${waveId})`);
           return {
             success: true,
             message: "Etiqueta já vinculada corretamente",
@@ -109,20 +114,23 @@ export const labelRouter = router({
         }
       }
 
-      // 4. Criar associação em labelAssociations
+      // 4. Criar etiqueta PERMANENTE em labelAssociations
+      const { getUniqueCode } = await import("./utils/uniqueCode");
+      const uniqueCode = getUniqueCode(product.sku, batch);
+
       await db.insert(labelAssociations).values({
-        sessionId: sessionIdStr,
         labelCode: labelCode,
+        uniqueCode: uniqueCode,
         productId: product.id,
         batch: batch || "",
         expiryDate: expiryDate,
         unitsPerPackage: unitsPerPackage,
-        packagesRead: 1,
         totalUnits: unitsPerPackage,
         associatedBy: ctx.user.id,
+        tenantId: tenantId,
       });
 
-      console.log(`[PICKING] Etiqueta ${labelCode} associada ao produto ${product.sku} (lote: ${batch || 'sem lote'}) - sessionId: ${sessionIdStr}`);
+      console.log(`[PICKING] Etiqueta ${labelCode} criada para produto ${product.sku} (lote: ${batch || 'sem lote'}) - onda: ${waveId}`);
 
       return {
         success: true,

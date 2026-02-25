@@ -16,7 +16,7 @@ export function CollectorReceiving() {
   const [step, setStep] = useState<"select" | "conference">("select");
   const [showScanner, setShowScanner] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [conferenceId, setConferenceId] = useState<number | null>(null);
   
   // Conferência cega
   const [labelCode, setLabelCode] = useState("");
@@ -60,7 +60,7 @@ export function CollectorReceiving() {
   // Iniciar sessão
   const startSessionMutation = trpc.blindConference.start.useMutation({
     onSuccess: (data) => {
-      setSessionId(data.sessionId);
+      setConferenceId(data.sessionId);
       setStep("conference");
       toast.success("Conferência iniciada");
     },
@@ -85,7 +85,7 @@ export function CollectorReceiving() {
         });
         setLabelCode("");
         labelInputRef.current?.focus();
-        utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+        utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
       }
     },
     onError: (error: any) => {
@@ -110,7 +110,7 @@ export function CollectorReceiving() {
       setLabelCode("");
       
       labelInputRef.current?.focus();
-      utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+      utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
     },
     onError: (error: any) => {
       toast.error(error.message);
@@ -121,7 +121,7 @@ export function CollectorReceiving() {
   const undoLastReadingMutation = trpc.blindConference.undoLastReading.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
-      utils.blindConference.getSummary.invalidate({ sessionId: sessionId! });
+      utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
     },
     onError: (error: any) => {
       toast.error(error.message);
@@ -130,8 +130,8 @@ export function CollectorReceiving() {
 
   // Obter resumo
   const { data: summary } = trpc.blindConference.getSummary.useQuery(
-    { sessionId: sessionId! },
-    { enabled: !!sessionId, refetchInterval: 3000 }
+    { conferenceId: conferenceId! },
+    { enabled: !!conferenceId, refetchInterval: 3000 }
   );
 
   // Finalizar conferência
@@ -140,7 +140,7 @@ export function CollectorReceiving() {
       toast.success(data.message);
       setStep("select");
       setSelectedOrderId(null);
-      setSessionId(null);
+      setConferenceId(null);
       utils.receiving.list.invalidate();
     },
     onError: (error: any) => {
@@ -162,13 +162,13 @@ export function CollectorReceiving() {
       return;
     }
 
-    if (!sessionId) {
+    if (!conferenceId) {
       toast.error("Sessão não iniciada");
       return;
     }
 
     readLabelMutation.mutate({
-      sessionId,
+      conferenceId,
       labelCode: labelCode.trim(),
     });
   };
@@ -177,9 +177,9 @@ export function CollectorReceiving() {
     setLabelCode(code);
     setShowScanner(false);
     
-    if (sessionId) {
+    if (conferenceId) {
       readLabelMutation.mutate({
-        sessionId,
+        conferenceId,
         labelCode: code,
       });
     }
@@ -202,7 +202,7 @@ export function CollectorReceiving() {
     }
 
     associateLabelMutation.mutate({
-      sessionId: sessionId!,
+      conferenceId: conferenceId!,
       labelCode: pendingLabelCode,
       productId: selectedProductId,
       batch: batch || null,
@@ -213,23 +213,23 @@ export function CollectorReceiving() {
   };
 
   const handleUndo = () => {
-    if (!sessionId) return;
-    undoLastReadingMutation.mutate({ sessionId });
+    if (!conferenceId) return;
+    undoLastReadingMutation.mutate({ conferenceId, productId: 0, batch: "" }); // TODO: Armazenar último item lido
   };
 
   const handleFinish = () => {
-    if (!summary?.associations.length) {
+    if (!summary?.conferenceItems.length) {
       toast.error("Nenhuma etiqueta foi lida ainda");
       return;
     }
     
     if (confirm("Finalizar conferência?")) {
-      finishMutation.mutate({ sessionId: sessionId! });
+      finishMutation.mutate({ conferenceId: conferenceId! });
     }
   };
 
-  const totalVolumes = summary?.associations.reduce((sum: number, a: any) => sum + a.packagesRead, 0) || 0;
-  const totalUnits = summary?.associations.reduce((sum: number, a: any) => sum + a.totalUnits, 0) || 0;
+  const totalVolumes = summary?.conferenceItems.reduce((sum: number, item: any) => sum + item.packagesRead, 0) || 0;
+  const totalUnits = summary?.conferenceItems.reduce((sum: number, item: any) => sum + (item.packagesRead * (item.unitsPerPackage || 1)), 0) || 0;
 
   if (showScanner) {
     return (
@@ -452,20 +452,20 @@ export function CollectorReceiving() {
           <CardContent className="p-4">
             <Label className="text-base font-semibold mb-3 block">Produtos Conferidos</Label>
             
-            {!summary?.associations.length ? (
+            {!summary?.conferenceItems.length ? (
               <div className="text-center py-8 text-gray-500">
                 <p className="text-base mb-2">Nenhum produto conferido</p>
                 <p className="text-sm">Escaneie a primeira etiqueta</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {summary.associations.map((assoc: any) => (
-                  <div key={assoc.id} className="border rounded-lg p-3">
-                    <div className="font-medium text-sm">{assoc.productName}</div>
-                    <div className="text-xs text-gray-600 mb-2">{assoc.productSku}</div>
+                {summary.conferenceItems.map((item: any) => (
+                  <div key={`${item.productId}-${item.batch}`} className="border rounded-lg p-3">
+                    <div className="font-medium text-sm">{item.productName}</div>
+                    <div className="text-xs text-gray-600 mb-2">{item.productSku}</div>
                     <div className="flex justify-between text-sm">
-                      <span>Lote: {assoc.batch || "-"}</span>
-                      <span className="font-semibold">{assoc.packagesRead} volumes / {assoc.totalUnits} un</span>
+                      <span>Lote: {item.batch || "-"}</span>
+                      <span className="font-semibold">{item.packagesRead} volumes</span>
                     </div>
                   </div>
                 ))}
@@ -479,7 +479,7 @@ export function CollectorReceiving() {
           <Button
             variant="outline"
             onClick={handleUndo}
-            disabled={!summary?.associations.length || undoLastReadingMutation.isPending}
+            disabled={!summary?.conferenceItems.length || undoLastReadingMutation.isPending}
             className="h-12"
           >
             <Undo2 className="w-5 h-5 mr-2" />
@@ -487,7 +487,7 @@ export function CollectorReceiving() {
           </Button>
           <Button
             onClick={handleFinish}
-            disabled={!summary?.associations.length || finishMutation.isPending}
+            disabled={!summary?.conferenceItems.length || finishMutation.isPending}
             className="h-12"
           >
             {finishMutation.isPending ? (
