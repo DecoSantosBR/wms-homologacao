@@ -8,7 +8,7 @@ import {
   stageCheckItems,
   products,
   inventory,
-  pickingReservations,
+  
   pickingAllocations,
   labelAssociations,
   tenants,

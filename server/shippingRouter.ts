@@ -15,7 +15,7 @@ import {
   tenants,
   inventory,
   inventoryMovements,
-  pickingReservations,
+  
   warehouseLocations,
   warehouseZones,
   stageCheckItems,

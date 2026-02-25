@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, warehouseZones, tenants, pickingReservations, pickingAllocations } from "../drizzle/schema";
+import { pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, products, inventory, warehouseLocations, warehouseZones, tenants, pickingAllocations } from "../drizzle/schema";
 import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
 import { getUniqueCode } from "./utils/uniqueCode";
 

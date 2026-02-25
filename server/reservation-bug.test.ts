@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getDb } from "./db";
-import { tenants, products, inventory, pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, pickingReservations, warehouseZones, warehouseLocations } from "../drizzle/schema";
+import { tenants, products, inventory, pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, warehouseZones, warehouseLocations } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { createWave } from "./waveLogic";
 

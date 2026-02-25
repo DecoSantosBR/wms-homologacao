@@ -9,7 +9,8 @@ import {
   receivingOrderItems,
   products,
   inventory,
-  warehouseLocations
+  warehouseLocations,
+  warehouseZones
 } from "../drizzle/schema";
 import { eq, and, or, desc, sql, isNull } from "drizzle-orm";
 import { z } from "zod";

@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingReservations, pickingAllocations, productLabels, printSettings, invoices } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingAllocations, productLabels, printSettings, invoices } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
@@ -2123,19 +2123,21 @@ export const appRouter = router({
           .where(eq(pickingOrders.id, input.id));
 
         // Liberar reservas antigas antes de excluir itens
-        const oldReservations = await db
+        const oldAllocations = await db
           .select()
-          .from(pickingReservations)
-          .where(eq(pickingReservations.pickingOrderId, input.id));
+          .from(pickingAllocations)
+          .where(eq(pickingAllocations.pickingOrderId, input.id));
 
-        for (const reservation of oldReservations) {
+        for (const allocation of oldAllocations) {
           // Decrementar reservedQuantity no inventory
           await db
             .update(inventory)
             .set({
-              reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
+              reservedQuantity: sql`${inventory.reservedQuantity} - ${allocation.quantity}`
             })
-            .where(eq(inventory.id, reservation.inventoryId));
+            .where(eq(inventory.locationId, allocation.locationId)
+              .and(eq(inventory.productId, allocation.productId))
+              .and(allocation.batch ? eq(inventory.batch, allocation.batch) : sql`1=1`));
         }
 
         // Excluir itens antigos
@@ -2323,21 +2325,25 @@ export const appRouter = router({
 
         // Liberar reservas de estoque antes de excluir
         for (const orderId of idsToDelete) {
-          // Buscar reservas do pedido
-          const reservations = await db
+          // Buscar alocações do pedido
+          const allocations = await db
             .select()
-            .from(pickingReservations)
-            .where(eq(pickingReservations.pickingOrderId, orderId));
+            .from(pickingAllocations)
+            .where(eq(pickingAllocations.pickingOrderId, orderId));
 
-          if (reservations.length > 0) {
+          if (allocations.length > 0) {
             // Liberar estoque reservado
-            for (const reservation of reservations) {
+            for (const allocation of allocations) {
               await db
                 .update(inventory)
                 .set({
-                  reservedQuantity: sql`${inventory.reservedQuantity} - ${reservation.quantity}`
+                  reservedQuantity: sql`${inventory.reservedQuantity} - ${allocation.quantity}`
                 })
-                .where(eq(inventory.id, reservation.inventoryId));
+                .where(and(
+                  eq(inventory.locationId, allocation.locationId),
+                  eq(inventory.productId, allocation.productId),
+                  allocation.batch ? eq(inventory.batch, allocation.batch) : sql`1=1`
+                ));
             }
 
             // Reservas já foram excluídas automaticamente (CASCADE)
@@ -2361,16 +2367,20 @@ export const appRouter = router({
                   )
                 );
 
-              // Verificar se cada posição tem reservas ativas
+              // Verificar se cada posição tem alocações ativas
               for (const inv of inventoryRecords) {
-                const [activeReservations] = await db
-                  .select({ total: sql<number>`COALESCE(SUM(${pickingReservations.quantity}), 0)` })
-                  .from(pickingReservations)
-                  .where(eq(pickingReservations.inventoryId, inv.id));
+                const [activeAllocations] = await db
+                  .select({ total: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)` })
+                  .from(pickingAllocations)
+                  .where(and(
+                    eq(pickingAllocations.locationId, inv.locationId),
+                    eq(pickingAllocations.productId, inv.productId),
+                    inv.batch ? eq(pickingAllocations.batch, inv.batch) : sql`1=1`
+                  ));
 
-                const activeTotal = Number(activeReservations?.total) || 0;
+                const activeTotal = Number(activeAllocations?.total) || 0;
 
-                // Se não há reservas ativas mas reservedQuantity > 0, corrigir
+                // Se não há alocações ativas mas reservedQuantity > 0, corrigir
                 if (activeTotal === 0 && inv.reservedQuantity > 0) {
                   await db
                     .update(inventory)

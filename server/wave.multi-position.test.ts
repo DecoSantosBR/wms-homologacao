@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getDb } from "./db";
 import { createWave } from "./waveLogic";
-import { pickingOrders, pickingReservations, pickingWaveItems, pickingWaves, inventory } from "../drizzle/schema";
+import { pickingOrders, pickingWaveItems, pickingWaves, inventory } from "../drizzle/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
 /**

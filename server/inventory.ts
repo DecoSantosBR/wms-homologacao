@@ -8,7 +8,7 @@ import {
   warehouseZones,
   tenants,
   receivingPreallocations,
-  pickingReservations,
+  
   pickingAllocations,
 } from "../drizzle/schema";
 

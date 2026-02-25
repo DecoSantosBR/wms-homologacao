@@ -24,7 +24,7 @@ import {
   warehouseZones,
   pickingOrders,
   pickingOrderItems,
-  pickingReservations,
+  
   pickingAllocations,
   receivingOrders,
   receivingOrderItems,
@@ -34,6 +34,7 @@ import { eq, and, desc, gte, lte, sql, gt, like, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as crypto from "crypto";
 import { sendEmail, createApprovalEmailTemplate } from "./_core/emailNotification";
+import { getUniqueCode } from "./utils/uniqueCode";
 
 // ============================================================================
 // HELPERS DE AUTENTICAÇÃO DO PORTAL

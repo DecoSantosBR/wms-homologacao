@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getDb } from "./db";
-import { tenants, products, inventory, pickingOrders, pickingOrderItems, pickingReservations } from "../drizzle/schema";
+import { tenants, products, inventory, pickingOrders, pickingOrderItems } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 
 describe("Orphan Reservations Correction", () => {

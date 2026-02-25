@@ -3467,3 +3467,22 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Apenas o primeiro item do pedido gera reserva de estoque
 - [x] Implementar alocação atômica para todos os itens dentro da transação de criação do pedido
+
+- [x] Liberar reserva do endereço Z01-01-01 (zerar reservedQuantity)
+
+- [ ] Verificar se pickingReservations pode ser deletada (substituída por pickingAllocations)
+
+
+## 🧹 OPERAÇÃO FAXINA: Remover pickingReservations
+- [x] Refatorar routers.ts (3 trechos) para usar pickingAllocations
+- [x] Remover imports de pickingReservations (16 arquivos)
+- [x] Remover definição da tabela do schema.ts
+- [x] Gerar e aplicar migration para dropar tabela
+
+
+## 🐛 BUGS PRÉ-EXISTENTES IDENTIFICADOS - 25/02/2026
+
+- [ ] Variável `product` não definida em clientPortalRouter.ts (linhas 1722, 1727, 1734, 1739)
+- [ ] Variável `products` não definida em modules/conference.ts (linhas 327-329)
+- [ ] Variáveis `warehouseZones` e `warehouseLocations` não importadas em modules/conference.ts (linhas 335-336)
+- [ ] Erro de overload em clientPortalRouter.ts (linha 1305)

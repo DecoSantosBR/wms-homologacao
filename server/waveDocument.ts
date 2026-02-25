@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { pickingWaves, pickingWaveItems, pickingOrders, pickingReservations, tenants } from "../drizzle/schema";
+import { pickingWaves, pickingWaveItems, pickingOrders, tenants } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 interface WaveDocumentData {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getDb } from "./db";
-import { pickingOrders, pickingOrderItems, products, stageChecks, stageCheckItems, inventory, pickingReservations, tenants, labelAssociations } from "../drizzle/schema";
+import { pickingOrders, pickingOrderItems, products, stageChecks, stageCheckItems, inventory, tenants, labelAssociations } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrderForStage, startStageCheck, recordStageItem, completeStageCheck } from "./stage";
 

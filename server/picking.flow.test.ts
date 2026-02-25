@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { getDb } from "./db";
-import { tenants, products, warehouseLocations, warehouseZones, inventory, pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems, pickingReservations } from "../drizzle/schema";
+import { tenants, products, warehouseLocations, warehouseZones, inventory, pickingOrders, pickingOrderItems, pickingWaves, pickingWaveItems } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;

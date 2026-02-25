@@ -9,7 +9,7 @@ import {
   warehouseZones,
   inventory,
   inventoryMovements,
-  pickingReservations,
+  
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 

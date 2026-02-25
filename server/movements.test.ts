@@ -3,7 +3,7 @@ import { getDb } from "./db";
 import { registerMovement } from "./movements";
 import {
   inventory,
-  pickingReservations,
+  
   warehouseLocations,
   products,
 } from "../drizzle/schema";
@@ -27,7 +27,7 @@ describe("Movements - Reserved Stock Validation", () => {
       })
       .from(inventory)
       .leftJoin(
-        pickingReservations,
+        
         eq(pickingReservations.inventoryId, inventory.id)
       )
       .groupBy(
@@ -125,7 +125,7 @@ describe("Movements - Reserved Stock Validation", () => {
       })
       .from(inventory)
       .leftJoin(
-        pickingReservations,
+        
         eq(pickingReservations.inventoryId, inventory.id)
       )
       .groupBy(

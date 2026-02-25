@@ -479,20 +479,7 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-/**
- * Tabela de reservas de estoque para pedidos de separação
- * Rastreia quais posições de estoque foram reservadas para cada pedido
- */
-export const pickingReservations = mysqlTable("pickingReservations", {
-  id: int("id").autoincrement().primaryKey(),
-  pickingOrderId: int("pickingOrderId").notNull(),
-  productId: int("productId").notNull(),
-  inventoryId: int("inventoryId").notNull(), // Posição de estoque reservada
-  batch: varchar("batch", { length: 50 }), // Lote reservado (copiado do inventory)
-  uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
-  quantity: int("quantity").notNull(), // Quantidade reservada desta posição
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+
 
 // ============================================================================
 // MÓDULO 6: EXPEDIÇÃO
@@ -806,6 +793,8 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
 export const pickingAllocations = mysqlTable("pickingAllocations", {
   id: int("id").autoincrement().primaryKey(),
   pickingOrderId: int("pickingOrderId").notNull(),
+  waveId: int("waveId"), // 🚀 Onda associada (para cancelamento atômico)
+  inventoryId: int("inventoryId"), // 🚀 Registro exato de estoque reservado (rastreabilidade atômica)
   productId: int("productId").notNull(),
   productSku: varchar("productSku", { length: 100 }).notNull(),
   locationId: int("locationId").notNull(), // Endereço pré-alocado
