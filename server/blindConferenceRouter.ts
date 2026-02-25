@@ -647,19 +647,29 @@ export const blindConferenceRouter = router({
         const productSku = product[0].sku;
         const uniqueCode = getUniqueCode(productSku, item.batch);
 
-        // Buscar endereço de recebimento (REC)
+        // 1. Buscar zona de recebimento (REC)
+        const zoneREC = await db.select()
+          .from(warehouseZones)
+          .where(eq(warehouseZones.code, 'REC'))
+          .limit(1);
+
+        if (zoneREC.length === 0) {
+          throw new Error("Zona de Recebimento ('REC') não configurada");
+        }
+
+        // 2. Buscar endereço de recebimento usando zoneId
         const recLocation = await db.select()
           .from(warehouseLocations)
           .where(
             and(
               eq(warehouseLocations.tenantId, activeTenantId),
-              eq(warehouseLocations.zone, 'REC') // Zona de recebimento
+              eq(warehouseLocations.zoneId, zoneREC[0].id)
             )
           )
           .limit(1);
 
         if (recLocation.length === 0) {
-          throw new Error("Endereço de recebimento não encontrado");
+          throw new Error("Endereço de recebimento não encontrado para este tenant");
         }
 
         const locationId = recLocation[0].id;

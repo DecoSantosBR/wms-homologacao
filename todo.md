@@ -3688,3 +3688,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir para string literal 'REC' (linhas 656 e 698)
 - [x] Erro de chaves React era efeito colateral do erro 500
 - [ ] Testar finalização de conferência (aguardando teste do usuário)
+
+## 🐛 CORREÇÃO - Query malformada em warehouseLocations - 25/02/2026
+
+- [x] Identificar linha com `eq(warehouseLocations.zone, 'REC')` malformada (linha 656)
+- [x] Corrigir: campo `zone` não existe, deve usar `zoneId` (FK)
+- [x] Implementar busca em 2 passos:
+  1. Buscar zona 'REC' em `warehouseZones` por `code='REC'`
+  2. Buscar endereço em `warehouseLocations` por `zoneId` + `tenantId`
+- [x] Evitar hardcoded IDs (portabilidade + multi-tenancy)
+- [ ] Testar finalização de conferência
