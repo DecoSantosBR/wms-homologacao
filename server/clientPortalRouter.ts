@@ -1117,175 +1117,217 @@ export const clientPortalRouter = router({
 
       const session = await getPortalSession(ctx.req);
 
-      // PASSO 1: Validar estoque disponível para cada item
-      const stockValidations: Array<{
-        item: typeof input.items[0];
-        product: any;
-        availableStock: any[];
-        quantityInUnits: number;
-      }> = [];
+      // 🔒 ENVOLVER TUDO EM TRANSAÇÃO ATÔMICA
+      return await db.transaction(async (tx) => {
+        // PASSO 1: Validar produtos e converter quantidades
+        const stockValidations: Array<{
+          item: typeof input.items[0];
+          product: any;
+          quantityInUnits: number;
+        }> = [];
 
-      for (const item of input.items) {
-        // Buscar produto para obter unitsPerBox
-        const [product] = await db
-          .select()
-          .from(products)
-          .where(eq(products.id, item.productId))
-          .limit(1);
+        for (const item of input.items) {
+          // Buscar produto para obter unitsPerBox
+          const [product] = await tx
+            .select()
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
 
-        if (!product) {
-          throw new TRPCError({ 
-            code: "NOT_FOUND", 
-            message: `Produto ID ${item.productId} não encontrado` 
-          });
-        }
-
-        // Converter quantidade para unidades se solicitado em caixa
-        let quantityInUnits = item.requestedQuantity;
-        if (item.requestedUM === "box") {
-          if (!product.unitsPerBox || product.unitsPerBox <= 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Produto ${product.sku} não possui quantidade por caixa configurada`
+          if (!product) {
+            throw new TRPCError({ 
+              code: "NOT_FOUND", 
+              message: `Produto ID ${item.productId} não encontrado` 
             });
           }
-          quantityInUnits = item.requestedQuantity * product.unitsPerBox;
-        }
 
-        // Buscar estoque disponível (FEFO)
-        const availableStock = await db
-          .select({
-            id: inventory.id,
-            locationId: inventory.locationId,
-            locationCode: warehouseLocations.code,
-            quantity: inventory.quantity,
-            reservedQuantity: inventory.reservedQuantity,
-            batch: inventory.batch,
-            expiryDate: inventory.expiryDate,
-            availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
-          })
-          .from(inventory)
-          .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
-          .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-          .where(
-            and(
-              eq(inventory.tenantId, session.tenantId),
-              eq(inventory.productId, item.productId),
-              eq(inventory.status, "available"),
-              sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-              // Excluir zonas especiais
-              sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
-            )
-          )
-          .orderBy(inventory.expiryDate); // FEFO
+          // Converter quantidade para unidades se solicitado em caixa
+          let quantityInUnits = item.requestedQuantity;
+          if (item.requestedUM === "box") {
+            if (!product.unitsPerBox || product.unitsPerBox <= 0) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Produto ${product.sku} não possui quantidade por caixa configurada`
+              });
+            }
+            quantityInUnits = item.requestedQuantity * product.unitsPerBox;
+          }
 
-        // Calcular total disponível
-        const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
-        
-        if (totalAvailable < quantityInUnits) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Estoque insuficiente para produto ${product.sku}. Disponível: ${totalAvailable} unidades, Solicitado: ${quantityInUnits} unidades`
-          });
-        }
-
-        stockValidations.push({ item, product, availableStock, quantityInUnits });
-      }
-
-      // PASSO 2: Criar pedido
-      const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
-
-      const tenant = await db
-        .select({ name: tenants.name })
-        .from(tenants)
-        .where(eq(tenants.id, session.tenantId))
-        .limit(1);
-
-      const customerName = tenant.length > 0 ? tenant[0].name : "Cliente";
-
-      // Calcular totalQuantity em unidades
-      const totalQuantityInUnits = stockValidations.reduce((sum, val) => sum + val.quantityInUnits, 0);
-
-      const [order] = await db.insert(pickingOrders).values({
-        tenantId: session.tenantId,
-        orderNumber,
-        customerOrderNumber: input.customerOrderNumber || null,
-        customerId: session.tenantId,
-        customerName,
-        deliveryAddress: input.deliveryAddress || null,
-        priority: input.priority,
-        status: "pending",
-        totalItems: input.items.length,
-        totalQuantity: totalQuantityInUnits,
-        scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
-        notes: input.notes || null,
-        createdBy: session.systemUserId,
-      });
-
-      const orderId = Number(order.insertId);
-
-      // PASSO 3: Criar itens e reservar estoque
-      // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
-      for (const validation of stockValidations) {
-        const { item, product, availableStock, quantityInUnits } = validation;
-
-        // Reservar estoque e criar um pickingOrderItem para CADA LOTE
-        let remainingToReserve = quantityInUnits;
-        for (const stock of availableStock) {
-          if (remainingToReserve <= 0) break;
-
-          const toReserve = Math.min(stock.availableQuantity, remainingToReserve);
-          
-          // Incrementar reservedQuantity no inventory
-          await db
-            .update(inventory)
-            .set({
-              reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+          // ⚠️ NOTA: Validação prévia SEM lock (apenas para feedback rápido)
+          // O lock real será feito na etapa de reserva
+          const availableStock = await tx
+            .select({
+              id: inventory.id,
+              locationId: inventory.locationId,
+              locationCode: warehouseLocations.code,
+              quantity: inventory.quantity,
+              reservedQuantity: inventory.reservedQuantity,
+              batch: inventory.batch,
+              expiryDate: inventory.expiryDate,
+              availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
             })
-            .where(eq(inventory.id, stock.id));
+            .from(inventory)
+            .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+            .where(
+              and(
+                eq(inventory.tenantId, session.tenantId),
+                eq(inventory.productId, item.productId),
+                eq(inventory.status, "available"),
+                sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+                // Excluir zonas especiais
+                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+              )
+            )
+            .orderBy(inventory.expiryDate); // FEFO
 
-          // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
-          await db.insert(pickingOrderItems).values({
-            pickingOrderId: orderId,
-            productId: item.productId,
-            requestedQuantity: toReserve, // ✅ Quantidade deste lote
-            requestedUM: "unit",
-            unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-            unitsPerBox: item.requestedUM === "box" ? product.unitsPerBox : undefined,
-            batch: stock.batch, // ✅ Lote específico
-            expiryDate: stock.expiryDate, // ✅ Validade
-            inventoryId: stock.id, // ✅ Vínculo com inventário
-            status: "pending" as const,
-            uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
-          });
+          // Calcular total disponível
+          const totalAvailable = availableStock.reduce((sum, loc) => sum + loc.availableQuantity, 0);
+          
+          if (totalAvailable < quantityInUnits) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Estoque insuficiente para produto ${product.sku}. Disponível: ${totalAvailable} unidades, Solicitado: ${quantityInUnits} unidades`
+            });
+          }
 
-          // ✅ CRIAR pickingAllocation para este lote
-          await db.insert(pickingAllocations).values({
-            pickingOrderId: orderId,
-            productId: item.productId,
-            productSku: product.sku,
-            locationId: stock.locationId,
-            locationCode: stock.locationCode,
-            batch: stock.batch,
-            expiryDate: stock.expiryDate,
-            uniqueCode: getUniqueCode(product.sku, stock.batch),
-            quantity: toReserve,
-            isFractional: false,
-            sequence: 0,
-            status: "pending",
-            pickedQuantity: 0,
-          });
-
-          remainingToReserve -= toReserve;
+          stockValidations.push({ item, product, quantityInUnits });
         }
-      }
 
-      return {
-        success: true,
-        orderId,
-        orderNumber,
-        message: "Pedido criado com sucesso!",
-      };
+        // PASSO 2: Criar pedido
+        const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
+
+        const tenant = await tx
+          .select({ name: tenants.name })
+          .from(tenants)
+          .where(eq(tenants.id, session.tenantId))
+          .limit(1);
+
+        const customerName = tenant.length > 0 ? tenant[0].name : "Cliente";
+
+        // Calcular totalQuantity em unidades
+        const totalQuantityInUnits = stockValidations.reduce((sum, val) => sum + val.quantityInUnits, 0);
+
+        const [order] = await tx.insert(pickingOrders).values({
+          tenantId: session.tenantId,
+          orderNumber,
+          customerOrderNumber: input.customerOrderNumber || null,
+          customerId: session.tenantId,
+          customerName,
+          deliveryAddress: input.deliveryAddress || null,
+          priority: input.priority,
+          status: "pending",
+          totalItems: input.items.length,
+          totalQuantity: totalQuantityInUnits,
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+          notes: input.notes || null,
+          createdBy: session.systemUserId,
+        });
+
+        const orderId = Number(order.insertId);
+
+        // PASSO 3: Reservar estoque atomicamente com SELECT FOR UPDATE
+        for (const validation of stockValidations) {
+          const { item, product, quantityInUnits } = validation;
+
+          // 🔒 BUSCAR ESTOQUE COM BLOQUEIO PESSIMISTA (FEFO + Lock)
+          const lockedStock = await tx
+            .select({
+              id: inventory.id,
+              locationId: inventory.locationId,
+              locationCode: warehouseLocations.code,
+              quantity: inventory.quantity,
+              reservedQuantity: inventory.reservedQuantity,
+              batch: inventory.batch,
+              expiryDate: inventory.expiryDate,
+            })
+            .from(inventory)
+            .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
+            .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
+            .where(
+              and(
+                eq(inventory.tenantId, session.tenantId),
+                eq(inventory.productId, item.productId),
+                eq(inventory.status, "available"),
+                sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
+                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+              )
+            )
+            .orderBy(inventory.id) // 🔒 ORDEM FIXA para evitar deadlock
+            .for('update'); // 🔒 BLOQUEIO PESSIMISTA
+
+          // ✅ REVALIDAÇÃO PÓS-LOCK
+          const totalLocked = lockedStock.reduce(
+            (sum, s) => sum + (s.quantity - s.reservedQuantity),
+            0
+          );
+
+          if (totalLocked < quantityInUnits) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Estoque insuficiente após lock para produto ${product.sku}. Disponível: ${totalLocked}, Solicitado: ${quantityInUnits}`
+            });
+          }
+
+          // Reservar estoque e criar pickingOrderItem para CADA LOTE
+          let remainingToReserve = quantityInUnits;
+          for (const stock of lockedStock) {
+            if (remainingToReserve <= 0) break;
+
+            const availableInStock = stock.quantity - stock.reservedQuantity;
+            const toReserve = Math.min(availableInStock, remainingToReserve);
+            
+            // Incrementar reservedQuantity no inventory
+            await tx
+              .update(inventory)
+              .set({
+                reservedQuantity: sql`${inventory.reservedQuantity} + ${toReserve}`
+              })
+              .where(eq(inventory.id, stock.id));
+
+            // ✅ CRIAR pickingOrderItem PARA ESTE LOTE ESPECÍFICO
+            await tx.insert(pickingOrderItems).values({
+              pickingOrderId: orderId,
+              productId: item.productId,
+              requestedQuantity: toReserve,
+              requestedUM: "unit",
+              unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+              unitsPerBox: item.requestedUM === "box" ? product.unitsPerBox : undefined,
+              batch: stock.batch,
+              expiryDate: stock.expiryDate,
+              inventoryId: stock.id,
+              status: "pending" as const,
+              uniqueCode: getUniqueCode(product.sku, stock.batch),
+            });
+
+            // ✅ CRIAR pickingAllocation para este lote
+            await tx.insert(pickingAllocations).values({
+              pickingOrderId: orderId,
+              productId: item.productId,
+              productSku: product.sku,
+              locationId: stock.locationId,
+              locationCode: stock.locationCode,
+              batch: stock.batch,
+              expiryDate: stock.expiryDate,
+              uniqueCode: getUniqueCode(product.sku, stock.batch),
+              quantity: toReserve,
+              isFractional: false,
+              sequence: 0,
+              status: "pending",
+              pickedQuantity: 0,
+            });
+
+            remainingToReserve -= toReserve;
+          }
+        }
+
+        return {
+          success: true,
+          orderId,
+          orderNumber,
+          message: "Pedido criado com sucesso!",
+        };
+      }); // 🔒 FIM DA TRANSAÇÃO
     }),
 
   /**

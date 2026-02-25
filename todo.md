@@ -3461,3 +3461,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Etapa 1: Aplicar constraints SQL (quantity >= 0, reservedQuantity <= quantity)
 - [x] Etapa 2: Implementar SELECT FOR UPDATE em movements.ts, waveRouter.ts (pickingRouter.ts não precisou)
 - [x] Etapa 3: Corrigir cancelamento de onda com reversão atômica de reservas
+
+
+## 🐛 BUG CRÍTICO: Pedido do Portal não gera reservas
+
+- [x] Apenas o primeiro item do pedido gera reserva de estoque
+- [x] Implementar alocação atômica para todos os itens dentro da transação de criação do pedido
