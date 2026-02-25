@@ -2135,9 +2135,11 @@ export const appRouter = router({
             .set({
               reservedQuantity: sql`${inventory.reservedQuantity} - ${allocation.quantity}`
             })
-            .where(eq(inventory.locationId, allocation.locationId)
-              .and(eq(inventory.productId, allocation.productId))
-              .and(allocation.batch ? eq(inventory.batch, allocation.batch) : sql`1=1`));
+            .where(and(
+              eq(inventory.locationId, allocation.locationId),
+              eq(inventory.productId, allocation.productId),
+              allocation.batch ? eq(inventory.batch, allocation.batch) : sql`1=1`
+            ));
         }
 
         // Excluir itens antigos

@@ -65,7 +65,7 @@ async function consolidateItems(orderIds: number[]): Promise<ConsolidatedItem[]>
       orderId: pickingOrderItems.pickingOrderId,
       productId: pickingOrderItems.productId,
       productSku: products.sku,
-      productName: products.name,
+      productName: products.description,
       quantity: pickingOrderItems.requestedQuantity,
       batch: pickingOrderItems.batch, // ✅ Incluir lote
       expiryDate: pickingOrderItems.expiryDate, // ✅ Incluir validade

@@ -901,7 +901,7 @@ export const waveRouter = router({
   /**
    * Cancelar onda de separação e reverter reservas atomicamente
    */
-  cancel: protectedProcedure
+  cancelWithRevert: protectedProcedure
     .input(z.object({ waveId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();

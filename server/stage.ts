@@ -1,4 +1,4 @@
-import { eq, and, or, desc, sql, like } from "drizzle-orm";
+import { eq, and, or, desc, sql, like, isNull } from "drizzle-orm";
 import { getDb } from "./db";
 import { getUniqueCode } from "./utils/uniqueCode";
 import {
@@ -765,7 +765,7 @@ export async function completeStageCheck(params: {
           quantity: quantityToShip,
           tenantId: pickingOrder.tenantId,
           status: "available",
-          uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
+          uniqueCode: getUniqueCode(sourceInventory.productSku || "", sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
           locationZone: "EXP", // ✅ Adicionar locationZone (sempre EXP neste ponto)
         });
       }
@@ -775,7 +775,7 @@ export async function completeStageCheck(params: {
         tenantId: pickingOrder.tenantId,
         productId: sourceInventory.productId,
         batch: sourceInventory.batch,
-        uniqueCode: getUniqueCode(sourceInventory.productSku, sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
+        uniqueCode: getUniqueCode(sourceInventory.productSku || "", sourceInventory.batch || ""), // ✅ Adicionar uniqueCode
         serialNumber: null, // ✅ Adicionar explicitamente para evitar deslocamento
         fromLocationId: sourceInventory.locationId,
         toLocationId: shippingLocation.id,

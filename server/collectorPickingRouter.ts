@@ -527,15 +527,14 @@ export const collectorPickingRouter = router({
 
           // Criar nova labelAssociation
           await db.insert(labelAssociations).values({
-            sessionId: `P${input.pickingOrderId}`, // Prefixo P para picking
             labelCode: input.scannedCode,
             productId: alloc.productId,
             batch: alloc.batch ?? null,
             expiryDate: inv.expiryDate ?? null,
             unitsPerPackage: 1, // Padrão 1 unidade por embalagem
-            packagesRead: 0,
-            totalUnits: 0,
             associatedBy: 0, // Sistema (userId 0)
+            tenantId: input.tenantId,
+            uniqueCode: getUniqueCode(alloc.productSku || "", alloc.batch || "")
           });
 
           // Atualizar scannedBatch para continuar fluxo

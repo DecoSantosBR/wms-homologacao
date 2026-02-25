@@ -628,8 +628,7 @@ export const shippingRouter = router({
           await db
             .update(inventory)
             .set({ 
-              reservedQuantity: sql`COALESCE(${inventory.reservedQuantity}, 0) + ${quantityToReserve}`,
-              status: "reserved" // ✅ Mudar status para "reserved" ao criar romaneio
+              reservedQuantity: sql`COALESCE(${inventory.reservedQuantity}, 0) + ${quantityToReserve}`
             })
             .where(eq(inventory.id, stock.inventoryId));
           

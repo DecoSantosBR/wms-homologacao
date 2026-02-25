@@ -1205,7 +1205,6 @@ export const clientPortalRouter = router({
           tenantId: session.tenantId,
           orderNumber,
           customerOrderNumber: input.customerOrderNumber || null,
-          customerName: input.customerName || null, // ✅ Nome do destinatário do pedido original
           deliveryAddress: input.deliveryAddress || null,
           priority: input.priority,
           status: "pending",
@@ -1686,7 +1685,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
             // PASSO 3: Criar itens e reservar estoque
             // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
             for (const validation of stockValidations) {
-              const { productId, availableStock, quantityInUnits, requestedUM } = validation;
+              const { productId, product, availableStock, quantityInUnits, requestedUM } = validation;
 
               // Reservar estoque e criar um pickingOrderItem para CADA LOTE
               let remainingToReserve = quantityInUnits;
