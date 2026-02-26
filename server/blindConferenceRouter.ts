@@ -139,6 +139,27 @@ export const blindConferenceRouter = router({
 
       console.log("[readLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
+      // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
+      const conferenceSession = await db.select()
+        .from(blindConferenceSessions)
+        .where(
+          and(
+            eq(blindConferenceSessions.id, input.conferenceId),
+            eq(blindConferenceSessions.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+      
+      if (conferenceSession.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Sessão de conferência não encontrada"
+        });
+      }
+      
+      const conference = conferenceSession[0];
+      console.log("[readLabel] Conference encontrada:", conference.id, "| receivingOrderId:", conference.receivingOrderId);
+
       // 1. BUSCA GLOBAL DA ETIQUETA (Identidade Permanente)
       const label = await db.select()
         .from(labelAssociations)
@@ -331,6 +352,27 @@ export const blindConferenceRouter = router({
 
       console.log("[associateLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
+      // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
+      const conferenceSession = await db.select()
+        .from(blindConferenceSessions)
+        .where(
+          and(
+            eq(blindConferenceSessions.id, input.conferenceId),
+            eq(blindConferenceSessions.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+      
+      if (conferenceSession.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Sessão de conferência não encontrada"
+        });
+      }
+      
+      const conference = conferenceSession[0];
+      console.log("[associateLabel] Conference encontrada:", conference.id, "| receivingOrderId:", conference.receivingOrderId);
+
       // Buscar produto para gerar uniqueCode
       const product = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
       if (product.length === 0) {
@@ -423,10 +465,10 @@ export const blindConferenceRouter = router({
       
       // 🛡️ VALIDAÇÃO DEFENSIVA 1: Item existe?
       if (!existingItem || existingItem.length === 0) {
-        console.error("[associateLabel] ERRO: Item não encontrado com uniqueCode:", uniqueCodeForUpdate);
+        console.error("[associateLabel] ERRO: Item não encontrado com ID:", input.receivingOrderItemId);
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: `Item da ordem não encontrado para produto/lote (uniqueCode: ${uniqueCodeForUpdate}). Verifique se a NF-e foi importada corretamente.`
+          message: `Item da ordem não encontrado (ID: ${input.receivingOrderItemId}). Verifique se a NF-e foi importada corretamente.`
         });
       }
       
@@ -437,7 +479,10 @@ export const blindConferenceRouter = router({
       if (item.receivingOrderId !== conference.receivingOrderId) {
         console.error("[associateLabel] ERRO: Item não pertence a esta ordem:", { 
           itemOrderId: item.receivingOrderId, 
-          sessionOrderId: conference.receivingOrderId 
+          sessionOrderId: conference.receivingOrderId,
+          labelCode: input.labelCode,
+          userId: userId,
+          conferenceId: input.conferenceId
         });
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -450,6 +495,15 @@ export const blindConferenceRouter = router({
       
       // 🛡️ PROTEÇÃO ENTERPRISE: Verificar over-receiving
       if (newQuantity > item.expectedQuantity) {
+        console.error("[associateLabel] ERRO: Over-receiving detectado", {
+          itemId: item.id,
+          expectedQuantity: item.expectedQuantity,
+          currentQuantity: currentQuantity,
+          newQuantity: newQuantity,
+          labelCode: input.labelCode,
+          userId: userId
+        });
+        
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Over-receiving detectado! Esperado: ${item.expectedQuantity}, Tentando receber: ${newQuantity}. Verifique a quantidade bipada.`,
@@ -493,6 +547,7 @@ export const blindConferenceRouter = router({
           unitsPerBox: input.unitsPerBox,
           packagesRead: 1,
           totalUnits: actualUnitsReceived,
+          currentQuantity: newQuantity
         }
       };
     }),

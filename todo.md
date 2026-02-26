@@ -3911,3 +3911,50 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] associateLabel: Adicionar mesma validação (linhas 451-457)
 - [x] Mensagens de erro claras para operador ("Over-receiving detectado! Esperado: X, Tentando receber: Y")
 - [ ] Testar cenário de over-receiving (próximo passo)
+
+## 🐛 ERRO: conference is not defined (RETORNOU) - 26/02/2026 04:05
+
+### Problema Reportado
+- [x] Erro: `TRPCClientError: conference is not defined`
+- [x] Localização: readLabel mutation (linha 228)
+- [x] Causa: Variável conference não estava declarada em readLabel
+- [x] Solução: Adicionar busca de blindConferenceSessions antes de usar conference.receivingOrderId
+
+### Correção Aplicada
+- [x] Buscar sessão de conferência em readLabel (linhas 195-212)
+- [x] Validar existência de sessão (throw NOT_FOUND se não encontrada)
+- [x] Declarar `const conference = conferenceSession[0]` antes de usar
+
+
+## 🐛 CORREÇÃO CRÍTICA: conference is not defined - 26/02/2026
+
+### Problema Identificado
+- [x] ReferenceError: conference is not defined em readLabel (linha 208)
+- [x] ReferenceError: conference is not defined em associateLabel (linha 458, 461)
+- [x] Variável uniqueCodeForUpdate não declarada em associateLabel (linha 447)
+
+### Causa Raiz
+- [x] Variável conference usada antes de ser declarada (fora do escopo)
+- [x] Declaração estava dentro de bloco if, não acessível globalmente
+
+### Correção Aplicada
+- [x] Mover busca de conference para TOPO do handler (escopo raiz) em readLabel
+- [x] Mover busca de conference para TOPO do handler (escopo raiz) em associateLabel
+- [x] Remover referência a uniqueCodeForUpdate inexistente
+- [x] Adicionar logs estruturados para auditoria (userId, labelCode, conferenceId)
+- [x] Melhorar logs de over-receiving com detalhes completos
+- [x] Adicionar currentQuantity no retorno de associateLabel
+
+### Arquitetura Enterprise Implementada
+- [x] Busca de sessão no topo (linhas 142-161 readLabel, 355-374 associateLabel)
+- [x] Validação defensiva (existência + pertença + over-receiving)
+- [x] UPDATE por ID (chave primária), não por uniqueCode
+- [x] Logs estruturados para rastreabilidade ANVISA
+- [x] Multi-tenant seguro (activeTenantId em todas as queries)
+
+### Resultado
+- [x] Bipagem de etiqueta funcionando
+- [x] Associação de produto funcionando
+- [x] receivedQuantity sincronizando automaticamente no banco
+- [x] Erro 500 eliminado
+
