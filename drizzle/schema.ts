@@ -795,6 +795,7 @@ export const pickingWaveItems = mysqlTable("pickingWaveItems", {
   batch: varchar("batch", { length: 100 }), // Lote sugerido
   expiryDate: date("expiryDate"), // Validade do lote
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  labelCode: varchar("labelCode", { length: 200 }), // Código da etiqueta (rastreabilidade)
   status: mysqlEnum("status", ["pending", "picking", "picked"]).default("pending").notNull(),
   pickedAt: timestamp("pickedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -3958,3 +3958,25 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] receivedQuantity sincronizando automaticamente no banco
 - [x] Erro 500 eliminado
 
+
+
+## 🚨 PROBLEMAS CRÍTICOS IDENTIFICADOS - 26/02/2026
+
+### Problemas de Finalização de Recebimento
+- [x] labelCode ausente em pickingWaveItems - Impede rastreabilidade durante picking
+- [x] Status RECEIVING não atualiza para AVAILABLE em labelAssociations após finalização
+- [x] Status receiving não atualiza para completed em receivingOrderItems após finalização
+- [x] waveId não registrado em pickingAllocations após criação de onda
+
+### Impacto Resolvido
+- ✅ Produtos agora são liberados (RECEIVING → AVAILABLE) após finalização
+- ✅ Rastreabilidade de lote completa durante separação (labelCode em pickingWaveItems)
+- ✅ Vínculo entre alocação e onda mantido (waveId em pickingAllocations)
+
+### Correções Aplicadas
+- [x] Adicionar campo labelCode em pickingWaveItems (schema + migration)
+- [x] Buscar labelCode de inventory via JOIN em waveLogic.ts
+- [x] Remover consolidação (criar uma linha por etiqueta)
+- [x] Adicionar atualização de status em mutation finish (labelAssociations + receivingOrderItems)
+- [x] Popular waveId em pickingAllocations durante criação de onda
+

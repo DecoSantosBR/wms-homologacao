@@ -257,6 +257,7 @@ export async function createWave(params: CreateWaveParams) {
       expiryDate: pickingAllocations.expiryDate,
       unit: pickingOrderItems.unit, // Unidade do pedido original
       unitsPerBox: pickingOrderItems.unitsPerBox, // Unidades por caixa
+      labelCode: inventory.labelCode, // ✅ Código da etiqueta para rastreabilidade
     })
     .from(pickingAllocations)
     .leftJoin(products, eq(pickingAllocations.productId, products.id))
@@ -266,6 +267,11 @@ export async function createWave(params: CreateWaveParams) {
       eq(pickingAllocations.pickingOrderId, pickingOrderItems.pickingOrderId),
       eq(pickingAllocations.productId, pickingOrderItems.productId),
       eq(pickingAllocations.batch, pickingOrderItems.batch) // ✅ Match por batch para evitar duplicação
+    ))
+    .leftJoin(inventory, and(
+      eq(pickingAllocations.productId, inventory.productId),
+      eq(pickingAllocations.locationId, inventory.locationId),
+      eq(pickingAllocations.batch, inventory.batch)
     ))
     .where(
       and(
@@ -279,48 +285,22 @@ export async function createWave(params: CreateWaveParams) {
     throw new Error("Nenhuma reserva encontrada para os pedidos selecionados");
   }
 
-  // 4. Transformar reservas em formato de allocatedItems E CONSOLIDAR por SKU+Lote
-  // 🔄 CORREÇÃO: Consolidar por uniqueCode para evitar duplicação de pickingWaveItems
-  const allocationsMap = new Map<string, {
-    pickingOrderId: number;
-    productId: number;
-    productSku: string;
-    productName: string;
-    allocatedQuantity: number;
-    locationId: number;
-    locationCode: string;
-    batch: string | undefined;
-    expiryDate: Date | undefined;
-    unit: string;
-    unitsPerBox: number | undefined;
-  }>();
-
-  for (const r of reservations) {
-    const uniqueCode = getUniqueCode(r.productSku!, r.batch);
-    const existing = allocationsMap.get(uniqueCode);
-    
-    if (existing) {
-      // Consolidar quantidade (somar múltiplos endereços do mesmo lote)
-      existing.allocatedQuantity += r.quantity;
-    } else {
-      // Primeiro endereço deste lote
-      allocationsMap.set(uniqueCode, {
-        pickingOrderId: r.pickingOrderId,
-        productId: r.productId,
-        productSku: r.productSku!,
-        productName: r.productName!,
-        allocatedQuantity: r.quantity,
-        locationId: r.locationId!, // Primeiro endereço (para referência)
-        locationCode: r.locationCode!,
-        batch: r.batch || undefined,
-        expiryDate: r.expiryDate || undefined,
-        unit: r.unit || "unit",
-        unitsPerBox: r.unitsPerBox || undefined,
-      });
-    }
-  }
-
-  const allocatedItems = Array.from(allocationsMap.values());
+  // 4. Transformar reservas em formato de allocatedItems SEM CONSOLIDAR
+  // ✅ CRIAR UMA LINHA POR ETIQUETA (labelCode) para rastreabilidade completa
+  const allocatedItems = reservations.map(r => ({
+    pickingOrderId: r.pickingOrderId,
+    productId: r.productId,
+    productSku: r.productSku!,
+    productName: r.productName!,
+    allocatedQuantity: r.quantity,
+    locationId: r.locationId!,
+    locationCode: r.locationCode!,
+    batch: r.batch || undefined,
+    expiryDate: r.expiryDate || undefined,
+    unit: r.unit || "unit",
+    unitsPerBox: r.unitsPerBox || undefined,
+    labelCode: r.labelCode || undefined, // ✅ Código da etiqueta
+  }));
 
   // 5. Gerar número da onda
   const waveNumber = await generateWaveNumber();
@@ -339,7 +319,7 @@ export async function createWave(params: CreateWaveParams) {
 
   const waveId = wave.insertId;
 
-  // 7. Criar itens consolidados da onda (um registro por lote)
+  // 7. Criar itens da onda (um registro por etiqueta/labelCode)
   const waveItemsData = allocatedItems.map((item) => ({
     waveId,
     pickingOrderId: item.pickingOrderId, // Pedido de origem do item
@@ -356,6 +336,7 @@ export async function createWave(params: CreateWaveParams) {
     expiryDate: item.expiryDate,
     status: "pending" as const,
     uniqueCode: getUniqueCode(item.productSku, item.batch), // ✅ Adicionar uniqueCode
+    labelCode: item.labelCode, // ✅ Código da etiqueta para rastreabilidade
   }));
 
   await db.insert(pickingWaveItems).values(waveItemsData);
@@ -363,7 +344,13 @@ export async function createWave(params: CreateWaveParams) {
   // Nota: A reserva de estoque já foi feita na criação dos pedidos,
   // então não precisamos incrementar reservedQuantity aqui novamente.
 
-  // 8. Atualizar status dos pedidos para "in_wave" e associar à onda
+  // 8. Atualizar waveId em pickingAllocations para rastreabilidade
+  await db
+    .update(pickingAllocations)
+    .set({ waveId })
+    .where(inArray(pickingAllocations.pickingOrderId, params.orderIds));
+
+  // 9. Atualizar status dos pedidos para "in_wave" e associar à onda
   await db
     .update(pickingOrders)
     .set({

@@ -915,7 +915,36 @@ export const blindConferenceRouter = router({
         }
       }
 
-      // 4. FINALIZAR SESSÃO
+      // 4. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
+      // Buscar todos os produtos conferidos para liberar suas etiquetas
+      const productIds = items.map(item => item.productId);
+      
+      if (productIds.length > 0) {
+        await db.update(labelAssociations)
+          .set({ status: "AVAILABLE" })
+          .where(
+            and(
+              eq(labelAssociations.tenantId, activeTenantId),
+              eq(labelAssociations.status, "RECEIVING"),
+              sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
+            )
+          );
+      }
+
+      // 5. ATUALIZAR STATUS DOS ITENS DA ORDEM (receiving → completed)
+      await db.update(receivingOrderItems)
+        .set({
+          status: "completed",
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        );
+
+      // 6. FINALIZAR SESSÃO
       await db.update(blindConferenceSessions)
         .set({
           status: "completed",
@@ -923,7 +952,7 @@ export const blindConferenceRouter = router({
         })
         .where(eq(blindConferenceSessions.id, input.conferenceId));
 
-      // 5. ATUALIZAR STATUS DA ORDEM DE RECEBIMENTO
+      // 7. ATUALIZAR STATUS DA ORDEM DE RECEBIMENTO
       await db.update(receivingOrders)
         .set({
           status: "completed",
