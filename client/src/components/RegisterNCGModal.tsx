@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { Camera, AlertCircle, X } from 'lucide-react';
+import { Camera, AlertCircle, X, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ const ncgSchema = z.object({
   labelCode: z.string().min(1, 'Código da etiqueta é obrigatório'),
   quantity: z.number().positive('Quantidade deve ser positiva'),
   description: z.string().min(10, 'Descrição deve ter no mínimo 10 caracteres'),
-  photoUrl: z.string().optional(),
+  photoUrl: z.string().min(1, 'Foto é obrigatória'), // Foto OBRIGATÓRIA
   unitsPerBox: z.number().positive('Unidades por caixa deve ser positiva').optional(),
 });
 
@@ -35,6 +35,10 @@ interface RegisterNCGModalProps {
   labelCode?: string;
   maxQuantity?: number; // Para limitar a quantidade bloqueada à quantidade recebida
   labelExists?: boolean; // Se etiqueta já existe em labelAssociations
+  unitsPerBox?: number; // Vindo da Tela 2
+  batch?: string; // Vindo da Tela 2
+  expiryDate?: string; // Vindo da Tela 2
+  productId?: number | null; // Vindo da Tela 2
 }
 
 export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
@@ -45,9 +49,17 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
   labelCode = '',
   maxQuantity = 1,
   labelExists = false,
+  unitsPerBox,
+  batch,
+  expiryDate,
+  productId,
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const { register, handleSubmit, control, reset, setValue, formState: { errors, isSubmitting } } = useForm<NCGFormData>({
     resolver: zodResolver(ncgSchema),
@@ -127,9 +139,22 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
       };
       reader.readAsDataURL(file);
 
-      // TODO: Implementar upload para S3
-      // Por enquanto, usar preview local
-      setValue('photoUrl', URL.createObjectURL(file));
+      // Upload para S3 via backend
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload-ncg-photo', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erro ao fazer upload da foto');
+      }
+      
+      const { url } = await response.json();
+      setValue('photoUrl', url);
       
       toast.success('Foto carregada com sucesso');
     } catch (error) {
@@ -143,6 +168,73 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
   const clearImage = () => {
     setValue('photoUrl', '');
     setImagePreview(null);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCameraCapture(true);
+    } catch (error) {
+      toast.error('Erro ao acessar câmera');
+      console.error(error);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCameraCapture(false);
+  };
+
+  const capturePhoto = async () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setImagePreview(dataUrl);
+        stopCamera();
+        
+        // Upload para S3
+        setIsUploading(true);
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const formData = new FormData();
+          formData.append('file', blob, 'ncg-photo.jpg');
+          
+          const response = await fetch('/api/upload-ncg-photo', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+          });
+          
+          if (!response.ok) {
+            throw new Error('Erro ao fazer upload da foto');
+          }
+          
+          const { url } = await response.json();
+          setValue('photoUrl', url);
+          toast.success('Foto capturada e enviada com sucesso');
+        } catch (error) {
+          toast.error('Erro ao enviar foto');
+          console.error(error);
+        } finally {
+          setIsUploading(false);
+        }
+      }
+    }
   };
 
   return (
@@ -222,9 +314,9 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
             {errors.description && <span className="text-xs text-red-500">{errors.description.message}</span>}
           </div>
 
-          {/* Área de Foto (QA/Auditoria) */}
+          {/* Área de Foto (OBRIGATÓRIA) */}
           <div className="space-y-2">
-            <Label>Evidência Fotográfica (Opcional)</Label>
+            <Label>Evidência Fotográfica (Obrigatória) *</Label>
             {imagePreview ? (
               <div className="relative border rounded-lg p-2 bg-muted/50">
                 <img src={imagePreview} alt="Avaria" className="max-h-40 w-auto mx-auto rounded-md" />
@@ -239,20 +331,41 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
                 </Button>
               </div>
             ) : (
-              <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
-                <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">Tirar foto ou anexar imagem</p>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleImageUpload}
-                  className="mt-3"
-                  disabled={isUploading}
-                />
-                {isUploading && <p className="text-xs text-muted-foreground mt-2">Carregando...</p>}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={startCamera}
+                    className="h-20 flex-col gap-2"
+                  >
+                    <Camera className="h-6 w-6" />
+                    Tirar Foto
+                  </Button>
+                  <div className="relative">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-20 w-full flex-col gap-2"
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                    >
+                      <Package className="h-6 w-6" />
+                      Anexar Arquivo
+                    </Button>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                  </div>
+                </div>
+                {isUploading && <p className="text-xs text-center text-muted-foreground">Carregando...</p>}
               </div>
             )}
+            {errors.photoUrl && <span className="text-xs text-red-500">{errors.photoUrl.message}</span>}
           </div>
 
           {/* Botão de Confirmação */}
@@ -273,6 +386,37 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
           </Button>
         </form>
       </DialogContent>
+
+      {/* Modal de Captura de Câmera */}
+      {showCameraCapture && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col">
+          <div className="flex-1 relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <div className="p-4 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={stopCamera}
+              className="flex-1 h-14 text-lg"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={capturePhoto}
+              className="flex-1 h-14 text-lg"
+            >
+              <Camera className="w-6 h-6 mr-2" />
+              Capturar
+            </Button>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 };

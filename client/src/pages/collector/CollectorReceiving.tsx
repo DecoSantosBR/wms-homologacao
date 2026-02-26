@@ -14,7 +14,7 @@ import { ProductCombobox } from "../../components/ProductCombobox";
 import { RegisterNCGModal } from "../../components/RegisterNCGModal";
 
 export function CollectorReceiving() {
-  const [step, setStep] = useState<"select" | "conference" | "ncg-scan">("select");
+  const [step, setStep] = useState<"select" | "conference" | "ncg-scan" | "ncg-register-label">("select");
   const [showScanner, setShowScanner] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [conferenceId, setConferenceId] = useState<number | null>(null);
@@ -48,6 +48,14 @@ export function CollectorReceiving() {
     maxQuantity: number;
     labelExists: boolean;
   } | null>(null);
+  
+  // Tela 2: Registro de etiqueta (quando etiqueta não existe)
+  const [ncgProductId, setNcgProductId] = useState<number | null>(null);
+  const [ncgUniqueCode, setNcgUniqueCode] = useState<string>("");
+  const [ncgBatch, setNcgBatch] = useState<string>("");
+  const [ncgExpiryDate, setNcgExpiryDate] = useState<string>("");
+  const [ncgUnitsPerBox, setNcgUnitsPerBox] = useState<number>(1);
+  const [ncgQuantity, setNcgQuantity] = useState<number>(0);
   
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
@@ -298,7 +306,7 @@ export function CollectorReceiving() {
       const labelData = result[0]?.result?.data;
 
       if (labelData?.exists) {
-        // Etiqueta existe: abrir modal sem solicitar unitsPerBox
+        // Etiqueta existe: ir direto para Tela 3 (Registro de NCG)
         setSelectedItemForNCG({
           receivingOrderItemId: labelData.receivingOrderItemId,
           labelCode: ncgLabelCode.trim(),
@@ -307,21 +315,8 @@ export function CollectorReceiving() {
         });
         setIsNCGModalOpen(true);
       } else {
-        // Etiqueta NÃO existe: abrir modal solicitando unitsPerBox
-        // Buscar primeiro item da ordem como fallback
-        const firstItem = orderItems?.[0];
-        if (!firstItem) {
-          toast.error("Nenhum item encontrado na ordem");
-          return;
-        }
-
-        setSelectedItemForNCG({
-          receivingOrderItemId: firstItem.id,
-          labelCode: ncgLabelCode.trim(),
-          maxQuantity: firstItem.expectedQuantity || 999999,
-          labelExists: false,
-        });
-        setIsNCGModalOpen(true);
+        // Etiqueta NÃO existe: ir para Tela 2 (Registro de Etiqueta)
+        setStep("ncg-register-label");
       }
     } catch (error) {
       console.error("Erro ao verificar etiqueta:", error);
@@ -556,14 +551,7 @@ export function CollectorReceiving() {
             </CardContent>
           </Card>
 
-          <Button
-            variant="destructive"
-            onClick={() => setStep("ncg-scan")}
-            disabled={!selectedOrderId}
-            className="w-full h-14 text-lg mb-4"
-          >
-            Registrar NCG
-          </Button>
+
 
           <Button
             onClick={handleStartConference}
@@ -660,6 +648,160 @@ export function CollectorReceiving() {
             labelCode={selectedItemForNCG.labelCode}
             maxQuantity={selectedItemForNCG.maxQuantity}
             labelExists={selectedItemForNCG.labelExists}
+          />
+        )}
+      </CollectorLayout>
+    );
+  }
+
+  // Tela 2: Registro de etiqueta (quando etiqueta não existe)
+  if (step === "ncg-register-label") {
+    return (
+      <CollectorLayout title="Registrar Etiqueta - NCG">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Código da Etiqueta</Label>
+                <Input
+                  value={ncgLabelCode}
+                  disabled
+                  className="bg-muted font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Selecionar Produto (SKU - Lote)</Label>
+                <ProductCombobox
+                  receivingOrderId={selectedOrderId!}
+                  value={ncgUniqueCode}
+                  onSelect={(uniqueCode, productId, receivingOrderItemId) => {
+                    setNcgUniqueCode(uniqueCode);
+                    setNcgProductId(productId);
+                    
+                    // Buscar dados do item da ordem para preencher lote e validade
+                    const item = orderItems?.find(i => i.id === receivingOrderItemId);
+                    if (item) {
+                      setNcgBatch(item.batch || "");
+                      setNcgExpiryDate(item.expiryDate || "");
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Lote</Label>
+                <Input
+                  value={ncgBatch}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Validade</Label>
+                <Input
+                  value={ncgExpiryDate}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Unidades por Caixa *</Label>
+                <Input
+                  type="number"
+                  value={ncgUnitsPerBox}
+                  onChange={(e) => setNcgUnitsPerBox(Number(e.target.value))}
+                  min={1}
+                  className="text-center font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Quantidade Avariada *</Label>
+                <Input
+                  type="number"
+                  value={ncgQuantity}
+                  onChange={(e) => setNcgQuantity(Number(e.target.value))}
+                  min={1}
+                  className="text-center font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep("ncg-scan");
+                    setNcgProductId(null);
+                    setNcgUniqueCode("");
+                    setNcgBatch("");
+                    setNcgExpiryDate("");
+                    setNcgUnitsPerBox(1);
+                    setNcgQuantity(0);
+                  }}
+                  className="h-12"
+                >
+                  Voltar
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!ncgProductId) {
+                      toast.error("Selecione um produto");
+                      return;
+                    }
+                    if (ncgUnitsPerBox < 1) {
+                      toast.error("Unidades por caixa deve ser maior que zero");
+                      return;
+                    }
+                    if (ncgQuantity < 1) {
+                      toast.error("Quantidade avariada deve ser maior que zero");
+                      return;
+                    }
+                    
+                    // Ir para Tela 3 (Registro de NCG)
+                    const item = orderItems?.find(i => i.productId === ncgProductId);
+                    if (!item) {
+                      toast.error("Item da ordem não encontrado");
+                      return;
+                    }
+                    
+                    setSelectedItemForNCG({
+                      receivingOrderItemId: item.id,
+                      labelCode: ncgLabelCode,
+                      maxQuantity: ncgQuantity,
+                      labelExists: false,
+                    });
+                    setIsNCGModalOpen(true);
+                  }}
+                  className="h-12"
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Modal de Registro de NCG */}
+        {isNCGModalOpen && selectedItemForNCG && (
+          <RegisterNCGModal
+            isOpen={isNCGModalOpen}
+            onClose={() => {
+              setIsNCGModalOpen(false);
+              setSelectedItemForNCG(null);
+              setStep("conference"); // Volta para tela de conferência
+            }}
+            conferenceId={conferenceId || 0}
+            receivingOrderItemId={selectedItemForNCG.receivingOrderItemId}
+            labelCode={selectedItemForNCG.labelCode}
+            maxQuantity={selectedItemForNCG.maxQuantity}
+            labelExists={selectedItemForNCG.labelExists}
+            unitsPerBox={ncgUnitsPerBox}
+            batch={ncgBatch}
+            expiryDate={ncgExpiryDate}
+            productId={ncgProductId}
           />
         )}
       </CollectorLayout>
@@ -802,6 +944,15 @@ export function CollectorReceiving() {
             Finalizar
           </Button>
         </div>
+
+        {/* Botão Registrar NCG */}
+        <Button
+          variant="destructive"
+          onClick={() => setStep("ncg-scan")}
+          className="w-full h-12 mt-3"
+        >
+          Registrar NCG
+        </Button>
       </div>
       {/* Modal de Registro de NCG */}
       {isNCGModalOpen && conferenceId && selectedItemForNCG && (

@@ -583,6 +583,9 @@ export const blindConferenceRouter = router({
       description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"), // Motivo da NCG
       photoUrl: z.string().optional(),
       unitsPerBox: z.number().positive().optional(), // Obrigatório se etiqueta não existe
+      batch: z.string().optional(), // Vindo da Tela 2
+      expiryDate: z.string().optional(), // Vindo da Tela 2
+      productId: z.number().optional(), // Vindo da Tela 2
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
@@ -654,15 +657,18 @@ export const blindConferenceRouter = router({
       if (!existingLabel) {
         console.log("[registerNCG] Criando nova etiqueta:", labelCode);
         
-        // Usar unitsPerBox fornecido pelo usuário, senão usar do orderItem
+        // Usar dados da Tela 2 se fornecidos, senão usar do orderItem
         const finalUnitsPerBox = input.unitsPerBox || orderItem.unitsPerBox || 1;
+        const finalBatch = input.batch || orderItem.batch || null;
+        const finalExpiryDate = input.expiryDate || orderItem.expiryDate || null;
+        const finalProductId = input.productId || orderItem.productId;
         
         await db.insert(labelAssociations).values({
           tenantId: activeTenantId,
           labelCode: labelCode,
-          productId: orderItem.productId,
-          batch: orderItem.batch || null,
-          expiryDate: orderItem.expiryDate || null,
+          productId: finalProductId,
+          batch: finalBatch,
+          expiryDate: finalExpiryDate,
           unitsPerBox: finalUnitsPerBox,
           status: "BLOCKED", // Já nasce bloqueada (NCG)
           scannedAt: new Date(),

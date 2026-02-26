@@ -4178,3 +4178,59 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Atualizar backend registerNCG para aceitar unitsPerBox no input
 - [x] Criar procedure checkLabelExists para verificar se etiqueta existe
 - [ ] Testar fluxo: botão → scan → modal (com/sem unitsPerBox) → confirmar → voltar
+
+
+## 🐛 CORREÇÃO: Erro uniqueCode na criação de etiqueta NCG - 26/02/2026
+
+**Erro:** `Failed query: insert into labelAssociations ... uniqueCode = default`
+
+**Causa:** Campo `uniqueCode` não está sendo gerado na criação de etiqueta em registerNCG
+
+**Solução:** Gerar uniqueCode (SKU + Lote) antes de inserir em labelAssociations
+
+- [ ] Adicionar geração de uniqueCode em registerNCG: `${orderItem.productSku}-${orderItem.batch || ''}`
+- [ ] Testar criação de NCG com etiqueta não existente
+
+
+## 🎯 IMPLEMENTAÇÃO FINAL: Fluxo NCG Completo (Especificação Correta) - 26/02/2026
+
+**Localização do Botão:**
+- Botão "Registrar NCG" (vermelho) deve aparecer DENTRO da tela de conferência (após selecionar ordem)
+- Posição: abaixo dos botões "Desfazer" e "Finalizar"
+
+**Fluxo Completo:**
+
+**Tela 1: Leitura de Etiqueta**
+- Input para código da etiqueta
+- Botão "Escanear com Câmera"
+- Ao bipar: verificar se etiqueta existe em labelAssociations
+  - Se existe: pular para Tela 3 (Registro de NCG)
+  - Se NÃO existe: ir para Tela 2 (Registro de Etiqueta)
+
+**Tela 2: Registro de Etiqueta (apenas se etiqueta NÃO existe)**
+- Combobox "Selecionar Produto" (exibe: SKU - Lote)
+- Campo "Lote" (preenchimento automático ao selecionar produto)
+- Campo "Validade" (preenchimento automático ao selecionar produto)
+- Campo "Unidades por Caixa" (manual)
+- Campo "Quantidade Avariada" (manual)
+- Botão "Confirmar" → cria vínculo labelCode ↔ uniqueCode → vai para Tela 3
+
+**Tela 3: Registro de NCG**
+- Campo "Descrição/Motivo" (mínimo 10 caracteres)
+- Campo "Foto" (OBRIGATÓRIO)
+  - Opção 1: Anexar arquivo (input file)
+  - Opção 2: Tirar foto com câmera (abrir câmera do dispositivo)
+- Botão "Confirmar" → move produto para NCG com status blocked
+
+**Implementação:**
+- [x] Mover botão "Registrar NCG" da tela de seleção para tela de conferência
+- [x] Criar step="ncg-register-label" (Tela 2) com combobox e campos
+- [x] Implementar combobox de produtos (SKU - Lote) com preenchimento automático
+- [x] Refatorar RegisterNCGModal para tornar foto obrigatória (schema zod)
+- [x] Adicionar estados para Tela 2 (ncgProductId, ncgBatch, ncgExpiryDate, etc.)
+- [x] Modificar handleNcgLabelScan para redirecionar para Tela 2 se etiqueta não existe
+- [x] Adicionar captura de foto com câmera (botão dedicado + modal fullscreen)
+- [x] Implementar upload real de foto para S3 (endpoint /api/upload-ncg-photo + multer)
+- [x] Atualizar backend registerNCG para aceitar batch, expiryDate, productId
+- [x] Usar dados da Tela 2 (batch, expiryDate, productId) se fornecidos
+- [ ] Testar fluxo: conferência → NCG → scan → (registrar etiqueta) → motivo+foto → confirmar
