@@ -11,6 +11,7 @@ import { Camera, Check, Loader2, Undo2, Package } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
 import { ProductCombobox } from "../../components/ProductCombobox";
+import { RegisterNCGModal } from "../../components/RegisterNCGModal";
 
 export function CollectorReceiving() {
   const [step, setStep] = useState<"select" | "conference">("select");
@@ -35,6 +36,14 @@ export function CollectorReceiving() {
     productId: number;
     batch: string;
     scannedCode: string;
+  } | null>(null);
+  
+  // Modal de NCG (Não Conformidade)
+  const [isNCGModalOpen, setIsNCGModalOpen] = useState(false);
+  const [selectedItemForNCG, setSelectedItemForNCG] = useState<{
+    receivingOrderItemId: number;
+    labelCode: string;
+    maxQuantity: number;
   } | null>(null);
   
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -414,7 +423,7 @@ export function CollectorReceiving() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -425,6 +434,26 @@ export function CollectorReceiving() {
                   className="flex-1 h-12"
                 >
                   Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    // Abrir modal de NCG
+                    if (!selectedReceivingOrderItemId) {
+                      toast.error("Selecione um produto primeiro");
+                      return;
+                    }
+                    setSelectedItemForNCG({
+                      receivingOrderItemId: selectedReceivingOrderItemId,
+                      labelCode: pendingLabelCode,
+                      maxQuantity: totalUnitsReceived || unitsPerBox,
+                    });
+                    setIsNCGModalOpen(true);
+                    setShowAssociationDialog(false);
+                  }}
+                  className="flex-1 h-12"
+                >
+                  Registrar NCG
                 </Button>
                 <Button
                   onClick={handleAssociate}
@@ -602,6 +631,20 @@ export function CollectorReceiving() {
           </Button>
         </div>
       </div>
+      {/* Modal de Registro de NCG */}
+      {isNCGModalOpen && conferenceId && selectedItemForNCG && (
+        <RegisterNCGModal
+          isOpen={isNCGModalOpen}
+          onClose={() => {
+            setIsNCGModalOpen(false);
+            setSelectedItemForNCG(null);
+          }}
+          conferenceId={conferenceId}
+          receivingOrderItemId={selectedItemForNCG.receivingOrderItemId}
+          labelCode={selectedItemForNCG.labelCode}
+          maxQuantity={selectedItemForNCG.maxQuantity}
+        />
+      )}
     </CollectorLayout>
   );
 }

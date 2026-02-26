@@ -4064,3 +4064,20 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Alocar addressedQuantity em endereço REC (status: available)
 - [ ] Alocar blockedQuantity em endereço NCG (status: blocked)
 - [ ] Atualizar receivingOrderItems com addressedQuantity e blockedQuantity
+
+
+## 🎨 IMPLEMENTAÇÃO DO MODAL DE NCG (FRONTEND) - 26/02/2026 ✅ CONCLUÍDO
+
+### Componente RegisterNCGModal
+- [x] Criar arquivo RegisterNCGModal.tsx em client/src/components/
+- [x] Implementar validação Zod (labelCode, quantity, description, photoUrl)
+- [x] Adicionar campo textarea para descrição do motivo
+- [x] Implementar upload de foto com preview e remoção
+- [x] Integrar mutation trpc.blindConference.registerNCG.useMutation()
+
+### Integração com CollectorReceiving
+- [x] Adicionar estado isNCGModalOpen e selectedItemForNCG
+- [x] Criar botão "Registrar NCG" ao lado de "Associar" (variant destructive)
+- [x] Implementar lógica de abertura do modal ao clicar no botão
+- [x] Passar conferenceId, receivingOrderItemId, labelCode e maxQuantity para modal
+- [x] Atualizar lista após registro de NCG (invalidate queries)
