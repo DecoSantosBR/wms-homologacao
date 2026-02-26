@@ -4101,3 +4101,15 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Refatorar lógica de `registerNCG` para usar `nonConformities` como referência
 - [x] Refatorar lógica de `finish` para buscar NCGs via `nonConformities`
 - [ ] Testar fluxo completo
+
+
+## 🔧 RASTREABILIDADE DE NCG: locationId + shippingId - 26/02/2026 ✅ CONCLUÍDO
+
+**Objetivo:** Adicionar rastreabilidade completa de produtos NCG (em estoque vs expedidos)
+
+- [x] Adicionar coluna `locationId` em `nonConformities` (schema)
+- [x] Adicionar coluna `shippingId` em `nonConformities` (schema)
+- [x] Rodar ALTER TABLE manual (colunas + índices)
+- [x] Atualizar mutation `registerNCG` para salvar `locationId` (NCG) e `shippingId` (NULL)
+- [ ] Implementar lógica de atualização de `shippingId` ao expedir produto NCG (futuro)
+- [ ] Testar fluxo completo de registro de NCG

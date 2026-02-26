@@ -370,6 +370,8 @@ export const nonConformities = mysqlTable("nonConformities", {
   receivingOrderItemId: int("receivingOrderItemId").notNull(), // ID do item da ordem de recebimento
   labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta com NCG
   conferenceId: int("conferenceId").notNull(), // ID da conferência onde foi registrado
+  locationId: int("locationId"), // Localização atual do produto NCG (NCG inicialmente)
+  shippingId: int("shippingId"), // ID da expedição (NULL se ainda em estoque)
   description: text("description").notNull(), // Descrição da não-conformidade (motivo)
   photoUrl: varchar("photoUrl", { length: 500 }), // URL da foto (opcional)
   registeredBy: int("registeredBy").notNull(), // userId do operador
@@ -378,6 +380,8 @@ export const nonConformities = mysqlTable("nonConformities", {
   labelCodeIdx: index("ncg_label_code_idx").on(table.labelCode),
   conferenceIdx: index("ncg_conference_idx").on(table.conferenceId),
   tenantIdIdx: index("ncg_tenant_id_idx").on(table.tenantId),
+  locationIdx: index("ncg_location_idx").on(table.locationId),
+  shippingIdx: index("ncg_shipping_idx").on(table.shippingId),
 }));
 
 export const divergenceApprovals = mysqlTable("divergenceApprovals", {

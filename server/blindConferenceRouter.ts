@@ -678,6 +678,8 @@ export const blindConferenceRouter = router({
         receivingOrderItemId: input.receivingOrderItemId,
         labelCode: input.labelCode,
         conferenceId: input.conferenceId,
+        locationId: ncgLocation.id, // Localização NCG onde foi alocado
+        shippingId: null, // NULL enquanto em estoque
         description: input.description,
         photoUrl: input.photoUrl || null,
         registeredBy: userId,
