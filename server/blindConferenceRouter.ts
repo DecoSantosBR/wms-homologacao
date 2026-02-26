@@ -608,7 +608,7 @@ export const blindConferenceRouter = router({
         .from(warehouseLocations)
         .where(
           and(
-            eq(warehouseLocations.code, "NCG"),
+            eq(warehouseLocations.zone, "NCG"), // Busca por zona NCG
             eq(warehouseLocations.tenantId, activeTenantId)
           )
         )

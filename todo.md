@@ -4124,3 +4124,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar que não há mais referências a `ncgStatus` em `labelAssociations`
 - [ ] Testar inserção válida (locationId preenchido, shippingId NULL)
 - [ ] Testar inserção inválida (ambos NULL ou ambos preenchidos)
+
+
+## 🔧 CORREÇÃO: Busca de Localização NCG - 26/02/2026 ✅ CONCLUÍDO
+
+- [x] Corrigir query em `registerNCG`: usar `zone = 'NCG'` em vez de `code = 'NCG'`
+- [ ] Testar registro de NCG após correção
