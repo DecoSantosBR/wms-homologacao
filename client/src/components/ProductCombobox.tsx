@@ -1,7 +1,7 @@
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 interface Product {
-  id: number;
+  id: string; // ✅ Alterado para string (receivingOrderItemId como chave única)
   sku: string;
   description: string;
 }
@@ -24,7 +24,7 @@ export function ProductCombobox({
   className,
 }: ProductComboboxProps) {
   const options: ComboboxOption[] = (products || []).map((product) => ({
-    value: product.id.toString(),
+    value: product.id, // ✅ Já é string, não precisa .toString()
     label: `${product.sku} - ${product.description}`,
     searchTerms: `${product.sku} ${product.description}`.toLowerCase(),
   }));

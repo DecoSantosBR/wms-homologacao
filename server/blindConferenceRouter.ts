@@ -11,7 +11,8 @@ import {
   products,
   inventory,
   warehouseLocations,
-  warehouseZones
+  warehouseZones,
+  nonConformities
 } from "../drizzle/schema";
 import { eq, and, or, desc, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -384,7 +385,7 @@ export const blindConferenceRouter = router({
       const uniqueCode = getUniqueCode(productSku, input.batch);
       console.log("[associateLabel] uniqueCode gerado:", uniqueCode);
 
-      const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox;
+      const actualUnitsReceived = input.totalUnitsReceived || input.receivedQuantity; // ✅ Fallback para receivedQuantity, não unitsPerBox
 
       // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
       const existingLabel = await db.select()
@@ -549,6 +550,73 @@ export const blindConferenceRouter = router({
           totalUnits: actualUnitsReceived,
           currentQuantity: newQuantity
         }
+      };
+    }),
+
+  /**
+   * 3.5. Registrar Não-Conformidade (NCG)
+   */
+  registerNCG: protectedProcedure
+    .input(z.object({
+      labelCode: z.string(),
+      conferenceId: z.number(),
+      description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"),
+      photoUrl: z.string().optional(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      console.log("[registerNCG] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+
+      // 1. VERIFICAR SE ETIQUETA EXISTE
+      const label = await db.select()
+        .from(labelAssociations)
+        .where(
+          and(
+            eq(labelAssociations.labelCode, input.labelCode),
+            eq(labelAssociations.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+
+      if (label.length === 0) {
+        throw new Error("Etiqueta não encontrada");
+      }
+
+      // 2. ATUALIZAR STATUS DA ETIQUETA PARA NCG
+      await db.update(labelAssociations)
+        .set({ ncgStatus: "NCG" })
+        .where(eq(labelAssociations.labelCode, input.labelCode));
+
+      // 3. REGISTRAR NÃO-CONFORMIDADE
+      await db.insert(nonConformities).values({
+        tenantId: activeTenantId,
+        labelCode: input.labelCode,
+        conferenceId: input.conferenceId,
+        description: input.description,
+        photoUrl: input.photoUrl || null,
+        registeredBy: userId,
+      });
+
+      return {
+        success: true,
+        message: "Não-conformidade registrada com sucesso",
+        labelCode: input.labelCode
       };
     }),
 
@@ -875,43 +943,81 @@ export const blindConferenceRouter = router({
         }
 
         const locationId = recLocation[0].id;
-        const totalUnits = item.packagesRead * (product[0].unitsPerBox || 1);
 
-        // UPSERT no estoque
-        const existingInventory = await db.select()
-          .from(inventory)
+        // ✅ NOVA LÓGICA: 1 LPN = 1 Inventory
+        // Buscar todas as etiquetas associadas a este produto+lote
+        const labels = await db.select()
+          .from(labelAssociations)
           .where(
             and(
-              eq(inventory.productId, item.productId),
-              eq(inventory.locationId, locationId),
-              eq(inventory.batch, item.batch || ""),
-              eq(inventory.tenantId, activeTenantId)
+              eq(labelAssociations.productId, item.productId),
+              eq(labelAssociations.batch, item.batch || ""),
+              eq(labelAssociations.tenantId, activeTenantId),
+              eq(labelAssociations.status, 'RECEIVING') // ✅ Apenas etiquetas em recebimento
             )
-          )
-          .limit(1);
+          );
 
-        if (existingInventory.length > 0) {
-          // Atualizar estoque existente
-          await db.update(inventory)
-            .set({
-              quantity: sql`${inventory.quantity} + ${totalUnits}`,
-              updatedAt: new Date()
-            })
-            .where(eq(inventory.id, existingInventory[0].id));
-        } else {
-          // Criar novo registro de estoque
-          await db.insert(inventory).values({
-            tenantId: activeTenantId,
-            productId: item.productId,
-            locationId: locationId,
-            batch: item.batch || "",
-            expiryDate: item.expiryDate,
-            uniqueCode: uniqueCode,
-            locationZone: 'REC', // Zona de recebimento
-            quantity: totalUnits,
-            reservedQuantity: 0,
-            status: "available",
-          });
+        console.log(`[finish] Criando inventory para ${labels.length} etiquetas do produto ${item.productId}`);
+
+        // Criar um registro de inventory para cada etiqueta
+        for (const label of labels) {
+          console.log('🔍 [finish] Label completo:', JSON.stringify(label, null, 2));
+          
+          if (!label.labelCode) {
+            console.error('❌ [finish] labelCode está NULL/undefined! Pulando...');
+            continue;
+          }
+          
+          console.log('🔍 [finish] Buscando inventory para labelCode:', label.labelCode, 'tenantId:', activeTenantId);
+          
+          let existingByLabel;
+          try {
+            existingByLabel = await db.select()
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.labelCode, label.labelCode),
+                  eq(inventory.tenantId, activeTenantId)
+                )
+              )
+              .limit(1);
+            
+            console.log('✅ [finish] Query executada com sucesso. Resultados:', existingByLabel.length);
+          } catch (error: any) {
+            console.error('❌ [finish] ERRO na query de inventory:', error?.message || error);
+            console.error('❌ [finish] Stack:', error?.stack);
+            console.error('❌ [finish] labelCode:', label.labelCode);
+            console.error('❌ [finish] tenantId:', activeTenantId);
+            console.error('❌ [finish] Tipo de labelCode:', typeof label.labelCode);
+            throw new Error(`Erro ao buscar inventory: ${error?.message || error}`);
+          }
+
+          if (existingByLabel.length > 0) {
+            // 🔄 Etiqueta já existe (re-entrada ou correção)
+            await db.update(inventory)
+              .set({
+                quantity: label.totalUnits, // ✅ Campo correto de labelAssociations
+                locationId: locationId,
+                status: "available",
+                updatedAt: new Date()
+              })
+              .where(eq(inventory.id, existingByLabel[0].id));
+          } else {
+            // ✨ Nova etiqueta entrando no estoque
+            await db.insert(inventory).values({
+              tenantId: activeTenantId,
+              productId: item.productId,
+              locationId: locationId,
+              batch: item.batch || "",
+              expiryDate: item.expiryDate,
+              uniqueCode: uniqueCode,
+              labelCode: label.labelCode, // 🔑 Identidade física da caixa
+              locationZone: 'REC',
+              quantity: label.totalUnits, // ✅ Campo correto de labelAssociations
+              reservedQuantity: 0,
+              status: "available",
+            });
+          }
         }
       }
 

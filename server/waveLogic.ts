@@ -243,6 +243,8 @@ export async function createWave(params: CreateWaveParams) {
   const pickingRule = tenant.pickingRule as "FIFO" | "FEFO" | "Direcionado";
 
   // 3. Buscar alocações dos pedidos (já criadas durante criação do pedido)
+  console.log("[createWave] Buscando alocações para pedidos:", params.orderIds);
+  
   const reservations = await db
     .select({
       pickingOrderId: pickingAllocations.pickingOrderId, // ID do pedido de origem
@@ -257,7 +259,7 @@ export async function createWave(params: CreateWaveParams) {
       expiryDate: pickingAllocations.expiryDate,
       unit: pickingOrderItems.unit, // Unidade do pedido original
       unitsPerBox: pickingOrderItems.unitsPerBox, // Unidades por caixa
-      labelCode: inventory.labelCode, // ✅ Código da etiqueta para rastreabilidade
+      labelCode: inventory.labelCode, // ✅ Código da etiqueta (pode ser null devido ao LEFT JOIN)
     })
     .from(pickingAllocations)
     .leftJoin(products, eq(pickingAllocations.productId, products.id))
@@ -287,20 +289,42 @@ export async function createWave(params: CreateWaveParams) {
 
   // 4. Transformar reservas em formato de allocatedItems SEM CONSOLIDAR
   // ✅ CRIAR UMA LINHA POR ETIQUETA (labelCode) para rastreabilidade completa
-  const allocatedItems = reservations.map(r => ({
-    pickingOrderId: r.pickingOrderId,
-    productId: r.productId,
-    productSku: r.productSku!,
-    productName: r.productName!,
-    allocatedQuantity: r.quantity,
-    locationId: r.locationId!,
-    locationCode: r.locationCode!,
-    batch: r.batch || undefined,
-    expiryDate: r.expiryDate || undefined,
-    unit: r.unit || "unit",
-    unitsPerBox: r.unitsPerBox || undefined,
-    labelCode: r.labelCode || undefined, // ✅ Código da etiqueta
-  }));
+  // 🛡️ VALIDAÇÃO DEFENSIVA: Filtrar registros com campos obrigatórios nulos
+  const allocatedItems = reservations
+    .filter(r => {
+      // Validar campos obrigatórios
+      if (!r.productSku || !r.productName || !r.locationId || !r.locationCode) {
+        console.warn("[createWave] Registro ignorado por campos nulos:", {
+          pickingOrderId: r.pickingOrderId,
+          productId: r.productId,
+          productSku: r.productSku,
+          productName: r.productName,
+          locationId: r.locationId,
+          locationCode: r.locationCode,
+        });
+        return false;
+      }
+      return true;
+    })
+    .map(r => ({
+      pickingOrderId: r.pickingOrderId,
+      productId: r.productId,
+      productSku: r.productSku!,
+      productName: r.productName!,
+      allocatedQuantity: r.quantity,
+      locationId: r.locationId!,
+      locationCode: r.locationCode!,
+      batch: r.batch || undefined,
+      expiryDate: r.expiryDate || undefined,
+      unit: r.unit || "unit",
+      unitsPerBox: r.unitsPerBox || undefined,
+      labelCode: r.labelCode || undefined, // ✅ Código da etiqueta
+    }));
+
+  // ✅ VALIDAÇÃO: Garantir que há itens válidos após filtro
+  if (allocatedItems.length === 0) {
+    throw new Error("Nenhum item válido encontrado para criar onda. Verifique se os produtos e endereços estão cadastrados corretamente.");
+  }
 
   // 5. Gerar número da onda
   const waveNumber = await generateWaveNumber();

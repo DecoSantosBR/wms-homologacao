@@ -363,6 +363,22 @@ export const receivingDivergences = mysqlTable("receivingDivergences", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+// Tabela de não-conformidades (NCG)
+export const nonConformities = mysqlTable("nonConformities", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(), // Multi-tenant
+  labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta com NCG
+  conferenceId: int("conferenceId").notNull(), // ID da conferência onde foi registrado
+  description: text("description").notNull(), // Descrição da não-conformidade
+  photoUrl: varchar("photoUrl", { length: 500 }), // URL da foto (opcional)
+  registeredBy: int("registeredBy").notNull(), // userId do operador
+  registeredAt: timestamp("registeredAt").defaultNow().notNull(),
+}, (table) => ({
+  labelCodeIdx: index("ncg_label_code_idx").on(table.labelCode),
+  conferenceIdx: index("ncg_conference_idx").on(table.conferenceId),
+  tenantIdIdx: index("ncg_tenant_id_idx").on(table.tenantId),
+}));
+
 export const divergenceApprovals = mysqlTable("divergenceApprovals", {
   id: int("id").autoincrement().primaryKey(),
   receivingOrderItemId: int("receivingOrderItemId").notNull(),
@@ -390,6 +406,7 @@ export const inventory = mysqlTable("inventory", {
   batch: varchar("batch", { length: 50 }),
   expiryDate: timestamp("expiryDate"),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  labelCode: varchar("labelCode", { length: 255 }), // ✅ Código da etiqueta (LPN) para rastreabilidade
   serialNumber: varchar("serialNumber", { length: 100 }),
   locationZone: varchar("locationZone", { length: 10 }), // Zona do endereço (EXP, REC, NCG, DEV, etc.)
   quantity: int("quantity").default(0).notNull(),
@@ -400,6 +417,7 @@ export const inventory = mysqlTable("inventory", {
 }, (table) => ({
   tenantProductIdx: index("tenant_product_idx").on(table.tenantId, table.productId),
   locationIdx: index("location_idx").on(table.locationId),
+  uniqueLabelIdx: uniqueIndex("unique_label_tenant_idx").on(table.labelCode, table.tenantId), // ✅ 1 LPN = 1 Inventory
 }));
 
 export const inventoryMovements = mysqlTable("inventoryMovements", {
@@ -691,6 +709,7 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   unitsPerBox: int("unitsPerBox").notNull(), // Quantidade de unidades por caixa
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
   status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no fluxo de recebimento
+  ncgStatus: mysqlEnum("ncgStatus", ["OK", "NCG"]).default("OK").notNull(), // Status de conformidade (OK ou Não-Conformidade)
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
 }, (table) => ({

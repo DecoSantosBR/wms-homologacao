@@ -3980,3 +3980,71 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar atualização de status em mutation finish (labelAssociations + receivingOrderItems)
 - [x] Popular waveId em pickingAllocations durante criação de onda
 
+
+
+## 🚨 ERRO AO GERAR ONDA - 26/02/2026
+
+### Problema
+- [ ] Erro 500 ao criar onda: "Cannot convert undefined or null to object"
+- Erro apareceu após remover consolidação e criar uma linha por etiqueta
+- Provável causa: Campo undefined ou JOIN retornando null
+
+### Impacto
+- Impossível criar ondas de picking
+- Fluxo de separação bloqueado
+
+
+## 🚨 ERRO CRÍTICO: METHOD_NOT_SUPPORTED ao criar onda - 26/02/2026
+
+### Problema
+- [ ] Erro 405 ao criar onda: "Unsupported GET-request to mutation procedure at path wave.create"
+- Frontend está fazendo GET em vez de POST
+- Precisa usar useMutation em vez de useQuery
+
+### Impacto
+- Impossível criar ondas de picking
+- Fluxo de separação bloqueado
+
+
+## 🐛 BUG: Impossível selecionar múltiplos lotes do mesmo SKU - 26/02/2026
+
+### Problema
+- [x] Sistema impede seleção do segundo lote quando já foi clicado em outro lote do mesmo SKU
+- Exemplo: 401460P (Lote: 22D08LB108) selecionado → 401460P (Lote: 22D10LB111) não pode ser clicado
+- Causa: Componente usava `productId` como chave única em vez de `receivingOrderItemId`
+
+### Correção Aplicada
+- [x] Linha 310 de CollectorReceiving.tsx: Trocado de `productId` para `receivingOrderItemId`
+- [x] Agora cada linha da ordem (productId + batch) é identificada unicamente pelo `id` da linha
+- [x] Suporta seleção de múltiplos lotes do mesmo SKU
+
+
+## 🔧 REGISTRO DE NCG (NÃO-CONFORMIDADE) - 26/02/2026
+
+### Backend - Schema e Tabelas
+- [x] Criar tabela nonConformities (id, labelCode, conferenceId, description, photoUrl, registeredBy, registeredAt, tenantId)
+- [x] Adicionar campo ncgStatus em labelAssociations ('OK' | 'NCG')
+- [x] Rodar pnpm db:push para aplicar migrações
+
+### Backend - Mutations
+- [x] Criar mutation registerNCG (labelCode, description, photoUrl opcional)
+- [x] Atualizar labelAssociations.ncgStatus para 'NCG'
+- [x] Salvar registro em nonConformities
+
+### Frontend - Modal de NCG
+- [ ] Criar componente RegisterNCGModal
+- [ ] Campo textarea para descrição da não-conformidade
+- [ ] Botão de upload de foto (opcional)
+- [ ] Botão "Confirmar" que chama mutation registerNCG
+
+### Frontend - Interface de Conferência
+- [ ] Adicionar botão "Registrar NCG" ao lado de "Associar"
+- [ ] Ao clicar, abrir RegisterNCGModal
+- [ ] Após confirmar NCG, atualizar lista de itens conferidos
+
+### Lógica de Finalização
+- [ ] Calcular addressedQuantity = total de volumes com ncgStatus='OK'
+- [ ] Calcular blockedQuantity = total de volumes com ncgStatus='NCG'
+- [ ] Alocar addressedQuantity em endereço REC (status: available)
+- [ ] Alocar blockedQuantity em endereço NCG (status: blocked)
+- [ ] Atualizar receivingOrderItems com addressedQuantity e blockedQuantity

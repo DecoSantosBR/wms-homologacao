@@ -24,6 +24,7 @@ export function CollectorReceiving() {
   const [pendingLabelCode, setPendingLabelCode] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [selectedReceivingOrderItemId, setSelectedReceivingOrderItemId] = useState<number | null>(null); // ✅ ID da linha da ordem
+  const [selectedUniqueCode, setSelectedUniqueCode] = useState<string>(""); // ✅ SKU+Lote como chave única
   const [batch, setBatch] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [unitsPerBox, setUnitsPerBox] = useState<number>(1);
@@ -86,13 +87,33 @@ export function CollectorReceiving() {
         
         if (orderItems && orderItems.length === 1) {
           setSelectedProductId(orderItems[0].productId);
+          setSelectedReceivingOrderItemId(orderItems[0].id);
+          setSelectedUniqueCode(orderItems[0].uniqueCode);
         }
       } else {
         // ✅ PROPAGAR receivingOrderItemId para o estado (fluxo automático)
         if (data.association) {
+          // ✅ Gerar uniqueCode (SKU + Lote)
+          const uniqueCode = `${data.association.productSku}-${data.association.batch || ""}`;
+          
+          console.log("🔍 [readLabel onSuccess] DADOS RECEBIDOS:", {
+            receivingOrderItemId: data.association.receivingOrderItemId,
+            productId: data.association.productId,
+            productName: data.association.productName,
+            batch: data.association.batch,
+            uniqueCode,
+          });
+          
           setSelectedReceivingOrderItemId(data.association.receivingOrderItemId || null);
           setSelectedProductId(data.association.productId);
+          setSelectedUniqueCode(uniqueCode); // ✅ Seta uniqueCode para sincronizar ProductCombobox
           setBatch(data.association.batch || "");
+          
+          console.log("🔍 [readLabel onSuccess] ESTADOS SETADOS:", {
+            selectedReceivingOrderItemId: data.association.receivingOrderItemId,
+            selectedProductId: data.association.productId,
+            selectedUniqueCode: uniqueCode,
+          });
           
           // Salvar último item bipado para undo
           setLastSuccessfulItem({
@@ -100,8 +121,6 @@ export function CollectorReceiving() {
             batch: data.association.batch || "",
             scannedCode: labelCode,
           });
-          
-          console.log("✅ [readLabel onSuccess] receivingOrderItemId propagado:", data.association.receivingOrderItemId);
         }
         
         toast.success("Etiqueta lida!", {
@@ -127,7 +146,8 @@ export function CollectorReceiving() {
       setShowAssociationDialog(false);
       setPendingLabelCode("");
       setSelectedProductId(null);
-      setSelectedReceivingOrderItemId(null); // ✅ Reset ID da linha
+      setSelectedReceivingOrderItemId(null);
+      setSelectedUniqueCode(""); // ✅ Reset uniqueCode
       setBatch("");
       setExpiryDate("");
       setUnitsPerBox(1);
@@ -301,20 +321,17 @@ export function CollectorReceiving() {
                 <Label>Produto *</Label>
                 <ProductCombobox
                   products={orderItems?.map((item: any) => ({
-                    // ✅ Usar item.id (receivingOrderItemId) como chave única, não productId
-                    id: item.id.toString(),
-                    sku: item.productSku,
-                    description: `${item.productDescription} (Lote: ${item.batch || 'S/L'})`,
-                  }))}
-                  // ✅ Mapeamento REVERSO: busca qual linha corresponde ao productId selecionado
-                  value={orderItems?.find(item => item.productId === selectedProductId)?.id.toString() || ""}
-                  onValueChange={(v) => {
-                    // Localizamos a linha da ordem pelo ID (v) e extraímos o productId real
-                    const selectedLine = orderItems?.find((item: any) => item.id.toString() === v);
+                    id: item.uniqueCode, // ✅ uniqueCode (SKU+Lote) como chave única
+                    sku: item.productSku || 'N/A',
+                    description: `${item.productDescription || 'Sem descrição'} - Lote: ${item.batch || 'S/L'}`,
+                  })) || []}
+                  value={selectedUniqueCode}
+                  onValueChange={(uniqueCode) => {
+                    const selectedLine = orderItems?.find((item: any) => item.uniqueCode === uniqueCode);
                     if (selectedLine) {
                       setSelectedProductId(selectedLine.productId);
-                      setSelectedReceivingOrderItemId(selectedLine.id); // ✅ Salva ID da linha
-                      // ✅ Dica: Já preencha o lote se ele vier no item da ordem!
+                      setSelectedReceivingOrderItemId(selectedLine.id);
+                      setSelectedUniqueCode(uniqueCode);
                       if (selectedLine.batch) setBatch(selectedLine.batch);
                     }
                   }}

@@ -922,14 +922,45 @@ export const appRouter = router({
               .from(products)
               .where(eq(products.id, item.productId))
               .limit(1);
-            return {
+            
+            console.log('🔍 [getItems] item:', {
+              id: item.id,
+              productId: item.productId,
+              uniqueCode: item.uniqueCode,
+              batch: item.batch,
+            });
+            console.log('🔍 [getItems] product:', product[0]);
+            
+            const result = {
               ...item,
               productSku: product[0]?.sku || null,
               productDescription: product[0]?.description || null,
               expectedGtin: product[0]?.gtin || null,
             };
+            
+            console.log('🔍 [getItems] result:', {
+              uniqueCode: result.uniqueCode,
+              productSku: result.productSku,
+              productDescription: result.productDescription,
+            });
+            
+            return result;
           })
         );
+        
+        console.log('🔍 [getItems] FINAL itemsWithProducts:', itemsWithProducts.map(i => ({
+          uniqueCode: i.uniqueCode,
+          productSku: i.productSku,
+          productDescription: i.productDescription,
+        })));
+        
+        console.table(itemsWithProducts.map(i => ({
+          id: i.id,
+          uniqueCode: i.uniqueCode,
+          productSku: i.productSku,
+          productDescription: i.productDescription,
+          batch: i.batch,
+        })));
         
         return itemsWithProducts;
       }),
