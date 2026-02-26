@@ -3742,3 +3742,31 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Resetar `receivingOrders.status = 'scheduled'` (não 'pending'!)
 - [x] Limpar `blindConferenceItems` e `blindConferenceSessions`
 - [x] Limpar `labelReadings`
+
+## 🐛 CORREÇÃO - Sintaxe SQL de incremento em receivingOrderItems - 26/02/2026
+
+**Erro:** `Failed query: set receivedQuantity = receivingOrderItems.receivedQuantity + ?`
+
+**Causa:** Referência ambígua à coluna no UPDATE (MySQL rejeita `tabela.coluna` dentro do SET)
+
+**Correção necessária:**
+- [x] Alterar `sql\`${receivingOrderItems.receivedQuantity} + ${value}\`` para `sql\`receivedQuantity + ${value}\``
+- [x] Aplicar correção em `readLabel` (linha 207)
+- [x] Aplicar correção em `associateLabel` (linha 366)
+- [ ] Testar associação de etiqueta
+
+## 🔧 FUNCIONALIDADE - Busca automática de data de validade do XML - 26/02/2026
+
+**Requisito:** Durante associação de etiqueta, buscar `expiryDate` do `receivingOrderItems` (XML da NF-e) e preencher automaticamente
+
+**Implementação:**
+- [x] Backend: Criar query `getExpiryDateFromXML` (linha 784-834)
+  - Recebe SKU + Lote
+  - Gera uniqueCode
+  - Busca receivingOrderItems por uniqueCode + tenantId
+  - Retorna expiryDate + expectedQuantity
+- [x] Frontend: Chamar query quando lote é digitado (onChange linha 304-333)
+- [x] Frontend: Preencher campo de validade automaticamente
+- [x] Toast informativo: "Data de validade preenchida automaticamente"
+- [x] Usuário pode confirmar ou alterar a data se necessário
+- [ ] Testar fluxo completo de associação

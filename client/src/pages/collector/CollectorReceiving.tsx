@@ -301,7 +301,36 @@ export function CollectorReceiving() {
                   <Label>Lote</Label>
                   <Input
                     value={batch}
-                    onChange={(e) => setBatch(e.target.value)}
+                    onChange={async (e) => {
+                      const newBatch = e.target.value;
+                      setBatch(newBatch);
+                      
+                      // Busca automática de expiryDate quando lote é digitado
+                      if (newBatch && selectedProductId) {
+                        const selectedProduct = orderItems?.find((item: any) => item.productId === selectedProductId);
+                        if (selectedProduct?.productSku) {
+                          try {
+                            const result = await trpc.blindConference.getExpiryDateFromXML.query({
+                              sku: selectedProduct.productSku,
+                              batch: newBatch,
+                            });
+                            
+                            if (result.found && result.expiryDate) {
+                              // Formata data para yyyy-MM-dd
+                              const date = new Date(result.expiryDate);
+                              const formatted = date.toISOString().split('T')[0];
+                              setExpiryDate(formatted);
+                              
+                              toast.info("Data de validade preenchida automaticamente", {
+                                description: `Encontrado no XML da NF-e: ${formatted}`,
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Erro ao buscar data de validade:", error);
+                          }
+                        }
+                      }
+                    }}
                     placeholder="Lote"
                     className="h-12 text-base"
                   />

@@ -201,13 +201,13 @@ export const blindConferenceRouter = router({
         const uniqueCode = getUniqueCode(productForSync[0].sku, labelData.batch || "");
 
         // Atualiza receivingOrderItems com labelCode e quantidade
-        await db.update(receivingOrderItems)
-          .set({
-            labelCode: input.labelCode,
-            receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${labelData.unitsPerBox}`,
-            status: 'receiving',
-            updatedAt: new Date(),
-          })
+      await db.update(receivingOrderItems)
+        .set({
+          labelCode: input.labelCode,
+          receivedQuantity: sql`receivedQuantity + ${unitsPerBox}`,
+          status: 'receiving',
+          updatedAt: new Date(),
+        })
           .where(
             and(
               eq(receivingOrderItems.uniqueCode, uniqueCode),
@@ -363,7 +363,7 @@ export const blindConferenceRouter = router({
       await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
-          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${actualUnitsReceived}`,
+          receivedQuantity: sql`receivedQuantity + ${actualUnitsReceived}`,
           status: 'receiving',
           updatedAt: new Date(),
         })
@@ -778,8 +778,64 @@ export const blindConferenceRouter = router({
     }),
 
   /**
-   * 8. Fechar Ordem de Recebimento (NOVO)
-   * Valida divergências, calcula saldos, ativa etiquetas e finaliza ordem
+   * 7. Buscar Data de Validade do XML (getExpiryDateFromXML)
+   * Busca expiryDate de receivingOrderItems por SKU+Lote
+   */
+  getExpiryDateFromXML: protectedProcedure
+    .input(z.object({
+      sku: z.string(),
+      batch: z.string(),
+      tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Lógica de Admin Global
+      const isGlobalAdmin = ctx.user?.role === 'admin' && ctx.user?.tenantId === 1;
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user?.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      // Gera uniqueCode (SKU+Lote)
+      const uniqueCode = getUniqueCode(input.sku, input.batch);
+
+      // Busca item da NF-e por uniqueCode
+      const item = await db.select({
+        expiryDate: receivingOrderItems.expiryDate,
+        expectedQuantity: receivingOrderItems.expectedQuantity,
+      })
+        .from(receivingOrderItems)
+        .where(
+          and(
+            eq(receivingOrderItems.uniqueCode, uniqueCode),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+
+      if (item.length === 0) {
+        return {
+          found: false,
+          expiryDate: null,
+          expectedQuantity: null,
+        };
+      }
+
+      return {
+        found: true,
+        expiryDate: item[0].expiryDate,
+        expectedQuantity: item[0].expectedQuantity,
+      };
+    }),
+
+  /**
+   * 8. Fechar Ordem de Recebimento (closeReceivingOrder)
+   * Valida divergências, atualiza saldos e ativa etiquetas (RECEIVING → AVAILABLE)
    */
   closeReceivingOrder: protectedProcedure
     .input(z.object({
