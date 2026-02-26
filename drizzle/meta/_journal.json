@@ -127,6 +127,13 @@
       "when": 1772144171554,
       "tag": "0017_panoramic_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1772145515179,
+      "tag": "0018_classy_mathemanic",
+      "breakpoints": true
     }
   ]
 }

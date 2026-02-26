@@ -4130,3 +4130,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Corrigir query em `registerNCG`: usar `zone = 'NCG'` em vez de `code = 'NCG'`
 - [ ] Testar registro de NCG após correção
+
+
+## 🎯 IMPLEMENTAÇÃO: Campo zoneCode em warehouseLocations - 26/02/2026 ✅ CONCLUÍDO
+
+**Objetivo:** Adicionar campo `zoneCode` para facilitar busca de endereços por zona (NCG, REC, EXP, etc.)
+
+- [x] Adicionar coluna `zoneCode` em `warehouseLocations` (schema)
+- [x] Gerar migration (0018_classy_mathemanic.sql)
+- [x] Atualizar query em `registerNCG` para usar `zoneCode = 'NCG'`
+- [ ] Criar endereço NCG no banco: `INSERT INTO warehouseLocations (code, name, zoneCode, zoneId, tenantId, status) VALUES ('NCG-001', 'Não Conformidade', 'NCG', 1, 1, 'blocked')`
+- [ ] Testar registro de NCG com novo campo
