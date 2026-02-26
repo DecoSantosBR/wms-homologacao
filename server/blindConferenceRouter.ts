@@ -190,6 +190,32 @@ export const blindConferenceRouter = router({
         unitsAdded: labelData.unitsPerBox,
       });
 
+      // 3.5. SINCRONIZAR COM receivingOrderItems (Atualização Automática)
+      // Busca produto para gerar uniqueCode
+      const productForSync = await db.select({ sku: products.sku })
+        .from(products)
+        .where(eq(products.id, labelData.productId))
+        .limit(1);
+
+      if (productForSync[0]) {
+        const uniqueCode = getUniqueCode(productForSync[0].sku, labelData.batch || "");
+
+        // Atualiza receivingOrderItems com labelCode e quantidade
+        await db.update(receivingOrderItems)
+          .set({
+            labelCode: input.labelCode,
+            receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${labelData.unitsPerBox}`,
+            status: 'receiving',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(receivingOrderItems.uniqueCode, uniqueCode),
+              eq(receivingOrderItems.tenantId, activeTenantId)
+            )
+          );
+      }
+
       // 4. BUSCAR PROGRESSO ATUAL DO ITEM NA CONFERÊNCIA
       const conferenceItem = await db.select()
         .from(blindConferenceItems)
@@ -332,6 +358,21 @@ export const blindConferenceRouter = router({
           .set({ unitsPerBox: input.unitsPerBox })
           .where(eq(products.id, input.productId));
       }
+
+      // 4.5. SINCRONIZAR COM receivingOrderItems (Atualização Automática)
+      await db.update(receivingOrderItems)
+        .set({
+          labelCode: input.labelCode,
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${actualUnitsReceived}`,
+          status: 'receiving',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(receivingOrderItems.uniqueCode, uniqueCode),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        );
 
       return {
         success: true,

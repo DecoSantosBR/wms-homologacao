@@ -358,7 +358,32 @@ export const stockRouter = router({
         labelBatch = labelAssoc[0].batch || null;
         labelUnitsPerBox = labelAssoc[0].unitsPerBox;
       } else {
-        // Etiqueta não encontrada - tentar buscar diretamente por SKU (fallback)
+        // Etiqueta não encontrada com status AVAILABLE
+        // Verificar se existe com outro status
+        const labelAnyStatus = await dbConn
+          .select({
+            status: labelAssociations.status,
+            productId: labelAssociations.productId,
+          })
+          .from(labelAssociations)
+          .where(eq(labelAssociations.labelCode, input.code))
+          .limit(1);
+
+        if (labelAnyStatus[0]) {
+          // Etiqueta existe mas não está AVAILABLE
+          const status = labelAnyStatus[0].status;
+          if (status === 'RECEIVING') {
+            throw new Error(`Produto aguardando liberação de recebimento (código: ${input.code})`);
+          } else if (status === 'BLOCKED') {
+            throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
+          } else if (status === 'EXPIRED') {
+            throw new Error(`Produto vencido (código: ${input.code})`);
+          } else {
+            throw new Error(`Produto indisponível (status: ${status}, código: ${input.code})`);
+          }
+        }
+
+        // Etiqueta não existe - tentar buscar diretamente por SKU (fallback)
         const productBySku = await dbConn
           .select({ id: products.id })
           .from(products)

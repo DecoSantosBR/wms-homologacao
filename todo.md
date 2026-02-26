@@ -3698,3 +3698,47 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
   2. Buscar endereço em `warehouseLocations` por `zoneId` + `tenantId`
 - [x] Evitar hardcoded IDs (portabilidade + multi-tenancy)
 - [ ] Testar finalização de conferência
+
+## 🔧 MELHORIA - Mensagem de erro específica em stock.getProductByCode - 25/02/2026
+
+- [x] Implementar busca em 2 etapas: primeiro AVAILABLE, depois qualquer status
+- [x] Diferenciar mensagens de erro:
+  - 🔴 "Etiqueta não encontrada" (não existe no banco)
+  - 🟡 "Produto aguardando liberação de recebimento" (status: RECEIVING)
+  - 🟠 "Produto bloqueado - avaria ou quarentena" (status: BLOCKED)
+  - ⚫ "Produto vencido" (status: EXPIRED)
+- [ ] Testar movimentação de estoque após correção
+
+## 🚨 CORREÇÃO CRÍTICA - receivingOrderItems não atualiza durante conferência - 26/02/2026
+
+**Problema identificado:**
+- ✅ Ordem finalizada (`receivingOrders.status = 'completed'`)
+- ❌ Itens não atualizados (`receivingOrderItems.status = 'pending'`)
+- ❌ `labelCode` vazio (não vincula etiqueta ao item da NF-e)
+- ❌ `receivedQuantity = 0` (não registra quantidade conferida)
+
+**Causa raiz:**
+- Conferência cega registra apenas em `blindConferenceItems`
+- Não sincroniza com `receivingOrderItems` durante bipagem
+- Mutation `finish` não encontra dados para processar
+
+**Correção necessária:**
+- [x] Atualizar `receivingOrderItems.labelCode` durante bipagem (readLabel linha 204 + associateLabel linha 363)
+- [x] Atualizar `receivingOrderItems.receivedQuantity` em tempo real (incremento automático via SQL)
+- [x] Atualizar `receivingOrderItems.status` para 'receiving' durante conferência
+- [ ] Mutation `finish` deve consolidar dados e mudar status para 'completed'
+- [ ] Testar fluxo completo: importação → conferência → finalização
+
+## 🔄 RESET - Retornar banco ao estado inicial - 26/02/2026
+
+- [x] Excluir etiquetas criadas (`DELETE FROM labelAssociations WHERE tenantId = 1`)
+- [x] Excluir produtos cadastrados (`DELETE FROM products WHERE id >= 90001`)
+- [x] Resetar `receivingOrderItems`:
+  - `status = 'pending'`
+  - `receivedQuantity = 0`
+  - `labelCode = NULL`
+  - `blockedQuantity = 0`
+  - `addressedQuantity = 0`
+- [x] Resetar `receivingOrders.status = 'scheduled'` (não 'pending'!)
+- [x] Limpar `blindConferenceItems` e `blindConferenceSessions`
+- [x] Limpar `labelReadings`
