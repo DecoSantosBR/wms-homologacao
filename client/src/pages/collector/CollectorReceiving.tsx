@@ -14,7 +14,7 @@ import { ProductCombobox } from "../../components/ProductCombobox";
 import { RegisterNCGModal } from "../../components/RegisterNCGModal";
 
 export function CollectorReceiving() {
-  const [step, setStep] = useState<"select" | "conference">("select");
+  const [step, setStep] = useState<"select" | "conference" | "ncg-scan">("select");
   const [showScanner, setShowScanner] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [conferenceId, setConferenceId] = useState<number | null>(null);
@@ -38,12 +38,15 @@ export function CollectorReceiving() {
     scannedCode: string;
   } | null>(null);
   
-  // Modal de NCG (Não Conformidade)
+  // NCG (Não Conformidade)
+  const [ncgLabelCode, setNcgLabelCode] = useState("");
+  const [ncgLabelExists, setNcgLabelExists] = useState(false);
   const [isNCGModalOpen, setIsNCGModalOpen] = useState(false);
   const [selectedItemForNCG, setSelectedItemForNCG] = useState<{
     receivingOrderItemId: number;
     labelCode: string;
     maxQuantity: number;
+    labelExists: boolean;
   } | null>(null);
   
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -273,6 +276,59 @@ export function CollectorReceiving() {
     });
   };
 
+  const handleNcgLabelScan = async () => {
+    if (!ncgLabelCode.trim()) {
+      toast.error("Digite ou escaneie um código");
+      return;
+    }
+
+    if (!selectedOrderId) {
+      toast.error("Ordem não selecionada");
+      return;
+    }
+
+    try {
+      // Verificar se etiqueta existe em labelAssociations
+      const response = await fetch(
+        `/api/trpc/blindConference.checkLabelExists?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { labelCode: ncgLabelCode.trim() } }))}`,
+        { credentials: 'include' }
+      );
+      
+      const result = await response.json();
+      const labelData = result[0]?.result?.data;
+
+      if (labelData?.exists) {
+        // Etiqueta existe: abrir modal sem solicitar unitsPerBox
+        setSelectedItemForNCG({
+          receivingOrderItemId: labelData.receivingOrderItemId,
+          labelCode: ncgLabelCode.trim(),
+          maxQuantity: labelData.maxQuantity || 999999,
+          labelExists: true,
+        });
+        setIsNCGModalOpen(true);
+      } else {
+        // Etiqueta NÃO existe: abrir modal solicitando unitsPerBox
+        // Buscar primeiro item da ordem como fallback
+        const firstItem = orderItems?.[0];
+        if (!firstItem) {
+          toast.error("Nenhum item encontrado na ordem");
+          return;
+        }
+
+        setSelectedItemForNCG({
+          receivingOrderItemId: firstItem.id,
+          labelCode: ncgLabelCode.trim(),
+          maxQuantity: firstItem.expectedQuantity || 999999,
+          labelExists: false,
+        });
+        setIsNCGModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar etiqueta:", error);
+      toast.error("Erro ao verificar etiqueta");
+    }
+  };
+
   const handleUndo = () => {
     if (!conferenceId || !lastSuccessfulItem) {
       toast.error("Nenhum item para desfazer");
@@ -500,43 +556,14 @@ export function CollectorReceiving() {
             </CardContent>
           </Card>
 
-          {/* Lista de Produtos da Ordem */}
-          {selectedOrderId && orderItems && orderItems.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <Label className="text-lg font-semibold mb-3 block">Produtos da Ordem</Label>
-                <div className="space-y-2">
-                  {orderItems.map((item: any) => (
-                    <div key={item.id} className="border rounded-lg p-3">
-                      <div className="font-medium text-sm">{item.productDescription}</div>
-                      <div className="text-xs text-gray-600 mb-2">
-                        SKU: {item.productSku} | Lote: {item.batch || 'S/L'}
-                      </div>
-                      <div className="flex justify-between items-center text-sm mb-2">
-                        <span>Esperado: {item.expectedQuantity} un.</span>
-                        <span className="text-gray-600">Recebido: {item.receivedQuantity || 0} un.</span>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedItemForNCG({
-                            receivingOrderItemId: item.id,
-                            labelCode: '', // Será gerado automaticamente
-                            maxQuantity: item.expectedQuantity
-                          });
-                          setIsNCGModalOpen(true);
-                        }}
-                        className="w-full"
-                      >
-                        Registrar NCG
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Button
+            variant="destructive"
+            onClick={() => setStep("ncg-scan")}
+            disabled={!selectedOrderId}
+            className="w-full h-14 text-lg mb-4"
+          >
+            Registrar NCG
+          </Button>
 
           <Button
             onClick={handleStartConference}
@@ -551,19 +578,88 @@ export function CollectorReceiving() {
             Iniciar Conferência
           </Button>
         </div>
+      </CollectorLayout>
+    );
+  }
 
-        {/* Modal de Registro de NCG (tela de seleção) */}
+  // Tela de scan de etiqueta para NCG
+  if (step === "ncg-scan") {
+    return (
+      <CollectorLayout title="Registrar NCG">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <Label className="text-base font-semibold">Realize a leitura da etiqueta do produto</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={ncgLabelCode}
+                  onChange={(e) => setNcgLabelCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && ncgLabelCode.trim()) {
+                      handleNcgLabelScan();
+                    }
+                  }}
+                  placeholder="Código da etiqueta..."
+                  className="h-12 text-base"
+                  inputMode="numeric"
+                />
+                <Button
+                  onClick={handleNcgLabelScan}
+                  disabled={!ncgLabelCode.trim()}
+                  className="h-12 px-6"
+                >
+                  Ler
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowScanner(true)}
+                className="w-full h-12"
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                Escanear com Câmera
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStep("select");
+              setNcgLabelCode("");
+            }}
+            className="w-full h-12"
+          >
+            Voltar
+          </Button>
+        </div>
+
+        {/* Scanner de código de barras */}
+        {showScanner && (
+          <BarcodeScanner
+            onScan={(code) => {
+              setNcgLabelCode(code);
+              setShowScanner(false);
+              handleNcgLabelScan();
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+
+        {/* Modal de Registro de NCG */}
         {isNCGModalOpen && selectedItemForNCG && (
           <RegisterNCGModal
             isOpen={isNCGModalOpen}
             onClose={() => {
               setIsNCGModalOpen(false);
               setSelectedItemForNCG(null);
+              setStep("select"); // Volta para tela inicial
             }}
-            conferenceId={conferenceId || 0} // Pode ser 0 se ainda não iniciou conferência
+            conferenceId={conferenceId || 0}
             receivingOrderItemId={selectedItemForNCG.receivingOrderItemId}
             labelCode={selectedItemForNCG.labelCode}
             maxQuantity={selectedItemForNCG.maxQuantity}
+            labelExists={selectedItemForNCG.labelExists}
           />
         )}
       </CollectorLayout>

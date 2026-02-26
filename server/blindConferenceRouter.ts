@@ -582,6 +582,7 @@ export const blindConferenceRouter = router({
       quantity: z.number().positive("Quantidade deve ser maior que zero"), // Quantidade bloqueada
       description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"), // Motivo da NCG
       photoUrl: z.string().optional(),
+      unitsPerBox: z.number().positive().optional(), // Obrigatório se etiqueta não existe
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
@@ -652,13 +653,17 @@ export const blindConferenceRouter = router({
       // Se não existir, criar nova etiqueta
       if (!existingLabel) {
         console.log("[registerNCG] Criando nova etiqueta:", labelCode);
+        
+        // Usar unitsPerBox fornecido pelo usuário, senão usar do orderItem
+        const finalUnitsPerBox = input.unitsPerBox || orderItem.unitsPerBox || 1;
+        
         await db.insert(labelAssociations).values({
           tenantId: activeTenantId,
           labelCode: labelCode,
           productId: orderItem.productId,
           batch: orderItem.batch || null,
           expiryDate: orderItem.expiryDate || null,
-          unitsPerBox: orderItem.unitsPerBox || 1,
+          unitsPerBox: finalUnitsPerBox,
           status: "BLOCKED", // Já nasce bloqueada (NCG)
           scannedAt: new Date(),
         });

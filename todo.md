@@ -4157,3 +4157,24 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Manter lógica de criação de inventory em NCG e atualização de blockedQuantity
 - [x] Adicionar modal NCG na tela de seleção (antes da conferência)
 - [ ] Testar fluxo: selecionar ordem → clicar "Registrar NCG" em produto → preencher descrição/foto → confirmar
+
+
+## 🔄 IMPLEMENTAÇÃO FINAL: Fluxo NCG com Scan e Validação - 26/02/2026
+
+**Especificação Completa:**
+1. UM único botão "Registrar NCG" na tela de conferência
+2. Ao clicar: abre tela de leitura de etiqueta (similar ao Stage)
+3. Após bipar etiqueta:
+   - Se etiqueta NÃO existe em labelAssociations: solicitar **unitsPerBox** + quantidade + descrição + foto
+   - Se etiqueta existe: solicitar apenas quantidade + descrição + foto
+4. Backend cria etiqueta automaticamente se necessário (com unitsPerBox informado)
+5. Após confirmar: retorna para tela inicial de recebimento
+
+**Implementação:**
+- [x] Remover lista de produtos com botões NCG (implementação anterior incorreta)
+- [x] Adicionar botão único "Registrar NCG" na tela de seleção de ordem
+- [x] Criar step="ncg-scan" com scanner de etiqueta
+- [x] Atualizar RegisterNCGModal para solicitar unitsPerBox condicionalmente
+- [x] Atualizar backend registerNCG para aceitar unitsPerBox no input
+- [x] Criar procedure checkLabelExists para verificar se etiqueta existe
+- [ ] Testar fluxo: botão → scan → modal (com/sem unitsPerBox) → confirmar → voltar

@@ -22,6 +22,7 @@ const ncgSchema = z.object({
   quantity: z.number().positive('Quantidade deve ser positiva'),
   description: z.string().min(10, 'Descrição deve ter no mínimo 10 caracteres'),
   photoUrl: z.string().optional(),
+  unitsPerBox: z.number().positive('Unidades por caixa deve ser positiva').optional(),
 });
 
 type NCGFormData = z.infer<typeof ncgSchema>;
@@ -33,6 +34,7 @@ interface RegisterNCGModalProps {
   receivingOrderItemId: number | null;
   labelCode?: string;
   maxQuantity?: number; // Para limitar a quantidade bloqueada à quantidade recebida
+  labelExists?: boolean; // Se etiqueta já existe em labelAssociations
 }
 
 export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
@@ -42,6 +44,7 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
   receivingOrderItemId,
   labelCode = '',
   maxQuantity = 1,
+  labelExists = false,
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -94,6 +97,7 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
       quantity: data.quantity,
       description: data.description,
       photoUrl: data.photoUrl,
+      unitsPerBox: data.unitsPerBox, // Enviado apenas se etiqueta não existe
     });
   };
 
@@ -152,29 +156,51 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Label Code e Quantidade (Geralmente preenchidos ao bipar) */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Label Code */}
+          <div className="space-y-1">
+            <Label htmlFor="labelCode">Etiqueta/LPN</Label>
+            <Input
+              id="labelCode"
+              {...register('labelCode')}
+              disabled
+              className="bg-muted font-mono"
+            />
+            {errors.labelCode && <span className="text-xs text-red-500">{errors.labelCode.message}</span>}
+          </div>
+
+          {/* Unidades por Caixa (apenas se etiqueta NÃO existe) */}
+          {!labelExists && (
             <div className="space-y-1">
-              <Label htmlFor="labelCode">Etiqueta/LPN</Label>
-              <Input
-                id="labelCode"
-                {...register('labelCode')}
-                disabled
-                className="bg-muted font-mono"
-              />
-              {errors.labelCode && <span className="text-xs text-red-500">{errors.labelCode.message}</span>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="quantity">Quantidade</Label>
+              <Label htmlFor="unitsPerBox">Unidades por Caixa *</Label>
               <Controller
                 control={control}
-                name="quantity"
+                name="unitsPerBox"
                 render={({ field }) => (
                   <Input
-                    id="quantity"
+                    id="unitsPerBox"
                     type="number"
                     {...field}
                     onChange={(e) => field.onChange(Number(e.target.value))}
+                    placeholder="Ex: 10"
+                  />
+                )}
+              />
+              {errors.unitsPerBox && <span className="text-xs text-red-500">{errors.unitsPerBox.message}</span>}
+            </div>
+          )}
+
+          {/* Quantidade */}
+          <div className="space-y-1">
+            <Label htmlFor="quantity">Quantidade Avariada *</Label>
+            <Controller
+              control={control}
+              name="quantity"
+              render={({ field }) => (
+                <Input
+                  id="quantity"
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
                     max={maxQuantity}
                     min={1}
                     className="font-bold text-center"
@@ -183,7 +209,6 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
               />
               {errors.quantity && <span className="text-xs text-red-500">{errors.quantity.message}</span>}
             </div>
-          </div>
 
           {/* Motivo da Não Conformidade (Textarea) */}
           <div className="space-y-1">
