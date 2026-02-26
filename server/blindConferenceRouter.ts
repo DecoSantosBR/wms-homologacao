@@ -205,7 +205,7 @@ export const blindConferenceRouter = router({
         .set({
           labelCode: input.labelCode,
           // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
-          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${unitsPerBox}`,
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${labelData.unitsPerBox}`,
           status: 'receiving',
           updatedAt: new Date(),
         })
@@ -291,7 +291,9 @@ export const blindConferenceRouter = router({
       }
 
       const productSku = product[0].sku;
+      console.log("[associateLabel] DEBUG:", { productSku, batch: input.batch, batchType: typeof input.batch });
       const uniqueCode = getUniqueCode(productSku, input.batch);
+      console.log("[associateLabel] uniqueCode gerado:", uniqueCode);
 
       const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox;
 
@@ -361,7 +363,25 @@ export const blindConferenceRouter = router({
       }
 
       // 4.5. SINCRONIZAR COM receivingOrderItems (Atualização Automática)
-      await db.update(receivingOrderItems)
+      // DEBUG: Verificar se linha existe antes do UPDATE
+      const existingItem = await db.select()
+        .from(receivingOrderItems)
+        .where(
+          and(
+            eq(receivingOrderItems.uniqueCode, uniqueCode),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+      
+      console.log("[associateLabel] Item encontrado?", existingItem.length > 0);
+      if (existingItem.length > 0) {
+        console.log("[associateLabel] Item existente:", existingItem[0]);
+      } else {
+        console.error("[associateLabel] ERRO: Nenhum item encontrado com uniqueCode:", uniqueCode);
+      }
+      
+      const updateResult = await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
           // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
@@ -375,6 +395,9 @@ export const blindConferenceRouter = router({
             eq(receivingOrderItems.tenantId, activeTenantId)
           )
         );
+      
+      console.log("[associateLabel] Update result:", updateResult);
+      console.log("[associateLabel] Rows affected:", updateResult.rowsAffected || 0);
 
       return {
         success: true,
@@ -878,6 +901,17 @@ export const blindConferenceRouter = router({
 
         if (items.length === 0) {
           throw new Error("Ordem de recebimento não possui itens");
+        }
+
+        // ✅ VALIDAÇÃO: Impedir fechamento se nenhum item foi conferido
+        const totalReceived = items.reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
+        console.log("[closeReceivingOrder] Total recebido:", totalReceived);
+        
+        if (totalReceived === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Não é possível finalizar uma ordem sem nenhum item conferido. Verifique se as etiquetas foram associadas corretamente."
+          });
         }
 
         const divergences: string[] = [];

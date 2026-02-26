@@ -3814,3 +3814,25 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Solução: Usar item.id (receivingOrderItemId) como chave única
 - [x] Implementado mapeamento reverso no onValueChange para sincronizar com selectedProductId
 
+
+## 🐛 ERROS CRÍTICOS CONFERÊNCIA CEGA - 26/02/2026 02:15
+
+### 1. unitsPerBox is not defined (readLabel)
+- [x] Erro: `TRPCClientError: unitsPerBox is not defined`
+- [x] Localização: blindConferenceRouter.ts - mutation readLabel (linha 208)
+- [x] Causa: Variável `unitsPerBox` não existia no escopo (deveria ser `labelData.unitsPerBox`)
+- [x] Solução: Corrigido para `sql\`${receivingOrderItems.receivedQuantity} + ${labelData.unitsPerBox}\``
+
+### 2. Erro SQL persiste (associateLabel)
+- [x] Erro: `Failed query: update receivingOrderItems set receivedQuantity = ...`
+- [x] Localização: blindConferenceRouter.ts - mutation associateLabel
+- [x] Causa: WHERE clause não encontrava linha (uniqueCode gerado não batia com banco)
+- [x] Solução: Adicionados logs de debug para investigar batch/uniqueCode em tempo real
+- [x] Logs adicionados: input.batch, uniqueCode gerado, item existente, rows affected
+
+### 3. Fechamento permite ordem vazia
+- [x] Problema: Sistema permite finalizar recebimento mesmo com erros
+- [x] Resultado: Estoque zerado apesar de conferência registrada
+- [x] Solução: Adicionada validação em closeReceivingOrder (linha 906-915)
+- [x] Validação: `if (totalReceived === 0) throw BAD_REQUEST`
+
