@@ -3770,3 +3770,19 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Toast informativo: "Data de validade preenchida automaticamente"
 - [x] Usuário pode confirmar ou alterar a data se necessário
 - [ ] Testar fluxo completo de associação
+
+## 🐛 CORREÇÃO CRÍTICA COLLECTORRECEI VING - 26/02/2026 00:50
+
+### Erro 1: Violação de Regras dos Hooks do React
+- [x] Erro: `hooks[lastArg] is not a function` ao digitar lote
+- [x] Causa: Chamada de `.query()` diretamente dentro de onChange (não permitido)
+- [x] Solução: Substituído `trpc.blindConference.getExpiryDateFromXML.query()` por `utils.client.blindConference.getExpiryDateFromXML.query()`
+- [x] Resultado: Busca automática de expiryDate funciona corretamente
+
+### Erro 2: Chaves Duplicadas no ProductCombobox
+- [x] Erro: `Encountered two children with the same key, 120002`
+- [x] Causa: Uso de `productId` como key (mesmo produto em múltiplos lotes)
+- [x] Solução: Alterado para usar `item.id` (receivingOrderItemId) como chave única
+- [x] Melhoria: Descrição atualizada para incluir lote: `"Produto X (Lote: ABC123)"`
+- [x] Resultado: Combobox renderiza corretamente sem duplicação de keys
+

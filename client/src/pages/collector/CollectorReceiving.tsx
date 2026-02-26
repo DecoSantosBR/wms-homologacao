@@ -285,12 +285,17 @@ export function CollectorReceiving() {
                 <Label>Produto *</Label>
                 <ProductCombobox
                   products={orderItems?.map((item: any) => ({
-                    id: item.productId,
+                    // ✅ Usar item.id (receivingOrderItemId) como chave única, não productId
+                    id: item.id.toString(),
                     sku: item.productSku,
-                    description: item.productDescription,
+                    description: `${item.productDescription} (Lote: ${item.batch})`,
                   }))}
                   value={selectedProductId?.toString() || ""}
-                  onValueChange={(v) => setSelectedProductId(parseInt(v))}
+                  onValueChange={(v) => {
+                    // Como agora o value é o ID da linha, precisamos achar o productId real
+                    const selectedLine = orderItems?.find((item: any) => item.id.toString() === v);
+                    if (selectedLine) setSelectedProductId(selectedLine.productId);
+                  }}
                   placeholder="Selecione o produto"
                   className="h-12 text-base"
                 />
@@ -310,7 +315,8 @@ export function CollectorReceiving() {
                         const selectedProduct = orderItems?.find((item: any) => item.productId === selectedProductId);
                         if (selectedProduct?.productSku) {
                           try {
-                            const result = await trpc.blindConference.getExpiryDateFromXML.query({
+                            // ✅ FORMA CORRETA: Use utils.client para fazer fetch manual (não é um Hook)
+                            const result = await utils.client.blindConference.getExpiryDateFromXML.query({
                               sku: selectedProduct.productSku,
                               batch: newBatch,
                             });
