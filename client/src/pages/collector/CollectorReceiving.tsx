@@ -288,13 +288,18 @@ export function CollectorReceiving() {
                     // ✅ Usar item.id (receivingOrderItemId) como chave única, não productId
                     id: item.id.toString(),
                     sku: item.productSku,
-                    description: `${item.productDescription} (Lote: ${item.batch})`,
+                    description: `${item.productDescription} (Lote: ${item.batch || 'S/L'})`,
                   }))}
-                  value={selectedProductId?.toString() || ""}
+                  // ✅ Mapeamento REVERSO: busca qual linha corresponde ao productId selecionado
+                  value={orderItems?.find(item => item.productId === selectedProductId)?.id.toString() || ""}
                   onValueChange={(v) => {
-                    // Como agora o value é o ID da linha, precisamos achar o productId real
+                    // Localiza a linha da ordem pelo ID (v) e extrai o productId real
                     const selectedLine = orderItems?.find((item: any) => item.id.toString() === v);
-                    if (selectedLine) setSelectedProductId(selectedLine.productId);
+                    if (selectedLine) {
+                      setSelectedProductId(selectedLine.productId);
+                      // ✅ Preenche o lote automaticamente se vier no item da ordem
+                      if (selectedLine.batch) setBatch(selectedLine.batch);
+                    }
                   }}
                   placeholder="Selecione o produto"
                   className="h-12 text-base"

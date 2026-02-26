@@ -3786,3 +3786,12 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Melhoria: Descrição atualizada para incluir lote: `"Produto X (Lote: ABC123)"`
 - [x] Resultado: Combobox renderiza corretamente sem duplicação de keys
 
+
+## 🐛 BUG SELEÇÃO PRODUCTCOMBOBOX - 26/02/2026 01:00
+
+### Problema Reportado
+- [x] Clicar no produto no ProductCombobox não seleciona o item
+- [x] Causa: Inconsistência entre value controlado (busca por productId) e id da linha (receivingOrderItemId)
+- [x] Solução: Corrigir mapeamento reverso no value para usar item.id.toString()
+- [x] Melhoria adicional: Preenche lote automaticamente ao selecionar produto
+
