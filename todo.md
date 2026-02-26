@@ -3804,3 +3804,13 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Solução: Usar sintaxe correta do Drizzle com template literal sql`${receivingOrderItems.receivedQuantity} + ${value}`
 - [x] Corrigidas 2 ocorrências: readLabel (linha 208) e associateLabel (linha 368)
 
+
+## 🐛 CHAVES DUPLICADAS BLINDCHECKMODAL - 26/02/2026 01:40
+
+### Problema Reportado
+- [x] Erro React: `Encountered two children with the same key, 120005`
+- [x] Localização: BlindCheckModal.tsx linha 535 (SelectItem)
+- [x] Causa: Uso de productId como key (mesmo produto em múltiplos lotes)
+- [x] Solução: Usar item.id (receivingOrderItemId) como chave única
+- [x] Implementado mapeamento reverso no onValueChange para sincronizar com selectedProductId
+

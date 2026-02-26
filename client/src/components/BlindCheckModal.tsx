@@ -524,16 +524,21 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
             <div>
               <Label className="text-sm font-medium mb-2 block">Produto *</Label>
               <Select
-                value={selectedProductId?.toString()}
-                onValueChange={(value) => setSelectedProductId(Number(value))}
+                // ✅ Mapeamento REVERSO: busca qual item corresponde ao productId selecionado
+                value={items.find(item => item.productId === selectedProductId)?.id.toString() || ""}
+                onValueChange={(value) => {
+                  // Localiza o item pelo ID e extrai o productId real
+                  const selectedItem = items.find(item => item.id.toString() === value);
+                  if (selectedItem) setSelectedProductId(selectedItem.productId);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o produto" />
                 </SelectTrigger>
                 <SelectContent>
                   {items.map((item) => (
-                    <SelectItem key={item.productId} value={item.productId.toString()}>
-                      {item.productDescription} ({item.productSku})
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.productDescription} ({item.productSku}) - Lote: {item.batch || 'S/L'}
                     </SelectItem>
                   ))}
                 </SelectContent>
