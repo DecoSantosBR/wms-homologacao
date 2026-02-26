@@ -370,6 +370,10 @@ export const nonConformities = mysqlTable("nonConformities", {
   receivingOrderItemId: int("receivingOrderItemId").notNull(), // ID do item da ordem de recebimento
   labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta com NCG
   conferenceId: int("conferenceId").notNull(), // ID da conferência onde foi registrado
+  // REGRA XOR: locationId OU shippingId (nunca ambos, nunca nenhum)
+  // - Em estoque: locationId preenchido, shippingId NULL
+  // - Expedido: locationId NULL, shippingId preenchido
+  // - CHECK CONSTRAINT: (locationId IS NOT NULL AND shippingId IS NULL) OR (locationId IS NULL AND shippingId IS NOT NULL)
   locationId: int("locationId"), // Localização atual do produto NCG (NCG inicialmente)
   shippingId: int("shippingId"), // ID da expedição (NULL se ainda em estoque)
   description: text("description").notNull(), // Descrição da não-conformidade (motivo)

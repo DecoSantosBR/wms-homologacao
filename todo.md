@@ -4113,3 +4113,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Atualizar mutation `registerNCG` para salvar `locationId` (NCG) e `shippingId` (NULL)
 - [ ] Implementar lógica de atualização de `shippingId` ao expedir produto NCG (futuro)
 - [ ] Testar fluxo completo de registro de NCG
+
+
+## 🔒 CONSTRAINT XOR: locationId ⊕ shippingId - 26/02/2026 ✅ CONCLUÍDO
+
+**Regra:** Produto NCG está EM ESTOQUE (locationId) OU EXPEDIDO (shippingId), nunca ambos
+
+- [x] Adicionar CHECK constraint no banco: `ncg_location_or_shipping_check`
+- [x] Documentar regra no schema Drizzle (comentário completo)
+- [x] Verificar que não há mais referências a `ncgStatus` em `labelAssociations`
+- [ ] Testar inserção válida (locationId preenchido, shippingId NULL)
+- [ ] Testar inserção inválida (ambos NULL ou ambos preenchidos)
