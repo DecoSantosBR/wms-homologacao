@@ -3836,3 +3836,19 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Solução: Adicionada validação em closeReceivingOrder (linha 906-915)
 - [x] Validação: `if (totalReceived === 0) throw BAD_REQUEST`
 
+
+## 🐛 ERRO SQL DEFINITIVO - WHERE com uniqueCode não encontra linha - 26/02/2026 02:45
+
+### Problema Reportado
+- [x] Erro persiste após todas as correções: `Failed query: update receivingOrderItems set receivedQuantity = ...`
+- [x] Params mostram: labelCode `44306022D14LA124` (sem hífen) vs uniqueCode `443060-22D14LA124` (com hífen)
+- [x] Causa raiz: WHERE clause com uniqueCode não encontrava linha no banco
+- [x] Solução: Substituir uniqueCode por receivingOrderItemId (chave primária)
+
+### Mudanças Aplicadas
+- [x] Backend: Adicionar `receivingOrderItemId` no input de associateLabel
+- [x] Backend: UPDATE por `id` em vez de `uniqueCode` (linhas 368-411)
+- [x] Frontend: Adicionar estado `selectedReceivingOrderItemId`
+- [x] Frontend: Salvar ID da linha no onValueChange do ProductCombobox
+- [x] Frontend: Enviar `receivingOrderItemId` na mutation (linha 224)
+- [x] Frontend: Validar `selectedReceivingOrderItemId` em handleAssociate

@@ -23,6 +23,7 @@ export function CollectorReceiving() {
   const [showAssociationDialog, setShowAssociationDialog] = useState(false);
   const [pendingLabelCode, setPendingLabelCode] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedReceivingOrderItemId, setSelectedReceivingOrderItemId] = useState<number | null>(null); // ✅ ID da linha da ordem
   const [batch, setBatch] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [unitsPerBox, setUnitsPerBox] = useState<number>(1);
@@ -202,7 +203,7 @@ export function CollectorReceiving() {
   };
 
   const handleAssociate = () => {
-    if (!selectedProductId) {
+    if (!selectedProductId || !selectedReceivingOrderItemId) {
       toast.error("Selecione um produto");
       return;
     }
@@ -220,6 +221,7 @@ export function CollectorReceiving() {
     associateLabelMutation.mutate({
       conferenceId: conferenceId!,
       labelCode: pendingLabelCode,
+      receivingOrderItemId: selectedReceivingOrderItemId!, // ✅ ID da linha da ordem
       productId: selectedProductId,
       batch: batch || null,
       expiryDate: expiryDate || null,
@@ -293,11 +295,12 @@ export function CollectorReceiving() {
                   // ✅ Mapeamento REVERSO: busca qual linha corresponde ao productId selecionado
                   value={orderItems?.find(item => item.productId === selectedProductId)?.id.toString() || ""}
                   onValueChange={(v) => {
-                    // Localiza a linha da ordem pelo ID (v) e extrai o productId real
+                    // Localizamos a linha da ordem pelo ID (v) e extraímos o productId real
                     const selectedLine = orderItems?.find((item: any) => item.id.toString() === v);
                     if (selectedLine) {
                       setSelectedProductId(selectedLine.productId);
-                      // ✅ Preenche o lote automaticamente se vier no item da ordem
+                      setSelectedReceivingOrderItemId(selectedLine.id); // ✅ Salva ID da linha
+                      // ✅ Dica: Já preencha o lote se ele vier no item da ordem!
                       if (selectedLine.batch) setBatch(selectedLine.batch);
                     }
                   }}

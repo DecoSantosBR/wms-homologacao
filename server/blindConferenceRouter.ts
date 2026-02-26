@@ -258,6 +258,7 @@ export const blindConferenceRouter = router({
     .input(z.object({
       conferenceId: z.number(),
       labelCode: z.string(),
+      receivingOrderItemId: z.number(), // ✅ ID da linha da ordem (chave primária)
       productId: z.number(),
       batch: z.string().nullable(),
       expiryDate: z.string().nullable(),
@@ -363,41 +364,51 @@ export const blindConferenceRouter = router({
       }
 
       // 4.5. SINCRONIZAR COM receivingOrderItems (Atualização Automática)
-      // DEBUG: Verificar se linha existe antes do UPDATE
+      // ✅ SOLUÇÃO DEFINITIVA: UPDATE direto por ID (chave primária)
       const existingItem = await db.select()
         .from(receivingOrderItems)
         .where(
           and(
-            eq(receivingOrderItems.uniqueCode, uniqueCode),
+            eq(receivingOrderItems.id, input.receivingOrderItemId),
             eq(receivingOrderItems.tenantId, activeTenantId)
           )
         )
         .limit(1);
       
-      console.log("[associateLabel] Item encontrado?", existingItem.length > 0);
-      if (existingItem.length > 0) {
-        console.log("[associateLabel] Item existente:", existingItem[0]);
-      } else {
-        console.error("[associateLabel] ERRO: Nenhum item encontrado com uniqueCode:", uniqueCode);
+      if (existingItem.length === 0) {
+        console.error("[associateLabel] ERRO: Item não encontrado com id:", input.receivingOrderItemId);
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Item da ordem não encontrado (id: ${input.receivingOrderItemId}). Verifique se a NF-e foi importada corretamente.`
+        });
       }
       
-      const updateResult = await db.update(receivingOrderItems)
+      const currentQuantity = existingItem[0].receivedQuantity || 0;
+      const newQuantity = currentQuantity + actualUnitsReceived;
+      
+      console.log("[associateLabel] Atualizando item:", { 
+        id: input.receivingOrderItemId, 
+        currentQuantity, 
+        actualUnitsReceived, 
+        newQuantity 
+      });
+      
+      // ✅ UPDATE por ID (chave primária) - SEMPRE funciona
+      await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
-          // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
-          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${actualUnitsReceived}`,
+          receivedQuantity: newQuantity,
           status: 'receiving',
           updatedAt: new Date(),
         })
         .where(
           and(
-            eq(receivingOrderItems.uniqueCode, uniqueCode),
+            eq(receivingOrderItems.id, input.receivingOrderItemId),
             eq(receivingOrderItems.tenantId, activeTenantId)
           )
         );
       
-      console.log("[associateLabel] Update result:", updateResult);
-      console.log("[associateLabel] Rows affected:", updateResult.rowsAffected || 0);
+      console.log("[associateLabel] UPDATE concluído com sucesso! Nova quantidade:", newQuantity);
 
       return {
         success: true,
