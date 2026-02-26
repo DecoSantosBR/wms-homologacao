@@ -88,13 +88,20 @@ export function CollectorReceiving() {
           setSelectedProductId(orderItems[0].productId);
         }
       } else {
-        // Salvar último item bipado para undo
+        // ✅ PROPAGAR receivingOrderItemId para o estado (fluxo automático)
         if (data.association) {
+          setSelectedReceivingOrderItemId(data.association.receivingOrderItemId || null);
+          setSelectedProductId(data.association.productId);
+          setBatch(data.association.batch || "");
+          
+          // Salvar último item bipado para undo
           setLastSuccessfulItem({
             productId: data.association.productId,
             batch: data.association.batch || "",
             scannedCode: labelCode,
           });
+          
+          console.log("✅ [readLabel onSuccess] receivingOrderItemId propagado:", data.association.receivingOrderItemId);
         }
         
         toast.success("Etiqueta lida!", {
@@ -120,6 +127,7 @@ export function CollectorReceiving() {
       setShowAssociationDialog(false);
       setPendingLabelCode("");
       setSelectedProductId(null);
+      setSelectedReceivingOrderItemId(null); // ✅ Reset ID da linha
       setBatch("");
       setExpiryDate("");
       setUnitsPerBox(1);
@@ -203,7 +211,13 @@ export function CollectorReceiving() {
   };
 
   const handleAssociate = () => {
+    // 🔍 DEBUG: Verificar IDs antes de enviar
+    console.log("🔍 [handleAssociate] selectedProductId:", selectedProductId);
+    console.log("🔍 [handleAssociate] selectedReceivingOrderItemId:", selectedReceivingOrderItemId);
+    console.log("🔍 [handleAssociate] conferenceId:", conferenceId);
+    
     if (!selectedProductId || !selectedReceivingOrderItemId) {
+      console.error("❌ [handleAssociate] ERRO: selectedReceivingOrderItemId não preenchido!");
       toast.error("Selecione um produto");
       return;
     }

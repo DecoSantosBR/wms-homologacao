@@ -3852,3 +3852,19 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Frontend: Salvar ID da linha no onValueChange do ProductCombobox
 - [x] Frontend: Enviar `receivingOrderItemId` na mutation (linha 224)
 - [x] Frontend: Validar `selectedReceivingOrderItemId` em handleAssociate
+
+## 🐛 FRONTEND ENVIANDO CONFERENCEID EM VEZ DE RECEIVINGORDERITEMID - 26/02/2026 02:55
+
+### Problema Reportado
+- [ ] Log mostra: `params: 140,44306022D14LA124,receiving,2026-02-26 02:55:20.131,180005,1`
+- [ ] ID enviado: `180005` (conferenceId) em vez de receivingOrderItemId (150xxx)
+- [ ] Causa: selectedReceivingOrderItemId não está sendo preenchido ou está sendo sobrescrito
+- [ ] Solução: Investigar ProductCombobox e handleAssociate para garantir envio correto
+
+### Correção Aplicada
+- [x] Backend: Buscar receivingOrderItem por uniqueCode em readLabel (linhas 237-254)
+- [x] Backend: Adicionar receivingOrderItemId no return de readLabel (linha 263)
+- [x] Frontend: Capturar receivingOrderItemId no onSuccess de readLabelMutation (linha 93)
+- [x] Frontend: Propagar para selectedReceivingOrderItemId (linha 93-104)
+- [x] Logs de debug adicionados em handleAssociate (linhas 206-209)
+- [x] Reset de selectedReceivingOrderItemId no onSuccess de associateLabel (linha 123)

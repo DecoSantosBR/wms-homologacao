@@ -234,11 +234,33 @@ export const blindConferenceRouter = router({
       // 5. BUSCAR DADOS DO PRODUTO
       const product = await db.select().from(products).where(eq(products.id, labelData.productId)).limit(1);
 
+      // 5.5. ✅ BUSCAR LINHA DA ORDEM (receivingOrderItem) POR uniqueCode
+      const productForOrderItem = await db.select({ sku: products.sku })
+        .from(products)
+        .where(eq(products.id, labelData.productId))
+        .limit(1);
+      
+      const uniqueCodeForOrderItem = getUniqueCode(productForOrderItem[0]?.sku || "", labelData.batch || "");
+      
+      const orderItem = await db.select()
+        .from(receivingOrderItems)
+        .where(
+          and(
+            eq(receivingOrderItems.receivingOrderId, conference.receivingOrderId),
+            eq(receivingOrderItems.uniqueCode, uniqueCodeForOrderItem),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+      
+      console.log("✅ [readLabel] receivingOrderItem encontrado:", orderItem[0]?.id || "NÃO ENCONTRADO");
+
       // 6. RETORNO PARA O FRONTEND
       return {
         isNewLabel: false,
         association: {
           id: labelData.id,
+          receivingOrderItemId: orderItem[0]?.id || null, // ✅ ID da linha da ordem
           productId: labelData.productId,
           productName: product[0]?.description || "",
           productSku: product[0]?.sku || "",
