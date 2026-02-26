@@ -3868,3 +3868,17 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Frontend: Propagar para selectedReceivingOrderItemId (linha 93-104)
 - [x] Logs de debug adicionados em handleAssociate (linhas 206-209)
 - [x] Reset de selectedReceivingOrderItemId no onSuccess de associateLabel (linha 123)
+
+## ✅ CORREÇÃO ENTERPRISE APLICADA - 26/02/2026 03:45
+
+### Problema Resolvido
+- [x] UPDATE usava `input.receivingOrderItemId` (180009 = conferenceId) em vez do ID correto
+- [x] Backend agora busca receivingOrderItem por uniqueCode + receivingOrderId
+- [x] UPDATE usa `item.id` (ID correto da busca) em vez de confiar no input
+
+### Validações Defensivas Implementadas
+- [x] Validação 1: Verificar se item existe antes de acessar (linhas 400-407)
+- [x] Validação 2: Verificar se item pertence à sessão correta (linhas 412-422)
+- [x] Variável segura `item` para evitar acessar `[0]` múltiplas vezes (linha 410)
+- [x] Logs detalhados para debug (linhas 427-432, 449)
+- [x] UPDATE por chave primária `item.id` (linha 444)

@@ -397,25 +397,41 @@ export const blindConferenceRouter = router({
         )
         .limit(1);
       
-      if (existingItem.length === 0) {
-        console.error("[associateLabel] ERRO: Item não encontrado com id:", input.receivingOrderItemId);
+      // 🛡️ VALIDAÇÃO DEFENSIVA 1: Item existe?
+      if (!existingItem || existingItem.length === 0) {
+        console.error("[associateLabel] ERRO: Item não encontrado com uniqueCode:", uniqueCodeForUpdate);
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: `Item da ordem não encontrado (id: ${input.receivingOrderItemId}). Verifique se a NF-e foi importada corretamente.`
+          message: `Item da ordem não encontrado para produto/lote (uniqueCode: ${uniqueCodeForUpdate}). Verifique se a NF-e foi importada corretamente.`
         });
       }
       
-      const currentQuantity = existingItem[0].receivedQuantity || 0;
+      // ✅ Extrair para variável segura (evitar acessar [0] múltiplas vezes)
+      const item = existingItem[0];
+      
+      // 🛡️ VALIDAÇÃO DEFENSIVA 2: Item pertence à sessão correta?
+      if (item.receivingOrderId !== conference.receivingOrderId) {
+        console.error("[associateLabel] ERRO: Item não pertence a esta ordem:", { 
+          itemOrderId: item.receivingOrderId, 
+          sessionOrderId: conference.receivingOrderId 
+        });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Item não pertence a esta ordem de recebimento. Possível corrupção de dados."
+        });
+      }
+      
+      const currentQuantity = item.receivedQuantity || 0;
       const newQuantity = currentQuantity + actualUnitsReceived;
       
       console.log("[associateLabel] Atualizando item:", { 
-        id: input.receivingOrderItemId, 
+        id: item.id, // ✅ ID correto da busca (não do input)
         currentQuantity, 
         actualUnitsReceived, 
         newQuantity 
       });
       
-      // ✅ UPDATE por ID (chave primária) - SEMPRE funciona
+      // ✅ UPDATE por ID correto da busca (NÃO confiar no input.receivingOrderItemId)
       await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
@@ -425,7 +441,7 @@ export const blindConferenceRouter = router({
         })
         .where(
           and(
-            eq(receivingOrderItems.id, input.receivingOrderItemId),
+            eq(receivingOrderItems.id, item.id), // ✅ ID correto da busca (variável segura)
             eq(receivingOrderItems.tenantId, activeTenantId)
           )
         );
