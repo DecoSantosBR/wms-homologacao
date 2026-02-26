@@ -385,13 +385,30 @@ export const blindConferenceRouter = router({
       const uniqueCode = getUniqueCode(productSku, input.batch);
       console.log("[associateLabel] uniqueCode gerado:", uniqueCode);
 
-      const actualUnitsReceived = input.totalUnitsReceived || input.receivedQuantity; // ✅ Fallback para receivedQuantity, não unitsPerBox
+      const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox; // ✅ Fallback para unitsPerBox
 
       // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
-      const existingLabel = await db.select()
-        .from(labelAssociations)
-        .where(eq(labelAssociations.labelCode, input.labelCode))
-        .limit(1);
+      console.log("🔍 [associateLabel] Buscando etiqueta existente:", input.labelCode, "| tenantId:", activeTenantId);
+      
+      let existingLabel;
+      try {
+        existingLabel = await db.select()
+          .from(labelAssociations)
+          .where(
+            and(
+              eq(labelAssociations.labelCode, input.labelCode),
+              eq(labelAssociations.tenantId, activeTenantId)
+            )
+          )
+          .limit(1);
+        
+        console.log("✅ [associateLabel] Query executada com sucesso. Resultados:", existingLabel.length);
+      } catch (error: any) {
+        console.error("❌ [associateLabel] ERRO na query de existingLabel:");
+        console.error("Mensagem:", error.message);
+        console.error("Stack:", error.stack);
+        throw new Error(`Erro ao buscar etiqueta existente: ${error.message}`);
+      }
 
       if (existingLabel.length > 0) {
         throw new Error("Etiqueta já existe no sistema");
@@ -650,9 +667,9 @@ export const blindConferenceRouter = router({
         })
         .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
 
-      // 6. ATUALIZAR STATUS DA ETIQUETA PARA NCG
+      // 6. ATUALIZAR STATUS DA ETIQUETA PARA BLOCKED (NCG já está em inventory)
       await db.update(labelAssociations)
-        .set({ ncgStatus: "NCG", status: "BLOCKED" })
+        .set({ status: "BLOCKED" })
         .where(eq(labelAssociations.labelCode, input.labelCode));
 
       // 7. REGISTRAR NÃO-CONFORMIDADE
@@ -1001,6 +1018,7 @@ export const blindConferenceRouter = router({
 
         // ✅ NOVA LÓGICA: 1 LPN = 1 Inventory
         // Buscar apenas etiquetas OK (sem NCG) para alocar em REC
+        // Buscar todas as etiquetas em RECEIVING
         const labels = await db.select()
           .from(labelAssociations)
           .where(
@@ -1008,15 +1026,25 @@ export const blindConferenceRouter = router({
               eq(labelAssociations.productId, item.productId),
               eq(labelAssociations.batch, item.batch || ""),
               eq(labelAssociations.tenantId, activeTenantId),
-              eq(labelAssociations.status, 'RECEIVING'),
-              sql`(${labelAssociations.ncgStatus} IS NULL OR ${labelAssociations.ncgStatus} != 'NCG')` // ✅ Apenas etiquetas OK
+              eq(labelAssociations.status, 'RECEIVING')
             )
           );
+        
+        // Buscar NCGs para filtrar
+        const ncgLabels = await db.select({ labelCode: nonConformities.labelCode })
+          .from(nonConformities)
+          .where(eq(nonConformities.tenantId, activeTenantId));
+        
+        const ncgLabelCodes = new Set(ncgLabels.map(n => n.labelCode));
+        
+        // Filtrar apenas etiquetas sem NCG
+        const labelsOK = labels.filter(label => !ncgLabelCodes.has(label.labelCode));
 
-        console.log(`[finish] Criando inventory para ${labels.length} etiquetas do produto ${item.productId}`);
+        console.log(`[finish] Total de etiquetas: ${labels.length}, NCGs: ${ncgLabelCodes.size}, OK: ${labelsOK.length}`);
+        console.log(`[finish] Criando inventory para ${labelsOK.length} etiquetas OK do produto ${item.productId}`);
 
-        // Criar um registro de inventory para cada etiqueta
-        for (const label of labels) {
+        // Criar um registro de inventory para cada etiqueta OK
+        for (const label of labelsOK) {
           console.log('🔍 [finish] Label completo:', JSON.stringify(label, null, 2));
           
           if (!label.labelCode) {

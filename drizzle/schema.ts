@@ -710,7 +710,6 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   unitsPerBox: int("unitsPerBox").notNull(), // Quantidade de unidades por caixa
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
   status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no fluxo de recebimento
-  ncgStatus: mysqlEnum("ncgStatus", ["OK", "NCG"]).default("OK").notNull(), // Status de conformidade (OK ou Não-Conformidade)
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
 }, (table) => ({

@@ -4081,3 +4081,23 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Implementar lógica de abertura do modal ao clicar no botão
 - [x] Passar conferenceId, receivingOrderItemId, labelCode e maxQuantity para modal
 - [x] Atualizar lista após registro de NCG (invalidate queries)
+
+
+## 🔧 CORREÇÃO URGENTE: labelCode em labelAssociations - 26/02/2026
+
+- [ ] Verificar schema de labelAssociations
+- [ ] Adicionar coluna labelCode em labelAssociations (se não existir)
+- [ ] Rodar pnpm db:push
+- [ ] Testar associação de etiqueta
+
+
+## 🚨 CORREÇÃO DE ARQUITETURA: NCG em labelAssociations - 26/02/2026 ✅ CONCLUÍDO
+
+**Problema:** `ncgStatus` foi adicionado em `labelAssociations` (tabela global), mas deveria estar em contexto de conferência específica.
+
+- [x] Remover `ncgStatus` de `labelAssociations` (schema)
+- [x] Remover coluna `ncgStatus` do banco (ALTER TABLE DROP COLUMN)
+- [x] Criar tabela `nonConformities` (pnpm db:push)
+- [x] Refatorar lógica de `registerNCG` para usar `nonConformities` como referência
+- [x] Refatorar lógica de `finish` para buscar NCGs via `nonConformities`
+- [ ] Testar fluxo completo
