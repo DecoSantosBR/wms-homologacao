@@ -204,7 +204,8 @@ export const blindConferenceRouter = router({
       await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
-          receivedQuantity: sql`receivedQuantity + ${unitsPerBox}`,
+          // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${unitsPerBox}`,
           status: 'receiving',
           updatedAt: new Date(),
         })
@@ -363,7 +364,8 @@ export const blindConferenceRouter = router({
       await db.update(receivingOrderItems)
         .set({
           labelCode: input.labelCode,
-          receivedQuantity: sql`receivedQuantity + ${actualUnitsReceived}`,
+          // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${actualUnitsReceived}`,
           status: 'receiving',
           updatedAt: new Date(),
         })

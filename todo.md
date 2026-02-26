@@ -3795,3 +3795,12 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Solução: Corrigir mapeamento reverso no value para usar item.id.toString()
 - [x] Melhoria adicional: Preenche lote automaticamente ao selecionar produto
 
+
+## 🐛 ERRO SQL INCREMENTO RECEIVINGORDERITEMS - 26/02/2026 01:25
+
+### Problema Reportado
+- [x] Erro SQL ao associar etiqueta: `Failed query: update receivingOrderItems set receivedQuantity = receivedQuantity + ?`
+- [x] Causa: Ambiguidade de referência de coluna no MySQL durante incremento
+- [x] Solução: Usar sintaxe correta do Drizzle com template literal sql`${receivingOrderItems.receivedQuantity} + ${value}`
+- [x] Corrigidas 2 ocorrências: readLabel (linha 208) e associateLabel (linha 368)
+
