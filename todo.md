@@ -4138,6 +4138,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Adicionar coluna `zoneCode` em `warehouseLocations` (schema)
 - [x] Gerar migration (0018_classy_mathemanic.sql)
+- [x] Aplicar ALTER TABLE manual no banco (migration não foi aplicada automaticamente)
 - [x] Atualizar query em `registerNCG` para usar `zoneCode = 'NCG'`
-- [ ] Criar endereço NCG no banco: `INSERT INTO warehouseLocations (code, name, zoneCode, zoneId, tenantId, status) VALUES ('NCG-001', 'Não Conformidade', 'NCG', 1, 1, 'blocked')`
+- [x] Criar endereço NCG no banco: `INSERT INTO warehouseLocations (code, zoneCode, zoneId, tenantId, status) VALUES ('NCG-001', 'NCG', 1, 1, 'blocked')`
 - [ ] Testar registro de NCG com novo campo
