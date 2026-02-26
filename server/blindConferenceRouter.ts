@@ -555,12 +555,15 @@ export const blindConferenceRouter = router({
 
   /**
    * 3.5. Registrar Não-Conformidade (NCG)
+   * REFATORADO: Cria inventory em NCG imediatamente e atualiza blockedQuantity
    */
   registerNCG: protectedProcedure
     .input(z.object({
+      receivingOrderItemId: z.number(), // ID do item da ordem
       labelCode: z.string(),
       conferenceId: z.number(),
-      description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"),
+      quantity: z.number().positive("Quantidade deve ser maior que zero"), // Quantidade bloqueada
+      description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"), // Motivo da NCG
       photoUrl: z.string().optional(),
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
@@ -583,8 +586,33 @@ export const blindConferenceRouter = router({
 
       console.log("[registerNCG] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
-      // 1. VERIFICAR SE ETIQUETA EXISTE
-      const label = await db.select()
+      // 1. BUSCAR LOCALIZAÇÃO NCG (Não Conformidade/Quarentena)
+      const [ncgLocation] = await db.select()
+        .from(warehouseLocations)
+        .where(
+          and(
+            eq(warehouseLocations.code, "NCG"),
+            eq(warehouseLocations.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+
+      if (!ncgLocation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Localização NCG não configurada" });
+      }
+
+      // 2. BUSCAR DADOS DO ITEM DA ORDEM
+      const [orderItem] = await db.select()
+        .from(receivingOrderItems)
+        .where(eq(receivingOrderItems.id, input.receivingOrderItemId))
+        .limit(1);
+
+      if (!orderItem) {
+        throw new Error("Item da ordem não encontrado");
+      }
+
+      // 3. VERIFICAR SE ETIQUETA EXISTE
+      const [label] = await db.select()
         .from(labelAssociations)
         .where(
           and(
@@ -594,18 +622,43 @@ export const blindConferenceRouter = router({
         )
         .limit(1);
 
-      if (label.length === 0) {
+      if (!label) {
         throw new Error("Etiqueta não encontrada");
       }
 
-      // 2. ATUALIZAR STATUS DA ETIQUETA PARA NCG
+      // 4. CRIAR REGISTRO DE INVENTÁRIO BLOQUEADO EM NCG
+      await db.insert(inventory).values({
+        tenantId: activeTenantId,
+        productId: orderItem.productId,
+        locationId: ncgLocation.id,
+        batch: orderItem.batch || null,
+        expiryDate: orderItem.expiryDate || null,
+        uniqueCode: orderItem.uniqueCode || null,
+        labelCode: input.labelCode,
+        serialNumber: orderItem.serialNumber || null,
+        locationZone: ncgLocation.zone || null,
+        quantity: input.quantity,
+        reservedQuantity: 0,
+        status: "blocked", // 🔒 CRUCIAL: Picking ignora este status
+      });
+
+      // 5. ATUALIZAR QUANTIDADE BLOQUEADA NO ITEM DA ORDEM
+      await db.update(receivingOrderItems)
+        .set({
+          blockedQuantity: sql`${receivingOrderItems.blockedQuantity} + ${input.quantity}`,
+          status: "receiving"
+        })
+        .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
+
+      // 6. ATUALIZAR STATUS DA ETIQUETA PARA NCG
       await db.update(labelAssociations)
-        .set({ ncgStatus: "NCG" })
+        .set({ ncgStatus: "NCG", status: "BLOCKED" })
         .where(eq(labelAssociations.labelCode, input.labelCode));
 
-      // 3. REGISTRAR NÃO-CONFORMIDADE
+      // 7. REGISTRAR NÃO-CONFORMIDADE
       await db.insert(nonConformities).values({
         tenantId: activeTenantId,
+        receivingOrderItemId: input.receivingOrderItemId,
         labelCode: input.labelCode,
         conferenceId: input.conferenceId,
         description: input.description,
@@ -616,7 +669,9 @@ export const blindConferenceRouter = router({
       return {
         success: true,
         message: "Não-conformidade registrada com sucesso",
-        labelCode: input.labelCode
+        labelCode: input.labelCode,
+        quantity: input.quantity,
+        location: ncgLocation.code
       };
     }),
 
@@ -945,7 +1000,7 @@ export const blindConferenceRouter = router({
         const locationId = recLocation[0].id;
 
         // ✅ NOVA LÓGICA: 1 LPN = 1 Inventory
-        // Buscar todas as etiquetas associadas a este produto+lote
+        // Buscar apenas etiquetas OK (sem NCG) para alocar em REC
         const labels = await db.select()
           .from(labelAssociations)
           .where(
@@ -953,7 +1008,8 @@ export const blindConferenceRouter = router({
               eq(labelAssociations.productId, item.productId),
               eq(labelAssociations.batch, item.batch || ""),
               eq(labelAssociations.tenantId, activeTenantId),
-              eq(labelAssociations.status, 'RECEIVING') // ✅ Apenas etiquetas em recebimento
+              eq(labelAssociations.status, 'RECEIVING'),
+              sql`(${labelAssociations.ncgStatus} IS NULL OR ${labelAssociations.ncgStatus} != 'NCG')` // ✅ Apenas etiquetas OK
             )
           );
 
@@ -1037,18 +1093,28 @@ export const blindConferenceRouter = router({
           );
       }
 
-      // 5. ATUALIZAR STATUS DOS ITENS DA ORDEM (receiving → completed)
-      await db.update(receivingOrderItems)
-        .set({
-          status: "completed",
-          updatedAt: new Date()
-        })
+      // 5. CALCULAR E ATUALIZAR addressedQuantity EM receivingOrderItems
+      // addressedQuantity = receivedQuantity - blockedQuantity
+      const orderItems = await db.select()
+        .from(receivingOrderItems)
         .where(
           and(
             eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
             eq(receivingOrderItems.tenantId, activeTenantId)
           )
         );
+
+      for (const orderItem of orderItems) {
+        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
+        
+        await db.update(receivingOrderItems)
+          .set({
+            addressedQuantity: addressableQty,
+            status: "completed",
+            updatedAt: new Date()
+          })
+          .where(eq(receivingOrderItems.id, orderItem.id));
+      }
 
       // 6. FINALIZAR SESSÃO
       await db.update(blindConferenceSessions)

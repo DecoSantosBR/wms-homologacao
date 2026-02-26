@@ -367,9 +367,10 @@ export const receivingDivergences = mysqlTable("receivingDivergences", {
 export const nonConformities = mysqlTable("nonConformities", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(), // Multi-tenant
+  receivingOrderItemId: int("receivingOrderItemId").notNull(), // ID do item da ordem de recebimento
   labelCode: varchar("labelCode", { length: 100 }).notNull(), // Código da etiqueta com NCG
   conferenceId: int("conferenceId").notNull(), // ID da conferência onde foi registrado
-  description: text("description").notNull(), // Descrição da não-conformidade
+  description: text("description").notNull(), // Descrição da não-conformidade (motivo)
   photoUrl: varchar("photoUrl", { length: 500 }), // URL da foto (opcional)
   registeredBy: int("registeredBy").notNull(), // userId do operador
   registeredAt: timestamp("registeredAt").defaultNow().notNull(),

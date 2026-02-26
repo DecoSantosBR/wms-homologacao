@@ -4019,7 +4019,23 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Suporta seleção de múltiplos lotes do mesmo SKU
 
 
-## 🔧 REGISTRO DE NCG (NÃO-CONFORMIDADE) - 26/02/2026
+## 🔧 REFATORAÇÃO DE NCG (CORREÇÃO COMPLETA) - 26/02/2026 ✅ CONCLUÍDO
+
+### Correções de Schema
+- [x] Adicionar receivingOrderItemId em nonConformities
+- [x] Adicionar addressedQuantity em receivingOrderItems (quantidade OK para REC)
+- [x] Adicionar blockedQuantity em receivingOrderItems (quantidade NCG)
+- [x] Rodar pnpm db:push
+
+### Refatoração de Mutations
+- [x] Refatorar registerNCG: criar inventory em NCG imediatamente
+- [x] Refatorar registerNCG: atualizar blockedQuantity em receivingOrderItems
+- [x] Corrigir associateLabel: verificado que está correto (atualiza receivedQuantity)
+- [x] Implementar finalização: alocar addressedQuantity em REC (apenas etiquetas OK)
+
+---
+
+## 🔧 REGISTRO DE NCG (NÃO-CONFORMIDADE) - 26/02/2026 [DEPRECATED]
 
 ### Backend - Schema e Tabelas
 - [x] Criar tabela nonConformities (id, labelCode, conferenceId, description, photoUrl, registeredBy, registeredAt, tenantId)
