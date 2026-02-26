@@ -3882,3 +3882,32 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Variável segura `item` para evitar acessar `[0]` múltiplas vezes (linha 410)
 - [x] Logs detalhados para debug (linhas 427-432, 449)
 - [x] UPDATE por chave primária `item.id` (linha 444)
+
+## 🐛 ERRO EM READLABEL: UPDATE FALHANDO COM UNIQUECODE - 26/02/2026 03:55
+
+### Problema Reportado
+- [x] Erro: `Failed query: update receivingOrderItems set ... where (receivingOrderItems.uniqueCode = ?...)`
+- [x] Params: `140,44306022D14LA124,receiving,2026-02-26 03:55:19.657,443060-22D14LA124,1`
+- [x] Causa 1: Status 'receiving' não aceito pelo ENUM do MySQL
+- [x] Causa 2: UPDATE por uniqueCode não encontrava linha (padrão não confiável)
+
+### Correção Aplicada
+- [x] SQL: Adicionar 'receiving' ao ENUM de status (ALTER TABLE receivingOrderItems)
+- [x] Backend: Buscar receivingOrderItem primeiro por uniqueCode + receivingOrderId (linhas 204-213)
+- [x] Backend: UPDATE por orderItem.id (chave primária) em vez de uniqueCode (linhas 220-232)
+- [x] Calcular newQuantity no código antes do UPDATE (linha 217)
+- [x] Padrão enterprise aplicado: nunca confiar em uniqueCode para UPDATE
+
+## 🛡️ PROTEÇÃO ENTERPRISE: OVER-RECEIVING - 26/02/2026 04:00
+
+### Diagnóstico
+- [x] Hipótese: receivedQuantity ultrapassando expectedQuantity causa erro 500
+- [x] Evidência: Incremento de 140 sem validação de limite
+- [x] Risco: Corrupção de inventário, inconsistência de ordem
+- [x] Solução: Adicionar validação antes do UPDATE (throw TRPCError)
+
+### Implementação
+- [x] readLabel: Adicionar validação `if (newQuantity > expectedQuantity) throw` (linhas 220-225)
+- [x] associateLabel: Adicionar mesma validação (linhas 451-457)
+- [x] Mensagens de erro claras para operador ("Over-receiving detectado! Esperado: X, Tentando receber: Y")
+- [ ] Testar cenário de over-receiving (próximo passo)

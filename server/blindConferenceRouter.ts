@@ -200,21 +200,45 @@ export const blindConferenceRouter = router({
       if (productForSync[0]) {
         const uniqueCode = getUniqueCode(productForSync[0].sku, labelData.batch || "");
 
-        // Atualiza receivingOrderItems com labelCode e quantidade
-      await db.update(receivingOrderItems)
-        .set({
-          labelCode: input.labelCode,
-          // ✅ Referência explícita à coluna da tabela para evitar ambiguidade no MySQL
-          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${labelData.unitsPerBox}`,
-          status: 'receiving',
-          updatedAt: new Date(),
-        })
+        // 🛡️ BUSCAR ITEM PRIMEIRO (Padrão Enterprise)
+        const existingOrderItem = await db.select()
+          .from(receivingOrderItems)
           .where(
             and(
+              eq(receivingOrderItems.receivingOrderId, conference.receivingOrderId),
               eq(receivingOrderItems.uniqueCode, uniqueCode),
               eq(receivingOrderItems.tenantId, activeTenantId)
             )
-          );
+          )
+          .limit(1);
+        
+        if (existingOrderItem && existingOrderItem.length > 0) {
+          const orderItem = existingOrderItem[0];
+          const newQuantity = (orderItem.receivedQuantity || 0) + labelData.unitsPerBox;
+          
+          // 🛡️ PROTEÇÃO ENTERPRISE: Verificar over-receiving
+          if (newQuantity > orderItem.expectedQuantity) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Over-receiving detectado! Esperado: ${orderItem.expectedQuantity}, Tentando receber: ${newQuantity}`,
+            });
+          }
+          
+          // ✅ UPDATE por ID (chave primária) - SEMPRE funciona
+          await db.update(receivingOrderItems)
+            .set({
+              labelCode: input.labelCode,
+              receivedQuantity: newQuantity,
+              status: 'receiving',
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(receivingOrderItems.id, orderItem.id), // ✅ ID correto
+                eq(receivingOrderItems.tenantId, activeTenantId)
+              )
+            );
+        }
       }
 
       // 4. BUSCAR PROGRESSO ATUAL DO ITEM NA CONFERÊNCIA
@@ -423,6 +447,14 @@ export const blindConferenceRouter = router({
       
       const currentQuantity = item.receivedQuantity || 0;
       const newQuantity = currentQuantity + actualUnitsReceived;
+      
+      // 🛡️ PROTEÇÃO ENTERPRISE: Verificar over-receiving
+      if (newQuantity > item.expectedQuantity) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Over-receiving detectado! Esperado: ${item.expectedQuantity}, Tentando receber: ${newQuantity}. Verifique a quantidade bipada.`,
+        });
+      }
       
       console.log("[associateLabel] Atualizando item:", { 
         id: item.id, // ✅ ID correto da busca (não do input)
