@@ -577,7 +577,7 @@ export const blindConferenceRouter = router({
   registerNCG: protectedProcedure
     .input(z.object({
       receivingOrderItemId: z.number(), // ID do item da ordem
-      labelCode: z.string(),
+      labelCode: z.string().optional(), // Opcional: será gerado se não fornecido
       conferenceId: z.number(),
       quantity: z.number().positive("Quantidade deve ser maior que zero"), // Quantidade bloqueada
       description: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"), // Motivo da NCG
@@ -628,19 +628,45 @@ export const blindConferenceRouter = router({
         throw new Error("Item da ordem não encontrado");
       }
 
-      // 3. VERIFICAR SE ETIQUETA EXISTE
-      const [label] = await db.select()
+      // 3. GERAR OU VERIFICAR ETIQUETA
+      let labelCode = input.labelCode;
+      
+      if (!labelCode) {
+        // Gerar labelCode automático: SKU + Lote + timestamp
+        const timestamp = Date.now().toString().slice(-6); // Últimos 6 dígitos
+        labelCode = `${orderItem.productSku}${orderItem.batch || 'SL'}${timestamp}`;
+        console.log("[registerNCG] LabelCode gerado automaticamente:", labelCode);
+      }
+
+      // Verificar se etiqueta já existe
+      const [existingLabel] = await db.select()
         .from(labelAssociations)
         .where(
           and(
-            eq(labelAssociations.labelCode, input.labelCode),
+            eq(labelAssociations.labelCode, labelCode),
             eq(labelAssociations.tenantId, activeTenantId)
           )
         )
         .limit(1);
 
-      if (!label) {
-        throw new Error("Etiqueta não encontrada");
+      // Se não existir, criar nova etiqueta
+      if (!existingLabel) {
+        console.log("[registerNCG] Criando nova etiqueta:", labelCode);
+        await db.insert(labelAssociations).values({
+          tenantId: activeTenantId,
+          labelCode: labelCode,
+          productId: orderItem.productId,
+          batch: orderItem.batch || null,
+          expiryDate: orderItem.expiryDate || null,
+          unitsPerBox: orderItem.unitsPerBox || 1,
+          status: "BLOCKED", // Já nasce bloqueada (NCG)
+          scannedAt: new Date(),
+        });
+      } else {
+        // Se já existe, atualizar status para BLOCKED
+        await db.update(labelAssociations)
+          .set({ status: "BLOCKED" })
+          .where(eq(labelAssociations.labelCode, labelCode));
       }
 
       // 4. CRIAR REGISTRO DE INVENTÁRIO BLOQUEADO EM NCG
@@ -651,7 +677,7 @@ export const blindConferenceRouter = router({
         batch: orderItem.batch || null,
         expiryDate: orderItem.expiryDate || null,
         uniqueCode: orderItem.uniqueCode || null,
-        labelCode: input.labelCode,
+        labelCode: labelCode,
         serialNumber: orderItem.serialNumber || null,
         locationZone: ncgLocation.zone || null,
         quantity: input.quantity,
@@ -667,16 +693,13 @@ export const blindConferenceRouter = router({
         })
         .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
 
-      // 6. ATUALIZAR STATUS DA ETIQUETA PARA BLOCKED (NCG já está em inventory)
-      await db.update(labelAssociations)
-        .set({ status: "BLOCKED" })
-        .where(eq(labelAssociations.labelCode, input.labelCode));
+      // 6. (JÁ FEITO NO PASSO 3) Etiqueta já foi criada/atualizada com status BLOCKED
 
       // 7. REGISTRAR NÃO-CONFORMIDADE
       await db.insert(nonConformities).values({
         tenantId: activeTenantId,
         receivingOrderItemId: input.receivingOrderItemId,
-        labelCode: input.labelCode,
+        labelCode: labelCode,
         conferenceId: input.conferenceId,
         locationId: ncgLocation.id, // Localização NCG onde foi alocado
         shippingId: null, // NULL enquanto em estoque
@@ -688,7 +711,7 @@ export const blindConferenceRouter = router({
       return {
         success: true,
         message: "Não-conformidade registrada com sucesso",
-        labelCode: input.labelCode,
+        labelCode: labelCode,
         quantity: input.quantity,
         location: ncgLocation.code
       };

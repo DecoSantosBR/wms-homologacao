@@ -4142,3 +4142,18 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Atualizar query em `registerNCG` para usar `zoneCode = 'NCG'`
 - [x] Criar endereço NCG no banco: `INSERT INTO warehouseLocations (code, zoneCode, zoneId, tenantId, status) VALUES ('NCG-001', 'NCG', 1, 1, 'blocked')`
 - [ ] Testar registro de NCG com novo campo
+
+
+## 🔄 REFATORAÇÃO: Registro de NCG ANTES da bipagem - 26/02/2026
+
+**Problema:** Sistema só registra NCG se etiqueta já estiver cadastrada (após bipagem). Botão "Registrar NCG" só aparece no modal de associação.
+
+**Solução:** Permitir registro de NCG direto da lista de produtos da ordem, ANTES da bipagem.
+
+- [x] Adicionar botão "Registrar NCG" em cada linha da lista de produtos (CollectorReceiving.tsx)
+- [x] Refatorar mutation `registerNCG` para criar etiqueta automaticamente se não existir
+- [x] Gerar `labelCode` automaticamente no backend (formato: SKU + Lote + timestamp)
+- [x] Criar registro em `labelAssociations` com status 'BLOCKED'
+- [x] Manter lógica de criação de inventory em NCG e atualização de blockedQuantity
+- [x] Adicionar modal NCG na tela de seleção (antes da conferência)
+- [ ] Testar fluxo: selecionar ordem → clicar "Registrar NCG" em produto → preencher descrição/foto → confirmar

@@ -500,6 +500,44 @@ export function CollectorReceiving() {
             </CardContent>
           </Card>
 
+          {/* Lista de Produtos da Ordem */}
+          {selectedOrderId && orderItems && orderItems.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <Label className="text-lg font-semibold mb-3 block">Produtos da Ordem</Label>
+                <div className="space-y-2">
+                  {orderItems.map((item: any) => (
+                    <div key={item.id} className="border rounded-lg p-3">
+                      <div className="font-medium text-sm">{item.productDescription}</div>
+                      <div className="text-xs text-gray-600 mb-2">
+                        SKU: {item.productSku} | Lote: {item.batch || 'S/L'}
+                      </div>
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span>Esperado: {item.expectedQuantity} un.</span>
+                        <span className="text-gray-600">Recebido: {item.receivedQuantity || 0} un.</span>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedItemForNCG({
+                            receivingOrderItemId: item.id,
+                            labelCode: '', // Será gerado automaticamente
+                            maxQuantity: item.expectedQuantity
+                          });
+                          setIsNCGModalOpen(true);
+                        }}
+                        className="w-full"
+                      >
+                        Registrar NCG
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Button
             onClick={handleStartConference}
             disabled={!selectedOrderId || startSessionMutation.isPending}
@@ -513,6 +551,21 @@ export function CollectorReceiving() {
             Iniciar Conferência
           </Button>
         </div>
+
+        {/* Modal de Registro de NCG (tela de seleção) */}
+        {isNCGModalOpen && selectedItemForNCG && (
+          <RegisterNCGModal
+            isOpen={isNCGModalOpen}
+            onClose={() => {
+              setIsNCGModalOpen(false);
+              setSelectedItemForNCG(null);
+            }}
+            conferenceId={conferenceId || 0} // Pode ser 0 se ainda não iniciou conferência
+            receivingOrderItemId={selectedItemForNCG.receivingOrderItemId}
+            labelCode={selectedItemForNCG.labelCode}
+            maxQuantity={selectedItemForNCG.maxQuantity}
+          />
+        )}
       </CollectorLayout>
     );
   }
@@ -595,10 +648,33 @@ export function CollectorReceiving() {
                   <div key={`${item.productId}-${item.batch}`} className="border rounded-lg p-3">
                     <div className="font-medium text-sm">{item.productName}</div>
                     <div className="text-xs text-gray-600 mb-2">{item.productSku}</div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm mb-2">
                       <span>Lote: {item.batch || "-"}</span>
                       <span className="font-semibold">{item.packagesRead} caixas ({item.unitsRead || 0} un.)</span>
                     </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        // Buscar receivingOrderItemId do item
+                        const orderItem = orderItems?.find((oi: any) => 
+                          oi.productId === item.productId && oi.batch === item.batch
+                        );
+                        if (orderItem) {
+                          setSelectedItemForNCG({
+                            receivingOrderItemId: orderItem.id,
+                            labelCode: '', // Será gerado automaticamente
+                            maxQuantity: item.unitsRead || 0
+                          });
+                          setIsNCGModalOpen(true);
+                        } else {
+                          toast.error('Item da ordem não encontrado');
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Registrar NCG
+                    </Button>
                   </div>
                 ))}
               </div>
