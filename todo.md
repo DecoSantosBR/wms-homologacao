@@ -4267,3 +4267,19 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Localizar mutation `wave.create` em server/waveRouter.ts (delega para waveLogic.ts)
 - [x] Formatar `expiryDate` para string `YYYY-MM-DD` antes de inserir em `pickingWaveItems`
 - [ ] Testar criação de onda de picking
+
+
+## 🐛 INVESTIGAÇÃO: Erro 500 Persistente ao Gerar Onda - 26/02/2026
+
+**Problema:** Erro 500 persiste mesmo com expiryDate formatado corretamente (2029-04-25).
+
+**Observação:** Params mostram data correta, mas INSERT ainda falha. Pode ser:
+- Campo `labelCode` sendo enviado como `default` mas schema não permite
+- Incompatibilidade de tipo em algum campo
+- Constraint violada **Solução:**
+- [x] Verificar schema de pickingWaveItems em drizzle/schema.ts
+- [x] Comparar campos enviados vs campos esperados
+- [x] Identificar campo problemático: `labelCode` pode ser undefined (LEFT JOIN)
+- [x] Corrigir: usar `item.labelCode || null` para evitar desalinhamento de parâmetros
+- [ ] Testar criação de onda de picking `labelCode` pode ser undefined (LEFT JOIN)
+- [x] Corrigir: usar `item.labelCode || null` para evitar desalinhamento de parâmetros

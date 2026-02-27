@@ -361,9 +361,10 @@ export async function createWave(params: CreateWaveParams) {
     expiryDate: item.expiryDate instanceof Date 
       ? item.expiryDate.toISOString().split('T')[0] 
       : item.expiryDate,
-    status: "pending" as const,
     uniqueCode: getUniqueCode(item.productSku, item.batch), // ✅ Adicionar uniqueCode
-    labelCode: item.labelCode, // ✅ Código da etiqueta para rastreabilidade
+    // ✅ CORREÇÃO: Garantir que labelCode nunca seja undefined (causa desalinhamento de parâmetros)
+    labelCode: item.labelCode || null, // Se undefined, usar null explícito
+    status: "pending" as const, // ✅ Definir status DEPOIS de labelCode para evitar desalinhamento
   }));
 
   await db.insert(pickingWaveItems).values(waveItemsData);
