@@ -1161,7 +1161,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              code: warehouseLocations.code,
+              locationCode: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1227,7 +1227,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              code: warehouseLocations.code,
+              locationCode: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,

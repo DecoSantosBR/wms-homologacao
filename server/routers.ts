@@ -1807,7 +1807,7 @@ export const appRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              code: warehouseLocations.code,
+              locationCode: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -3145,14 +3145,14 @@ export const appRouter = router({
                 
                 const availableStock = await db
                   .select({
-                    id: inventory.id,
-                    quantity: inventory.quantity,
-                    reservedQuantity: inventory.reservedQuantity,
-                    batch: inventory.batch,
-                    expiryDate: inventory.expiryDate,
-                    labelCode: inventory.labelCode,
-                    locationId: inventory.locationId,
-                    code: warehouseLocations.code,
+                  id: inventory.id,
+                  quantity: inventory.quantity,
+                  reservedQuantity: inventory.reservedQuantity,
+                  batch: inventory.batch,
+                  expiryDate: inventory.expiryDate,
+                  labelCode: inventory.labelCode,
+                  locationId: inventory.locationId,
+                  locationCode: warehouseLocations.code,
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
                   })
                   .from(inventory)
