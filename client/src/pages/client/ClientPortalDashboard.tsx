@@ -102,10 +102,10 @@ export function ClientPortalDashboard() {
     <ClientPortalLayout>
       {/* Cabeçalho de boas-vindas */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-white drop-shadow-lg">
           Olá, {user?.fullName?.split(" ")[0] ?? "Bem-vindo"}!
         </h1>
-        <p className="text-slate-500 text-sm mt-1 capitalize">{todayLabel}</p>
+        <p className="text-slate-200 text-sm mt-1 capitalize">{todayLabel}</p>
       </div>
 
       {/* Alertas */}

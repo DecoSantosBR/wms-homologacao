@@ -4718,5 +4718,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 ## 🐛 BUG - 27/02/2026 (contraste headers)
 
-- [ ] Corrigir contraste do PageHeader (bg-white sólido cobrindo background) em todas as telas do Portal do Cliente e WMS
+- [x] Corrigir contraste do PageHeader (bg-white sólido cobrindo background) em todas as telas do Portal do Cliente e WMS
 - [x] Corrigir contraste da barra de navegação inferior e atalhos rápidos do Coletor (/collector)
