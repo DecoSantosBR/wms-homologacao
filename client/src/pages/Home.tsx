@@ -233,10 +233,10 @@ export default function Home() {
       {/* Main Content */}
       <main className="container py-6 sm:py-8">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3 px-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg mb-2 sm:mb-3 px-4">
             Sistema de Gerenciamento de Armazém
           </h2>
-          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground px-4">
+          <p className="text-sm sm:text-base lg:text-lg text-slate-200 drop-shadow px-4">
             Gerencie todas as operações do seu armazém de forma eficiente
           </p>
         </div>
