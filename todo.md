@@ -4692,3 +4692,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Corrigir finalização precoce do picking ao bipar primeiro item
 - [x] Implementar Validation Guard no finish do recebimento (validação prévia de todos os campos)
 - [x] Corrigir finalização precoce do picking (aguardar refreshRoute com setTimeout)
+- [x] Envolver finish em transação atômica (db.transaction com tx.select/update/insert)

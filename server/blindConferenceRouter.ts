@@ -1137,190 +1137,193 @@ export const blindConferenceRouter = router({
 
       console.log("[finish] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
-      // 1. BUSCAR SESSÃO
-      const session = await db.select()
+      // TRANSAÇÃO ATÔMICA: Tudo ou nada (mesmo padrão do closeReceivingOrder)
+      return await db.transaction(async (tx) => {
+        // 1. BUSCAR SESSÃO
+        const session = await tx.select()
         .from(blindConferenceSessions)
         .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
 
-      if (!session || session.length === 0 || !session[0]) {
-        throw new TRPCError({ 
-          code: 'NOT_FOUND', 
-          message: 'Sessão de conferência não encontrada.' 
-        });
-      }
-
-      // Buscar receivingOrder para obter tenantId correto
-      const [order] = await db.select()
-        .from(receivingOrders)
-        .where(eq(receivingOrders.id, session[0].receivingOrderId))
-        .limit(1);
-      
-      if (!order) {
-        throw new Error("Ordem de recebimento não encontrada");
-      }
-      
-      const orderTenantId = order.tenantId;
-
-      // 2. BUSCAR ITENS COM addressedQuantity JÁ CALCULADO (pelo prepareFinish)
-      const itemsWithQty = await db.select({
-        id: receivingOrderItems.id,
-        productId: receivingOrderItems.productId,
-        batch: receivingOrderItems.batch,
-        expiryDate: receivingOrderItems.expiryDate,
-        serialNumber: receivingOrderItems.serialNumber,
-        uniqueCode: receivingOrderItems.uniqueCode,
-        labelCode: receivingOrderItems.labelCode,
-        tenantId: receivingOrderItems.tenantId,
-        addressedQuantity: receivingOrderItems.addressedQuantity,
-      })
-        .from(receivingOrderItems)
-        .where(
-          and(
-            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
-            eq(receivingOrderItems.tenantId, activeTenantId)
-          )
-        );
-
-      console.log('[finish] Items com addressedQuantity:', itemsWithQty.length);
-
-      if (itemsWithQty.length === 0) {
-        throw new Error("Nenhum item encontrado para criar inventory");
-      }
-
-      // 3. BUSCAR ZONA E ENDEREÇO DE RECEBIMENTO (REC)
-      const zoneREC = await db.select()
-        .from(warehouseZones)
-        .where(eq(warehouseZones.code, 'REC'))
-        .limit(1);
-
-      if (zoneREC.length === 0) {
-        throw new Error("Zona de Recebimento ('REC') não configurada");
-      }
-
-      const recLocation = await db.select()
-        .from(warehouseLocations)
-        .where(
-          and(
-            eq(warehouseLocations.tenantId, activeTenantId),
-            eq(warehouseLocations.zoneId, zoneREC[0].id)
-          )
-        )
-        .limit(1);
-
-      if (recLocation.length === 0) {
-        throw new Error("Endereço de recebimento não encontrado para este tenant");
-      }
-
-      const locationId = recLocation[0].id;
-
-      // 4. VALIDATION GUARD: Validar todos os itens ANTES de inserir
-      const validationErrors: string[] = [];
-      
-      for (const item of itemsWithQty) {
-        if (!item || item.addressedQuantity === undefined || item.addressedQuantity === null) {
-          validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: addressedQuantity ausente`);
+        if (!session || session.length === 0 || !session[0]) {
+          throw new TRPCError({ 
+            code: 'NOT_FOUND', 
+            message: 'Sessão de conferência não encontrada.' 
+          });
         }
-        if (!item.productId) {
-          validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: productId ausente`);
-        }
-        if (!item.uniqueCode) {
-          validationErrors.push(`Item com productId ${item?.productId}: uniqueCode ausente`);
-        }
-        if (!item.labelCode) {
-          validationErrors.push(`Item ${item?.uniqueCode}: labelCode ausente`);
-        }
-      }
-      
-      if (validationErrors.length > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Validação falhou. Erros encontrados:\n${validationErrors.join('\n')}`
-        });
-      }
 
-      // 5. CRIAR 1 INVENTORY POR receivingOrderItem (1 uniqueCode = 1 inventory)
-      // Todos os itens já foram validados pelo Validation Guard acima
-      for (const item of itemsWithQty) {
-        console.log('[finish] Criando inventory para item:', item.uniqueCode, 'quantity:', item.addressedQuantity);
+        // Buscar receivingOrder para obter tenantId correto
+        const [order] = await tx.select()
+          .from(receivingOrders)
+          .where(eq(receivingOrders.id, session[0].receivingOrderId))
+          .limit(1);
         
-        // Buscar se já existe inventory para este uniqueCode
-        const existingInventory = await db.select()
-          .from(inventory)
+        if (!order) {
+          throw new Error("Ordem de recebimento não encontrada");
+        }
+        
+        const orderTenantId = order.tenantId;
+
+        // 2. BUSCAR ITENS COM addressedQuantity JÁ CALCULADO (pelo prepareFinish)
+        const itemsWithQty = await tx.select({
+          id: receivingOrderItems.id,
+          productId: receivingOrderItems.productId,
+          batch: receivingOrderItems.batch,
+          expiryDate: receivingOrderItems.expiryDate,
+          serialNumber: receivingOrderItems.serialNumber,
+          uniqueCode: receivingOrderItems.uniqueCode,
+          labelCode: receivingOrderItems.labelCode,
+          tenantId: receivingOrderItems.tenantId,
+          addressedQuantity: receivingOrderItems.addressedQuantity,
+        })
+          .from(receivingOrderItems)
           .where(
             and(
-              eq(inventory.uniqueCode, item.uniqueCode || ""),
-              eq(inventory.tenantId, activeTenantId),
-              eq(inventory.locationZone, 'REC')
+              eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
+              eq(receivingOrderItems.tenantId, activeTenantId)
+            )
+          );
+
+        console.log('[finish] Items com addressedQuantity:', itemsWithQty.length);
+
+        if (itemsWithQty.length === 0) {
+          throw new Error("Nenhum item encontrado para criar inventory");
+        }
+
+        // 3. BUSCAR ZONA E ENDEREÇO DE RECEBIMENTO (REC)
+        const zoneREC = await tx.select()
+          .from(warehouseZones)
+          .where(eq(warehouseZones.code, 'REC'))
+          .limit(1);
+
+        if (zoneREC.length === 0) {
+          throw new Error("Zona de Recebimento ('REC') não configurada");
+        }
+
+        const recLocation = await tx.select()
+          .from(warehouseLocations)
+          .where(
+            and(
+              eq(warehouseLocations.tenantId, activeTenantId),
+              eq(warehouseLocations.zoneId, zoneREC[0].id)
             )
           )
           .limit(1);
 
-        if (existingInventory.length > 0) {
-          // Atualizar inventory existente
-          await db.update(inventory)
-            .set({
-              quantity: Number(item.addressedQuantity) || 0,
-              locationId: locationId,
-              status: "available",
-              updatedAt: new Date()
-            })
-            .where(eq(inventory.id, existingInventory[0].id));
-        } else {
-          // Criar novo inventory
-          await db.insert(inventory).values({
-            tenantId: orderTenantId,
-            productId: item.productId,
-            locationId: locationId,
-            batch: item.batch || "",
-            expiryDate: item.expiryDate,
-            uniqueCode: item.uniqueCode || "",
-            labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
-            locationZone: 'REC',
-            quantity: Number(item.addressedQuantity) || 0,
-            reservedQuantity: 0,
-            status: "available",
+        if (recLocation.length === 0) {
+          throw new Error("Endereço de recebimento não encontrado para este tenant");
+        }
+
+        const locationId = recLocation[0].id;
+
+        // 4. VALIDATION GUARD: Validar todos os itens ANTES de inserir
+        const validationErrors: string[] = [];
+        
+        for (const item of itemsWithQty) {
+          if (!item || item.addressedQuantity === undefined || item.addressedQuantity === null) {
+            validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: addressedQuantity ausente`);
+          }
+          if (!item.productId) {
+            validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: productId ausente`);
+          }
+          if (!item.uniqueCode) {
+            validationErrors.push(`Item com productId ${item?.productId}: uniqueCode ausente`);
+          }
+          if (!item.labelCode) {
+            validationErrors.push(`Item ${item?.uniqueCode}: labelCode ausente`);
+          }
+        }
+        
+        if (validationErrors.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Validação falhou. Erros encontrados:\n${validationErrors.join('\n')}`
           });
         }
-      }
 
-      // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
-      // Buscar todos os produtos conferidos para liberar suas etiquetas
-      const productIds = itemsWithQty.map(item => item.productId);
-      
-      if (productIds.length > 0) {
-        await db.update(labelAssociations)
-          .set({ status: "AVAILABLE" })
-          .where(
-            and(
-              eq(labelAssociations.tenantId, activeTenantId),
-              eq(labelAssociations.status, "RECEIVING"),
-              sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
+        // 5. CRIAR 1 INVENTORY POR receivingOrderItem (1 uniqueCode = 1 inventory)
+        // Todos os itens já foram validados pelo Validation Guard acima
+        for (const item of itemsWithQty) {
+          console.log('[finish] Criando inventory para item:', item.uniqueCode, 'quantity:', item.addressedQuantity);
+          
+          // Buscar se já existe inventory para este uniqueCode
+          const existingInventory = await tx.select()
+            .from(inventory)
+            .where(
+              and(
+                eq(inventory.uniqueCode, item.uniqueCode || ""),
+                eq(inventory.tenantId, activeTenantId),
+                eq(inventory.locationZone, 'REC')
+              )
             )
-          );
-      }
+            .limit(1);
 
-      // 5. FINALIZAR SESSÃO
-      await db.update(blindConferenceSessions)
-        .set({
-          status: "completed",
-          finishedAt: new Date()
-        })
-        .where(eq(blindConferenceSessions.id, input.conferenceId));
+          if (existingInventory.length > 0) {
+            // Atualizar inventory existente
+            await tx.update(inventory)
+              .set({
+                quantity: Number(item.addressedQuantity) || 0,
+                locationId: locationId,
+                status: "available",
+                updatedAt: new Date()
+              })
+              .where(eq(inventory.id, existingInventory[0].id));
+          } else {
+            // Criar novo inventory
+            await tx.insert(inventory).values({
+              tenantId: orderTenantId,
+              productId: item.productId,
+              locationId: locationId,
+              batch: item.batch || "",
+              expiryDate: item.expiryDate,
+              uniqueCode: item.uniqueCode || "",
+              labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
+              locationZone: 'REC',
+              quantity: Number(item.addressedQuantity) || 0,
+              reservedQuantity: 0,
+              status: "available",
+            });
+          }
+        }
 
-      // 7. ATUALIZAR STATUS DA ORDEM DE RECEBIMENTO
-      await db.update(receivingOrders)
-        .set({
-          status: "completed",
-          updatedAt: new Date()
-        })
-        .where(eq(receivingOrders.id, session[0].receivingOrderId));
+        // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
+        // Buscar todos os produtos conferidos para liberar suas etiquetas
+        const productIds = itemsWithQty.map(item => item.productId);
+        
+        if (productIds.length > 0) {
+          await tx.update(labelAssociations)
+            .set({ status: "AVAILABLE" })
+            .where(
+              and(
+                eq(labelAssociations.tenantId, activeTenantId),
+                eq(labelAssociations.status, "RECEIVING"),
+                sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
+              )
+            );
+        }
 
-      return {
-        success: true,
-        message: "Conferência finalizada com sucesso",
-        itemsProcessed: itemsWithQty.length
-      };
+        // 5. FINALIZAR SESSÃO
+        await tx.update(blindConferenceSessions)
+          .set({
+            status: "completed",
+            finishedAt: new Date()
+          })
+          .where(eq(blindConferenceSessions.id, input.conferenceId));
+
+        // 7. ATUALIZAR STATUS DA ORDEM DE RECEBIMENTO
+        await tx.update(receivingOrders)
+          .set({
+            status: "completed",
+            updatedAt: new Date()
+          })
+          .where(eq(receivingOrders.id, session[0].receivingOrderId));
+
+          return {
+            success: true,
+            message: "Conferência finalizada com sucesso",
+            itemsProcessed: itemsWithQty.length
+          };
+      }); // Fim da transação atômica
     }),
 
   /**
