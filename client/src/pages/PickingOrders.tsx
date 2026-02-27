@@ -1183,7 +1183,7 @@ export default function PickingOrders() {
                 </div>
 
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button size="sm">
                           Ver Detalhes
                         </Button>
                         {isPending && (

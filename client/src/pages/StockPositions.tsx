@@ -129,15 +129,15 @@ export default function StockPositions() {
         actions={
           <div className="flex items-center gap-2">
             <Link href="/stock/occupancy">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-white text-gray-700 hover:bg-gray-50">
                 <BarChart3 className="w-4 h-4 mr-2" /> Dashboard de Ocupação
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
+            <Button variant="outline" size="sm" className="bg-white text-gray-700 hover:bg-gray-50" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
               <Tag className="w-4 h-4 mr-2" /> Histórico de Etiquetas
             </Button>
             <Link href="/stock/movements">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-white text-gray-700 hover:bg-gray-50">
                 <ArrowRightLeft className="w-4 h-4 mr-2" /> Movimentações
               </Button>
             </Link>
@@ -236,10 +236,11 @@ export default function StockPositions() {
                 placeholder="Buscar por SKU, descrição..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-white"
               />
 
               <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Cliente" />
                 </SelectTrigger>
                 <SelectContent>
@@ -254,7 +255,7 @@ export default function StockPositions() {
               </Select>
 
               <Select value={zoneFilter} onValueChange={setZoneFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Zona" />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,22 +279,25 @@ export default function StockPositions() {
                 selected={statusFilter}
                 onChange={setStatusFilter}
                 placeholder="Todos os status"
+                className="bg-white"
               />
 
               <Input
                 placeholder="Filtrar por lote..."
                 value={batchFilter}
                 onChange={(e) => setBatchFilter(e.target.value)}
+                className="bg-white"
               />
 
               <Input
                 placeholder="Filtrar por endereço..."
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
+                className="bg-white"
               />
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleClearFilters}>
+                <Button variant="outline" className="bg-white text-gray-700 hover:bg-gray-50" onClick={handleClearFilters}>
                   Limpar Filtros
                 </Button>
                 <Button onClick={handleExportExcel} disabled={positions.length === 0 || exportMutation.isPending}>
@@ -323,18 +327,18 @@ export default function StockPositions() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Zona</TableHead>
-                      <TableHead>Endereço</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Lote</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead className="text-right">Qtd. Reservada</TableHead>
-                      <TableHead className="text-right">Qtd. Disponível</TableHead>
-                      <TableHead>Validade</TableHead>
+                    <TableRow className="bg-white">
+                      <TableHead className="text-gray-700 font-semibold">Cliente</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Zona</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Endereço</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Status</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">SKU</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Produto</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Lote</TableHead>
+                      <TableHead className="text-right text-gray-700 font-semibold">Quantidade</TableHead>
+                      <TableHead className="text-right text-gray-700 font-semibold">Qtd. Reservada</TableHead>
+                      <TableHead className="text-right text-gray-700 font-semibold">Qtd. Disponível</TableHead>
+                      <TableHead className="text-gray-700 font-semibold">Validade</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
