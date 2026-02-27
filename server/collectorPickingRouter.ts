@@ -620,7 +620,7 @@ export const collectorPickingRouter = router({
             .update(pickingWaveItems)
             .set({
               pickedQuantity: sql`${pickingWaveItems.pickedQuantity} + ${quantityToAdd}`,
-              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${quantityToAdd} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'in_progress' END`,
+              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${quantityToAdd} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'picking' END`,
               pickedAt: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${quantityToAdd} >= ${pickingWaveItems.totalQuantity} THEN NOW() ELSE ${pickingWaveItems.pickedAt} END`,
             })
             .where(
@@ -735,7 +735,7 @@ export const collectorPickingRouter = router({
             .update(pickingWaveItems)
             .set({
               pickedQuantity: sql`${pickingWaveItems.pickedQuantity} + ${input.quantity}`,
-              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${input.quantity} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'in_progress' END`,
+              status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${input.quantity} >= ${pickingWaveItems.totalQuantity} THEN 'picked' ELSE 'picking' END`,
               pickedAt: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} + ${input.quantity} >= ${pickingWaveItems.totalQuantity} THEN NOW() ELSE ${pickingWaveItems.pickedAt} END`,
             })
             .where(
