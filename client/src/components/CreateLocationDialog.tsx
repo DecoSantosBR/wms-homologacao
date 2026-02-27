@@ -72,7 +72,7 @@ export function CreateLocationDialog() {
         generatedCode = `${aisle}-${rack}-${level}${position}`;
       }
       
-      if (generatedCode && generatedCode !== formData.code) {
+      if (generatedCode) {
         setFormData(prev => ({ ...prev, code: generatedCode }));
       }
     }
@@ -175,7 +175,7 @@ export function CreateLocationDialog() {
                 <SelectContent>
                   {zones?.map((zone) => (
                     <SelectItem key={zone.id} value={zone.id.toString()}>
-                      {zone.code} - {zone.name}
+                      {zone.zoneCode} - {zone.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

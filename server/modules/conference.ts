@@ -332,7 +332,7 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
       const { getUniqueCode } = await import("../utils/uniqueCode");
 
       // Buscar zona do endereço de recebimento
-      const recLocation = await dbConn.select({ zoneCode: warehouseZones.code })
+      const recLocation = await dbConn.select({ zoneCode: warehouseZones.zoneCode })
         .from(warehouseLocations)
         .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(eq(warehouseLocations.id, order.receivingLocationId))

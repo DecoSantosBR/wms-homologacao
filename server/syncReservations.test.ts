@@ -56,7 +56,7 @@ describe("Sincronização Automática de Reservas", () => {
     const [zone] = await db
       .select({ id: warehouseZones.id })
       .from(warehouseZones)
-      .where(eq(warehouseZones.code, "EXP"))
+      .where(eq(warehouseZones.zoneCode, "EXP"))
       .limit(1);
 
     // Criar endereço de teste

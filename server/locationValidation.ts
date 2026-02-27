@@ -36,9 +36,9 @@ export async function validateLocationForBatch(
   const location = await dbConn
     .select({
       locationId: warehouseLocations.id,
-      locationCode: warehouseLocations.code,
+      locationCode: warehouseLocations.locationCode,
       zoneId: warehouseLocations.zoneId,
-      zoneCode: warehouseZones.code,
+      zoneCode: warehouseZones.zoneCode,
       zoneName: warehouseZones.name,
     })
     .from(warehouseLocations)

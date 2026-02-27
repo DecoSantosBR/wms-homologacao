@@ -2,7 +2,7 @@ import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 interface Location {
   id: number;
-  code: string;
+  locationCode: string;
   zoneName?: string;
 }
 

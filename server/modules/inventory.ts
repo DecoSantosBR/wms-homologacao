@@ -99,7 +99,7 @@ export async function getInventoryPositions(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      locationCode: warehouseLocations.locationCode,
       locationStatus: warehouseLocations.status, // Status do endereço
       zoneName: warehouseZones.name,
       batch: inventory.batch,
@@ -246,7 +246,7 @@ export async function getExpiringProducts(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      locationCode: warehouseLocations.locationCode,
       locationStatus: warehouseLocations.status,
       zoneName: warehouseZones.name,
       batch: inventory.batch,

@@ -220,8 +220,8 @@ describe("Reservation Bug - Completed Wave Deletion", () => {
       await db.delete(products).where(eq(products.id, testProductId));
     }
     if (testTenantId) {
-      await db.delete(warehouseLocations).where(eq(warehouseLocations.code, "TEST-LOC-RES-01"));
-      await db.delete(warehouseZones).where(eq(warehouseZones.code, "TEST-ZONE-RES"));
+      await db.delete(warehouseLocations).where(eq(warehouseLocations.locationCode, "TEST-LOC-RES-01"));
+      await db.delete(warehouseZones).where(eq(warehouseZones.zoneCode, "TEST-ZONE-RES"));
       await db.delete(tenants).where(eq(tenants.id, testTenantId));
     }
   });

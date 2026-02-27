@@ -51,7 +51,7 @@ export async function listLocations(filters: LocationFilters = {}) {
   if (filters.search) {
     conditions.push(
       or(
-        like(warehouseLocations.code, `%${filters.search}%`),
+        like(warehouseLocations.locationCode, `%${filters.search}%`),
         like(warehouseLocations.aisle, `%${filters.search}%`),
         like(warehouseLocations.rack, `%${filters.search}%`)
       )!
@@ -77,7 +77,7 @@ export async function listLocations(filters: LocationFilters = {}) {
     query = query.where(and(...conditions));
   }
   
-  return await query.orderBy(warehouseLocations.code);
+  return await query.orderBy(warehouseLocations.locationCode);
 }
 
 /**
@@ -114,7 +114,7 @@ export async function getLocationByCode(code: string) {
   const results = await db
     .select()
     .from(warehouseLocations)
-    .where(eq(warehouseLocations.code, code))
+    .where(eq(warehouseLocations.locationCode, code))
     .limit(1);
   
   return results[0] || null;
@@ -218,7 +218,7 @@ export async function updateLocation(
       const levelPosition = (level || '') + (position || '');
       if (levelPosition) codeParts.push(levelPosition);
       
-      updateData.code = codeParts.join("-") || `LOC-${Date.now()}`;
+      updateData.locationCode = codeParts.join("-") || `LOC-${Date.now()}`;
     }
   }
   
@@ -288,7 +288,7 @@ export async function getZoneById(id: number) {
  */
 export async function createZone(data: {
   warehouseId: number;
-  code: string;
+  zoneCode: string;
   name: string;
   storageCondition: "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled" | "quarantine";
   hasTemperatureControl?: boolean;
@@ -299,7 +299,7 @@ export async function createZone(data: {
   
   const result = await db.insert(warehouseZones).values({
     warehouseId: data.warehouseId,
-    code: data.code,
+    zoneCode: data.zoneCode,
     name: data.name,
     storageCondition: data.storageCondition,
     hasTemperatureControl: data.hasTemperatureControl || false,
@@ -313,7 +313,7 @@ export async function createZone(data: {
  * Atualizar zona
  */
 export async function updateZone(id: number, data: Partial<{
-  code: string;
+  zoneCode: string;
   name: string;
   storageCondition: "ambient" | "refrigerated_2_8" | "frozen_minus_20" | "controlled" | "quarantine";
   hasTemperatureControl: boolean;
@@ -485,9 +485,9 @@ export async function createBulkLocations(data: {
   // Verificar códigos duplicados
   const codes = locations.map(l => l.code);
   const existing = await db
-    .select({ code: warehouseLocations.code })
+    .select({ locationCode: warehouseLocations.locationCode })
     .from(warehouseLocations)
-    .where(sql`${warehouseLocations.code} IN (${sql.join(codes.map(c => sql`${c}`), sql`, `)})`);
+    .where(sql`${warehouseLocations.locationCode} IN (${sql.join(codes.map(c => sql`${c}`), sql`, `)})`);
   
   const existingCodes = new Set(existing.map(e => e.code));
   const toCreate = locations.filter(l => !existingCodes.has(l.code));
@@ -624,7 +624,7 @@ export async function listLocationsWithStock(filters: { tenantId?: number | null
           : sql`1=1`
       )
     )
-    .orderBy(warehouseLocations.code);
+    .orderBy(warehouseLocations.locationCode);
   
   return locationsWithStock;
 }

@@ -141,7 +141,7 @@ export default function Locations() {
       toast.success("Zona criada com sucesso!");
       utils.zones.list.invalidate();
       setZoneDialogOpen(false);
-      setZoneForm({ name: "", code: "", storageCondition: "ambient", hasTemperatureControl: false });
+      setZoneForm({ name: "", zoneCode: "", storageCondition: "ambient", hasTemperatureControl: false });
     },
     onError: (error) => {
       toast.error("Erro ao criar zona: " + error.message);
@@ -199,7 +199,7 @@ export default function Locations() {
     setEditForm({
       zoneId: location.zoneId,
       tenantId: location.tenantId || 0,
-      code: location.code || "",
+      locationCode: location.code || "",
       aisle: location.aisle || "",
       rack: location.rack || "",
       level: location.level || "",
@@ -232,7 +232,7 @@ export default function Locations() {
 
   // Zone handlers
   const handleCreateZone = () => {
-    setZoneForm({ name: "", code: "", storageCondition: "ambient", hasTemperatureControl: false });
+    setZoneForm({ name: "", zoneCode: "", storageCondition: "ambient", hasTemperatureControl: false });
     setZoneDialogOpen(true);
   };
 
@@ -240,7 +240,7 @@ export default function Locations() {
     setSelectedZone(zone);
     setZoneForm({
       name: zone.name,
-      code: zone.code,
+      zoneCode: zone.code,
       storageCondition: zone.storageCondition,
       hasTemperatureControl: zone.hasTemperatureControl || false,
     });
@@ -396,7 +396,7 @@ export default function Locations() {
     if (searchText) {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(loc => 
-        loc.code?.toLowerCase().includes(search) ||
+        loc.locationCode?.toLowerCase().includes(search) ||
         loc.aisle?.toLowerCase().includes(search) ||
         loc.rack?.toLowerCase().includes(search) ||
         loc.level?.toLowerCase().includes(search)
@@ -924,7 +924,7 @@ export default function Locations() {
               <Input
                 id="edit-code"
                 value={editForm.code}
-                onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                onChange={(e) => setEditForm({ ...editForm, locationCode: e.target.value })}
                 placeholder="Ex: A-01-01-01"
               />
             </div>
@@ -1066,7 +1066,7 @@ export default function Locations() {
               <Input
                 id="zone-code"
                 value={zoneForm.code}
-                onChange={(e) => setZoneForm({ ...zoneForm, code: e.target.value })}
+                onChange={(e) => setZoneForm({ ...zoneForm, zoneCode: e.target.value })}
                 placeholder="Ex: ZONA-A"
               />
             </div>
@@ -1139,7 +1139,7 @@ export default function Locations() {
               <Input
                 id="edit-zone-code"
                 value={zoneForm.code}
-                onChange={(e) => setZoneForm({ ...zoneForm, code: e.target.value })}
+                onChange={(e) => setZoneForm({ ...zoneForm, zoneCode: e.target.value })}
               />
             </div>
 

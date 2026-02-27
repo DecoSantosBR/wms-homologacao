@@ -4328,3 +4328,123 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar `labelCode` ao registro de inventoryMovements
 - [x] Atualizar query de criação de onda para buscar `labelCode` de `inventory`
 - [ ] Testar fluxo completo: conferência → movimentação → criação de onda
+
+
+## 🗑️ LIMPEZA: Base de Dados - Teste do Zero - 26/02/2026
+
+**Objetivo:** Limpar completamente a base de dados para teste do zero (manter estrutura, remover dados)
+
+**Implementação:**
+- [ ] Executar TRUNCATE em todas as tabelas (ordem reversa de dependências)
+- [ ] Verificar limpeza completa
+- [ ] Confirmar ao usuário
+
+
+## 🗑️ LIMPEZA: Base de Dados - Teste do Zero - 27/02/2026
+
+**Objetivo:** Limpar completamente a base de dados para teste do zero (manter estrutura e usuário)
+
+**Implementação:**
+- [x] Executar TRUNCATE em todas as tabelas (exceto users)
+- [x] Verificar limpeza completa (0 registros em todas as tabelas exceto users)
+- [x] Confirmar ao usuário
+
+
+## 🎓 SKILL: Teste de Fluxo Completo WMS - 27/02/2026
+
+**Objetivo:** Criar Skill padronizada para testar todos os fluxos do sistema com validações SQL
+
+**Implementação:**
+- [x] Ler skill-creator para entender estrutura
+- [x] Criar skill com roteiros de teste (cadastros, recebimento, movimentação, picking, NCG)
+- [x] Adicionar queries SQL de validação para cada etapa
+- [x] Validar skill (quick_validate.py)
+- [x] Documentar uso da skill
+
+
+## 🔧 CORREÇÃO: Skill wms-test-flow - Campo type em zonas - 27/02/2026
+
+**Problema:** Skill menciona campo `type` no cadastro de zonas, mas campo não existe na UI
+
+**Solução:**
+- [ ] Verificar schema de warehouseZones
+- [ ] Verificar tela de cadastro de zonas
+- [ ] Atualizar skill com campos corretos da UI
+
+
+## 🐛 BUG: Código de Endereço Não Gerado Automaticamente - 27/02/2026
+
+**Problema:** Código do endereço deveria ser gerado automaticamente ao preencher Rua, Prédio, Andar e Quadrante, mas não está ocorrendo
+
+**Solução:**
+- [x] Localizar tela de cadastro de endereços (CreateLocationDialog.tsx)
+- [x] Verificar lógica de geração automática de código
+- [x] Corrigir geração automática (remover comparação com formData.code)
+- [x] Testar geração automática (FUNCIONANDO: REC + 001 + A = REC-001-A)
+
+
+## 🐛 BUG: zoneCode Não Preenchido em warehouseLocations - 27/02/2026
+
+**Problema:** Campo `zoneCode` está NULL em todos os endereços, mas deveria ser preenchido automaticamente com o código da zona
+
+**Solução:**
+- [x] Verificar backend de criação de endereços (locations.create em routers.ts)
+- [x] Adicionar lógica para preencher zoneCode automaticamente (busca zone.code)
+- [x] Atualizar endereços existentes com zoneCode correto (UPDATE com JOIN)
+- [ ] Testar criação de novo endereço
+
+
+## 🔄 REFATORAÇÃO: Padronização de nomenclatura de colunas - 27/02/2026
+
+**Decisão:** Renomear colunas "code" genéricas para nomes específicos e consistentes
+
+**Mudanças:**
+- [ ] warehouseZones.code → warehouseZones.zoneCode
+- [ ] warehouseLocations.code → warehouseLocations.locationCode
+- [ ] Criar migrations para renomear colunas no banco
+- [ ] Atualizar schema Drizzle (drizzle/schema.ts)
+- [ ] Atualizar todas as queries e referências no backend
+- [ ] Atualizar componentes UI que exibem essas colunas
+- [ ] Testar sistema completo após mudanças
+
+
+## 🔄 ROLLBACK: Padronização de Nomenclatura - 27/02/2026
+
+**Decisão:** Cancelar renomeação de colunas code → zoneCode/locationCode
+
+**Ação tomada:**
+- [x] Rollback completo realizado
+- [x] Colunas mantidas como estavam: `warehouseZones.code` e `warehouseLocations.code`
+- [x] Migrations SQL revertidas no banco de dados
+- [x] Schema Drizzle restaurado ao estado original (checkpoint 25edd80a)
+- [x] Sistema funcional e estável
+
+**Motivo:** Complexidade excessiva da refatoração não justificava o benefício marginal. Nomenclatura atual é funcional e consistente dentro do contexto de cada tabela.
+
+
+## 🐛 BUG: Erro na página /cadastros - 27/02/2026
+
+**Erro:** "Cannot convert undefined or null to object" (TRPCClientError)
+**Página:** /cadastros
+**Contexto:** Usuário admin (tenantId: 1) acessando a página
+
+**Ações:**
+- [ ] Identificar qual query tRPC está falhando
+- [ ] Verificar se há objeto undefined/null sendo acessado
+- [ ] Corrigir tratamento de dados nulos
+- [ ] Testar correção
+
+
+## 🐛 BUG: Erro locationCode undefined após rollback - 27/02/2026
+
+**Erro:** "Invalid input: expected string, received undefined" no campo locationCode
+**Página:** /locations  
+**Causa:** Frontend ainda usa `locationCode` mas schema foi revertido para `code`
+
+**Ações:**
+- [x] Reverter editForm.locationCode para editForm.code em Locations.tsx
+- [x] Reverter zoneForm.zoneCode para zoneForm.code
+- [x] Reverter location.locationCode para location.code em todos os componentes
+- [x] Reverter loc.locationCode para loc.code em StockMovements, PickingExecution, etc.
+- [x] Testar página /locations sem erros no console
+- [ ] Salvar checkpoint

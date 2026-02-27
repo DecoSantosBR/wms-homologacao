@@ -746,7 +746,7 @@ export const shippingRouter = router({
             .from(warehouseLocations)
             .where(
               and(
-                sql`${warehouseLocations.code} LIKE 'EXP%'`,
+                sql`${warehouseLocations.locationCode} LIKE 'EXP%'`,
                 eq(warehouseLocations.tenantId, pickingOrder.tenantId),
                 or(
                   eq(warehouseLocations.status, 'available'),
@@ -771,7 +771,7 @@ export const shippingRouter = router({
             .from(warehouseLocations)
             .where(
               and(
-                eq(warehouseLocations.code, tenant.shippingAddress),
+                eq(warehouseLocations.locationCode, tenant.shippingAddress),
                 eq(warehouseLocations.tenantId, pickingOrder.tenantId)
               )
             )
@@ -924,7 +924,7 @@ export const shippingRouter = router({
             .where(
               and(
                 eq(inventory.productId, item.productId),
-                eq(warehouseZones.code, "EXP"),
+                eq(warehouseZones.zoneCode, "EXP"),
                 sql`${inventory.reservedQuantity} > 0` // Tem reserva
               )
             )
@@ -1162,7 +1162,7 @@ export const shippingRouter = router({
             .where(
               and(
                 eq(inventory.productId, item.productId),
-                eq(warehouseZones.code, "EXP"),
+                eq(warehouseZones.zoneCode, "EXP"),
                 sql`${inventory.reservedQuantity} > 0` // Tem reserva
               )
             )
@@ -1391,7 +1391,7 @@ export const shippingRouter = router({
             .limit(1);
 
           // Buscar zona do endereço de armazenagem (origem da movimentação)
-          const storageLocation = await db.select({ zoneCode: warehouseZones.code })
+          const storageLocation = await db.select({ zoneCode: warehouseZones.zoneCode })
             .from(warehouseLocations)
             .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
             .where(eq(warehouseLocations.id, movement.fromLocationId))

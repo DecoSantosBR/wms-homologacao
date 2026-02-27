@@ -404,8 +404,8 @@ export const appRouter = router({
         const availableStock = await db
           .select({
             locationId: inventory.locationId,
-            locationCode: warehouseLocations.code,
-            zoneCode: warehouseZones.code,
+            locationCode: warehouseLocations.locationCode,
+            zoneCode: warehouseZones.zoneCode,
             quantity: inventory.quantity,
             reservedQuantity: inventory.reservedQuantity,
             availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
@@ -418,7 +418,7 @@ export const appRouter = router({
               eq(inventory.productId, input.productId),
               eq(inventory.tenantId, input.tenantId),
               sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-              sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')` // Excluir zonas especiais
+              sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')` // Excluir zonas especiais
             )
           );
 
@@ -441,7 +441,7 @@ export const appRouter = router({
               eq(inventory.productId, input.productId),
               eq(inventory.tenantId, input.tenantId),
               sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-              sql`${warehouseZones.code} IN ('EXP', 'REC', 'NCG', 'DEV')` // Apenas zonas especiais
+              sql`${warehouseZones.zoneCode} IN ('EXP', 'REC', 'NCG', 'DEV')` // Apenas zonas especiais
             )
           );
 
@@ -472,7 +472,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         name: z.string().min(1, "Nome é obrigatório"),
-        code: z.string().min(1, "Código é obrigatório"),
+        zoneCode: z.string().min(1, "Código é obrigatório"),
         warehouseId: z.number().default(1),
         storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled", "quarantine"]).default("ambient"),
         hasTemperatureControl: z.boolean().default(false),
@@ -489,7 +489,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().min(1, "Nome é obrigatório"),
-        code: z.string().min(1, "Código é obrigatório"),
+        zoneCode: z.string().min(1, "Código é obrigatório"),
         storageCondition: z.enum(["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled", "quarantine"]),
         hasTemperatureControl: z.boolean(),
       }))
@@ -546,7 +546,7 @@ export const appRouter = router({
       .input(z.object({
         zoneId: z.number(),
         tenantId: z.number(),
-        code: z.string().min(1, "Código é obrigatório"),
+        locationCode: z.string().min(1, "Código é obrigatório"),
         aisle: z.string().optional(),
         rack: z.string().optional(),
         level: z.string().optional(),
@@ -558,7 +558,17 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        await db.insert(warehouseLocations).values(input);
+        // Buscar zoneCode da zona selecionada
+        const [zone] = await db.select({ zoneCode: warehouseZones.zoneCode })
+          .from(warehouseZones)
+          .where(eq(warehouseZones.id, input.zoneId))
+          .limit(1);
+        
+        // Inserir location com zoneCode preenchido automaticamente
+        await db.insert(warehouseLocations).values({
+          ...input,
+          zoneCode: zone?.zoneCode || null,
+        });
         return { success: true };
       }),
 
@@ -567,7 +577,7 @@ export const appRouter = router({
         id: z.number(),
         zoneId: z.number(),
         tenantId: z.number().optional(),
-        code: z.string().min(1, "Código é obrigatório"),
+        locationCode: z.string().min(1, "Código é obrigatório"),
         aisle: z.string().optional(),
         rack: z.string().optional(),
         level: z.string().optional(),
@@ -621,7 +631,7 @@ export const appRouter = router({
         
         // Buscar código do endereço
         const [location] = await db
-          .select({ code: warehouseLocations.code })
+          .select({ locationCode: warehouseLocations.locationCode })
           .from(warehouseLocations)
           .where(eq(warehouseLocations.id, input.id))
           .limit(1);
@@ -1796,7 +1806,7 @@ export const appRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.code,
+              locationCode: warehouseLocations.locationCode,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1813,7 +1823,7 @@ export const appRouter = router({
                 eq(inventory.status, "available"),
                 sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
                 // Excluir zonas especiais (Expedição, Recebimento, Não Conformidades, Devoluções)
-                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
               )
             )
             .orderBy(inventory.expiryDate); // FEFO por padrão
@@ -2245,7 +2255,7 @@ export const appRouter = router({
               .select({
                 id: inventory.id,
                 locationId: inventory.locationId,
-                locationCode: warehouseLocations.code,
+                locationCode: warehouseLocations.locationCode,
                 batch: inventory.batch,
                 expiryDate: inventory.expiryDate,
                 quantity: inventory.quantity,
@@ -2261,7 +2271,7 @@ export const appRouter = router({
                   eq(inventory.productId, item.productId),
                   eq(inventory.status, "available"),
                   sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-                  sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                  sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
                 )
               )
               .orderBy(inventory.expiryDate);
@@ -3136,7 +3146,7 @@ export const appRouter = router({
                     batch: inventory.batch,
                     expiryDate: inventory.expiryDate,
                     locationId: inventory.locationId,
-                    locationCode: warehouseLocations.code,
+                    locationCode: warehouseLocations.locationCode,
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
                   })
                   .from(inventory)

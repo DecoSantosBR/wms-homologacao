@@ -78,7 +78,7 @@ export async function generatePickingAllocations(
         .select({
           id: inventory.id,
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.code,
+          locationCode: warehouseLocations.locationCode,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,
@@ -140,7 +140,7 @@ export async function generatePickingAllocations(
         .select({
           id: inventory.id,
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.code,
+          locationCode: warehouseLocations.locationCode,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,
@@ -168,7 +168,7 @@ export async function generatePickingAllocations(
         .select({
           id: inventory.id,
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.code,
+          locationCode: warehouseLocations.locationCode,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,
@@ -200,7 +200,7 @@ export async function generatePickingAllocations(
         .select({
           id: inventory.id,
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.code,
+          locationCode: warehouseLocations.locationCode,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,

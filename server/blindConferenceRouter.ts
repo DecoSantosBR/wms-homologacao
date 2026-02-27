@@ -690,7 +690,7 @@ export const blindConferenceRouter = router({
         uniqueCode: orderItem.uniqueCode || null,
         labelCode: labelCode,
         serialNumber: orderItem.serialNumber || null,
-        locationZone: ncgLocation.zone || null,
+        locationZone: ncgLocation.zoneCode || null,
         quantity: input.quantity,
         reservedQuantity: 0,
         status: "blocked", // 🔒 CRUCIAL: Picking ignora este status
@@ -1028,7 +1028,7 @@ export const blindConferenceRouter = router({
         // 1. Buscar zona de recebimento (REC)
         const zoneREC = await db.select()
           .from(warehouseZones)
-          .where(eq(warehouseZones.code, 'REC'))
+          .where(eq(warehouseZones.zoneCode, 'REC'))
           .limit(1);
 
         if (zoneREC.length === 0) {

@@ -136,7 +136,7 @@ async function allocateLocations(
       .select({
         inventoryId: inventory.id,
         locationId: inventory.locationId,
-        locationCode: warehouseLocations.code,
+        locationCode: warehouseLocations.locationCode,
         batch: inventory.batch,
         expiryDate: inventory.expiryDate,
         quantity: inventory.quantity,
@@ -282,7 +282,7 @@ export async function createWave(params: CreateWaveParams) {
       and(
         inArray(pickingAllocations.pickingOrderId, params.orderIds),
         // Excluir zonas especiais (Expedição, Recebimento, Não Conformidades, Devoluções)
-        sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+        sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
       )
     );
 
