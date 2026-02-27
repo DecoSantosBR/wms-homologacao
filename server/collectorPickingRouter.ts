@@ -12,6 +12,7 @@ import { eq, and, asc, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { getUniqueCode } from "./utils/uniqueCode";
+import { toMySQLDate } from "../shared/utils";
 import {
   pickingOrders,
   pickingAllocations,
@@ -956,7 +957,7 @@ export const collectorPickingRouter = router({
           locationId: alt.locationId!,
           locationCode: alt.locationCode!,
           batch: alt.batch ?? null,
-          expiryDate: alloc.expiryDate,
+          expiryDate: toMySQLDate(alloc.expiryDate),
           uniqueCode: alt.uniqueCode,
           labelCode: alt.labelCode,
           quantity: remainingNeeded,

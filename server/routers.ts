@@ -24,6 +24,7 @@ import { labelRouter } from "./labelRouter";
 import { clientPortalRouter } from "./clientPortalRouter";
 import { collectorPickingRouter } from "./collectorPickingRouter";
 import { getUniqueCode } from "./utils/uniqueCode";
+import { toMySQLDate } from "../shared/utils";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1944,7 +1945,7 @@ export const appRouter = router({
               locationId: stock.locationId,
               locationCode: stock.locationCode,
               batch: stock.batch,
-              expiryDate: stock.expiryDate,
+              expiryDate: toMySQLDate(stock.expiryDate),
               uniqueCode: getUniqueCode(product.sku, stock.batch),
               labelCode: stock.labelCode,
               quantity: toReserve,
@@ -2328,7 +2329,7 @@ export const appRouter = router({
                 locationId: stock.locationId,
                 locationCode: stock.locationCode,
                 batch: stock.batch ?? "",
-                expiryDate: stock.expiryDate ?? null,
+                expiryDate: toMySQLDate(stock.expiryDate ?? null),
                 uniqueCode: getUniqueCode(product.sku, stock.batch ?? ""),
                 labelCode: stock.labelCode,
                 quantity: toReserve,

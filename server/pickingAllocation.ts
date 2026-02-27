@@ -10,6 +10,7 @@ import {
 } from "../drizzle/schema";
 import { eq, and, isNull, or, sql, gt } from "drizzle-orm";
 import { getUniqueCode } from "./utils/uniqueCode";
+import { toMySQLDate } from "../shared/utils";
 
 /**
  * Pré-alocação de lotes e endereços para picking
@@ -242,7 +243,7 @@ export async function generatePickingAllocations(
         locationId: inv.locationId,
         locationCode: inv.locationCode,
         batch: inv.batch,
-        expiryDate: inv.expiryDate,
+        expiryDate: toMySQLDate(inv.expiryDate),
         uniqueCode: getUniqueCode(product.sku, inv.batch), // ✅ Adicionar uniqueCode
         labelCode: inv.labelCode, // ✅ Adicionar labelCode
         quantity: allocatedQuantity,

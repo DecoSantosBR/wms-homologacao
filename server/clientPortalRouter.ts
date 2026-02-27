@@ -35,6 +35,7 @@ import { nanoid } from "nanoid";
 import * as crypto from "crypto";
 import { sendEmail, createApprovalEmailTemplate } from "./_core/emailNotification";
 import { getUniqueCode } from "./utils/uniqueCode";
+import { toMySQLDate } from "../shared/utils";
 
 // ============================================================================
 // HELPERS DE AUTENTICAÇÃO DO PORTAL
@@ -1300,7 +1301,7 @@ export const clientPortalRouter = router({
               locationId: stock.locationId,
               locationCode: stock.locationCode,
               batch: stock.batch,
-              expiryDate: stock.expiryDate,
+              expiryDate: toMySQLDate(stock.expiryDate),
               uniqueCode: getUniqueCode(product.sku, stock.batch),
               labelCode: stock.labelCode,
               quantity: toReserve,

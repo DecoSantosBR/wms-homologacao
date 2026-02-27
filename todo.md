@@ -4683,3 +4683,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar coluna labelCode na tabela inventoryMovements (já existia no schema, migration aplicada)
 - [x] Verificar e adicionar coluna labelCode na tabela inventoryMovements (ALTER TABLE aplicado)
 - [x] Adicionar coluna labelCode na tabela pickingAllocations (schema + ALTER TABLE + todos os INSERTs corrigidos)
+- [x] Corrigir formato de expiryDate em pickingAllocations (toMySQLDate aplicado em todos os INSERTs)
