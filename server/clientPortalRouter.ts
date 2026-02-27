@@ -464,7 +464,7 @@ export const clientPortalRouter = router({
           quantity: inventory.quantity,
           reservedQuantity: inventory.reservedQuantity,
           status: inventory.status,
-          locationCode: warehouseLocations.locationCode,
+          locationCode: warehouseLocations.code,
           zoneName: warehouseZones.name,
           unitOfMeasure: products.unitOfMeasure,
         })
@@ -521,7 +521,7 @@ export const clientPortalRouter = router({
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,
-          locationCode: warehouseLocations.locationCode,
+          locationCode: warehouseLocations.code,
         })
         .from(inventory)
         .innerJoin(products, eq(inventory.productId, products.id))
@@ -1160,7 +1160,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.locationCode,
+              locationCode: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1177,7 +1177,7 @@ export const clientPortalRouter = router({
                 eq(inventory.status, "available"),
                 sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
                 // Excluir zonas especiais
-                sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
               )
             )
             .orderBy(inventory.expiryDate); // FEFO
@@ -1226,7 +1226,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.locationCode,
+              locationCode: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1241,7 +1241,7 @@ export const clientPortalRouter = router({
                 eq(inventory.productId, item.productId),
                 eq(inventory.status, "available"),
                 sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-                sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
               )
             )
             .orderBy(inventory.id) // 🔒 ORDEM FIXA para evitar deadlock
@@ -1619,7 +1619,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 .select({
                   id: inventory.id,
                   locationId: inventory.locationId,
-                  locationCode: warehouseLocations.locationCode,
+                  locationCode: warehouseLocations.code,
                   quantity: inventory.quantity,
                   reservedQuantity: inventory.reservedQuantity,
                   batch: inventory.batch,
@@ -1635,7 +1635,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                     eq(inventory.productId, product.id),
                     eq(inventory.status, "available"),
                     sql`${inventory.quantity} - ${inventory.reservedQuantity} > 0`,
-                    sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
+                    sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`
                   )
                 )
                 .orderBy(inventory.expiryDate); // FEFO

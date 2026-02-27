@@ -51,7 +51,7 @@ export async function listLocations(filters: LocationFilters = {}) {
   if (filters.search) {
     conditions.push(
       or(
-        like(warehouseLocations.locationCode, `%${filters.search}%`),
+        like(warehouseLocations.code, `%${filters.search}%`),
         like(warehouseLocations.aisle, `%${filters.search}%`),
         like(warehouseLocations.rack, `%${filters.search}%`)
       )!
@@ -77,7 +77,7 @@ export async function listLocations(filters: LocationFilters = {}) {
     query = query.where(and(...conditions));
   }
   
-  return await query.orderBy(warehouseLocations.locationCode);
+  return await query.orderBy(warehouseLocations.code);
 }
 
 /**
@@ -114,7 +114,7 @@ export async function getLocationByCode(code: string) {
   const results = await db
     .select()
     .from(warehouseLocations)
-    .where(eq(warehouseLocations.locationCode, code))
+    .where(eq(warehouseLocations.code, code))
     .limit(1);
   
   return results[0] || null;
@@ -485,9 +485,9 @@ export async function createBulkLocations(data: {
   // Verificar códigos duplicados
   const codes = locations.map(l => l.code);
   const existing = await db
-    .select({ locationCode: warehouseLocations.locationCode })
+    .select({ locationCode: warehouseLocations.code })
     .from(warehouseLocations)
-    .where(sql`${warehouseLocations.locationCode} IN (${sql.join(codes.map(c => sql`${c}`), sql`, `)})`);
+    .where(sql`${warehouseLocations.code} IN (${sql.join(codes.map(c => sql`${c}`), sql`, `)})`);
   
   const existingCodes = new Set(existing.map(e => e.code));
   const toCreate = locations.filter(l => !existingCodes.has(l.code));
@@ -624,7 +624,7 @@ export async function listLocationsWithStock(filters: { tenantId?: number | null
           : sql`1=1`
       )
     )
-    .orderBy(warehouseLocations.locationCode);
+    .orderBy(warehouseLocations.code);
   
   return locationsWithStock;
 }

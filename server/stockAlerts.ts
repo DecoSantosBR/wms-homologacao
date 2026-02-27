@@ -30,7 +30,7 @@ export async function getExpiringProducts(tenantId: number, daysThreshold: numbe
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.locationCode,
+      locationCode: warehouseLocations.code,
       zoneName: warehouseZones.name,
       status: inventory.status,
       daysUntilExpiry: sql<number>`DATEDIFF(${inventory.expiryDate}, NOW())`,
@@ -104,7 +104,7 @@ export async function getProductStock(tenantId: number, productId: number) {
       status: inventory.status,
       totalQuantity: sql<number>`SUM(${inventory.quantity})`,
       locationCount: sql<number>`COUNT(DISTINCT ${inventory.locationId})`,
-      locations: sql<string>`GROUP_CONCAT(DISTINCT ${warehouseLocations.locationCode} SEPARATOR ', ')`,
+      locations: sql<string>`GROUP_CONCAT(DISTINCT ${warehouseLocations.code} SEPARATOR ', ')`,
     })
     .from(inventory)
     .innerJoin(products, eq(inventory.productId, products.id))

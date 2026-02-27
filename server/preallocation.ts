@@ -165,7 +165,7 @@ export async function validatePreallocations(
     const locations = await dbConn
       .select()
       .from(warehouseLocations)
-      .where(eq(warehouseLocations.locationCode, row.endereco))
+      .where(eq(warehouseLocations.code, row.endereco))
       .limit(1);
 
     if (locations.length === 0) {
@@ -260,7 +260,7 @@ export async function getPreallocations(receivingOrderId: number) {
       productSku: products.sku,
       productDescription: products.description,
       locationId: receivingPreallocations.locationId,
-      locationCode: warehouseLocations.locationCode,
+      locationCode: warehouseLocations.code,
       batch: receivingPreallocations.batch,
       quantity: receivingPreallocations.quantity,
       status: receivingPreallocations.status,
@@ -330,7 +330,7 @@ export async function executeAddressing(
       quantity: receivingPreallocations.quantity,
       productSku: products.sku,
       productDescription: products.description,
-      locationCode: warehouseLocations.locationCode,
+      locationCode: warehouseLocations.code,
     })
     .from(receivingPreallocations)
     .leftJoin(products, eq(receivingPreallocations.productId, products.id))
@@ -352,7 +352,7 @@ export async function executeAddressing(
     .from(warehouseLocations)
     .where(
       and(
-        sql`${warehouseLocations.locationCode} LIKE '%REC%'`,
+        sql`${warehouseLocations.code} LIKE '%REC%'`,
         sql`${warehouseLocations.tenantId} = ${order.tenantId}`
       )
     )
@@ -443,7 +443,7 @@ export async function executeAddressing(
       }
 
       // Buscar zona do endereço de destino (pré-alocação)
-      const destLocation = await dbConn.select({ zoneCode: warehouseZones.zoneCode })
+      const destLocation = await dbConn.select({ zoneCode: warehouseZones.code })
         .from(warehouseLocations)
         .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(eq(warehouseLocations.id, prealloc.locationId))

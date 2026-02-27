@@ -304,12 +304,12 @@ export const stockRouter = router({
       const location = await dbConn
         .select({
           id: warehouseLocations.id,
-          locationCode: warehouseLocations.locationCode,
+          locationCode: warehouseLocations.code,
           tenantId: warehouseLocations.tenantId,
           status: warehouseLocations.status,
         })
         .from(warehouseLocations)
-        .where(eq(warehouseLocations.locationCode, input.code))
+        .where(eq(warehouseLocations.code, input.code))
         .limit(1);
 
       if (!location[0]) {
@@ -419,7 +419,7 @@ export const stockRouter = router({
         const location = await dbConn
           .select({ id: warehouseLocations.id })
           .from(warehouseLocations)
-          .where(eq(warehouseLocations.locationCode, input.locationCode))
+          .where(eq(warehouseLocations.code, input.locationCode))
           .limit(1);
 
         if (location[0]) {

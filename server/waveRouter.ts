@@ -682,7 +682,7 @@ export const waveRouter = router({
       const [location] = await db
         .select()
         .from(warehouseLocations)
-        .where(eq(warehouseLocations.locationCode, input.locationCode))
+        .where(eq(warehouseLocations.code, input.locationCode))
         .limit(1);
 
       if (!location) {

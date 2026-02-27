@@ -88,7 +88,7 @@ export const reportsRouter = router({
           quantity: inventory.quantity,
           reserved: inventory.reservedQuantity,
           available: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
-          locationCode: warehouseLocations.locationCode,
+          locationCode: warehouseLocations.code,
           status: inventory.status,
           tenantName: tenants.name,
         })
@@ -97,7 +97,7 @@ export const reportsRouter = router({
         .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
         .leftJoin(tenants, eq(inventory.tenantId, tenants.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(asc(warehouseLocations.locationCode), asc(products.sku))
+        .orderBy(asc(warehouseLocations.code), asc(products.sku))
         .limit(pageSize)
         .offset(offset);
       
@@ -184,10 +184,10 @@ export const reportsRouter = router({
       const results = await db
         .select({
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.locationCode,
+          locationCode: warehouseLocations.code,
           locationType: warehouseLocations.locationType,
           zoneName: warehouseZones.name,
-          zoneCode: warehouseZones.zoneCode,
+          zoneCode: warehouseZones.code,
           totalQuantity: sql<number>`SUM(${inventory.quantity})`,
           totalReserved: sql<number>`SUM(${inventory.reservedQuantity})`,
           totalAvailable: sql<number>`SUM(${inventory.quantity} - ${inventory.reservedQuantity})`,
@@ -198,8 +198,8 @@ export const reportsRouter = router({
         .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
         .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .groupBy(inventory.locationId, warehouseLocations.locationCode, warehouseLocations.locationType, warehouseZones.name, warehouseZones.zoneCode)
-        .orderBy(asc(warehouseLocations.locationCode))
+        .groupBy(inventory.locationId, warehouseLocations.code, warehouseLocations.locationType, warehouseZones.name, warehouseZones.code)
+        .orderBy(asc(warehouseLocations.code))
         .limit(pageSize)
         .offset(offset);
       

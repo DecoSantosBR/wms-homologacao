@@ -78,7 +78,7 @@ export async function getInventoryPositions(
 
   // Filtro por código de endereço
   if (filters.locationCode) {
-    locationConditions.push(like(warehouseLocations.locationCode, `%${filters.locationCode}%`));
+    locationConditions.push(like(warehouseLocations.code, `%${filters.locationCode}%`));
   }
 
   // Filtro por status de endereço
@@ -142,7 +142,7 @@ export async function getInventoryPositions(
         productSku: products.sku,
         productDescription: products.description,
         locationId: warehouseLocations.id,
-        locationCode: warehouseLocations.locationCode,
+        code: warehouseLocations.code,
         locationStatus: warehouseLocations.status,
         locationTenantId: warehouseLocations.tenantId,
         zoneName: warehouseZones.name,
@@ -167,7 +167,7 @@ export async function getInventoryPositions(
           ...(whereConditions.length > 0 ? whereConditions : [])
         )
       )
-      .orderBy(warehouseLocations.locationCode)
+      .orderBy(warehouseLocations.code)
       .limit(1000);
 
     return results as InventoryPosition[];
@@ -180,7 +180,7 @@ export async function getInventoryPositions(
         productSku: products.sku,
         productDescription: products.description,
         locationId: inventory.locationId,
-        locationCode: warehouseLocations.locationCode,
+        code: warehouseLocations.code,
         locationStatus: warehouseLocations.status,
         locationTenantId: warehouseLocations.tenantId,
         zoneName: warehouseZones.name,
@@ -206,7 +206,7 @@ export async function getInventoryPositions(
           ...(whereConditions.length > 0 ? whereConditions : [])
         )
       )
-      .orderBy(warehouseLocations.locationCode, products.sku)
+      .orderBy(warehouseLocations.code, products.sku)
       .limit(1000);
 
     return results;
@@ -284,7 +284,7 @@ export async function getExpiringProducts(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.locationCode,
+      code: warehouseLocations.code,
       locationStatus: warehouseLocations.status,
       locationTenantId: warehouseLocations.tenantId,
       zoneName: warehouseZones.name,
@@ -332,9 +332,9 @@ export async function getLocationsWithStock(tenantId?: number | null) {
   const results = await dbConn
     .select({
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.locationCode,
+      code: warehouseLocations.code,
       zoneName: warehouseZones.name,
-      zoneCode: warehouseZones.zoneCode,
+      zoneCode: warehouseZones.code,
       totalQuantity: sql<number>`SUM(${inventory.quantity})`,
       reservedQuantity: sql<number>`COALESCE(SUM(${pickingAllocations.quantity}), 0)`,
     })
@@ -346,11 +346,11 @@ export async function getLocationsWithStock(tenantId?: number | null) {
     .groupBy(
       inventory.locationId,
       warehouseLocations.id,
-      warehouseLocations.locationCode,
+      warehouseLocations.code,
       warehouseZones.name,
-      warehouseZones.zoneCode
+      warehouseZones.code
     )
-    .orderBy(warehouseLocations.locationCode);
+    .orderBy(warehouseLocations.code);
   
   // Filtrar apenas endereços com saldo disponível > 0
   const locationsWithAvailableStock = results
@@ -383,10 +383,10 @@ export async function getDestinationLocations(params: {
     const allLocations = await dbConn
       .select({
         id: warehouseLocations.id,
-        locationCode: warehouseLocations.locationCode,
+        code: warehouseLocations.code,
         storageRule: warehouseLocations.storageRule,
         zoneName: warehouseZones.name,
-        zoneCode: warehouseZones.zoneCode,
+        zoneCode: warehouseZones.code,
       })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
@@ -395,7 +395,7 @@ export async function getDestinationLocations(params: {
           ? eq(warehouseLocations.tenantId, tenantId)
           : sql`1=1`
       )
-      .orderBy(warehouseLocations.locationCode);
+      .orderBy(warehouseLocations.code);
 
     // Buscar estoque atual de cada endereço (filtrado por tenant se fornecido)
     const locationStocks = await dbConn
@@ -455,10 +455,10 @@ export async function getDestinationLocations(params: {
     const results = await dbConn
       .select({
         id: warehouseLocations.id,
-        locationCode: warehouseLocations.locationCode,
+        code: warehouseLocations.code,
         storageRule: warehouseLocations.storageRule,
         zoneName: warehouseZones.name,
-        zoneCode: warehouseZones.zoneCode,
+        zoneCode: warehouseZones.code,
       })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
@@ -466,15 +466,15 @@ export async function getDestinationLocations(params: {
         tenantId !== undefined && tenantId !== null
           ? and(
               eq(warehouseLocations.status, "available"),
-              eq(warehouseZones.zoneCode, "DEV"),
+              eq(warehouseZones.code, "DEV"),
               eq(warehouseLocations.tenantId, tenantId)
             )
           : and(
               eq(warehouseLocations.status, "available"),
-              eq(warehouseZones.zoneCode, "DEV")
+              eq(warehouseZones.code, "DEV")
             )
       )
-      .orderBy(warehouseLocations.locationCode);
+      .orderBy(warehouseLocations.code);
 
     return results;
   }
@@ -484,10 +484,10 @@ export async function getDestinationLocations(params: {
     const results = await dbConn
       .select({
         id: warehouseLocations.id,
-        locationCode: warehouseLocations.locationCode,
+        code: warehouseLocations.code,
         storageRule: warehouseLocations.storageRule,
         zoneName: warehouseZones.name,
-        zoneCode: warehouseZones.zoneCode,
+        zoneCode: warehouseZones.code,
       })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
@@ -495,15 +495,15 @@ export async function getDestinationLocations(params: {
         tenantId !== undefined && tenantId !== null
           ? and(
               eq(warehouseLocations.status, "available"),
-              eq(warehouseZones.zoneCode, "NCG"),
+              eq(warehouseZones.code, "NCG"),
               eq(warehouseLocations.tenantId, tenantId)
             )
           : and(
               eq(warehouseLocations.status, "available"),
-              eq(warehouseZones.zoneCode, "NCG")
+              eq(warehouseZones.code, "NCG")
             )
       )
-      .orderBy(warehouseLocations.locationCode);
+      .orderBy(warehouseLocations.code);
 
     return results;
   }
@@ -512,16 +512,16 @@ export async function getDestinationLocations(params: {
   const results = await dbConn
     .selectDistinct({
       id: warehouseLocations.id,
-      locationCode: warehouseLocations.locationCode,
+      code: warehouseLocations.code,
       storageRule: warehouseLocations.storageRule,
       zoneName: warehouseZones.name,
-      zoneCode: warehouseZones.zoneCode,
+      zoneCode: warehouseZones.code,
     })
     .from(inventory)
     .innerJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .where(gt(inventory.quantity, 0))
-    .orderBy(warehouseLocations.locationCode);
+    .orderBy(warehouseLocations.code);
 
   return results;
 }
@@ -542,7 +542,7 @@ export async function getSuggestedDestination(params: {
   // 1. Verificar se endereço origem é da zona REC
   const fromLocation = await dbConn
     .select({
-      zoneCode: warehouseZones.zoneCode,
+      zoneCode: warehouseZones.code,
     })
     .from(warehouseLocations)
     .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
@@ -557,7 +557,7 @@ export async function getSuggestedDestination(params: {
   const preallocation = await dbConn
     .select({
       locationId: receivingPreallocations.locationId,
-      locationCode: warehouseLocations.locationCode,
+      code: warehouseLocations.code,
       zoneName: warehouseZones.name,
       quantity: receivingPreallocations.quantity,
     })

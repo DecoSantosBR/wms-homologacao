@@ -25,7 +25,7 @@ describe("products.checkAvailability", () => {
     testTenantId = tenant.id;
 
     // Buscar zona de armazenagem existente (ou criar se não existir)
-    const existingZones = await db.select().from(warehouseZones).where(eq(warehouseZones.zoneCode, "A01")).limit(1);
+    const existingZones = await db.select().from(warehouseZones).where(eq(warehouseZones.code, "A01")).limit(1);
     if (existingZones.length > 0) {
       testZoneId = existingZones[0].id;
     } else {
@@ -41,7 +41,7 @@ describe("products.checkAvailability", () => {
     }
 
     // Buscar zona de expedição existente
-    const existingExpZones = await db.select().from(warehouseZones).where(eq(warehouseZones.zoneCode, "EXP")).limit(1);
+    const existingExpZones = await db.select().from(warehouseZones).where(eq(warehouseZones.code, "EXP")).limit(1);
     if (existingExpZones.length > 0) {
       expZoneId = existingExpZones[0].id;
     } else {

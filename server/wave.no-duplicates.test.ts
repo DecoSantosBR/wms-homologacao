@@ -46,12 +46,12 @@ describe("Wave Logic - No Duplicates", () => {
     const locations = await db
       .select({ 
         id: warehouseLocations.id,
-        locationCode: warehouseLocations.locationCode,
-        zoneCode: warehouseZones.zoneCode
+        locationCode: warehouseLocations.code,
+        zoneCode: warehouseZones.code
       })
       .from(warehouseLocations)
       .leftJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
-      .where(sql`${warehouseZones.zoneCode} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`)
+      .where(sql`${warehouseZones.code} NOT IN ('EXP', 'REC', 'NCG', 'DEV')`)
       .limit(2);
     
     if (locations.length < 2) {

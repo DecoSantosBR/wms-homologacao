@@ -61,7 +61,7 @@ describe("Validações Preventivas de Reservas de Estoque", () => {
     const [zone] = await db
       .select({ id: warehouseZones.id })
       .from(warehouseZones)
-      .where(eq(warehouseZones.zoneCode, "EXP"))
+      .where(eq(warehouseZones.code, "EXP"))
       .limit(1);
 
     // Criar endereço de teste na zona EXP

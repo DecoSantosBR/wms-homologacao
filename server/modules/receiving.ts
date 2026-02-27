@@ -172,7 +172,7 @@ export async function moveToQuarantine(
     .limit(1);
 
   // Buscar zona do endereço de quarentena (locationId = 1)
-  const quarantineLocation = await db.select({ zoneCode: warehouseZones.zoneCode })
+  const quarantineLocation = await db.select({ zoneCode: warehouseZones.code })
     .from(warehouseLocations)
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
     .where(eq(warehouseLocations.id, 1))

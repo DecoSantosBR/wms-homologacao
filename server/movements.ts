@@ -245,7 +245,7 @@ async function registerMovementInternal(
         .limit(1);
 
       // Buscar zona do endereço de destino
-      const toLocation = await tx.select({ zoneCode: warehouseZones.zoneCode })
+      const toLocation = await tx.select({ zoneCode: warehouseZones.code })
         .from(warehouseLocations)
         .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
         .where(eq(warehouseLocations.id, input.toLocationId))

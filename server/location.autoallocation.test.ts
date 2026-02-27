@@ -26,7 +26,7 @@ describe("Endereçamento Automático - Status Livre", () => {
       .from(warehouseLocations)
       .where(
         and(
-          sql`${warehouseLocations.locationCode} LIKE '%REC%'`,
+          sql`${warehouseLocations.code} LIKE '%REC%'`,
           sql`${warehouseLocations.tenantId} = ${sessionTenantId}`,
           or(
             eq(warehouseLocations.status, 'available'),
@@ -52,7 +52,7 @@ describe("Endereçamento Automático - Status Livre", () => {
       .from(warehouseLocations)
       .where(
         and(
-          like(warehouseLocations.locationCode, 'EXP%'),
+          like(warehouseLocations.code, 'EXP%'),
           eq(warehouseLocations.tenantId, pickingOrderTenantId),
           or(
             eq(warehouseLocations.status, 'available'),
@@ -78,7 +78,7 @@ describe("Endereçamento Automático - Status Livre", () => {
       .from(warehouseLocations)
       .where(
         and(
-          sql`${warehouseLocations.locationCode} LIKE '%REC%'`,
+          sql`${warehouseLocations.code} LIKE '%REC%'`,
           sql`${warehouseLocations.tenantId} = ${sessionTenantId}`,
           or(
             eq(warehouseLocations.status, 'available'),
@@ -108,7 +108,7 @@ describe("Endereçamento Automático - Status Livre", () => {
       .from(warehouseLocations)
       .where(
         and(
-          sql`${warehouseLocations.locationCode} LIKE '%REC%'`,
+          sql`${warehouseLocations.code} LIKE '%REC%'`,
           sql`${warehouseLocations.tenantId} = ${sessionTenantId}`,
           eq(warehouseLocations.status, 'livre')
         )
@@ -137,7 +137,7 @@ describe("Endereçamento Automático - Status Livre", () => {
       .from(warehouseLocations)
       .where(
         and(
-          like(warehouseLocations.locationCode, 'EXP%'),
+          like(warehouseLocations.code, 'EXP%'),
           eq(warehouseLocations.tenantId, pickingOrderTenantId),
           eq(warehouseLocations.status, 'livre')
         )

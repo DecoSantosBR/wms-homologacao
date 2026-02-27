@@ -175,7 +175,7 @@ export function CreateLocationDialog() {
                 <SelectContent>
                   {zones?.map((zone) => (
                     <SelectItem key={zone.id} value={zone.id.toString()}>
-                      {zone.zoneCode} - {zone.name}
+                      {zone.code} - {zone.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

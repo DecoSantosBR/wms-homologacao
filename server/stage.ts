@@ -572,7 +572,7 @@ export async function completeStageCheck(params: {
       .from(warehouseLocations)
       .where(
         and(
-          like(warehouseLocations.locationCode, 'EXP%'),
+          like(warehouseLocations.code, 'EXP%'),
           eq(warehouseLocations.tenantId, pickingOrder.tenantId),
           or(
             eq(warehouseLocations.status, 'available'),
@@ -597,7 +597,7 @@ export async function completeStageCheck(params: {
       .from(warehouseLocations)
       .where(
         and(
-          eq(warehouseLocations.locationCode, tenant.shippingAddress),
+          eq(warehouseLocations.code, tenant.shippingAddress),
           eq(warehouseLocations.tenantId, pickingOrder.tenantId)
         )
       )

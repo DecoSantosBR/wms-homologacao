@@ -112,7 +112,7 @@ export async function recalculateInventoryBalances(): Promise<{
   const locationIds = Array.from(new Set(Array.from(balances.values()).map(b => b.locationId)));
   const locationZones = await db.select({ 
     locationId: warehouseLocations.id, 
-    zoneCode: warehouseZones.zoneCode 
+    zoneCode: warehouseZones.code 
   })
     .from(warehouseLocations)
     .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
@@ -239,7 +239,7 @@ export async function updateInventoryBalance(
       .limit(1);
 
     // Buscar zona do endereço
-    const location = await db.select({ zoneCode: warehouseZones.zoneCode })
+    const location = await db.select({ zoneCode: warehouseZones.code })
       .from(warehouseLocations)
       .innerJoin(warehouseZones, eq(warehouseLocations.zoneId, warehouseZones.id))
       .where(eq(warehouseLocations.id, locationId))

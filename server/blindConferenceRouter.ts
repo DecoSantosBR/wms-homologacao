@@ -1028,7 +1028,7 @@ export const blindConferenceRouter = router({
         // 1. Buscar zona de recebimento (REC)
         const zoneREC = await db.select()
           .from(warehouseZones)
-          .where(eq(warehouseZones.zoneCode, 'REC'))
+          .where(eq(warehouseZones.code, 'REC'))
           .limit(1);
 
         if (zoneREC.length === 0) {

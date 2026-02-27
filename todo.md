@@ -4447,4 +4447,20 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Reverter location.locationCode para location.code em todos os componentes
 - [x] Reverter loc.locationCode para loc.code em StockMovements, PickingExecution, etc.
 - [x] Testar página /locations sem erros no console
+- [x] Salvar checkpoint (161e501e)
+
+
+## 🔧 CORREÇÃO: 148 erros TypeScript - 27/02/2026
+
+**Problema:** Erros de tipo relacionados a Drizzle ORM (MySqlColumn não compatível com Aliased)
+**Impacto:** Código funciona mas TypeScript reporta erros de tipo
+
+**Ações:**
+- [x] Analisar padrão dos erros TypeScript
+- [x] Identificar queries problemáticas (warehouseLocations.locationCode, warehouseZones.zoneCode)
+- [x] Corrigir uso de aliases em queries Drizzle (substituir locationCode → code, zoneCode → code)
+- [x] Validar que todos os erros foram resolvidos (0 erros TypeScript)
+- [x] Testar páginas /locations (endereços e zonas funcionando)
+- [x] Corrigir inputs tRPC (zones.create, zones.update, locations.create, locations.update)
+- [x] Corrigir referências no frontend (Locations.tsx, CreateLocationDialog.tsx)
 - [ ] Salvar checkpoint
