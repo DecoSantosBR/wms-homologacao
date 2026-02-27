@@ -4720,3 +4720,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Corrigir contraste do PageHeader (bg-white sólido cobrindo background) em todas as telas do Portal do Cliente e WMS
 - [x] Corrigir contraste da barra de navegação inferior e atalhos rápidos do Coletor (/collector)
+
+## 🐛 BUG - 27/02/2026 (contraste botão + transparência)
+
+- [x] Corrigir botão Atualizar invisível em ClientPortalStock
+- [x] Aumentar transparência do overlay de background em 15% (de bg-black/55 para bg-black/70)
