@@ -209,7 +209,7 @@ export const productBarcodes = mysqlTable("productBarcodes", {
   productId: int("productId").notNull(),
   barcode: varchar("barcode", { length: 100 }).notNull().unique(), // Código da etiqueta
   batch: varchar("batch", { length: 50 }), // Lote associado (opcional)
-  expiryDate: timestamp("expiryDate"), // Validade associada (opcional)
+  expiryDate: date("expiryDate"), // Validade associada (opcional)
   locationId: int("locationId"), // Endereço onde está armazenado (opcional)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -303,7 +303,7 @@ export const receivingOrderItems = mysqlTable("receivingOrderItems", {
   scannedSupplierCode: varchar("scannedSupplierCode", { length: 50 }),
   scannedInternalCode: varchar("scannedInternalCode", { length: 50 }),
   batch: varchar("batch", { length: 50 }),
-  expiryDate: timestamp("expiryDate"),
+  expiryDate: date("expiryDate"),
   serialNumber: varchar("serialNumber", { length: 100 }),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   labelCode: varchar("labelCode", { length: 100 }), // Código da etiqueta vinculada (após conferência)
@@ -414,7 +414,7 @@ export const inventory = mysqlTable("inventory", {
   productId: int("productId").notNull(),
   locationId: int("locationId").notNull(),
   batch: varchar("batch", { length: 50 }),
-  expiryDate: timestamp("expiryDate"),
+  expiryDate: date("expiryDate"),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   labelCode: varchar("labelCode", { length: 255 }), // ✅ Código da etiqueta (LPN) para rastreabilidade
   serialNumber: varchar("serialNumber", { length: 100 }),
@@ -497,7 +497,7 @@ export const pickingOrderItems = mysqlTable("pickingOrderItems", {
   pickedQuantity: int("pickedQuantity").default(0).notNull(),
   pickedUM: mysqlEnum("pickedUM", ["unit", "box", "pallet"]).default("unit").notNull(),
   batch: varchar("batch", { length: 50 }), // Lote separado (FEFO)
-  expiryDate: timestamp("expiryDate"), // Validade do lote
+  expiryDate: date("expiryDate"), // Validade do lote
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única para rastreabilidade)
   serialNumber: varchar("serialNumber", { length: 100 }),
   fromLocationId: int("fromLocationId"), // Endereço de origem
@@ -559,7 +559,7 @@ export const inventoryCountItems = mysqlTable("inventoryCountItems", {
   locationId: int("locationId").notNull(),
   productId: int("productId"),
   batch: varchar("batch", { length: 50 }),
-  expiryDate: timestamp("expiryDate"),
+  expiryDate: date("expiryDate"),
   serialNumber: varchar("serialNumber", { length: 100 }),
   systemQuantity: int("systemQuantity").default(0).notNull(),
   countedQuantity: int("countedQuantity"),
@@ -1022,11 +1022,10 @@ export const pickingInvoiceItems = mysqlTable("pickingInvoiceItems", {
   sku: varchar("sku", { length: 100 }).notNull(), // SKU/Código do produto na NF-e
   productName: varchar("productName", { length: 255 }).notNull(), // Nome do produto
   batch: varchar("batch", { length: 50 }), // Lote
-  expiryDate: timestamp("expiryDate"), // Validade
+  expiryDate: date("expiryDate"), // Validade
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   quantity: int("quantity").notNull(), // Quantidade (sempre em unidades)
-  unitValue: decimal("unitValue", { precision: 15, scale: 4 }), // Valor unitário
-  totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total do item
+  quantityUM: mysqlEnum("quantityUM", ["unit", "box", "pallet"]).default("unit").notNull(),lue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total do item
   ncm: varchar("ncm", { length: 10 }), // Código NCM
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
@@ -1047,11 +1046,10 @@ export const receivingInvoiceItems = mysqlTable("receivingInvoiceItems", {
   productId: int("productId"), // Produto vinculado (pode ser null se não encontrado)
   sku: varchar("sku", { length: 100 }).notNull(), // SKU/Código do produto na NF-e
   productName: varchar("productName", { length: 255 }).notNull(), // Nome do produto
-  batch: varchar("batch", { length: 50 }), // Lote
-  expiryDate: timestamp("expiryDate"), // Validade
+  batch: varchar("batch", { length: 50 }), // Lo  expiryDate: date("expiryDate"), // Validade
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   quantity: int("quantity").notNull(), // Quantidade (sempre em unidades)
-  unitValue: decimal("unitValue", { precision: 15, scale: 4 }), // Valor unitário
+  divergence: int("divergence"), // Diferença (conferido - esperado)/ Valor unitário
   totalValue: decimal("totalValue", { precision: 15, scale: 2 }), // Valor total do item
   ncm: varchar("ncm", { length: 10 }), // Código NCM
   createdAt: timestamp("createdAt").defaultNow().notNull(),

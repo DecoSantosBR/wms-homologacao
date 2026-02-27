@@ -4578,4 +4578,47 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar inventory em modules/receiving.ts (JÁ CORRETO - usa order[0].tenantId)
 - [x] Buscar INSERTs em inventoryMovements (10 INSERTs encontrados em 8 arquivos)
 - [x] Verificar inventoryMovements (TODOS JÁ CORRETOS - usam order.tenantId ou pickingOrder.tenantId)
+- [x] Salvar checkpoint (4aa4282b)
+
+
+## 🐛 BUG: Sessão de conferência não encontrada ao bipar primeiro item
+
+**Erro:** "Sessão de conferência não encontrada" ao bipar primeiro item em /collector/receiving
+**Contexto:** Erro ocorre na primeira bipagem de etiqueta
+**Causa provável:** Sessão não está sendo criada ou filtro de tenantId está bloqueando acesso
+
+**Ações:**
+- [x] Identificar qual mutation está falhando (readLabel e associateLabel)
+- [x] Verificar filtro de tenantId na busca de sessão (estava bloqueando Admin)
+- [x] Corrigir: remover filtro tenantId quando isGlobalAdmin === true
+- [ ] Testar fluxo completo
+- [ ] Salvar checkpoint
+
+
+## 🐛 BUG: Data de validade não preenche automaticamente em Associar Etiqueta
+
+**Erro:** Ao selecionar produto no combobox, campo "Validade" permanece vazio
+**Contexto:** Tela "Associar Etiqueta" após bipar etiqueta
+**Esperado:** Data de validade deve ser preenchida automaticamente com base no item da ordem
+
+**Ações:**
+- [ ] Identificar componente da tela Associar Etiqueta
+- [ ] Verificar lógica de preenchimento ao selecionar produto
+- [ ] Corrigir para buscar e preencher expiryDate do receivingOrderItem
+- [ ] Testar fluxo completo
+- [ ] Salvar checkpoint
+
+## 🔧 Padronizar formato de data de validade para dd/MM/yyyy - 27/02/2026
+
+**Requisito:** Usar formato brasileiro dd/MM/yyyy para todas as datas de validade (sem horário)
+**Contexto:** Datas de validade não precisam de horário, apenas dia/mês/ano
+
+**Ações:**
+- [x] Identificar todos os componentes que exibem expiryDate
+- [x] Identificar todos os inputs de data de validade
+- [x] Criar helper function para formatar datas (dd/MM/yyyy)
+- [x] Atualizar BlindCheckModal para usar formato brasileiro
+- [ ] Atualizar demais componentes (listagens, relatórios, etc)
+- [x] Garantir que backend aceita e retorna formato correto
+- [ ] Testar fluxo completo de entrada e exibição de datas
 - [ ] Salvar checkpoint

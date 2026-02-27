@@ -147,10 +147,12 @@ export const blindConferenceRouter = router({
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
         .where(
-          and(
-            eq(blindConferenceSessions.id, input.conferenceId),
-            eq(blindConferenceSessions.tenantId, activeTenantId)
-          )
+          isGlobalAdmin
+            ? eq(blindConferenceSessions.id, input.conferenceId)
+            : and(
+                eq(blindConferenceSessions.id, input.conferenceId),
+                eq(blindConferenceSessions.tenantId, activeTenantId)
+              )
         )
         .limit(1);
       
@@ -373,10 +375,12 @@ export const blindConferenceRouter = router({
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
         .where(
-          and(
-            eq(blindConferenceSessions.id, input.conferenceId),
-            eq(blindConferenceSessions.tenantId, activeTenantId)
-          )
+          isGlobalAdmin
+            ? eq(blindConferenceSessions.id, input.conferenceId)
+            : and(
+                eq(blindConferenceSessions.id, input.conferenceId),
+                eq(blindConferenceSessions.tenantId, activeTenantId)
+              )
         )
         .limit(1);
       

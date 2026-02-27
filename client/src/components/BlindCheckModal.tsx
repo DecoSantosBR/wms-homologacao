@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, AlertCircle, Camera, Undo, Edit, Home } from "lu
 import { toast } from "sonner";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { useLocation } from "wouter";
+import { formatDateBR, brToISO } from "@/lib/dateUtils";
 
 interface BlindCheckModalProps {
   open: boolean;
@@ -24,6 +25,8 @@ interface BlindCheckModalProps {
     expectedGtin?: string | null;
     productSku?: string | null;
     productDescription?: string | null;
+    batch?: string | null;
+    expiryDate?: string | null;
   }>;
 }
 
@@ -277,12 +280,15 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       return;
     }
 
+    // Converter data do formato brasileiro dd/MM/yyyy para ISO yyyy-MM-dd antes de enviar
+    const expiryDateISO = expiryDate ? brToISO(expiryDate) : null;
+    
     associateLabelMutation.mutate({
       conferenceId: conferenceId!,
       labelCode: pendingLabelCode,
       productId: selectedProductId,
       batch: batch || null,
-      expiryDate: expiryDate || null,
+      expiryDate: expiryDateISO,
       unitsPerBox,
       totalUnitsReceived, // Enviar quantidade fracionada
     });
@@ -529,7 +535,20 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 onValueChange={(value) => {
                   // Localiza o item pelo ID e extrai o productId real
                   const selectedItem = items.find(item => item.id.toString() === value);
-                  if (selectedItem) setSelectedProductId(selectedItem.productId);
+                  if (selectedItem) {
+                    setSelectedProductId(selectedItem.productId);
+                    
+                    // Preencher automaticamente lote e validade do item da ordem
+                    if (selectedItem.batch) {
+                      setBatch(selectedItem.batch);
+                    }
+                    
+                    if (selectedItem.expiryDate) {
+                      // Converter para formato brasileiro dd/MM/yyyy
+                      const formattedDate = formatDateBR(selectedItem.expiryDate);
+                      setExpiryDate(formattedDate);
+                    }
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -558,9 +577,11 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
               <div>
                 <Label className="text-sm font-medium mb-2 block">Validade (opcional)</Label>
                 <Input
-                  type="date"
+                  type="text"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
+                  placeholder="dd/MM/aaaa"
+                  maxLength={10}
                 />
               </div>
             </div>

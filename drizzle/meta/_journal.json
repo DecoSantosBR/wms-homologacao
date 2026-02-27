@@ -141,6 +141,13 @@
       "when": 1772162206509,
       "tag": "0019_yellow_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1772174294004,
+      "tag": "0020_black_tigra",
+      "breakpoints": true
     }
   ]
 }
