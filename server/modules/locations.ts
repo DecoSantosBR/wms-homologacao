@@ -299,7 +299,7 @@ export async function createZone(data: {
   
   const result = await db.insert(warehouseZones).values({
     warehouseId: data.warehouseId,
-    zoneCode: data.zoneCode,
+    code: data.zoneCode, // schema usa 'code', não 'zoneCode'
     name: data.name,
     storageCondition: data.storageCondition,
     hasTemperatureControl: data.hasTemperatureControl || false,

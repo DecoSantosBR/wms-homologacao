@@ -243,7 +243,7 @@ export async function generatePickingAllocations(
         locationId: inv.locationId,
         locationCode: inv.locationCode,
         batch: inv.batch,
-        expiryDate: toMySQLDate(inv.expiryDate),
+        expiryDate: inv.expiryDate ?? null,
         uniqueCode: getUniqueCode(product.sku, inv.batch), // ✅ Adicionar uniqueCode
         labelCode: inv.labelCode, // ✅ Adicionar labelCode
         quantity: allocatedQuantity,

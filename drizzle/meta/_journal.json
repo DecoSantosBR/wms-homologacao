@@ -155,6 +155,13 @@
       "when": 1772190913006,
       "tag": "0021_light_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1772202690470,
+      "tag": "0022_skinny_felicia_hardy",
+      "breakpoints": true
     }
   ]
 }

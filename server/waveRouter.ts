@@ -853,8 +853,12 @@ export const waveRouter = router({
       }
 
       // Criar associação
+      const tenantId = ctx.user.tenantId;
+      if (!tenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant vinculado" });
+      }
       await db.insert(labelAssociations).values({
-        tenantId: ctx.user.tenantId,
+        tenantId,
         labelCode: input.labelCode,
         productId: input.productId,
         batch: input.batch || null,
@@ -966,6 +970,11 @@ export const waveRouter = router({
 
         // 3. Reverter reservas no inventário atomicamente
         for (const allocation of allocations) {
+          // Pular alocações sem inventoryId (não deveria acontecer, mas protege contra dados inconsistentes)
+          if (!allocation.inventoryId) {
+            console.warn(`[WAVE CANCEL] Alocação ${allocation.id} sem inventoryId - pulando`);
+            continue;
+          }
           // 🔒 SELECT FOR UPDATE no item de inventário específico
           const [invItem] = await tx
             .select()

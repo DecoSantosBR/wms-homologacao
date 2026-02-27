@@ -159,7 +159,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const associateLabelMutation = trpc.blindConference.associateLabel.useMutation({
     onSuccess: (data) => {
       toast.success("Etiqueta associada com sucesso!", {
-        description: `${data.product.description} - ${data.totalUnits} unidades`,
+        description: `${data.association.productName} - ${data.association.totalUnits} unidades`,
       });
       
       // Limpar campos
@@ -283,9 +283,16 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     // Converter data do formato brasileiro dd/MM/yyyy para ISO yyyy-MM-dd antes de enviar
     const expiryDateISO = expiryDate ? brToISO(expiryDate) : null;
     
+    // Encontrar o receivingOrderItemId a partir do productId selecionado
+    const matchingItem = items.find(i => i.productId === selectedProductId);
+    if (!matchingItem) {
+      toast.error("Item não encontrado na ordem de recebimento");
+      return;
+    }
     associateLabelMutation.mutate({
       conferenceId: conferenceId!,
       labelCode: pendingLabelCode,
+      receivingOrderItemId: matchingItem.id,
       productId: selectedProductId,
       batch: batch || null,
       expiryDate: expiryDateISO,

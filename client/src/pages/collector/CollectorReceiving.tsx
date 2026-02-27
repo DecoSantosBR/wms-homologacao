@@ -109,7 +109,7 @@ export function CollectorReceiving() {
         if (orderItems && orderItems.length === 1) {
           setSelectedProductId(orderItems[0].productId);
           setSelectedReceivingOrderItemId(orderItems[0].id);
-          setSelectedUniqueCode(orderItems[0].uniqueCode);
+          setSelectedUniqueCode(orderItems[0].uniqueCode ?? "");
         }
       } else {
         // ✅ PROPAGAR receivingOrderItemId para o estado (fluxo automático)
@@ -520,6 +520,7 @@ export function CollectorReceiving() {
                       receivingOrderItemId: selectedReceivingOrderItemId,
                       labelCode: pendingLabelCode,
                       maxQuantity: totalUnitsReceived || unitsPerBox,
+                      labelExists: false,
                     });
                     setIsNCGModalOpen(true);
                     setShowAssociationDialog(false);
@@ -697,7 +698,7 @@ export function CollectorReceiving() {
                 <ProductCombobox
                   products={orderItems?.map(item => ({
                     id: item.id.toString(),
-                    sku: item.productSku,
+                    sku: item.productSku ?? "",
                     description: `Lote: ${item.batch || 'SEM LOTE'}`,
                   }))}
                   value={ncgUniqueCode}
@@ -707,7 +708,8 @@ export function CollectorReceiving() {
                       setNcgUniqueCode(item.uniqueCode || `${item.productId}-${item.id}`);
                       setNcgProductId(item.productId);
                       setNcgBatch(item.batch || "");
-                      setNcgExpiryDate(item.expiryDate || "");
+                      const ed = item.expiryDate;
+                      setNcgExpiryDate(ed instanceof Date ? ed.toISOString().split('T')[0] : (ed ?? ""));
                     }
                   }}
                 />

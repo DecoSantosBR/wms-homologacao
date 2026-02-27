@@ -775,7 +775,10 @@ export default function Receiving() {
               refetch();
             }}
             receivingOrderId={checkOrderId}
-            items={checkOrderItems}
+            items={(checkOrderItems || []).map(item => ({
+              ...item,
+              expiryDate: item.expiryDate instanceof Date ? item.expiryDate.toISOString().split('T')[0] : item.expiryDate,
+            }))}
           />
         )}
 

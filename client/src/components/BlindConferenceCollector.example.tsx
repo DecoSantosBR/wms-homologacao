@@ -115,7 +115,7 @@ export const BlindConferenceCollector: React.FC<ConferenceCollectorProps> = ({ c
         {summary && (
           <div className="mt-2">
             <p className="text-sm text-gray-600">
-              Total: {summary.totals.received} unidades conferidas
+              Total: {summary.conferenceItems.reduce((sum, i) => sum + i.unitsRead, 0)} unidades conferidas
             </p>
             <ul className="mt-2 space-y-2">
               {summary.conferenceItems.map((item) => (

@@ -81,7 +81,6 @@ export const RegisterNCGModal: React.FC<RegisterNCGModalProps> = ({
       setImagePreview(null);
       
       // Invalidar queries para atualizar lista
-      utils.blindConference.getItems.invalidate();
       utils.blindConference.getSummary.invalidate();
       
       onClose(); // Fecha o modal

@@ -596,7 +596,7 @@ export const shippingRouter = router({
           .from(inventory)
           .where(
             and(
-              eq(inventory.uniqueCode, item.uniqueCode), // 🎯 Busca por uniqueCode (SKU-LOTE)
+              ...(item.uniqueCode ? [eq(inventory.uniqueCode, item.uniqueCode)] : [sql`1=0`]), // 🎯 Busca por uniqueCode (SKU-LOTE)
               eq(inventory.locationZone, "EXP"), // 🎯 Busca direta por locationZone (sem JOIN)
               eq(inventory.status, "available"),
               sql`${inventory.quantity} - COALESCE(${inventory.reservedQuantity}, 0) > 0` // Saldo disponível

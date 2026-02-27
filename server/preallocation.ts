@@ -485,7 +485,7 @@ export async function executeAddressing(
       .where(eq(receivingPreallocations.id, prealloc.id));
 
     movedItems++;
-    console.log(`[ENDEREÇAMENTO] Movido ${quantityToMove} unidades de ${prealloc.productSku} (${prealloc.batch}) de ${recLocationCode} para ${prealloc.locationCode}`);
+    console.log(`[ENDEREÇAMENTO] Movido ${quantityToMove} unidades de ${prealloc.productSku} (${prealloc.batch}) de ${recLocationCode} para ${prealloc.code}`);
   }
 
   // 5. Atualizar status da ordem para "completed"

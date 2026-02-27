@@ -680,13 +680,19 @@ export const blindConferenceRouter = router({
       const orderTenantId = receivingOrder.tenantId;
       console.log("[registerNCG] Usando tenantId da ordem:", orderTenantId);
 
+      // ✅ BUSCAR PRODUTO PARA OBTER SKU E unitsPerBox
+      const [product] = await db.select()
+        .from(products)
+        .where(eq(products.id, orderItem.productId))
+        .limit(1);
+
       // 3. GERAR OU VERIFICAR ETIQUETA
       let labelCode = input.labelCode;
       
       if (!labelCode) {
         // Gerar labelCode automático: SKU + Lote + timestamp
         const timestamp = Date.now().toString().slice(-6); // Últimos 6 dígitos
-        labelCode = `${orderItem.productSku}${orderItem.batch || 'SL'}${timestamp}`;
+        labelCode = `${product?.sku || orderItem.productId}${orderItem.batch || 'SL'}${timestamp}`;
         console.log("[registerNCG] LabelCode gerado automaticamente:", labelCode);
       }
 
@@ -706,20 +712,22 @@ export const blindConferenceRouter = router({
         console.log("[registerNCG] Criando nova etiqueta:", labelCode);
         
         // Usar dados da Tela 2 se fornecidos, senão usar do orderItem
-        const finalUnitsPerBox = input.unitsPerBox || orderItem.unitsPerBox || 1;
+        const finalUnitsPerBox = input.unitsPerBox || product?.unitsPerBox || 1;
         const finalBatch = input.batch || orderItem.batch || null;
-        const finalExpiryDate = input.expiryDate || orderItem.expiryDate || null;
+        const finalExpiryDateRaw = input.expiryDate || (orderItem.expiryDate ? String(orderItem.expiryDate) : null) || null;
+        const finalExpiryDate = finalExpiryDateRaw ? new Date(finalExpiryDateRaw) : null;
         const finalProductId = input.productId || orderItem.productId;
         
         await db.insert(labelAssociations).values({
           tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           labelCode: labelCode,
+          uniqueCode: orderItem.uniqueCode || `${finalProductId}-${finalBatch || 'SL'}`,
           productId: finalProductId,
           batch: finalBatch,
           expiryDate: finalExpiryDate,
           unitsPerBox: finalUnitsPerBox,
           status: "BLOCKED", // Já nasce bloqueada (NCG)
-          scannedAt: new Date(),
+          associatedBy: userId,
         });
       } else {
         // Se já existe, atualizar status para BLOCKED
@@ -1105,7 +1113,7 @@ export const blindConferenceRouter = router({
       return {
         success: true,
         receivingOrderId: session[0].receivingOrderId,
-        receivingOrderCode: order.code,
+        receivingOrderCode: order.orderNumber,
         summary,
       };
     }),

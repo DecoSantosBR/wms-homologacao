@@ -957,7 +957,7 @@ export const collectorPickingRouter = router({
           locationId: alt.locationId!,
           locationCode: alt.locationCode!,
           batch: alt.batch ?? null,
-          expiryDate: toMySQLDate(alloc.expiryDate),
+          expiryDate: alloc.expiryDate ?? null,
           uniqueCode: alt.uniqueCode,
           labelCode: alt.labelCode,
           quantity: remainingNeeded,

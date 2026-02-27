@@ -137,7 +137,7 @@ export async function getInventoryPositions(
     const results = await dbConn
       .select({
         // Usar locationId como ID principal para incluir endereços vazios
-        id: sql`COALESCE(${inventory.id}, ${warehouseLocations.id})`.as('id'),
+        id: sql<number>`COALESCE(${inventory.id}, ${warehouseLocations.id})`.as('id'),
         productId: inventory.productId,
         productSku: products.sku,
         productDescription: products.description,
@@ -284,7 +284,7 @@ export async function getExpiringProducts(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      code: warehouseLocations.code,
+      locationCode: warehouseLocations.code,
       locationStatus: warehouseLocations.status,
       locationTenantId: warehouseLocations.tenantId,
       zoneName: warehouseZones.name,
@@ -312,7 +312,7 @@ export async function getExpiringProducts(
     .orderBy(inventory.expiryDate)
     .limit(1000);
 
-  return results;
+  return results as InventoryPosition[];
 }
 
 /**
@@ -582,7 +582,7 @@ export async function getSuggestedDestination(params: {
 
   return {
     locationId: preallocation[0].locationId,
-    locationCode: preallocation[0].locationCode,
+    locationCode: preallocation[0].code,
     zoneName: preallocation[0].zoneName,
     quantity: preallocation[0].quantity,
   };

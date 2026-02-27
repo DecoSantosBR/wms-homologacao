@@ -53,7 +53,7 @@ export async function validateLocationForBatch(
     };
   }
 
-  const { zoneCode, locationCode } = location[0];
+  const { zoneCode, code: locationCode } = location[0];
 
   // Verificar se zona permite múltiplos lotes
   if (zoneCode && MULTI_BATCH_ZONES.includes(zoneCode.toUpperCase())) {

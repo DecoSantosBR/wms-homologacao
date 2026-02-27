@@ -184,7 +184,7 @@ async function allocateLocations(
         orders: item.orders,
         inventoryId: location.inventoryId,
         locationId: location.locationId,
-        locationCode: location.locationCode!,
+        locationCode: location.code!,
         allocatedQuantity: quantityToAllocate,
       });
 
@@ -360,10 +360,7 @@ export async function createWave(params: CreateWaveParams) {
     locationId: item.locationId,
     locationCode: item.locationCode,
     batch: item.batch,
-    // ✅ CORREÇÃO: Formatar expiryDate para YYYY-MM-DD (MySQL DATE format)
-    expiryDate: item.expiryDate instanceof Date 
-      ? item.expiryDate.toISOString().split('T')[0] 
-      : item.expiryDate,
+    expiryDate: item.expiryDate instanceof Date ? item.expiryDate : null,
     uniqueCode: getUniqueCode(item.productSku, item.batch), // ✅ Adicionar uniqueCode
     // ✅ CORREÇÃO: Garantir que labelCode nunca seja undefined (causa desalinhamento de parâmetros)
     labelCode: item.labelCode || null, // Se undefined, usar null explícito

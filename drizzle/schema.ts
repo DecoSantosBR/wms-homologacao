@@ -307,7 +307,7 @@ export const receivingOrderItems = mysqlTable("receivingOrderItems", {
   serialNumber: varchar("serialNumber", { length: 100 }),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   labelCode: varchar("labelCode", { length: 100 }), // Código da etiqueta vinculada (após conferência)
-  status: mysqlEnum("status", ["pending", "in_quarantine", "approved", "rejected", "awaiting_approval"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "in_quarantine", "approved", "rejected", "awaiting_approval", "receiving", "completed"]).default("pending").notNull(),
   rejectionReason: text("rejectionReason"),
   approvedBy: int("approvedBy"),
   approvedAt: timestamp("approvedAt"),
@@ -745,15 +745,16 @@ export const labelReadings = mysqlTable("labelReadings", {
 // Ajustes manuais de quantidade
 export const blindConferenceAdjustments = mysqlTable("blindConferenceAdjustments", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: int("sessionId").notNull(),
-  associationId: int("associationId").notNull(),
-  previousQuantity: int("previousQuantity").notNull(),
+  conferenceId: int("conferenceId").notNull(),
+  productId: int("productId").notNull(),
+  batch: varchar("batch", { length: 100 }),
+  oldQuantity: int("oldQuantity").notNull(),
   newQuantity: int("newQuantity").notNull(),
   reason: text("reason"),
   adjustedBy: int("adjustedBy").notNull(), // userId
   adjustedAt: timestamp("adjustedAt").defaultNow().notNull(),
 }, (table) => ({
-  sessionIdx: index("blind_adj_session_idx").on(table.sessionId),
+  conferenceIdx: index("blind_adj_conference_idx").on(table.conferenceId),
 }));
 
 // Auditoria de Picking (rastreabilidade de regras aplicadas)

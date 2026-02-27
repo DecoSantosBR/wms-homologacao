@@ -233,7 +233,7 @@ export function ClientPortalStock() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <p className="font-medium text-slate-700">{item.locationCode}</p>
+                          <p className="font-medium text-slate-700">{item.code}</p>
                           <p className="text-xs text-slate-400">{item.zoneName}</p>
                         </div>
                       </TableCell>

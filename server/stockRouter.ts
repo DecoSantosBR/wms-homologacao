@@ -427,6 +427,7 @@ export const stockRouter = router({
             .select({
               batch: inventory.batch,
               quantity: inventory.quantity,
+              reservedQuantity: inventory.reservedQuantity,
               expiryDate: inventory.expiryDate,
             })
             .from(inventory)
@@ -450,11 +451,15 @@ export const stockRouter = router({
       // Priorizar batch da etiqueta, depois do estoque
       const finalBatch = labelBatch || stockData?.batch || null;
 
+      const availableQuantity = stockData 
+        ? (stockData.quantity - (stockData.reservedQuantity ?? 0))
+        : 0;
+
       return {
         ...product[0],
         unitsPerBox: finalUnitsPerBox,
         batch: finalBatch,
-        availableQuantity: availableQuantity || 0,
+        availableQuantity,
         expiryDate: stockData?.expiryDate || null,
       };
     }),
