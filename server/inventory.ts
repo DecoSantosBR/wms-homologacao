@@ -357,7 +357,7 @@ export async function getLocationsWithStock(tenantId?: number | null) {
     .filter(loc => (loc.totalQuantity - loc.reservedQuantity) > 0)
     .map(loc => ({
       id: loc.locationId,
-      locationCode: loc.locationCode,
+      code: loc.code,
       zoneName: loc.zoneName,
       zoneCode: loc.zoneCode,
     }));

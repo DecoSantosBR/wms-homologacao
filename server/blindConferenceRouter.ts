@@ -1170,6 +1170,7 @@ export const blindConferenceRouter = router({
         expiryDate: receivingOrderItems.expiryDate,
         serialNumber: receivingOrderItems.serialNumber,
         uniqueCode: receivingOrderItems.uniqueCode,
+        labelCode: receivingOrderItems.labelCode,
         tenantId: receivingOrderItems.tenantId,
         addressedQuantity: receivingOrderItems.addressedQuantity,
       })
@@ -1258,7 +1259,7 @@ export const blindConferenceRouter = router({
             batch: item.batch || "",
             expiryDate: item.expiryDate,
             uniqueCode: item.uniqueCode || "",
-            labelCode: null, // Sem labelCode específico (1 inventory por uniqueCode)
+            labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
             locationZone: 'REC',
             quantity: Number(item.addressedQuantity) || 0,
             reservedQuantity: 0,

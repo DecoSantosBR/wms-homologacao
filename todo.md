@@ -4674,3 +4674,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar lógica de criação de inventory no finish
 - [x] Adicionar lógica para buscar locationId da zona Recebimento
 - [x] Testar preenchimento de locationId
+
+## Bugs Identificados - 27/02/2026
+
+- [ ] Corrigir bug: combobox "Endereço Origem" mostra "undefined" ao invés do código do endereço
+- [ ] Corrigir status dos endereços: "Livre" (vazio) vs "Disponível" (com item, aceita mais)
+- [x] Corrigir finish: copiar labelCode de receivingOrderItems para inventory
