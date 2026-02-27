@@ -1214,18 +1214,34 @@ export const blindConferenceRouter = router({
 
       const locationId = recLocation[0].id;
 
-      // 4. CRIAR 1 INVENTORY POR receivingOrderItem (1 uniqueCode = 1 inventory)
+      // 4. VALIDATION GUARD: Validar todos os itens ANTES de inserir
+      const validationErrors: string[] = [];
+      
       for (const item of itemsWithQty) {
         if (!item || item.addressedQuantity === undefined || item.addressedQuantity === null) {
-          console.warn(`[finish] Item ignorado por falta de addressedQuantity: ${item?.productId}`);
-          continue;
+          validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: addressedQuantity ausente`);
         }
-        
         if (!item.productId) {
-          console.warn('[finish] Item sem productId, pulando');
-          continue;
+          validationErrors.push(`Item ${item?.uniqueCode || 'desconhecido'}: productId ausente`);
         }
-        
+        if (!item.uniqueCode) {
+          validationErrors.push(`Item com productId ${item?.productId}: uniqueCode ausente`);
+        }
+        if (!item.labelCode) {
+          validationErrors.push(`Item ${item?.uniqueCode}: labelCode ausente`);
+        }
+      }
+      
+      if (validationErrors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validação falhou. Erros encontrados:\n${validationErrors.join('\n')}`
+        });
+      }
+
+      // 5. CRIAR 1 INVENTORY POR receivingOrderItem (1 uniqueCode = 1 inventory)
+      // Todos os itens já foram validados pelo Validation Guard acima
+      for (const item of itemsWithQty) {
         console.log('[finish] Criando inventory para item:', item.uniqueCode, 'quantity:', item.addressedQuantity);
         
         // Buscar se já existe inventory para este uniqueCode

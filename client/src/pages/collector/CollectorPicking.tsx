@@ -274,13 +274,18 @@ export function CollectorPicking() {
       }
 
       toast.success(data.message);
+      
+      // Aguardar refresh antes de avançar para usar dados atualizados
       refreshRoute();
-
-      if (data.allocationCompleted) {
-        advanceItem();
-      } else {
-        setTimeout(() => productInputRef.current?.focus(), 100);
-      }
+      
+      // Aguardar próximo tick para garantir que estado foi atualizado
+      setTimeout(() => {
+        if (data.allocationCompleted) {
+          advanceItem();
+        } else {
+          productInputRef.current?.focus();
+        }
+      }, 150);
     },
     onError: async (err) => {
       // Se falhar, adicionar à fila offline

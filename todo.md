@@ -4689,3 +4689,6 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir status 'in_progress' para 'picking' em pickingWaveItems (2 UPDATEs corrigidos)
 - [x] Corrigir status 'in_progress' para 'picking' em pickingOrderItems (2) e pickingAllocations (2)
 - [x] Revertido status de pickingAllocations para 'in_progress' (schema aceita: pending, in_progress, picked, short_picked)
+- [ ] Corrigir finalização precoce do picking ao bipar primeiro item
+- [x] Implementar Validation Guard no finish do recebimento (validação prévia de todos os campos)
+- [x] Corrigir finalização precoce do picking (aguardar refreshRoute com setTimeout)
