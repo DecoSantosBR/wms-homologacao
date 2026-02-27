@@ -4695,3 +4695,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Envolver finish em transação atômica (db.transaction com tx.select/update/insert)
 - [x] Corrigir finalização precoce: refreshRoute agora aceita callback executado após dados atualizados
 - [x] Reescrito advanceItem: busca próximo item em dados JÁ atualizados do servidor
+- [x] isLast já estava correto: verifica pendências globais
+- [x] advanceItem refatorado: reseta índice para 0 e busca primeiro item pendente

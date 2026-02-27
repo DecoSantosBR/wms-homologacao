@@ -389,29 +389,36 @@ export function CollectorPicking() {
     // IMPORTANTE: Esta função é chamada DENTRO do callback de refreshRoute(),
     // então route/currentLocation já contém dados ATUALIZADOS do servidor
     
-    if (!currentLocation) {
+    const currentLoc = route[locationIdx];
+    
+    if (!currentLoc) {
       console.warn("[advanceItem] currentLocation é undefined");
       setScreen("location_done");
       return;
     }
     
-    // Buscar próximo item pendente no endereço atual (dados já atualizados)
-    const nextPendingIdx = currentLocation.items.findIndex(
-      (i) => i.status !== "picked" && i.status !== "short_picked"
+    // Buscar se ainda existe algum item não coletado neste endereço
+    const nextPendingItem = currentLoc.items.find(
+      (i) => i.status === "pending"
     );
     
-    if (nextPendingIdx >= 0) {
-      // Ainda há itens pendentes neste endereço
-      console.log(`[advanceItem] Próximo item pendente: índice ${nextPendingIdx}`);
-      setCurrentItemIdx(nextPendingIdx);
+    if (nextPendingItem) {
+      // ✅ Ainda há lotes aqui! Reseta para o primeiro disponível
+      console.log(`[advanceItem] Item pendente encontrado, resetando índice para 0`);
+      setCurrentItemIdx(0);
       setScreen("scan_product");
       setTimeout(() => productInputRef.current?.focus(), 100);
-      return;
+    } else {
+      // ✅ Acabaram os lotes DESTE endereço.
+      // Agora sim verificamos se vamos para o próximo endereço ou se acabou tudo.
+      console.log("[advanceItem] Todos os itens do endereço foram separados");
+      
+      if (locationIdx < route.length - 1) {
+        setScreen("location_done");
+      } else {
+        setScreen("all_done");
+      }
     }
-    
-    // Não há mais itens pendentes neste endereço
-    console.log("[advanceItem] Todos os itens do endereço foram separados");
-    setScreen("location_done");
   }
 
   function advanceLocation() {
