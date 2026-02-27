@@ -96,6 +96,7 @@ export default function DashboardLayout({
           "--sidebar-width": `${sidebarWidth}px`,
         } as CSSProperties
       }
+      className="bg-transparent"
     >
       <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
         {children}

@@ -96,7 +96,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const handleLogout = () => logoutMutation.mutate();
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* ── Sidebar Desktop ─────────────────────────────────────────────── */}
       <aside
         className={`

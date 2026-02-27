@@ -4699,3 +4699,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] advanceItem refatorado: reseta índice para 0 e busca primeiro item pendente
 - [x] Filtro advanceItem corrigido: agora inclui status in_progress
 - [x] refreshRoute corrigido: passa dados atualizados diretamente para callback
+
+## 🖼️ BACKGROUNDS ALEATÓRIOS - 27/02/2026
+
+- [x] Otimizar 5 imagens Med@x para WebP (37–148 KB cada)
+- [x] Upload das imagens para CDN
+- [x] Criar hook useBackground com seleção aleatória persistente por sessão (sessionStorage)
+- [x] Criar componente AppBackground com overlay de legibilidade (bg-black/55)
+- [x] Aplicar AppBackground como wrapper global em App.tsx
+- [x] Tornar --background e --card semitransparentes no CSS (88%)
+- [x] Remover bg sólidos de DashboardLayout, ClientPortalLayout, CollectorLayout
+- [x] Remover bg-gradient de EnvironmentSelector, ClientPortalLogin, ClientPortalFirstAccess, Home, NotFound

@@ -70,7 +70,7 @@ export function ClientPortalFirstAccess() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-slate-700 bg-slate-800/50 backdrop-blur">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
@@ -110,7 +110,7 @@ export function ClientPortalFirstAccess() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl" />

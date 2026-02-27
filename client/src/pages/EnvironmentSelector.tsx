@@ -12,23 +12,15 @@ import { Button } from "@/components/ui/button";
 
 export default function EnvironmentSelector() {
   return (
-    <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 relative"
-      style={{
-        backgroundImage: 'url(https://files.manuscdn.com/user_upload_by_module/session_file/310519663187653950/KsiBngXQYgMVVNPi.jpg)'
-      }}
-    >
-      {/* Overlay escuro para melhorar legibilidade */}
-      <div className="absolute inset-0 bg-black/50"></div>
-
-      <div className="relative w-full max-w-5xl">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-3xl shadow-xl mb-6">
             <Package className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-3">Med@x WMS</h1>
-          <p className="text-lg text-slate-200">
+          <h1 className="text-4xl font-bold text-white drop-shadow-lg mb-3">Med@x WMS</h1>
+          <p className="text-lg text-slate-100 drop-shadow">
             Sistema de Gerenciamento de Armazém Farmacêutico
           </p>
         </div>
@@ -140,10 +132,10 @@ export default function EnvironmentSelector() {
 
         {/* Footer */}
         <div className="text-center mt-12">
-          <p className="text-sm text-slate-200">
+          <p className="text-sm text-slate-100 drop-shadow">
             © {new Date().getFullYear()} Med@x — Sistema de Gerenciamento de Armazém Farmacêutico
           </p>
-          <p className="text-xs text-slate-300 mt-2">
+          <p className="text-xs text-slate-200 mt-2">
             Conformidade ANVISA RDC 430/2020 • Rastreabilidade Total
           </p>
         </div>

@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AppBackground } from "./components/AppBackground";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import EnvironmentSelector from "./pages/EnvironmentSelector";
 import Home from "./pages/Home";
@@ -102,7 +103,9 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <AppBackground>
+            <Router />
+          </AppBackground>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
