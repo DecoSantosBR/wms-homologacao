@@ -11,7 +11,8 @@ import { Camera, Check, Loader2, Undo2, Package } from "lucide-react";
 import { trpc } from "../../lib/trpc";
 import { toast } from "sonner";
 import { ProductCombobox } from "../../components/ProductCombobox";
-import { RegisterNCGModal } from "../../components/RegisterNCGModal";
+import { RegisterNCGModal } from "@/components/RegisterNCGModal";
+import { ConfirmFinishModal } from "@/components/ConfirmFinishModal";
 
 export function CollectorReceiving() {
   const [step, setStep] = useState<"select" | "conference" | "ncg-scan" | "ncg-register-label">("select");
@@ -199,10 +200,27 @@ export function CollectorReceiving() {
     { enabled: !!conferenceId, refetchInterval: 3000 }
   );
 
-  // Finalizar conferência
+  // Estado para modal de confirmação
+  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
+  const [prepareSummary, setPrepareSummary] = React.useState<any>(null);
+
+  // Preparar finalização (calcular addressedQuantity)
+  const prepareMutation = trpc.blindConference.prepareFinish.useMutation({
+    onSuccess: (data) => {
+      setPrepareSummary(data);
+      setShowConfirmModal(true);
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Finalizar conferência (criar inventory)
   const finishMutation = trpc.blindConference.finish.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
+      setShowConfirmModal(false);
+      setPrepareSummary(null);
       setStep("select");
       setSelectedOrderId(null);
       setConferenceId(null);
@@ -348,9 +366,13 @@ export function CollectorReceiving() {
       return;
     }
     
-    if (confirm("Finalizar conferência?")) {
-      finishMutation.mutate({ conferenceId: conferenceId! });
-    }
+    // Chamar prepareFinish para calcular addressedQuantity e mostrar modal
+    prepareMutation.mutate({ conferenceId: conferenceId! });
+  };
+
+  const handleConfirmFinish = () => {
+    // Chamar finish para criar inventory
+    finishMutation.mutate({ conferenceId: conferenceId! });
   };
 
   const totalVolumes = summary?.conferenceItems.reduce((sum: number, item: any) => sum + item.packagesRead, 0) || 0;
@@ -945,6 +967,21 @@ export function CollectorReceiving() {
           receivingOrderItemId={selectedItemForNCG.receivingOrderItemId}
           labelCode={selectedItemForNCG.labelCode}
           maxQuantity={selectedItemForNCG.maxQuantity}
+        />
+      )}
+
+      {/* Modal de Confirmação de Finalização */}
+      {showConfirmModal && prepareSummary && (
+        <ConfirmFinishModal
+          open={showConfirmModal}
+          onClose={() => {
+            setShowConfirmModal(false);
+            setPrepareSummary(null);
+          }}
+          onConfirm={handleConfirmFinish}
+          summary={prepareSummary.items}
+          receivingOrderCode={prepareSummary.receivingOrderCode}
+          isLoading={finishMutation.isPending}
         />
       )}
     </CollectorLayout>

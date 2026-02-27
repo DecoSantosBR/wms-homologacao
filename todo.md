@@ -4658,3 +4658,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Criar procedure prepareFinish para calcular addressedQuantity
 - [x] Modificar finish para criar 1 inventory por receivingOrderItem
 - [ ] Criar modal de confirmação no frontend
+
+- [x] Criar componente ConfirmFinishModal
+- [x] Integrar modal no CollectorReceiving
+- [ ] Testar fluxo completo em duas etapas
