@@ -4632,3 +4632,10 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Reorganizar finish para calcular addressedQuantity ANTES de criar inventory
 - [x] Remover duplicação de cálculo de addressedQuantity
+
+- [x] Remover JOIN prematuro que causava erro ao buscar addressedQuantity NULL
+
+- [x] Adicionar validações robustas para prevenir erro "Cannot convert undefined or null to object"
+- [x] Validar session[0] antes de usar
+- [x] Validar item.addressedQuantity antes de processar
+- [x] Converter addressedQuantity para número com fallback para 0

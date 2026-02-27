@@ -1047,8 +1047,11 @@ export const blindConferenceRouter = router({
         .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
 
-      if (session.length === 0) {
-        throw new Error("Sessão de conferência não encontrada");
+      if (!session || session.length === 0 || !session[0]) {
+        throw new TRPCError({ 
+          code: 'NOT_FOUND', 
+          message: 'Sessão de conferência não encontrada.' 
+        });
       }
 
       // Buscar receivingOrder para obter tenantId correto
@@ -1063,36 +1066,9 @@ export const blindConferenceRouter = router({
       
       const orderTenantId = order.tenantId;
 
-      // 2. BUSCAR ITENS CONFERIDOS COM addressedQuantity
-      const items = await db.select({
-        id: blindConferenceItems.id,
-        conferenceId: blindConferenceItems.conferenceId,
-        productId: blindConferenceItems.productId,
-        batch: blindConferenceItems.batch,
-        expiryDate: blindConferenceItems.expiryDate,
-        serialNumber: blindConferenceItems.serialNumber,
-        uniqueCode: blindConferenceItems.uniqueCode,
-        tenantId: blindConferenceItems.tenantId,
-        addressedQuantity: receivingOrderItems.addressedQuantity,
-      })
+      // 2. BUSCAR ITENS CONFERIDOS (sem addressedQuantity ainda)
+      const items = await db.select()
         .from(blindConferenceItems)
-        .innerJoin(
-          receivingOrderItems,
-          and(
-            eq(blindConferenceItems.productId, receivingOrderItems.productId),
-            or(
-              and(
-                isNotNull(blindConferenceItems.batch),
-                eq(blindConferenceItems.batch, receivingOrderItems.batch)
-              ),
-              and(
-                isNull(blindConferenceItems.batch),
-                isNull(receivingOrderItems.batch)
-              )
-            ),
-            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId)
-          )
-        )
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
@@ -1100,7 +1076,7 @@ export const blindConferenceRouter = router({
           )
         );
 
-      console.log('[finish] Items retornados do JOIN:', JSON.stringify(items, null, 2));
+      console.log('[finish] Items conferidos:', items.length);
 
       if (items.length === 0) {
         throw new Error("Nenhum item foi conferido");
@@ -1172,8 +1148,24 @@ export const blindConferenceRouter = router({
 
       // 5. CRIAR/ATUALIZAR ESTOQUE PARA CADA ITEM
       for (const item of itemsWithQty) {
+        // Validar se o item do Join é válido
+        if (!item || item.addressedQuantity === undefined || item.addressedQuantity === null) {
+          console.warn(`[finish] Item ignorado por falta de addressedQuantity: ${item?.productId}`);
+          continue;
+        }
+        
+        if (!item.productId) {
+          console.warn('[finish] Item sem productId, pulando');
+          continue;
+        }
+        
+        console.log('[finish] Processando item:', JSON.stringify(item, null, 2));
+        
         const product = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
-        if (product.length === 0) continue;
+        if (product.length === 0) {
+          console.log('[finish] Produto não encontrado, pulando item');
+          continue;
+        }
 
         const productSku = product[0].sku;
         const uniqueCode = getUniqueCode(productSku, item.batch);
@@ -1269,7 +1261,7 @@ export const blindConferenceRouter = router({
             // 🔄 Etiqueta já existe (re-entrada ou correção)
             await db.update(inventory)
               .set({
-                quantity: item.addressedQuantity, // ✅ Quantidade líquida endereçável (received - blocked)
+                quantity: Number(item.addressedQuantity) || 0, // ✅ Quantidade líquida endereçável (received - blocked)
                 locationId: locationId,
                 status: "available",
                 updatedAt: new Date()
@@ -1286,7 +1278,7 @@ export const blindConferenceRouter = router({
               uniqueCode: uniqueCode,
               labelCode: label.labelCode, // 🔑 Identidade física da caixa
               locationZone: 'REC',
-              quantity: item.addressedQuantity, // ✅ Quantidade líquida endereçável (received - blocked)
+              quantity: Number(item.addressedQuantity) || 0, // ✅ Quantidade líquida endereçável (received - blocked)
               reservedQuantity: 0,
               status: "available",
             });
