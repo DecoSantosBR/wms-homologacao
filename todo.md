@@ -4625,3 +4625,5 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Corrigir banco de dados receivingOrderItems - coluna expiryDate agora é DATE puro (sem horário)
 - [x] Reinserir dados de validade no formato correto (YYYY-MM-DD)
+
+- [x] Corrigir inventory.quantity para usar addressedQuantity ao invés de totalUnits

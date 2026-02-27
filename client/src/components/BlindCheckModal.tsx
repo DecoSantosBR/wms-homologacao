@@ -533,20 +533,26 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 // ✅ Mapeamento REVERSO: busca qual item corresponde ao productId selecionado
                 value={items.find(item => item.productId === selectedProductId)?.id.toString() || ""}
                 onValueChange={(value) => {
-                  // Localiza o item pelo ID e extrai o productId real
+                  // Locali                onValueChange={(value) => {
                   const selectedItem = items.find(item => item.id.toString() === value);
+                  console.log('🔍 Item selecionado:', selectedItem);
                   if (selectedItem) {
                     setSelectedProductId(selectedItem.productId);
                     
                     // Preencher automaticamente lote e validade do item da ordem
                     if (selectedItem.batch) {
+                      console.log('✅ Preenchendo lote:', selectedItem.batch);
                       setBatch(selectedItem.batch);
                     }
                     
                     if (selectedItem.expiryDate) {
+                      console.log('📅 expiryDate original:', selectedItem.expiryDate);
                       // Converter para formato brasileiro dd/MM/yyyy
                       const formattedDate = formatDateBR(selectedItem.expiryDate);
+                      console.log('📅 Data formatada BR:', formattedDate);
                       setExpiryDate(formattedDate);
+                    } else {
+                      console.log('⚠️ expiryDate está vazio ou null');
                     }
                   }
                 }}

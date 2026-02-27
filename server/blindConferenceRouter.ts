@@ -1176,7 +1176,7 @@ export const blindConferenceRouter = router({
             // 🔄 Etiqueta já existe (re-entrada ou correção)
             await db.update(inventory)
               .set({
-                quantity: label.totalUnits, // ✅ Campo correto de labelAssociations
+                quantity: item.addressedQuantity, // ✅ Quantidade líquida endereçável (received - blocked)
                 locationId: locationId,
                 status: "available",
                 updatedAt: new Date()
@@ -1193,7 +1193,7 @@ export const blindConferenceRouter = router({
               uniqueCode: uniqueCode,
               labelCode: label.labelCode, // 🔑 Identidade física da caixa
               locationZone: 'REC',
-              quantity: label.totalUnits, // ✅ Campo correto de labelAssociations
+              quantity: item.addressedQuantity, // ✅ Quantidade líquida endereçável (received - blocked)
               reservedQuantity: 0,
               status: "available",
             });
