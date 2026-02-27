@@ -4687,3 +4687,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir mapeamento de locationCode em queries de availableStock (renomeado code para locationCode em todas as queries)
 - [x] Adicionar coluna labelCode na tabela pickingWaveItems
 - [x] Corrigir status 'in_progress' para 'picking' em pickingWaveItems (2 UPDATEs corrigidos)
+- [x] Corrigir status 'in_progress' para 'picking' em pickingOrderItems (2) e pickingAllocations (2)
