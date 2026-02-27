@@ -186,7 +186,7 @@ export default function Tenants() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<FileText className="h-8 w-8" />}
         title="Clientes"

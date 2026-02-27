@@ -3,7 +3,7 @@ import { Package } from "lucide-react";
 
 export default function Picking() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<Package className="h-8 w-8" />}
         title="Separação"

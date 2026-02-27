@@ -309,7 +309,7 @@ export default function Receiving() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<ClipboardCheck className="h-8 w-8" />}
         title="Recebimento"

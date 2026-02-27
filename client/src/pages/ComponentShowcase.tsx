@@ -229,7 +229,7 @@ export default function ComponentsShowcase() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <PageHeader
         icon={<Palette className="h-8 w-8" />}
         title="Component Showcase"

@@ -44,7 +44,7 @@ export default function OccupancyDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <PageHeader
         icon={<BarChart3 className="h-8 w-8" />}
         title="Dashboard de Ocupação"

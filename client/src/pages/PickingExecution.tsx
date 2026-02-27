@@ -158,7 +158,7 @@ export default function PickingExecution() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4">
         <p className="text-center text-muted-foreground">Carregando pedido...</p>
       </div>
     );
@@ -166,7 +166,7 @@ export default function PickingExecution() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4">
         <p className="text-center text-destructive">Pedido não encontrado</p>
       </div>
     );
@@ -196,7 +196,7 @@ export default function PickingExecution() {
   const progressPercent = (progress / total) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">

@@ -190,7 +190,7 @@ export default function StockMovements() {
   }, [availableDestinations]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <PageHeader
         icon={<ArrowRightLeft className="h-8 w-8" />}
         title="Movimentações de Estoque"

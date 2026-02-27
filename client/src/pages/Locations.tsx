@@ -464,7 +464,7 @@ export default function Locations() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<MapPin className="h-8 w-8" />}
         title="Endereços e Zonas"

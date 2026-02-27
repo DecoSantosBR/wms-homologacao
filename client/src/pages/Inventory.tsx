@@ -3,7 +3,7 @@ import { Warehouse } from "lucide-react";
 
 export default function Inventory() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<Warehouse className="h-8 w-8" />}
         title="Estoque"

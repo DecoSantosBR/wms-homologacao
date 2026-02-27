@@ -262,7 +262,7 @@ export default function ClientPortalNewOrder() {
   
   return (
     <ClientPortalLayout>
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8">
       <div className="container max-w-5xl">
         {/* Header */}
         <div className="mb-6">

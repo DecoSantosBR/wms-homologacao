@@ -4710,3 +4710,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Tornar --background e --card semitransparentes no CSS (88%)
 - [x] Remover bg sólidos de DashboardLayout, ClientPortalLayout, CollectorLayout
 - [x] Remover bg-gradient de EnvironmentSelector, ClientPortalLogin, ClientPortalFirstAccess, Home, NotFound
+
+## 🐛 BUG - 27/02/2026
+
+- [x] Corrigir tela de Recebimento sem background (fundo sólido cobrindo a imagem)
+- [x] Corrigir bg sólido em todas as outras páginas (Inventory, Locations, Picking, PickingExecution, PrintSettings, Products, StockMovements, StockPositions, Tenants, Users, ClientPortalNewOrder, ComponentShowcase, OccupancyDashboard)

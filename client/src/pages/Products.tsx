@@ -271,7 +271,7 @@ export default function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PageHeader
         icon={<Package className="w-8 h-8" />}
         title="Produtos"

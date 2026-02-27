@@ -49,7 +49,7 @@ export default function PrintSettings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen p-6">
         <div className="container max-w-4xl">
           <p className="text-gray-500">Carregando configurações...</p>
         </div>
@@ -58,7 +58,7 @@ export default function PrintSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen p-6">
       <div className="container max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
