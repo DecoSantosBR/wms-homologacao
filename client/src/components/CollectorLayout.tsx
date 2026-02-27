@@ -23,11 +23,11 @@ export function CollectorLayout({ children, title }: CollectorLayoutProps) {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-700 bg-slate-900/90 backdrop-blur">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Scan className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">{title}</h1>
+            <Scan className="h-6 w-6 text-blue-400" />
+            <h1 className="text-xl font-bold text-white">{title}</h1>
           </div>
           <SyncStatusBadge />
         </div>
@@ -41,7 +41,7 @@ export function CollectorLayout({ children, title }: CollectorLayoutProps) {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="sticky bottom-0 z-50 w-full border-t bg-background">
+      <nav className="sticky bottom-0 z-50 w-full border-t border-slate-700 bg-slate-900/95 backdrop-blur">
         <div className="container grid grid-cols-5 gap-1 p-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -51,7 +51,7 @@ export function CollectorLayout({ children, title }: CollectorLayoutProps) {
               <Link key={item.path} href={item.path}>
                 <Button
                   variant={isActive ? "default" : "ghost"}
-                  className="h-16 w-full flex-col gap-1 text-xs"
+                  className={`h-16 w-full flex-col gap-1 text-xs ${!isActive ? "text-slate-300 hover:text-white hover:bg-slate-800" : ""}`}
                 >
                   <Icon className="h-5 w-5" />
                   <span className="truncate">{item.label}</span>

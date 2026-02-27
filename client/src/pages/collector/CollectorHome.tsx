@@ -44,8 +44,8 @@ export function CollectorHome() {
     <CollectorLayout title="Coletor de Dados">
       <div className="space-y-4">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">Selecione uma Operação</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold text-white drop-shadow-lg">Selecione uma Operação</h2>
+          <p className="text-slate-200 drop-shadow">
             Escolha a operação que deseja realizar
           </p>
         </div>
@@ -81,12 +81,12 @@ export function CollectorHome() {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Link href="/stock">
-              <Button variant="outline" className="w-full h-12">
+              <Button variant="outline" className="w-full h-12 border-slate-600 bg-slate-800/80 text-white hover:bg-slate-700 hover:text-white">
                 Ver Estoque
               </Button>
             </Link>
             <Link href="/">
-              <Button variant="outline" className="w-full h-12">
+              <Button variant="outline" className="w-full h-12 border-slate-600 bg-slate-800/80 text-white hover:bg-slate-700 hover:text-white">
                 Menu Principal
               </Button>
             </Link>
