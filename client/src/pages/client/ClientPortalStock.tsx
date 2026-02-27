@@ -84,17 +84,17 @@ export function ClientPortalStock() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
-            <Package className="h-5 w-5 text-blue-400" />
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Package className="h-5 w-5 text-blue-600" />
             Posições de Estoque
           </h1>
-          <p className="text-slate-200 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             {data?.total !== undefined
               ? `${data.total.toLocaleString("pt-BR")} registro(s) encontrado(s)`
               : "Carregando..."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="shrink-0 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm">
+        <Button variant="outline" size="sm" onClick={() => refetch()} className="shrink-0">
           <RefreshCw className="h-4 w-4 mr-1.5" /> Atualizar
         </Button>
       </div>

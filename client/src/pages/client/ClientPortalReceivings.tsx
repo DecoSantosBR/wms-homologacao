@@ -87,11 +87,11 @@ export function ClientPortalReceivings() {
     <ClientPortalLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
-            <Truck className="h-5 w-5 text-blue-400" />
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Truck className="h-5 w-5 text-blue-600" />
             Recebimentos
           </h1>
-          <p className="text-slate-200 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Histórico de entradas de mercadoria no armazém
           </p>
         </div>
@@ -163,7 +163,7 @@ export function ClientPortalReceivings() {
                           {recv.nfeNumber}
                         </div>
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-slate-400">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-slate-700">
@@ -269,7 +269,7 @@ export function ClientPortalReceivingDetail() {
             <ArrowLeft className="h-3.5 w-3.5" /> Recebimentos
           </button>
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-slate-400">/</span>
         <span className="text-slate-600 font-medium">#{order.orderNumber}</span>
       </div>
 
@@ -379,11 +379,11 @@ export function ClientPortalMovements() {
     <ClientPortalLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
-            <ArrowLeftRight className="h-5 w-5 text-blue-400" />
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <ArrowLeftRight className="h-5 w-5 text-blue-600" />
             Movimentações
           </h1>
-          <p className="text-slate-200 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Histórico completo de entradas, saídas e transferências
           </p>
         </div>

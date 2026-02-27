@@ -339,13 +339,13 @@ export default function StageCheck() {
           <Button
             variant="ghost"
             onClick={() => setLocation("/")}
-            className="mb-4"
+            className="mb-4 text-white hover:text-white hover:bg-white/20"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
-          <h1 className="text-3xl font-bold">Stage - Conferência de Expedição</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl font-bold text-white drop-shadow-lg">Stage - Conferência de Expedição</h1>
+          <p className="text-white/80 drop-shadow mt-2">
             Confira pedidos separados antes da expedição
           </p>
         </div>
@@ -386,15 +386,15 @@ export default function StageCheck() {
             setOrderInfo(null);
             setScannedItems([]);
           }}
-          className="mb-4"
+          className="mb-4 text-white hover:text-white hover:bg-white/20"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Cancelar Conferência
         </Button>
-        <h1 className="text-3xl font-bold">
+        <h1 className="text-3xl font-bold text-white drop-shadow-lg">
           Conferindo Pedido: {customerOrderNumber}
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-white/70 mt-2">
           Bipe cada produto para registrar automaticamente (+1 caixa)
         </p>
       </div>

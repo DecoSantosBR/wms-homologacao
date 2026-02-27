@@ -90,11 +90,11 @@ export function ClientPortalOrders() {
     <ClientPortalLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-blue-400" />
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-blue-600" />
             Pedidos de Saída
           </h1>
-          <p className="text-slate-200 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             {data?.total !== undefined
               ? `${data.total.toLocaleString("pt-BR")} pedido(s) encontrado(s)`
               : "Carregando..."}
@@ -322,7 +322,7 @@ export function ClientPortalOrderDetail() {
             <ArrowLeft className="h-3.5 w-3.5" /> Pedidos
           </button>
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-slate-400">/</span>
         <span className="text-slate-600 font-medium">#{order.orderNumber}</span>
       </div>
 

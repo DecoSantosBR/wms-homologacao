@@ -25,7 +25,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando...</p>
+          <p className="mt-4 text-white/70">Carregando...</p>
         </div>
       </div>
     );
@@ -211,18 +211,18 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-black/40 backdrop-blur-sm border-b border-white/10 sticky top-0 z-10">
         <div className="container py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-4">
-              <h1 className="text-2xl sm:text-3xl font-bold">Med@x</h1>
-              <span className="text-xs sm:text-sm text-muted-foreground">WMS</span>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow">Med@x</h1>
+              <span className="text-xs sm:text-sm text-white/70">WMS</span>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
-              <span className="text-xs sm:text-sm text-muted-foreground hidden md:block">
-                Bem-vindo, <span className="font-medium text-foreground">{user?.name || "Usuário"}</span>
+              <span className="text-xs sm:text-sm text-white/80 hidden md:block">
+                Bem-vindo, <span className="font-medium text-white">{user?.name || "Usuário"}</span>
               </span>
-              <Button variant="outline" size="sm" onClick={() => logout()} className="h-9">
+              <Button variant="ghost" size="sm" onClick={() => logout()} className="h-9 text-white hover:text-white hover:bg-white/20 border border-white/30">
                 Sair
               </Button>
             </div>

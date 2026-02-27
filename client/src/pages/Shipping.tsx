@@ -269,13 +269,13 @@ export default function Shipping() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/20">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Testes - Módulo de Expedição</h1>
-          <p className="text-muted-foreground">Teste todas as procedures do shippingRouter</p>
+          <h1 className="text-3xl font-bold text-white drop-shadow-lg">Módulo de Expedição</h1>
+          <p className="text-white/80 drop-shadow">Gerencie pedidos prontos para expedição</p>
         </div>
       </div>
 

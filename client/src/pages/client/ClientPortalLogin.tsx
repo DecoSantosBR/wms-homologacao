@@ -165,7 +165,7 @@ export function ClientPortalLogin() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-slate-600 mt-6">
+        <p className="text-center text-xs text-white/50 mt-6">
           © {new Date().getFullYear()} Med@x — Acesso restrito a clientes cadastrados
         </p>
       </div>

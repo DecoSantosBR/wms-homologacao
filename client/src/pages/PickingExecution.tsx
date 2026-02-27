@@ -198,7 +198,7 @@ export default function PickingExecution() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-black/40 backdrop-blur-sm border-b border-white/10 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -206,13 +206,14 @@ export default function PickingExecution() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/picking")}
+                className="text-white hover:text-white hover:bg-white/20"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
               <div>
-                <h1 className="text-xl font-bold">{order.orderNumber}</h1>
-                <p className="text-sm text-muted-foreground">Destinatário: {order.customerName}</p>
+                <h1 className="text-xl font-bold text-white drop-shadow">{order.orderNumber}</h1>
+                <p className="text-sm text-white/70">Destinatário: {order.customerName}</p>
               </div>
             </div>
             {getStatusBadge(order.status)}
@@ -221,14 +222,14 @@ export default function PickingExecution() {
           {/* Progress Bar */}
           <div className="mt-4">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Progresso</span>
-              <span className="font-semibold">
+              <span className="text-white/70">Progresso</span>
+              <span className="font-semibold text-white">
                 {progress}/{total} itens ({progressPercent.toFixed(0)}%)
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-white/20 rounded-full h-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all"
+                className="bg-blue-400 h-2 rounded-full transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>

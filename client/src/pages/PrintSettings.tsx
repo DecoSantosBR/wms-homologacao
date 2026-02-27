@@ -51,7 +51,7 @@ export default function PrintSettings() {
     return (
       <div className="min-h-screen p-6">
         <div className="container max-w-4xl">
-          <p className="text-gray-500">Carregando configurações...</p>
+          <p className="text-white/70">Carregando configurações...</p>
         </div>
       </div>
     );
@@ -62,12 +62,12 @@ export default function PrintSettings() {
       <div className="container max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="text-white hover:text-white hover:bg-white/20 border border-white/30">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <Printer className="h-6 w-6 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Configurações de Impressão</h1>
+            <Printer className="h-6 w-6 text-blue-300" />
+            <h1 className="text-2xl font-bold text-white drop-shadow">Configurações de Impressão</h1>
           </div>
         </div>
 

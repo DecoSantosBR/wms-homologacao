@@ -108,7 +108,7 @@ export default function Roles() {
     return (
       <div className="container py-8">
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Carregando perfis...</div>
+          <div className="text-white/70">Carregando perfis...</div>
         </div>
       </div>
     );
@@ -118,8 +118,8 @@ export default function Roles() {
     <div className="container py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Perfis e Permissões</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl font-bold mb-2 text-white drop-shadow-lg">Perfis e Permissões</h1>
+        <p className="text-white/70">
           Gerencie perfis de acesso e atribua permissões aos usuários
         </p>
       </div>

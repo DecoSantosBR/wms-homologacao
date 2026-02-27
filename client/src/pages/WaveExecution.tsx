@@ -401,7 +401,7 @@ export default function WaveExecution() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <p className="text-muted-foreground">Carregando onda...</p>
+        <p className="text-white/70">Carregando onda...</p>
       </div>
     );
   }

@@ -225,17 +225,17 @@ export default function Reports() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => window.history.back()}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-white hover:text-white hover:bg-white/20"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">Relatórios</h1>
+            <p className="text-white/80 drop-shadow">
               Análises e relatórios gerenciais do WMS
             </p>
           </div>

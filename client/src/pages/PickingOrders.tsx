@@ -703,7 +703,7 @@ export default function PickingOrders() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <p className="text-muted-foreground">Carregando pedidos...</p>
+        <p className="text-white/70">Carregando pedidos...</p>
       </div>
     );
   }

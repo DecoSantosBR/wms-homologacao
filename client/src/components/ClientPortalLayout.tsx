@@ -309,7 +309,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         )}
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50">
           <div className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
