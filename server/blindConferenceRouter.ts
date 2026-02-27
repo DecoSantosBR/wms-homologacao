@@ -14,7 +14,7 @@ import {
   warehouseZones,
   nonConformities
 } from "../drizzle/schema";
-import { eq, and, or, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, or, desc, sql, isNull, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { getUniqueCode } from "./utils/uniqueCode";
@@ -1063,9 +1063,36 @@ export const blindConferenceRouter = router({
       
       const orderTenantId = order.tenantId;
 
-      // 2. BUSCAR ITENS CONFERIDOS
-      const items = await db.select()
+      // 2. BUSCAR ITENS CONFERIDOS COM addressedQuantity
+      const items = await db.select({
+        id: blindConferenceItems.id,
+        conferenceId: blindConferenceItems.conferenceId,
+        productId: blindConferenceItems.productId,
+        batch: blindConferenceItems.batch,
+        expiryDate: blindConferenceItems.expiryDate,
+        serialNumber: blindConferenceItems.serialNumber,
+        uniqueCode: blindConferenceItems.uniqueCode,
+        tenantId: blindConferenceItems.tenantId,
+        addressedQuantity: receivingOrderItems.addressedQuantity,
+      })
         .from(blindConferenceItems)
+        .innerJoin(
+          receivingOrderItems,
+          and(
+            eq(blindConferenceItems.productId, receivingOrderItems.productId),
+            or(
+              and(
+                isNotNull(blindConferenceItems.batch),
+                eq(blindConferenceItems.batch, receivingOrderItems.batch)
+              ),
+              and(
+                isNull(blindConferenceItems.batch),
+                isNull(receivingOrderItems.batch)
+              )
+            ),
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId)
+          )
+        )
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
@@ -1073,12 +1100,78 @@ export const blindConferenceRouter = router({
           )
         );
 
+      console.log('[finish] Items retornados do JOIN:', JSON.stringify(items, null, 2));
+
       if (items.length === 0) {
         throw new Error("Nenhum item foi conferido");
       }
 
-      // 3. CRIAR/ATUALIZAR ESTOQUE PARA CADA ITEM
-      for (const item of items) {
+      // 3. CALCULAR E ATUALIZAR addressedQuantity EM receivingOrderItems PRIMEIRO
+      // addressedQuantity = receivedQuantity - blockedQuantity
+      const orderItems = await db.select()
+        .from(receivingOrderItems)
+        .where(
+          and(
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        );
+
+      for (const orderItem of orderItems) {
+        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
+        
+        await db.update(receivingOrderItems)
+          .set({
+            addressedQuantity: addressableQty,
+            status: "completed",
+            updatedAt: new Date()
+          })
+          .where(eq(receivingOrderItems.id, orderItem.id));
+      }
+
+      console.log('[finish] addressedQuantity calculado e atualizado');
+
+      // 4. BUSCAR ITENS CONFERIDOS COM addressedQuantity ATUALIZADO
+      const itemsWithQty = await db.select({
+        id: blindConferenceItems.id,
+        conferenceId: blindConferenceItems.conferenceId,
+        productId: blindConferenceItems.productId,
+        batch: blindConferenceItems.batch,
+        expiryDate: blindConferenceItems.expiryDate,
+        serialNumber: blindConferenceItems.serialNumber,
+        uniqueCode: blindConferenceItems.uniqueCode,
+        tenantId: blindConferenceItems.tenantId,
+        addressedQuantity: receivingOrderItems.addressedQuantity,
+      })
+        .from(blindConferenceItems)
+        .innerJoin(
+          receivingOrderItems,
+          and(
+            eq(blindConferenceItems.productId, receivingOrderItems.productId),
+            or(
+              and(
+                isNotNull(blindConferenceItems.batch),
+                eq(blindConferenceItems.batch, receivingOrderItems.batch)
+              ),
+              and(
+                isNull(blindConferenceItems.batch),
+                isNull(receivingOrderItems.batch)
+              )
+            ),
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId)
+          )
+        )
+        .where(
+          and(
+            eq(blindConferenceItems.conferenceId, input.conferenceId),
+            eq(blindConferenceItems.tenantId, activeTenantId)
+          )
+        );
+
+      console.log('[finish] Items com addressedQuantity:', JSON.stringify(itemsWithQty, null, 2));
+
+      // 5. CRIAR/ATUALIZAR ESTOQUE PARA CADA ITEM
+      for (const item of itemsWithQty) {
         const product = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
         if (product.length === 0) continue;
 
@@ -1217,30 +1310,7 @@ export const blindConferenceRouter = router({
           );
       }
 
-      // 5. CALCULAR E ATUALIZAR addressedQuantity EM receivingOrderItems
-      // addressedQuantity = receivedQuantity - blockedQuantity
-      const orderItems = await db.select()
-        .from(receivingOrderItems)
-        .where(
-          and(
-            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
-            eq(receivingOrderItems.tenantId, activeTenantId)
-          )
-        );
-
-      for (const orderItem of orderItems) {
-        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
-        
-        await db.update(receivingOrderItems)
-          .set({
-            addressedQuantity: addressableQty,
-            status: "completed",
-            updatedAt: new Date()
-          })
-          .where(eq(receivingOrderItems.id, orderItem.id));
-      }
-
-      // 6. FINALIZAR SESSÃO
+      // 5. FINALIZAR SESSÃO
       await db.update(blindConferenceSessions)
         .set({
           status: "completed",

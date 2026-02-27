@@ -4627,3 +4627,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Reinserir dados de validade no formato correto (YYYY-MM-DD)
 
 - [x] Corrigir inventory.quantity para usar addressedQuantity ao invés de totalUnits
+
+- [x] Adicionar JOIN com receivingOrderItems para obter addressedQuantity no finish
+
+- [x] Reorganizar finish para calcular addressedQuantity ANTES de criar inventory
+- [x] Remover duplicação de cálculo de addressedQuantity
