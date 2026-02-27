@@ -715,7 +715,7 @@ export default function PickingOrders() {
         description="Gerencie e acompanhe pedidos de picking"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Button variant="outline" className="bg-white text-gray-700 hover:bg-gray-50" onClick={() => setIsImportDialogOpen(true)}>
               <Package className="h-4 w-4 mr-2" />
               Importar Excel
             </Button>
@@ -1058,7 +1058,7 @@ export default function PickingOrders() {
 
       <div className="container mx-auto py-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "orders" | "waves")}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 bg-white/90 border border-gray-200 shadow-sm">
             <TabsTrigger value="orders" className="gap-2">
               <Package className="h-4 w-4" />
               Pedidos
