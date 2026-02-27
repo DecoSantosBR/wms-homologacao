@@ -4510,4 +4510,18 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar dados no banco (item ID 5 existe, mas filtro tenantId bloqueava)
 - [x] Corrigir lógica: remover filtro tenantId quando isGlobalAdmin === true
 - [x] Aguardando teste do usuário
+- [x] Salvar checkpoint (ce0b2068)
+
+
+## 🎨 UI: Remover botão "Registrar NCG" da lista de itens - 27/02/2026
+
+**Contexto:** Página /collector/receiving (conferência cega)
+**Solicitação:** Remover botão "Registrar NCG" que aparece dentro da lista de produtos conferidos
+**Manter:** Botão "Registrar NCG" principal no rodapé da página
+
+**Ações:**
+- [x] Identificar componente que renderiza lista de itens conferidos (CollectorReceiving.tsx)
+- [x] Remover botão "Registrar NCG" da lista (linhas 895-917)
+- [x] Manter botão principal no rodapé (linha 951-957)
+- [x] Interface atualizada (lista mais limpa, botão NCG apenas no rodapé)
 - [ ] Salvar checkpoint

@@ -888,33 +888,10 @@ export function CollectorReceiving() {
                   <div key={`${item.productId}-${item.batch}`} className="border rounded-lg p-3">
                     <div className="font-medium text-sm">{item.productName}</div>
                     <div className="text-xs text-gray-600 mb-2">{item.productSku}</div>
-                    <div className="flex justify-between text-sm mb-2">
+                    <div className="flex justify-between text-sm">
                       <span>Lote: {item.batch || "-"}</span>
                       <span className="font-semibold">{item.packagesRead} caixas ({item.unitsRead || 0} un.)</span>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        // Buscar receivingOrderItemId do item
-                        const orderItem = orderItems?.find((oi: any) => 
-                          oi.productId === item.productId && oi.batch === item.batch
-                        );
-                        if (orderItem) {
-                          setSelectedItemForNCG({
-                            receivingOrderItemId: orderItem.id,
-                            labelCode: '', // Será gerado automaticamente
-                            maxQuantity: item.unitsRead || 0
-                          });
-                          setIsNCGModalOpen(true);
-                        } else {
-                          toast.error('Item da ordem não encontrado');
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      Registrar NCG
-                    </Button>
                   </div>
                 ))}
               </div>
