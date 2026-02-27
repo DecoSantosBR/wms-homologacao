@@ -275,18 +275,14 @@ export function CollectorPicking() {
 
       toast.success(data.message);
       
-      // Aguardar refresh antes de avançar para usar dados atualizados
-      refreshRoute();
-      
-      // Aguardar próximo tick para garantir que estado foi atualizado
-      setTimeout(() => {
+      // Atualizar rota e executar lógica após dados estarem atualizados
+      refreshRoute(() => {
         if (data.allocationCompleted) {
           advanceItem();
         } else {
           productInputRef.current?.focus();
         }
-      }, 150);
-    },
+      });    },
     onError: async (err) => {
       // Se falhar, adicionar à fila offline
       if (!navigator.onLine) {
@@ -312,15 +308,17 @@ export function CollectorPicking() {
     trpc.collectorPicking.recordFractionalQuantity.useMutation({
       onSuccess: (data) => {
         toast.success(`+${data.quantityAdded} registrado.`);
-        refreshRoute();
         setFractionalInput("");
         setPendingAllocationId(null);
         setScreen("scan_product");
-        if (data.allocationCompleted) {
-          advanceItem();
-        } else {
-          setTimeout(() => productInputRef.current?.focus(), 100);
-        }
+        
+        refreshRoute(() => {
+          if (data.allocationCompleted) {
+            advanceItem();
+          } else {
+            setTimeout(() => productInputRef.current?.focus(), 100);
+          }
+        });
       },
       onError: (err) => toast.error(err.message),
     });
@@ -343,9 +341,11 @@ export function CollectorPicking() {
         } else {
           toast.warning(data.message);
         }
-        refreshRoute();
         setScreen("scan_product");
-        advanceItem();
+        
+        refreshRoute(() => {
+          advanceItem();
+        });
       },
       onError: (err) => toast.error(err.message),
     });
@@ -372,11 +372,17 @@ export function CollectorPicking() {
   });
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function refreshRoute() {
+  function refreshRoute(onComplete?: () => void) {
     if (!selectedOrderId) return;
     utils.collectorPicking.getRoute
       .fetch({ pickingOrderId: selectedOrderId })
-      .then((r) => setRoute(r as RouteLocation[]));
+      .then((r) => {
+        setRoute(r as RouteLocation[]);
+        // Executar callback após estado ser atualizado
+        if (onComplete) {
+          setTimeout(onComplete, 50); // Pequeno delay para garantir que React atualizou o estado
+        }
+      });
   }
 
   function advanceItem() {

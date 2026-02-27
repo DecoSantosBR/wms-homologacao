@@ -4693,3 +4693,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Implementar Validation Guard no finish do recebimento (validação prévia de todos os campos)
 - [x] Corrigir finalização precoce do picking (aguardar refreshRoute com setTimeout)
 - [x] Envolver finish em transação atômica (db.transaction com tx.select/update/insert)
+- [x] Corrigir finalização precoce: refreshRoute agora aceita callback executado após dados atualizados
