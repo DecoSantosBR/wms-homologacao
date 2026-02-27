@@ -909,6 +909,8 @@ export const collectorPickingRouter = router({
           locationId: inventory.locationId,
           locationCode: wl.code,
           batch: inventory.batch,
+          labelCode: inventory.labelCode,
+          uniqueCode: inventory.uniqueCode,
           quantity: inventory.quantity,
           reservedQuantity: inventory.reservedQuantity,
         })
@@ -955,6 +957,8 @@ export const collectorPickingRouter = router({
           locationCode: alt.locationCode!,
           batch: alt.batch ?? null,
           expiryDate: alloc.expiryDate,
+          uniqueCode: alt.uniqueCode,
+          labelCode: alt.labelCode,
           quantity: remainingNeeded,
           isFractional: remainingNeeded < (alloc.quantity > 0 ? alloc.quantity : 1),
           sequence: nextSeq,

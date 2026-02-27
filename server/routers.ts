@@ -1811,6 +1811,7 @@ export const appRouter = router({
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
               expiryDate: inventory.expiryDate,
+              labelCode: inventory.labelCode,
               availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
             })
             .from(inventory)
@@ -1945,6 +1946,7 @@ export const appRouter = router({
               batch: stock.batch,
               expiryDate: stock.expiryDate,
               uniqueCode: getUniqueCode(product.sku, stock.batch),
+              labelCode: stock.labelCode,
               quantity: toReserve,
               isFractional: false, // TODO: calcular baseado em unitsPerBox
               sequence: 0, // Será recalculado ao gerar onda
@@ -2255,9 +2257,10 @@ export const appRouter = router({
               .select({
                 id: inventory.id,
                 locationId: inventory.locationId,
-                code: warehouseLocations.code,
+                locationCode: warehouseLocations.code,
                 batch: inventory.batch,
                 expiryDate: inventory.expiryDate,
+                labelCode: inventory.labelCode,
                 quantity: inventory.quantity,
                 reservedQuantity: inventory.reservedQuantity,
                 availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
@@ -2327,6 +2330,7 @@ export const appRouter = router({
                 batch: stock.batch ?? "",
                 expiryDate: stock.expiryDate ?? null,
                 uniqueCode: getUniqueCode(product.sku, stock.batch ?? ""),
+                labelCode: stock.labelCode,
                 quantity: toReserve,
                 isFractional: false,
                 sequence: 0,
@@ -3145,6 +3149,7 @@ export const appRouter = router({
                     reservedQuantity: inventory.reservedQuantity,
                     batch: inventory.batch,
                     expiryDate: inventory.expiryDate,
+                    labelCode: inventory.labelCode,
                     locationId: inventory.locationId,
                     code: warehouseLocations.code,
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
@@ -3201,6 +3206,7 @@ export const appRouter = router({
                     batch: stock.batch ?? "",
                     expiryDate: stock.expiryDate ?? null,
                     uniqueCode: getUniqueCode(product.sku, stock.batch ?? ""),
+                    labelCode: stock.labelCode,
                     quantity: quantityToReserve,
                     isFractional: false,
                     sequence: 0,

@@ -1231,6 +1231,7 @@ export const clientPortalRouter = router({
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
               expiryDate: inventory.expiryDate,
+              labelCode: inventory.labelCode,
             })
             .from(inventory)
             .leftJoin(warehouseLocations, eq(inventory.locationId, warehouseLocations.id))
@@ -1301,6 +1302,7 @@ export const clientPortalRouter = router({
               batch: stock.batch,
               expiryDate: stock.expiryDate,
               uniqueCode: getUniqueCode(product.sku, stock.batch),
+              labelCode: stock.labelCode,
               quantity: toReserve,
               isFractional: false,
               sequence: 0,
@@ -1624,6 +1626,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   reservedQuantity: inventory.reservedQuantity,
                   batch: inventory.batch,
                   expiryDate: inventory.expiryDate,
+                  labelCode: inventory.labelCode,
                   availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
                 })
                 .from(inventory)
@@ -1727,6 +1730,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   batch: stock.batch,
                   expiryDate: stock.expiryDate,
                   uniqueCode: getUniqueCode(product.sku, stock.batch),
+                  labelCode: stock.labelCode,
                   quantity: toReserve,
                   isFractional: false,
                   sequence: 0,

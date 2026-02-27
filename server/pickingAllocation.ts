@@ -143,6 +143,7 @@ export async function generatePickingAllocations(
           code: warehouseLocations.code,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
+          labelCode: inventory.labelCode,
           quantity: inventory.quantity,
         })
         .from(inventory)
@@ -171,6 +172,7 @@ export async function generatePickingAllocations(
           code: warehouseLocations.code,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
+          labelCode: inventory.labelCode,
           quantity: inventory.quantity,
         })
         .from(inventory)
@@ -203,6 +205,7 @@ export async function generatePickingAllocations(
           code: warehouseLocations.code,
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
+          labelCode: inventory.labelCode,
           quantity: inventory.quantity,
         })
         .from(inventory)
@@ -241,6 +244,7 @@ export async function generatePickingAllocations(
         batch: inv.batch,
         expiryDate: inv.expiryDate,
         uniqueCode: getUniqueCode(product.sku, inv.batch), // ✅ Adicionar uniqueCode
+        labelCode: inv.labelCode, // ✅ Adicionar labelCode
         quantity: allocatedQuantity,
         isFractional,
         sequence: sequence++,

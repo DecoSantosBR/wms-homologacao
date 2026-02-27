@@ -856,6 +856,7 @@ export const pickingAllocations = mysqlTable("pickingAllocations", {
   batch: varchar("batch", { length: 100 }), // Lote pré-alocado
   expiryDate: date("expiryDate"), // Validade do lote
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  labelCode: varchar("labelCode", { length: 100 }), // Código da etiqueta (rastreabilidade completa)
   quantity: int("quantity").notNull(), // Quantidade a separar
   isFractional: boolean("isFractional").default(false).notNull(), // Item fracionado?
   sequence: int("sequence").notNull(), // Ordem de visitação (endereços ordenados)
