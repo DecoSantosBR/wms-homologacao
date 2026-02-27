@@ -4604,7 +4604,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 **Ações:**
 - [ ] Identificar componente da tela Associar Etiqueta
 - [ ] Verificar lógica de preenchimento ao selecionar produto
-- [ ] Corrigir para buscar e preencher expiryDate do receivingOrderItem
+- [x] Corrigir banco de dados receivingOrderItems para armazenar datas sem horário
 - [ ] Testar fluxo completo
 - [ ] Salvar checkpoint
 
@@ -4622,3 +4622,6 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Garantir que backend aceita e retorna formato correto
 - [ ] Testar fluxo completo de entrada e exibição de datas
 - [ ] Salvar checkpoint
+
+- [x] Corrigir banco de dados receivingOrderItems - coluna expiryDate agora é DATE puro (sem horário)
+- [x] Reinserir dados de validade no formato correto (YYYY-MM-DD)
