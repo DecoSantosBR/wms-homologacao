@@ -26,7 +26,7 @@ export interface InventoryPosition {
   productSku: string;
   productDescription: string;
   locationId: number;
-  locationCode: string;
+  code: string;
   locationStatus: string; // Status do endereço (available/occupied)
   zoneName: string;
   batch: string | null;
@@ -99,7 +99,7 @@ export async function getInventoryPositions(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
       locationStatus: warehouseLocations.status, // Status do endereço
       zoneName: warehouseZones.name,
       batch: inventory.batch,
@@ -246,7 +246,7 @@ export async function getExpiringProducts(
       productSku: products.sku,
       productDescription: products.description,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
       locationStatus: warehouseLocations.status,
       zoneName: warehouseZones.name,
       batch: inventory.batch,

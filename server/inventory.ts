@@ -30,7 +30,7 @@ export interface InventoryPosition {
   productSku: string;
   productDescription: string;
   locationId: number;
-  locationCode: string;
+  code: string;
   locationStatus: string;
   locationTenantId: number | null;
   zoneName: string;

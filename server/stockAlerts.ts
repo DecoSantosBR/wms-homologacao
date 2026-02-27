@@ -30,7 +30,7 @@ export async function getExpiringProducts(tenantId: number, daysThreshold: numbe
       expiryDate: inventory.expiryDate,
       quantity: inventory.quantity,
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
       zoneName: warehouseZones.name,
       status: inventory.status,
       daysUntilExpiry: sql<number>`DATEDIFF(${inventory.expiryDate}, NOW())`,

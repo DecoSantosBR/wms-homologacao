@@ -404,7 +404,7 @@ export const appRouter = router({
         const availableStock = await db
           .select({
             locationId: inventory.locationId,
-            locationCode: warehouseLocations.code,
+            code: warehouseLocations.code,
             zoneCode: warehouseZones.code,
             quantity: inventory.quantity,
             reservedQuantity: inventory.reservedQuantity,
@@ -631,7 +631,7 @@ export const appRouter = router({
         
         // Buscar código do endereço
         const [location] = await db
-          .select({ locationCode: warehouseLocations.code })
+          .select({ code: warehouseLocations.code })
           .from(warehouseLocations)
           .where(eq(warehouseLocations.id, input.id))
           .limit(1);
@@ -1806,7 +1806,7 @@ export const appRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.code,
+              code: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -2255,7 +2255,7 @@ export const appRouter = router({
               .select({
                 id: inventory.id,
                 locationId: inventory.locationId,
-                locationCode: warehouseLocations.code,
+                code: warehouseLocations.code,
                 batch: inventory.batch,
                 expiryDate: inventory.expiryDate,
                 quantity: inventory.quantity,
@@ -3146,7 +3146,7 @@ export const appRouter = router({
                     batch: inventory.batch,
                     expiryDate: inventory.expiryDate,
                     locationId: inventory.locationId,
-                    locationCode: warehouseLocations.code,
+                    code: warehouseLocations.code,
                     availableQuantity: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`.as('availableQuantity'),
                   })
                   .from(inventory)

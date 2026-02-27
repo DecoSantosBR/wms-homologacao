@@ -74,7 +74,7 @@ export async function suggestPickingLocations(
   const stockQuery = db
     .select({
       locationId: inventory.locationId,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
       productId: inventory.productId,
       batch: inventory.batch,
       expiryDate: inventory.expiryDate,

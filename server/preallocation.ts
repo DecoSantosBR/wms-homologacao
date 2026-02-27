@@ -260,7 +260,7 @@ export async function getPreallocations(receivingOrderId: number) {
       productSku: products.sku,
       productDescription: products.description,
       locationId: receivingPreallocations.locationId,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
       batch: receivingPreallocations.batch,
       quantity: receivingPreallocations.quantity,
       status: receivingPreallocations.status,
@@ -330,7 +330,7 @@ export async function executeAddressing(
       quantity: receivingPreallocations.quantity,
       productSku: products.sku,
       productDescription: products.description,
-      locationCode: warehouseLocations.code,
+      code: warehouseLocations.code,
     })
     .from(receivingPreallocations)
     .leftJoin(products, eq(receivingPreallocations.productId, products.id))

@@ -136,7 +136,7 @@ async function allocateLocations(
       .select({
         inventoryId: inventory.id,
         locationId: inventory.locationId,
-        locationCode: warehouseLocations.code,
+        code: warehouseLocations.code,
         batch: inventory.batch,
         expiryDate: inventory.expiryDate,
         quantity: inventory.quantity,

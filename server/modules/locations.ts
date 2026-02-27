@@ -485,7 +485,7 @@ export async function createBulkLocations(data: {
   // Verificar códigos duplicados
   const codes = locations.map(l => l.code);
   const existing = await db
-    .select({ locationCode: warehouseLocations.code })
+    .select({ code: warehouseLocations.code })
     .from(warehouseLocations)
     .where(sql`${warehouseLocations.code} IN (${sql.join(codes.map(c => sql`${c}`), sql`, `)})`);
   

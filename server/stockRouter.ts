@@ -304,7 +304,7 @@ export const stockRouter = router({
       const location = await dbConn
         .select({
           id: warehouseLocations.id,
-          locationCode: warehouseLocations.code,
+          code: warehouseLocations.code,
           tenantId: warehouseLocations.tenantId,
           status: warehouseLocations.status,
         })

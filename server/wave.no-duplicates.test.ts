@@ -46,7 +46,7 @@ describe("Wave Logic - No Duplicates", () => {
     const locations = await db
       .select({ 
         id: warehouseLocations.id,
-        locationCode: warehouseLocations.code,
+        code: warehouseLocations.code,
         zoneCode: warehouseZones.code
       })
       .from(warehouseLocations)

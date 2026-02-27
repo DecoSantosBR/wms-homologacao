@@ -464,7 +464,7 @@ export const clientPortalRouter = router({
           quantity: inventory.quantity,
           reservedQuantity: inventory.reservedQuantity,
           status: inventory.status,
-          locationCode: warehouseLocations.code,
+          code: warehouseLocations.code,
           zoneName: warehouseZones.name,
           unitOfMeasure: products.unitOfMeasure,
         })
@@ -521,7 +521,7 @@ export const clientPortalRouter = router({
           batch: inventory.batch,
           expiryDate: inventory.expiryDate,
           quantity: inventory.quantity,
-          locationCode: warehouseLocations.code,
+          code: warehouseLocations.code,
         })
         .from(inventory)
         .innerJoin(products, eq(inventory.productId, products.id))
@@ -1160,7 +1160,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.code,
+              code: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1226,7 +1226,7 @@ export const clientPortalRouter = router({
             .select({
               id: inventory.id,
               locationId: inventory.locationId,
-              locationCode: warehouseLocations.code,
+              code: warehouseLocations.code,
               quantity: inventory.quantity,
               reservedQuantity: inventory.reservedQuantity,
               batch: inventory.batch,
@@ -1619,7 +1619,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 .select({
                   id: inventory.id,
                   locationId: inventory.locationId,
-                  locationCode: warehouseLocations.code,
+                  code: warehouseLocations.code,
                   quantity: inventory.quantity,
                   reservedQuantity: inventory.reservedQuantity,
                   batch: inventory.batch,

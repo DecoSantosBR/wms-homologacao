@@ -88,7 +88,7 @@ export const reportsRouter = router({
           quantity: inventory.quantity,
           reserved: inventory.reservedQuantity,
           available: sql<number>`${inventory.quantity} - ${inventory.reservedQuantity}`,
-          locationCode: warehouseLocations.code,
+          code: warehouseLocations.code,
           status: inventory.status,
           tenantName: tenants.name,
         })
@@ -184,7 +184,7 @@ export const reportsRouter = router({
       const results = await db
         .select({
           locationId: inventory.locationId,
-          locationCode: warehouseLocations.code,
+          code: warehouseLocations.code,
           locationType: warehouseLocations.locationType,
           zoneName: warehouseZones.name,
           zoneCode: warehouseZones.code,
