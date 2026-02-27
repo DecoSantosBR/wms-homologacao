@@ -4496,4 +4496,18 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Identificar onde validação de tenant está bloqueando Admin (blindConferenceRouter.ts)
 - [x] Ajustar lógica: isGlobalAdmin agora aceita tenantId === 1 OU tenantId === null
 - [x] Testar acesso de Admin (página /collector/receiving funcionando sem erros)
+- [x] Salvar checkpoint (73b0018f)
+
+
+## 🐛 BUG: Item da ordem não encontrado (ID: 5) - 27/02/2026
+
+**Contexto:** Página /collector/receiving
+**Erro:** "Item da ordem não encontrado (ID: 5). Verifique se a NF-e foi importada corretamente."
+**Usuário:** Admin (tenantId: 1)
+
+**Ações:**
+- [x] Identificar onde erro está sendo lançado (associateLabel em blindConferenceRouter.ts)
+- [x] Verificar dados no banco (item ID 5 existe, mas filtro tenantId bloqueava)
+- [x] Corrigir lógica: remover filtro tenantId quando isGlobalAdmin === true
+- [x] Aguardando teste do usuário
 - [ ] Salvar checkpoint

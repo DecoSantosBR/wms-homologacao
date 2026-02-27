@@ -474,10 +474,12 @@ export const blindConferenceRouter = router({
       const existingItem = await db.select()
         .from(receivingOrderItems)
         .where(
-          and(
-            eq(receivingOrderItems.id, input.receivingOrderItemId),
-            eq(receivingOrderItems.tenantId, activeTenantId)
-          )
+          isGlobalAdmin
+            ? eq(receivingOrderItems.id, input.receivingOrderItemId)
+            : and(
+                eq(receivingOrderItems.id, input.receivingOrderItemId),
+                eq(receivingOrderItems.tenantId, activeTenantId)
+              )
         )
         .limit(1);
       
