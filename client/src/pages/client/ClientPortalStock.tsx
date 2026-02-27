@@ -94,7 +94,7 @@ export function ClientPortalStock() {
               : "Carregando..."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="shrink-0">
+        <Button variant="outline" size="sm" onClick={() => refetch()} className="shrink-0 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm">
           <RefreshCw className="h-4 w-4 mr-1.5" /> Atualizar
         </Button>
       </div>
