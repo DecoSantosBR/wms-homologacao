@@ -673,15 +673,17 @@ export function CollectorReceiving() {
               <div className="space-y-2">
                 <Label>Selecionar Produto (SKU - Lote)</Label>
                 <ProductCombobox
-                  receivingOrderId={selectedOrderId!}
+                  products={orderItems?.map(item => ({
+                    id: item.id.toString(),
+                    sku: item.productSku,
+                    description: `Lote: ${item.batch || 'SEM LOTE'}`,
+                  }))}
                   value={ncgUniqueCode}
-                  onSelect={(uniqueCode, productId, receivingOrderItemId) => {
-                    setNcgUniqueCode(uniqueCode);
-                    setNcgProductId(productId);
-                    
-                    // Buscar dados do item da ordem para preencher lote e validade
-                    const item = orderItems?.find(i => i.id === receivingOrderItemId);
+                  onValueChange={(selectedId) => {
+                    const item = orderItems?.find(i => i.id.toString() === selectedId);
                     if (item) {
+                      setNcgUniqueCode(item.uniqueCode || `${item.productId}-${item.id}`);
+                      setNcgProductId(item.productId);
                       setNcgBatch(item.batch || "");
                       setNcgExpiryDate(item.expiryDate || "");
                     }

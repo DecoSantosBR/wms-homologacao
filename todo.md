@@ -4234,3 +4234,15 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Atualizar backend registerNCG para aceitar batch, expiryDate, productId
 - [x] Usar dados da Tela 2 (batch, expiryDate, productId) se fornecidos
 - [ ] Testar fluxo: conferência → NCG → scan → (registrar etiqueta) → motivo+foto → confirmar
+
+
+## 🐛 CORREÇÃO: Combobox de Produtos na Tela 2 de NCG - 26/02/2026
+
+**Problema:** Combobox "Selecionar Produto (SKU - Lote)" exibe "Nenhum produto encontrado" na Tela 2 de registro de etiqueta NCG.
+
+**Causa Provável:** ProductCombobox pode estar filtrando produtos incorretamente ou não recebendo receivingOrderId corretamente.
+
+**Solução:**
+- [x] Investigar ProductCombobox e verificar query de produtos
+- [x] Usar ProductCombobox existente com array de orderItems mapeado
+- [ ] Testar seleção de produto e preenchimento automático de lote/validade
