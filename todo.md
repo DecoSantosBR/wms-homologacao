@@ -4646,3 +4646,15 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Corrigir JOIN que causava duplicação de linhas em itemsWithQty
 - [x] Buscar items diretamente de receivingOrderItems ao invés de blindConferenceItems
+
+- [ ] Ajustar loop de criação de inventory para trabalhar com receivingOrderItems
+
+## 🔄 Fluxo em duas etapas para finalização de conferência
+- [ ] Criar procedure `prepareFinish` para calcular addressedQuantity e retornar resumo
+- [ ] Modificar procedure `finish` para receber confirmação e criar inventory
+- [ ] Criar modal de confirmação de quantidades no frontend
+- [ ] Testar fluxo completo: calcular → confirmar → criar inventory
+
+- [x] Criar procedure prepareFinish para calcular addressedQuantity
+- [x] Modificar finish para criar 1 inventory por receivingOrderItem
+- [ ] Criar modal de confirmação no frontend

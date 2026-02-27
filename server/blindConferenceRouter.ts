@@ -1015,6 +1015,102 @@ export const blindConferenceRouter = router({
     }),
 
   /**
+   * 6.5. Preparar Finalização - Calcular addressedQuantity e retornar resumo
+   */
+  prepareFinish: protectedProcedure
+    .input(z.object({
+      conferenceId: z.number(),
+      tenantId: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
+      const activeTenantId = (isGlobalAdmin && input.tenantId) 
+        ? input.tenantId 
+        : ctx.user.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      // 1. BUSCAR SESSÃO
+      const session = await db.select()
+        .from(blindConferenceSessions)
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
+        .limit(1);
+
+      if (!session || session.length === 0 || !session[0]) {
+        throw new TRPCError({ 
+          code: 'NOT_FOUND', 
+          message: 'Sessão de conferência não encontrada.' 
+        });
+      }
+
+      // 2. BUSCAR ORDEM DE RECEBIMENTO
+      const [order] = await db.select()
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, session[0].receivingOrderId))
+        .limit(1);
+      
+      if (!order) {
+        throw new Error("Ordem de recebimento não encontrada");
+      }
+
+      // 3. CALCULAR E ATUALIZAR addressedQuantity
+      const orderItems = await db.select()
+        .from(receivingOrderItems)
+        .where(
+          and(
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
+            eq(receivingOrderItems.tenantId, activeTenantId)
+          )
+        );
+
+      const summary = [];
+
+      for (const orderItem of orderItems) {
+        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
+        
+        await db.update(receivingOrderItems)
+          .set({
+            addressedQuantity: addressableQty,
+            status: "completed",
+            updatedAt: new Date()
+          })
+          .where(eq(receivingOrderItems.id, orderItem.id));
+
+        // Buscar produto para exibir no resumo
+        const [product] = await db.select({ sku: products.sku, description: products.description })
+          .from(products)
+          .where(eq(products.id, orderItem.productId))
+          .limit(1);
+
+        summary.push({
+          productId: orderItem.productId,
+          productSku: product?.sku || '',
+          productDescription: product?.description || '',
+          batch: orderItem.batch,
+          expectedQuantity: orderItem.expectedQuantity,
+          receivedQuantity: orderItem.receivedQuantity,
+          blockedQuantity: orderItem.blockedQuantity,
+          addressedQuantity: addressableQty,
+        });
+      }
+
+      return {
+        success: true,
+        receivingOrderId: session[0].receivingOrderId,
+        receivingOrderCode: order.code,
+        summary,
+      };
+    }),
+
+  /**
    * 7. Finalizar Conferência (REFATORADO)
    */
   finish: protectedProcedure
@@ -1066,49 +1162,7 @@ export const blindConferenceRouter = router({
       
       const orderTenantId = order.tenantId;
 
-      // 2. BUSCAR ITENS CONFERIDOS (sem addressedQuantity ainda)
-      const items = await db.select()
-        .from(blindConferenceItems)
-        .where(
-          and(
-            eq(blindConferenceItems.conferenceId, input.conferenceId),
-            eq(blindConferenceItems.tenantId, activeTenantId)
-          )
-        );
-
-      console.log('[finish] Items conferidos:', items.length);
-
-      if (items.length === 0) {
-        throw new Error("Nenhum item foi conferido");
-      }
-
-      // 3. CALCULAR E ATUALIZAR addressedQuantity EM receivingOrderItems PRIMEIRO
-      // addressedQuantity = receivedQuantity - blockedQuantity
-      const orderItems = await db.select()
-        .from(receivingOrderItems)
-        .where(
-          and(
-            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
-            eq(receivingOrderItems.tenantId, activeTenantId)
-          )
-        );
-
-      for (const orderItem of orderItems) {
-        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
-        
-        await db.update(receivingOrderItems)
-          .set({
-            addressedQuantity: addressableQty,
-            status: "completed",
-            updatedAt: new Date()
-          })
-          .where(eq(receivingOrderItems.id, orderItem.id));
-      }
-
-      console.log('[finish] addressedQuantity calculado e atualizado');
-
-      // 4. BUSCAR ITENS CONFERIDOS COM addressedQuantity ATUALIZADO
-      // IMPORTANTE: Buscar diretamente de receivingOrderItems para evitar duplicação
+      // 2. BUSCAR ITENS COM addressedQuantity JÁ CALCULADO (pelo prepareFinish)
       const itemsWithQty = await db.select({
         id: receivingOrderItems.id,
         productId: receivingOrderItems.productId,
@@ -1127,11 +1181,40 @@ export const blindConferenceRouter = router({
           )
         );
 
-      console.log('[finish] Items com addressedQuantity:', JSON.stringify(itemsWithQty, null, 2));
+      console.log('[finish] Items com addressedQuantity:', itemsWithQty.length);
 
-      // 5. CRIAR/ATUALIZAR ESTOQUE PARA CADA ITEM
+      if (itemsWithQty.length === 0) {
+        throw new Error("Nenhum item encontrado para criar inventory");
+      }
+
+      // 3. BUSCAR ZONA E ENDEREÇO DE RECEBIMENTO (REC)
+      const zoneREC = await db.select()
+        .from(warehouseZones)
+        .where(eq(warehouseZones.code, 'REC'))
+        .limit(1);
+
+      if (zoneREC.length === 0) {
+        throw new Error("Zona de Recebimento ('REC') não configurada");
+      }
+
+      const recLocation = await db.select()
+        .from(warehouseLocations)
+        .where(
+          and(
+            eq(warehouseLocations.tenantId, activeTenantId),
+            eq(warehouseLocations.zoneId, zoneREC[0].id)
+          )
+        )
+        .limit(1);
+
+      if (recLocation.length === 0) {
+        throw new Error("Endereço de recebimento não encontrado para este tenant");
+      }
+
+      const locationId = recLocation[0].id;
+
+      // 4. CRIAR 1 INVENTORY POR receivingOrderItem (1 uniqueCode = 1 inventory)
       for (const item of itemsWithQty) {
-        // Validar se o item do Join é válido
         if (!item || item.addressedQuantity === undefined || item.addressedQuantity === null) {
           console.warn(`[finish] Item ignorado por falta de addressedQuantity: ${item?.productId}`);
           continue;
@@ -1142,136 +1225,51 @@ export const blindConferenceRouter = router({
           continue;
         }
         
-        console.log('[finish] Processando item:', JSON.stringify(item, null, 2));
+        console.log('[finish] Criando inventory para item:', item.uniqueCode, 'quantity:', item.addressedQuantity);
         
-        const product = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
-        if (product.length === 0) {
-          console.log('[finish] Produto não encontrado, pulando item');
-          continue;
-        }
-
-        const productSku = product[0].sku;
-        const uniqueCode = getUniqueCode(productSku, item.batch);
-
-        // 1. Buscar zona de recebimento (REC)
-        const zoneREC = await db.select()
-          .from(warehouseZones)
-          .where(eq(warehouseZones.code, 'REC'))
-          .limit(1);
-
-        if (zoneREC.length === 0) {
-          throw new Error("Zona de Recebimento ('REC') não configurada");
-        }
-
-        // 2. Buscar endereço de recebimento usando zoneId
-        const recLocation = await db.select()
-          .from(warehouseLocations)
+        // Buscar se já existe inventory para este uniqueCode
+        const existingInventory = await db.select()
+          .from(inventory)
           .where(
             and(
-              eq(warehouseLocations.tenantId, activeTenantId),
-              eq(warehouseLocations.zoneId, zoneREC[0].id)
+              eq(inventory.uniqueCode, item.uniqueCode || ""),
+              eq(inventory.tenantId, activeTenantId),
+              eq(inventory.locationZone, 'REC')
             )
           )
           .limit(1);
 
-        if (recLocation.length === 0) {
-          throw new Error("Endereço de recebimento não encontrado para este tenant");
-        }
-
-        const locationId = recLocation[0].id;
-
-        // ✅ NOVA LÓGICA: 1 LPN = 1 Inventory
-        // Buscar apenas etiquetas OK (sem NCG) para alocar em REC
-        // Buscar todas as etiquetas em RECEIVING
-        const labels = await db.select()
-          .from(labelAssociations)
-          .where(
-            and(
-              eq(labelAssociations.productId, item.productId),
-              eq(labelAssociations.batch, item.batch || ""),
-              eq(labelAssociations.tenantId, activeTenantId),
-              eq(labelAssociations.status, 'RECEIVING')
-            )
-          );
-        
-        // Buscar NCGs para filtrar
-        const ncgLabels = await db.select({ labelCode: nonConformities.labelCode })
-          .from(nonConformities)
-          .where(eq(nonConformities.tenantId, activeTenantId));
-        
-        const ncgLabelCodes = new Set(ncgLabels.map(n => n.labelCode));
-        
-        // Filtrar apenas etiquetas sem NCG
-        const labelsOK = labels.filter(label => !ncgLabelCodes.has(label.labelCode));
-
-        console.log(`[finish] Total de etiquetas: ${labels.length}, NCGs: ${ncgLabelCodes.size}, OK: ${labelsOK.length}`);
-        console.log(`[finish] Criando inventory para ${labelsOK.length} etiquetas OK do produto ${item.productId}`);
-
-        // Criar um registro de inventory para cada etiqueta OK
-        for (const label of labelsOK) {
-          console.log('🔍 [finish] Label completo:', JSON.stringify(label, null, 2));
-          
-          if (!label.labelCode) {
-            console.error('❌ [finish] labelCode está NULL/undefined! Pulando...');
-            continue;
-          }
-          
-          console.log('🔍 [finish] Buscando inventory para labelCode:', label.labelCode, 'tenantId:', activeTenantId);
-          
-          let existingByLabel;
-          try {
-            existingByLabel = await db.select()
-              .from(inventory)
-              .where(
-                and(
-                  eq(inventory.labelCode, label.labelCode),
-                  eq(inventory.tenantId, activeTenantId)
-                )
-              )
-              .limit(1);
-            
-            console.log('✅ [finish] Query executada com sucesso. Resultados:', existingByLabel.length);
-          } catch (error: any) {
-            console.error('❌ [finish] ERRO na query de inventory:', error?.message || error);
-            console.error('❌ [finish] Stack:', error?.stack);
-            console.error('❌ [finish] labelCode:', label.labelCode);
-            console.error('❌ [finish] tenantId:', activeTenantId);
-            console.error('❌ [finish] Tipo de labelCode:', typeof label.labelCode);
-            throw new Error(`Erro ao buscar inventory: ${error?.message || error}`);
-          }
-
-          if (existingByLabel.length > 0) {
-            // 🔄 Etiqueta já existe (re-entrada ou correção)
-            await db.update(inventory)
-              .set({
-                quantity: Number(item.addressedQuantity) || 0, // ✅ Quantidade líquida endereçável (received - blocked)
-                locationId: locationId,
-                status: "available",
-                updatedAt: new Date()
-              })
-              .where(eq(inventory.id, existingByLabel[0].id));
-          } else {
-            // ✨ Nova etiqueta entrando no estoque
-            await db.insert(inventory).values({
-              tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
-              productId: item.productId,
+        if (existingInventory.length > 0) {
+          // Atualizar inventory existente
+          await db.update(inventory)
+            .set({
+              quantity: Number(item.addressedQuantity) || 0,
               locationId: locationId,
-              batch: item.batch || "",
-              expiryDate: item.expiryDate,
-              uniqueCode: uniqueCode,
-              labelCode: label.labelCode, // 🔑 Identidade física da caixa
-              locationZone: 'REC',
-              quantity: Number(item.addressedQuantity) || 0, // ✅ Quantidade líquida endereçável (received - blocked)
-              reservedQuantity: 0,
               status: "available",
-            });
-          }
+              updatedAt: new Date()
+            })
+            .where(eq(inventory.id, existingInventory[0].id));
+        } else {
+          // Criar novo inventory
+          await db.insert(inventory).values({
+            tenantId: orderTenantId,
+            productId: item.productId,
+            locationId: locationId,
+            batch: item.batch || "",
+            expiryDate: item.expiryDate,
+            uniqueCode: item.uniqueCode || "",
+            labelCode: null, // Sem labelCode específico (1 inventory por uniqueCode)
+            locationZone: 'REC',
+            quantity: Number(item.addressedQuantity) || 0,
+            reservedQuantity: 0,
+            status: "available",
+          });
         }
       }
 
-      // 4. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
+      // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
       // Buscar todos os produtos conferidos para liberar suas etiquetas
-      const productIds = items.map(item => item.productId);
+      const productIds = itemsWithQty.map(item => item.productId);
       
       if (productIds.length > 0) {
         await db.update(labelAssociations)
@@ -1304,7 +1302,7 @@ export const blindConferenceRouter = router({
       return {
         success: true,
         message: "Conferência finalizada com sucesso",
-        itemsProcessed: items.length
+        itemsProcessed: itemsWithQty.length
       };
     }),
 
