@@ -454,7 +454,7 @@ export const stockRouter = router({
         ...product[0],
         unitsPerBox: finalUnitsPerBox,
         batch: finalBatch,
-        availableQuantity: stockData?.quantity || 0,
+        availableQuantity: availableQuantity || 0,
         expiryDate: stockData?.expiryDate || null,
       };
     }),

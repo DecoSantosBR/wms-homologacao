@@ -4246,3 +4246,12 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Investigar ProductCombobox e verificar query de produtos
 - [x] Usar ProductCombobox existente com array de orderItems mapeado
 - [ ] Testar seleção de produto e preenchimento automático de lote/validade
+
+
+## 🔄 ATUALIZAÇÃO: stockRouter.ts Corrigido - 26/02/2026
+
+**Objetivo:** Substituir stockRouter.ts com versão corrigida fornecida pelo usuário.
+
+**Implementação:**
+- [x] Substituir conteúdo de server/stockRouter.ts
+- [ ] Testar endpoints de estoque
