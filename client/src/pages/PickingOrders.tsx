@@ -664,23 +664,23 @@ export default function PickingOrders() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
-      pending: { label: "Pendente", variant: "secondary", icon: Clock },
-      picking: { label: "Separando", variant: "default", icon: Package },
-      picked: { label: "Separado", variant: "outline", icon: CheckCircle2 },
-      staged: { label: "Conferido", variant: "default", icon: CheckCircle2 },
-      completed: { label: "Completo", variant: "outline", icon: CheckCircle2 },
-      checking: { label: "Conferindo", variant: "default", icon: AlertCircle },
-      packed: { label: "Embalado", variant: "outline", icon: Package },
-      shipped: { label: "Expedido", variant: "default", icon: Truck },
-      cancelled: { label: "Cancelado", variant: "destructive", icon: AlertCircle },
+    const variants: Record<string, { label: string; className: string; icon: any }> = {
+      pending:    { label: "Pendente",   className: "bg-gray-500 text-white",         icon: Clock },
+      picking:    { label: "Separando",  className: "bg-blue-600 text-white",         icon: Package },
+      picked:     { label: "Separado",   className: "bg-teal-600 text-white",         icon: CheckCircle2 },
+      staged:     { label: "Conferido",  className: "bg-indigo-600 text-white",       icon: CheckCircle2 },
+      completed:  { label: "Completo",   className: "bg-green-600 text-white",        icon: CheckCircle2 },
+      checking:   { label: "Conferindo", className: "bg-amber-500 text-white",        icon: AlertCircle },
+      packed:     { label: "Embalado",   className: "bg-purple-600 text-white",       icon: Package },
+      shipped:    { label: "Expedido",   className: "bg-sky-600 text-white",          icon: Truck },
+      cancelled:  { label: "Cancelado",  className: "bg-red-600 text-white",          icon: AlertCircle },
     };
 
     const config = variants[status] || variants.pending;
     const Icon = config.icon;
 
     return (
-      <Badge variant={config.variant} className="gap-1">
+      <Badge className={`gap-1 ${config.className}`}>
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
@@ -1376,7 +1376,7 @@ export default function PickingOrders() {
                     <div className="flex gap-2">
                       {wave.status !== "cancelled" && (
                         <Link href={`/picking/execute/${wave.id}`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="bg-white text-gray-700 hover:bg-gray-50">
                             {wave.status === "completed" ? "Visualizar" : "Executar"}
                           </Button>
                         </Link>
@@ -1388,6 +1388,7 @@ export default function PickingOrders() {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="bg-white text-gray-700 hover:bg-gray-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingWave(wave);
