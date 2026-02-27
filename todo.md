@@ -4560,4 +4560,22 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir blindConferenceItems (2 INSERTs: readLabel linha 208, associateLabel linha 453)
 - [x] Verificar receivingOrderItems (JÁ CORRETO: usa input.tenantId na importação de NF-e)
 - [x] Corrigir nonConformities (registerNCG linha 755)
-- [ ] Testar e salvar checkpoint
+- [x] Testar e salvar checkpoint (475de72e)
+
+
+## 🔧 CORREÇÃO: Tabelas de média prioridade - tenantId
+
+**Objetivo:** Corrigir inventory e inventoryMovements para herdar tenantId correto
+
+**Ações:**
+- [x] Buscar INSERTs em inventory (34 INSERTs encontrados em 22 arquivos)
+- [x] Corrigir inventory em blindConferenceRouter.ts (2/2 concluídos)
+- [x] Verificar inventory em movements.ts (JÁ CORRETO - usa tenantId do parâmetro)
+- [x] Verificar inventory em preallocation.ts (JÁ CORRETO - usa order.tenantId)
+- [x] Verificar inventory em shippingRouter.ts (JÁ CORRETO - usa order.tenantId)
+- [x] Verificar inventory em stage.ts (JÁ CORRETO - usa pickingOrder.tenantId)
+- [x] Verificar inventory em modules/conference.ts (JÁ CORRETO - usa order.tenantId)
+- [x] Verificar inventory em modules/receiving.ts (JÁ CORRETO - usa order[0].tenantId)
+- [x] Buscar INSERTs em inventoryMovements (10 INSERTs encontrados em 8 arquivos)
+- [x] Verificar inventoryMovements (TODOS JÁ CORRETOS - usam order.tenantId ou pickingOrder.tenantId)
+- [ ] Salvar checkpoint

@@ -726,7 +726,7 @@ export const blindConferenceRouter = router({
 
       // 4. CRIAR REGISTRO DE INVENTÁRIO BLOQUEADO EM NCG
       await db.insert(inventory).values({
-        tenantId: activeTenantId,
+        tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
         productId: orderItem.productId,
         locationId: ncgLocation.id,
         batch: orderItem.batch || null,
@@ -1047,6 +1047,18 @@ export const blindConferenceRouter = router({
         throw new Error("Sessão de conferência não encontrada");
       }
 
+      // Buscar receivingOrder para obter tenantId correto
+      const [order] = await db.select()
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, session[0].receivingOrderId))
+        .limit(1);
+      
+      if (!order) {
+        throw new Error("Ordem de recebimento não encontrada");
+      }
+      
+      const orderTenantId = order.tenantId;
+
       // 2. BUSCAR ITENS CONFERIDOS
       const items = await db.select()
         .from(blindConferenceItems)
@@ -1169,7 +1181,7 @@ export const blindConferenceRouter = router({
           } else {
             // ✨ Nova etiqueta entrando no estoque
             await db.insert(inventory).values({
-              tenantId: activeTenantId,
+              tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
