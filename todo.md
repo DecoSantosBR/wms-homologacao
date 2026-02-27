@@ -4524,4 +4524,40 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Remover botão "Registrar NCG" da lista (linhas 895-917)
 - [x] Manter botão principal no rodapé (linha 951-957)
 - [x] Interface atualizada (lista mais limpa, botão NCG apenas no rodapé)
+- [x] Salvar checkpoint (cae30eec)
+
+
+## 🐛 BUG: tenantId incorreto em blindConferenceSessions e blindConferenceItems - 27/02/2026
+
+**Problema:** Tabelas blindConferenceSessions, blindConferenceItems e labelAssociations estão usando tenantId do usuário
+**Correto:** Devem usar tenantId da receivingOrder correspondente
+
+**Motivo:** Dados de conferência devem pertencer ao mesmo tenant da ordem original, não ao tenant do operador
+
+**Ações:**
+- [ ] Identificar onde tenantId do usuário está sendo usado (função start, associateLabel, etc.)
+- [ ] Buscar receivingOrder.tenantId antes de criar sessão/itens
+- [ ] Ajustar INSERTs para usar receivingOrder.tenantId
+- [ ] Testar criação de sessão e itens
 - [ ] Salvar checkpoint
+
+
+## 🔍 AUDITORIA: Identificar todas as tabelas com tenantId incorreto - 27/02/2026
+
+**Objetivo:** Listar todas as tabelas que usam tenantId do usuário quando deveriam herdar de ordem relacionada
+
+**Regras:**
+- Tabelas relacionadas a **receivingOrder** devem herdar `receivingOrder.tenantId`
+- Tabelas relacionadas a **pickingOrder** devem herdar `pickingOrder.tenantId`
+- Tabelas de **cadastro** (produtos, clientes, locais) mantêm tenantId do usuário
+
+**Ações:**
+- [x] Analisar schema.ts e listar todas as tabelas com campo tenantId
+- [x] Verificar lógica de INSERT em cada tabela
+- [x] Classificar: (1) herda de ordem, (2) usa tenant do usuário
+- [x] Documentar lista completa de tabelas que precisam correção (TENANT_ID_AUDIT.md)
+- [x] Corrigir labelAssociations (2 locais: associateLabel linha 443, registerNCG linha 698)
+- [x] Corrigir blindConferenceItems (2 INSERTs: readLabel linha 208, associateLabel linha 453)
+- [x] Verificar receivingOrderItems (JÁ CORRETO: usa input.tenantId na importação de NF-e)
+- [x] Corrigir nonConformities (registerNCG linha 755)
+- [ ] Testar e salvar checkpoint

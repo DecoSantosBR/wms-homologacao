@@ -64,6 +64,9 @@ export const blindConferenceRouter = router({
         throw new Error("Ordem de recebimento não encontrada");
       }
 
+      // ✅ USAR tenantId DA ORDEM, NÃO DO USUÁRIO
+      const orderTenantId = order[0].tenantId;
+
       // Verificar se já existe sessão ativa para esta ordem
       const existingSession = await db.select()
         .from(blindConferenceSessions)
@@ -85,7 +88,7 @@ export const blindConferenceRouter = router({
 
       // Criar nova sessão
       await db.insert(blindConferenceSessions).values({
-        tenantId: activeTenantId,
+        tenantId: orderTenantId,
         receivingOrderId: input.receivingOrderId,
         startedBy: userId,
         status: "active",
@@ -161,6 +164,19 @@ export const blindConferenceRouter = router({
       const conference = conferenceSession[0];
       console.log("[readLabel] Conference encontrada:", conference.id, "| receivingOrderId:", conference.receivingOrderId);
 
+      // ✅ BUSCAR receivingOrder PARA OBTER tenantId CORRETO
+      const receivingOrder = await db.select()
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, conference.receivingOrderId))
+        .limit(1);
+      
+      if (receivingOrder.length === 0) {
+        throw new Error("Ordem de recebimento não encontrada");
+      }
+      
+      const orderTenantId = receivingOrder[0].tenantId;
+      console.log("[readLabel] Usando tenantId da ordem:", orderTenantId);
+
       // 1. BUSCA GLOBAL DA ETIQUETA (Identidade Permanente)
       const label = await db.select()
         .from(labelAssociations)
@@ -189,7 +205,7 @@ export const blindConferenceRouter = router({
           productId: labelData.productId,
           batch: labelData.batch || "",
           expiryDate: labelData.expiryDate,
-          tenantId: activeTenantId,
+          tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           packagesRead: 1,
           unitsRead: labelData.unitsPerBox, // Primeira leitura: 1 caixa * unitsPerBox
           expectedQuantity: 0,
@@ -374,6 +390,19 @@ export const blindConferenceRouter = router({
       const conference = conferenceSession[0];
       console.log("[associateLabel] Conference encontrada:", conference.id, "| receivingOrderId:", conference.receivingOrderId);
 
+      // ✅ BUSCAR receivingOrder PARA OBTER tenantId CORRETO
+      const receivingOrder = await db.select()
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, conference.receivingOrderId))
+        .limit(1);
+      
+      if (receivingOrder.length === 0) {
+        throw new Error("Ordem de recebimento não encontrada");
+      }
+      
+      const orderTenantId = receivingOrder[0].tenantId;
+      console.log("[associateLabel] Usando tenantId da ordem:", orderTenantId);
+
       // Buscar produto para gerar uniqueCode
       const product = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
       if (product.length === 0) {
@@ -424,7 +453,7 @@ export const blindConferenceRouter = router({
         totalUnits: actualUnitsReceived,
         status: "RECEIVING", // Etiqueta criada durante conferência fica bloqueada até fechamento
         associatedBy: userId,
-        tenantId: activeTenantId,
+        tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
       });
 
       // 2. REGISTRAR PRIMEIRO BIP NA CONFERÊNCIA
@@ -434,7 +463,7 @@ export const blindConferenceRouter = router({
           productId: input.productId,
           batch: input.batch || "",
           expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-          tenantId: activeTenantId,
+          tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           packagesRead: 1,
           unitsRead: actualUnitsReceived, // Primeira leitura: actualUnitsReceived (pode ser fracionado)
           expectedQuantity: 0,
@@ -634,6 +663,19 @@ export const blindConferenceRouter = router({
         throw new Error("Item da ordem não encontrado");
       }
 
+      // ✅ BUSCAR receivingOrder PARA OBTER tenantId CORRETO
+      const [receivingOrder] = await db.select()
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, orderItem.receivingOrderId))
+        .limit(1);
+      
+      if (!receivingOrder) {
+        throw new Error("Ordem de recebimento não encontrada");
+      }
+      
+      const orderTenantId = receivingOrder.tenantId;
+      console.log("[registerNCG] Usando tenantId da ordem:", orderTenantId);
+
       // 3. GERAR OU VERIFICAR ETIQUETA
       let labelCode = input.labelCode;
       
@@ -666,7 +708,7 @@ export const blindConferenceRouter = router({
         const finalProductId = input.productId || orderItem.productId;
         
         await db.insert(labelAssociations).values({
-          tenantId: activeTenantId,
+          tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           labelCode: labelCode,
           productId: finalProductId,
           batch: finalBatch,
@@ -710,7 +752,7 @@ export const blindConferenceRouter = router({
 
       // 7. REGISTRAR NÃO-CONFORMIDADE
       await db.insert(nonConformities).values({
-        tenantId: activeTenantId,
+        tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
         receivingOrderItemId: input.receivingOrderItemId,
         labelCode: labelCode,
         conferenceId: input.conferenceId,
