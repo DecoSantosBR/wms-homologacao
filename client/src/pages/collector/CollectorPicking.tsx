@@ -398,9 +398,12 @@ export function CollectorPicking() {
     }
     
     // Buscar se ainda existe algum item não coletado neste endereço
-    const nextPendingItem = currentLoc.items.find(
-      (i) => i.status === "pending"
+    // IMPORTANTE: Incluir "in_progress" pois item pode estar parcialmente bipado
+    const pendingItems = currentLoc.items.filter(
+      (i) => i.status !== "picked" && i.status !== "short_picked"
     );
+    
+    const nextPendingItem = pendingItems.length > 0 ? pendingItems[0] : null;
     
     if (nextPendingItem) {
       // ✅ Ainda há lotes aqui! Reseta para o primeiro disponível

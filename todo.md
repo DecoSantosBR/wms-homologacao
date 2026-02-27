@@ -4697,3 +4697,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Reescrito advanceItem: busca próximo item em dados JÁ atualizados do servidor
 - [x] isLast já estava correto: verifica pendências globais
 - [x] advanceItem refatorado: reseta índice para 0 e busca primeiro item pendente
+- [x] Filtro advanceItem corrigido: agora inclui status in_progress
