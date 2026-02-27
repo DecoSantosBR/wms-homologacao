@@ -1108,39 +1108,22 @@ export const blindConferenceRouter = router({
       console.log('[finish] addressedQuantity calculado e atualizado');
 
       // 4. BUSCAR ITENS CONFERIDOS COM addressedQuantity ATUALIZADO
+      // IMPORTANTE: Buscar diretamente de receivingOrderItems para evitar duplicação
       const itemsWithQty = await db.select({
-        id: blindConferenceItems.id,
-        conferenceId: blindConferenceItems.conferenceId,
-        productId: blindConferenceItems.productId,
-        batch: blindConferenceItems.batch,
-        expiryDate: blindConferenceItems.expiryDate,
-        serialNumber: blindConferenceItems.serialNumber,
-        uniqueCode: blindConferenceItems.uniqueCode,
-        tenantId: blindConferenceItems.tenantId,
+        id: receivingOrderItems.id,
+        productId: receivingOrderItems.productId,
+        batch: receivingOrderItems.batch,
+        expiryDate: receivingOrderItems.expiryDate,
+        serialNumber: receivingOrderItems.serialNumber,
+        uniqueCode: receivingOrderItems.uniqueCode,
+        tenantId: receivingOrderItems.tenantId,
         addressedQuantity: receivingOrderItems.addressedQuantity,
       })
-        .from(blindConferenceItems)
-        .innerJoin(
-          receivingOrderItems,
-          and(
-            eq(blindConferenceItems.productId, receivingOrderItems.productId),
-            or(
-              and(
-                isNotNull(blindConferenceItems.batch),
-                eq(blindConferenceItems.batch, receivingOrderItems.batch)
-              ),
-              and(
-                isNull(blindConferenceItems.batch),
-                isNull(receivingOrderItems.batch)
-              )
-            ),
-            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId)
-          )
-        )
+        .from(receivingOrderItems)
         .where(
           and(
-            eq(blindConferenceItems.conferenceId, input.conferenceId),
-            eq(blindConferenceItems.tenantId, activeTenantId)
+            eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
+            eq(receivingOrderItems.tenantId, activeTenantId)
           )
         );
 

@@ -4256,6 +4256,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Substituir conteúdo de server/stockRouter.ts
 - [ ] Testar endpoints de estoque
 
+<<<<<<< Updated upstream
 
 ## 🐛 CORREÇÃO: Erro 500 ao Gerar Onda de Picking - 26/02/2026
 
@@ -4639,3 +4640,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Validar session[0] antes de usar
 - [x] Validar item.addressedQuantity antes de processar
 - [x] Converter addressedQuantity para número com fallback para 0
+=======
+- [ ] Investigar por que inventory.quantity está usando unitsPerBox (140, 80, 80, 140) ao invés de addressedQuantity (280, 160, 560, 140)
+>>>>>>> Stashed changes
+
+- [x] Corrigir JOIN que causava duplicação de linhas em itemsWithQty
+- [x] Buscar items diretamente de receivingOrderItems ao invés de blindConferenceItems
