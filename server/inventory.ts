@@ -30,7 +30,7 @@ export interface InventoryPosition {
   productSku: string;
   productDescription: string;
   locationId: number;
-  code: string;
+  locationCode: string;
   locationStatus: string;
   locationTenantId: number | null;
   zoneName: string;
@@ -142,7 +142,7 @@ export async function getInventoryPositions(
         productSku: products.sku,
         productDescription: products.description,
         locationId: warehouseLocations.id,
-        code: warehouseLocations.code,
+        locationCode: warehouseLocations.code,
         locationStatus: warehouseLocations.status,
         locationTenantId: warehouseLocations.tenantId,
         zoneName: warehouseZones.name,
@@ -180,7 +180,7 @@ export async function getInventoryPositions(
         productSku: products.sku,
         productDescription: products.description,
         locationId: inventory.locationId,
-        code: warehouseLocations.code,
+        locationCode: warehouseLocations.code,
         locationStatus: warehouseLocations.status,
         locationTenantId: warehouseLocations.tenantId,
         zoneName: warehouseZones.name,

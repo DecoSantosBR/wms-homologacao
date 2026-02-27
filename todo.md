@@ -4666,3 +4666,11 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Verificar implementação do prepareFinish no backend
 - [x] Corrigir lógica de cálculo e retorno de dados no prepareFinish
 - [ ] Testar modal com dados corretos
+
+- [x] Investigar erro 500 no endpoint de movimentação
+- [ ] Corrigir erro no backend de movimentação
+- [ ] Testar correção de movimentação
+
+- [x] Verificar lógica de criação de inventory no finish
+- [x] Adicionar lógica para buscar locationId da zona Recebimento
+- [x] Testar preenchimento de locationId
