@@ -32,10 +32,10 @@ export function ConfirmFinishModal({
   receivingOrderCode,
   isLoading = false
 }: ConfirmFinishModalProps) {
-  const totalExpected = summary.reduce((sum, item) => sum + (item.expectedQuantity || 0), 0);
-  const totalReceived = summary.reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
-  const totalBlocked = summary.reduce((sum, item) => sum + (item.blockedQuantity || 0), 0);
-  const totalAddressed = summary.reduce((sum, item) => sum + item.addressedQuantity, 0);
+  const totalExpected = (summary || []).reduce((sum, item) => sum + (item.expectedQuantity || 0), 0);
+  const totalReceived = (summary || []).reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
+  const totalBlocked = (summary || []).reduce((sum, item) => sum + (item.blockedQuantity || 0), 0);
+  const totalAddressed = (summary || []).reduce((sum, item) => sum + item.addressedQuantity, 0);
 
   const hasDivergence = totalReceived !== totalExpected;
   const hasBlocked = totalBlocked > 0;
@@ -105,7 +105,7 @@ export function ConfirmFinishModal({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.map((item, index) => {
+                {(summary || []).map((item, index) => {
                   const isDivergent = item.receivedQuantity !== item.expectedQuantity;
                   return (
                     <TableRow key={index} className={isDivergent ? "bg-yellow-50" : ""}>
