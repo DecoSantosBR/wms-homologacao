@@ -100,7 +100,7 @@ export default function NFEImport() {
                 Tipo de Movimento <span className="text-red-500">*</span>
               </Label>
               <Select value={tipo} onValueChange={(value: "entrada" | "saida") => setTipo(value)}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white text-gray-800">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,7 +121,7 @@ export default function NFEImport() {
                   : "Selecione o armazém/cliente que está expedindo (ex: Hapvida)"}
               </p>
               <Select value={tenantId} onValueChange={setTenantId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white text-gray-800">
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
@@ -142,7 +142,7 @@ export default function NFEImport() {
               <div className="flex items-center gap-4">
                 <label
                   htmlFor="xml-file"
-                  className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors bg-white"
                 >
                   <Upload className="h-5 w-5 text-gray-500" />
                   <span className="text-sm text-gray-600">
