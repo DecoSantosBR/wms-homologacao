@@ -436,6 +436,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 50 }),
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
+  labelCode: varchar("labelCode", { length: 100 }), // ✅ Código da etiqueta (rastreabilidade completa)
   serialNumber: varchar("serialNumber", { length: 100 }),
   fromLocationId: int("fromLocationId"),
   toLocationId: int("toLocationId"),

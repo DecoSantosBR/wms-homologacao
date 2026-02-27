@@ -263,6 +263,7 @@ async function registerMovementInternal(
         status: "available",
         tenantId: tenantId || null,
         uniqueCode: getUniqueCode(product[0]?.sku || "", input.batch || null), // ✅ Adicionar uniqueCode
+        labelCode: fromInventory[0]?.labelCode || null, // ✅ CORREÇÃO CRÍTICA: Copiar labelCode do origem
         locationZone: toLocation[0]?.zoneCode || null, // ✅ Adicionar locationZone
       });
     }
@@ -275,6 +276,7 @@ async function registerMovementInternal(
     toLocationId: input.toLocationId || null,
     quantity: input.quantity,
     batch: input.batch || null,
+    labelCode: fromInventory[0]?.labelCode || null, // ✅ Registrar labelCode na movimentação
     movementType: input.movementType,
     notes: input.notes || null,
     performedBy: input.performedBy,

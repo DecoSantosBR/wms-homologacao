@@ -4283,3 +4283,48 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir: usar `item.labelCode || null` para evitar desalinhamento de parâmetros
 - [ ] Testar criação de onda de picking `labelCode` pode ser undefined (LEFT JOIN)
 - [x] Corrigir: usar `item.labelCode || null` para evitar desalinhamento de parâmetros
+
+
+## 🐛 CORREÇÃO: labelCode String Vazia em Vez de Null - 26/02/2026
+
+**Problema:** Erro 500 persiste. Params mostram `labelCode` como string vazia `""` (veja: `...,,pending...`), mas banco pode rejeitar.
+
+**Causa:** `item.labelCode || null` converte undefined para null, mas string vazia `""` passa direto.
+
+**Solução:**
+- [ ] Mudar para `item.labelCode || null` → `item.labelCode ? item.labelCode : null`
+- [ ] Garantir que string vazia também vire null
+
+
+## 🔍 INVESTIGAÇÃO: labelCode Não Recuperado na Query de Alocações - 26/02/2026
+
+**Problema:** labelCode aparece como string vazia nos params, mesmo quando produto possui etiqueta cadastrada.
+
+**Hipótese:** LEFT JOIN com `inventory` (linha 262-277) pode estar:
+- Retornando múltiplos registros (várias etiquetas do mesmo produto/endereço/lote)
+- Não encontrando registro (condições de JOIN incorretas)
+- Buscando de tabela errada (labelCode pode estar em labelAssociations, não inventory)
+
+**Solução:**
+- [ ] Analisar query completa de busca de alocações (linhas 248-285)
+- [ ] Verificar de onde vem labelCode (inventory vs labelAssociations)
+- [ ] Corrigir JOIN ou adicionar JOIN com labelAssociations
+- [ ] Testar criação de onda
+
+
+## 🎯 CORREÇÃO CRÍTICA: Rastreabilidade de labelCode em Movimentações - 26/02/2026
+
+**Problema Raiz Identificado:**
+1. Conferência finalizada: `labelCode` registrado em `inventory` no endereço REC
+2. Movimentação REC → Armazenagem: Sistema cria novo registro em `inventory` no destino, mas **NÃO copia `labelCode`**
+3. Criação de onda: Query busca `labelCode` do endereço de armazenagem, retorna vazio/null
+
+**Impacto:** Perda de rastreabilidade de etiquetas após movimentação, impossibilitando picking guiado por etiqueta.
+
+**Solução:**
+- [x] Adicionar coluna `labelCode` em `inventoryMovements` (schema)
+- [x] Gerar migration 0019 e aplicar no banco
+- [x] Corrigir lógica de movimentação para copiar `labelCode` do origem para destino (movements.ts)
+- [x] Adicionar `labelCode` ao registro de inventoryMovements
+- [x] Atualizar query de criação de onda para buscar `labelCode` de `inventory`
+- [ ] Testar fluxo completo: conferência → movimentação → criação de onda

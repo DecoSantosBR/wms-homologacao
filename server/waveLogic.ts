@@ -259,7 +259,8 @@ export async function createWave(params: CreateWaveParams) {
       expiryDate: pickingAllocations.expiryDate,
       unit: pickingOrderItems.unit, // Unidade do pedido original
       unitsPerBox: pickingOrderItems.unitsPerBox, // Unidades por caixa
-      labelCode: inventory.labelCode, // ✅ Código da etiqueta (pode ser null devido ao LEFT JOIN)
+      // ✅ CORREÇÃO CRÍTICA: Buscar labelCode de inventory (agora copiado durante movimentações)
+      labelCode: inventory.labelCode,
     })
     .from(pickingAllocations)
     .leftJoin(products, eq(pickingAllocations.productId, products.id))
@@ -270,10 +271,12 @@ export async function createWave(params: CreateWaveParams) {
       eq(pickingAllocations.productId, pickingOrderItems.productId),
       eq(pickingAllocations.batch, pickingOrderItems.batch) // ✅ Match por batch para evitar duplicação
     ))
+    // ✅ CORREÇÃO: JOIN com inventory para recuperar labelCode (copiado durante movimentações)
     .leftJoin(inventory, and(
       eq(pickingAllocations.productId, inventory.productId),
       eq(pickingAllocations.locationId, inventory.locationId),
-      eq(pickingAllocations.batch, inventory.batch)
+      eq(pickingAllocations.batch, inventory.batch),
+      eq(inventory.tenantId, tenantId) // Filtrar por tenant
     ))
     .where(
       and(
