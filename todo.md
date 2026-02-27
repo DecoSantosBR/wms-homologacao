@@ -4681,3 +4681,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [ ] Corrigir status dos endereços: "Livre" (vazio) vs "Disponível" (com item, aceita mais)
 - [x] Corrigir finish: copiar labelCode de receivingOrderItems para inventory
 - [x] Adicionar coluna labelCode na tabela inventoryMovements (já existia no schema, migration aplicada)
+- [x] Verificar e adicionar coluna labelCode na tabela inventoryMovements (ALTER TABLE aplicado)
