@@ -357,7 +357,10 @@ export async function createWave(params: CreateWaveParams) {
     locationId: item.locationId,
     locationCode: item.locationCode,
     batch: item.batch,
-    expiryDate: item.expiryDate,
+    // ✅ CORREÇÃO: Formatar expiryDate para YYYY-MM-DD (MySQL DATE format)
+    expiryDate: item.expiryDate instanceof Date 
+      ? item.expiryDate.toISOString().split('T')[0] 
+      : item.expiryDate,
     status: "pending" as const,
     uniqueCode: getUniqueCode(item.productSku, item.batch), // ✅ Adicionar uniqueCode
     labelCode: item.labelCode, // ✅ Código da etiqueta para rastreabilidade

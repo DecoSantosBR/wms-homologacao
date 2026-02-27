@@ -4255,3 +4255,15 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 **Implementação:**
 - [x] Substituir conteúdo de server/stockRouter.ts
 - [ ] Testar endpoints de estoque
+
+
+## 🐛 CORREÇÃO: Erro 500 ao Gerar Onda de Picking - 26/02/2026
+
+**Problema:** Erro 500 ao criar onda: `Failed query: insert into pickingWaveItems` devido a formato incorreto de `expiryDate`.
+
+**Causa:** Backend envia objeto Date completo do JavaScript (`Wed Apr 25 2029 00:00:00 GMT+0000`), mas MySQL espera formato `YYYY-MM-DD`.
+
+**Solução:**
+- [x] Localizar mutation `wave.create` em server/waveRouter.ts (delega para waveLogic.ts)
+- [x] Formatar `expiryDate` para string `YYYY-MM-DD` antes de inserir em `pickingWaveItems`
+- [ ] Testar criação de onda de picking
