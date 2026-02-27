@@ -386,27 +386,31 @@ export function CollectorPicking() {
   }
 
   function advanceItem() {
-    // Buscar próximo item pendente no endereço atual
-    const pendingItems = currentLocation?.items.filter(
-      (i) => i.status !== "picked" && i.status !== "short_picked"
-    ) ?? [];
+    // IMPORTANTE: Esta função é chamada DENTRO do callback de refreshRoute(),
+    // então route/currentLocation já contém dados ATUALIZADOS do servidor
     
-    if (pendingItems.length > 0) {
+    if (!currentLocation) {
+      console.warn("[advanceItem] currentLocation é undefined");
+      setScreen("location_done");
+      return;
+    }
+    
+    // Buscar próximo item pendente no endereço atual (dados já atualizados)
+    const nextPendingIdx = currentLocation.items.findIndex(
+      (i) => i.status !== "picked" && i.status !== "short_picked"
+    );
+    
+    if (nextPendingIdx >= 0) {
       // Ainda há itens pendentes neste endereço
-      // Encontrar o índice do primeiro item pendente na lista original
-      const nextPendingIdx = currentLocation?.items.findIndex(
-        (i) => i.status !== "picked" && i.status !== "short_picked"
-      ) ?? -1;
-      
-      if (nextPendingIdx >= 0) {
-        setCurrentItemIdx(nextPendingIdx);
-        setScreen("scan_product");
-        setTimeout(() => productInputRef.current?.focus(), 100);
-        return;
-      }
+      console.log(`[advanceItem] Próximo item pendente: índice ${nextPendingIdx}`);
+      setCurrentItemIdx(nextPendingIdx);
+      setScreen("scan_product");
+      setTimeout(() => productInputRef.current?.focus(), 100);
+      return;
     }
     
     // Não há mais itens pendentes neste endereço
+    console.log("[advanceItem] Todos os itens do endereço foram separados");
     setScreen("location_done");
   }
 

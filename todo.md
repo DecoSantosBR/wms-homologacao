@@ -4694,3 +4694,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir finalização precoce do picking (aguardar refreshRoute com setTimeout)
 - [x] Envolver finish em transação atômica (db.transaction com tx.select/update/insert)
 - [x] Corrigir finalização precoce: refreshRoute agora aceita callback executado após dados atualizados
+- [x] Reescrito advanceItem: busca próximo item em dados JÁ atualizados do servidor
