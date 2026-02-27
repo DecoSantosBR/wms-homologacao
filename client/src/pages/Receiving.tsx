@@ -18,12 +18,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const STATUS_COLORS = {
-  scheduled: "bg-blue-100 text-blue-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  in_quarantine: "bg-orange-100 text-orange-800",
-  addressing: "bg-purple-100 text-purple-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-gray-100 text-gray-800",
+  scheduled: "bg-blue-600 text-white",
+  in_progress: "bg-yellow-500 text-white",
+  in_quarantine: "bg-orange-500 text-white",
+  addressing: "bg-purple-600 text-white",
+  completed: "bg-green-600 text-white",
+  cancelled: "bg-gray-500 text-white",
 };
 
 const STATUS_LABELS = {
@@ -328,7 +328,7 @@ export default function Receiving() {
                     placeholder="Buscar por número, fornecedor ou NF-e..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-11"
+                    className="pl-10 h-11 bg-white text-gray-800"
                   />
                 </div>
               </div>
@@ -336,7 +336,7 @@ export default function Receiving() {
               {/* Filtro de Status */}
               <div className="w-full sm:w-64">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 bg-white text-gray-800">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
                       <SelectValue placeholder="Status" />
@@ -490,18 +490,18 @@ export default function Receiving() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">
+                    <TableHead className="w-12 bg-white text-gray-700 font-semibold">
                       <Checkbox
                         checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
                         onCheckedChange={toggleSelectAll}
                       />
                     </TableHead>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>NF-e</TableHead>
-                    <TableHead>Data Agendada</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Número</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Cliente</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">NF-e</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Data Agendada</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Status</TableHead>
+                    <TableHead className="text-right bg-white text-gray-700 font-semibold">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -652,14 +652,14 @@ export default function Receiving() {
                         title="Selecionar todos os itens"
                       />
                     </TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Lote</TableHead>
-                    <TableHead className="text-right">Qtd Esperada</TableHead>
-                    <TableHead className="text-right">Qtd Recebida</TableHead>
-                    <TableHead className="text-right">Qtd Endereçada</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center">Ações</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Produto</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">SKU</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Lote</TableHead>
+                    <TableHead className="text-right bg-white text-gray-700 font-semibold">Qtd Esperada</TableHead>
+                    <TableHead className="text-right bg-white text-gray-700 font-semibold">Qtd Recebida</TableHead>
+                    <TableHead className="text-right bg-white text-gray-700 font-semibold">Qtd Endereçada</TableHead>
+                    <TableHead className="bg-white text-gray-700 font-semibold">Status</TableHead>
+                    <TableHead className="text-center bg-white text-gray-700 font-semibold">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -702,7 +702,7 @@ export default function Receiving() {
                         <TableCell className="text-right">{item.receivedQuantity}</TableCell>
                         <TableCell className="text-right">{item.addressedQuantity}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge className="text-xs bg-gray-500 text-white">
                             {item.status || "Pendente"}
                           </Badge>
                         </TableCell>
