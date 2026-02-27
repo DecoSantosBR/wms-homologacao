@@ -596,7 +596,7 @@ export const collectorPickingRouter = router({
         .update(pickingAllocations)
         .set({ 
           pickedQuantity: sql`${pickingAllocations.pickedQuantity} + ${quantityToAdd}`,
-          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${quantityToAdd} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'picking' END`
+          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${quantityToAdd} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'in_progress' END`
         })
         .where(eq(pickingAllocations.id, alloc.id));
       
@@ -711,7 +711,7 @@ export const collectorPickingRouter = router({
         .update(pickingAllocations)
         .set({ 
           pickedQuantity: sql`${pickingAllocations.pickedQuantity} + ${input.quantity}`,
-          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${input.quantity} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'picking' END`
+          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} + ${input.quantity} >= ${pickingAllocations.quantity} THEN 'picked' ELSE 'in_progress' END`
         })
         .where(eq(pickingAllocations.id, alloc.id));
       

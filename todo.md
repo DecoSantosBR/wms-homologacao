@@ -4688,3 +4688,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar coluna labelCode na tabela pickingWaveItems
 - [x] Corrigir status 'in_progress' para 'picking' em pickingWaveItems (2 UPDATEs corrigidos)
 - [x] Corrigir status 'in_progress' para 'picking' em pickingOrderItems (2) e pickingAllocations (2)
+- [x] Revertido status de pickingAllocations para 'in_progress' (schema aceita: pending, in_progress, picked, short_picked)
