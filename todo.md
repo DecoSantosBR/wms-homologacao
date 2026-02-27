@@ -4662,3 +4662,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Criar componente ConfirmFinishModal
 - [x] Integrar modal no CollectorReceiving
 - [ ] Testar fluxo completo em duas etapas
+
+- [x] Verificar implementação do prepareFinish no backend
+- [x] Corrigir lógica de cálculo e retorno de dados no prepareFinish
+- [ ] Testar modal com dados corretos

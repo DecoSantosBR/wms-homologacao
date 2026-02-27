@@ -979,7 +979,7 @@ export function CollectorReceiving() {
             setPrepareSummary(null);
           }}
           onConfirm={handleConfirmFinish}
-          summary={prepareSummary.items}
+          summary={prepareSummary.summary}
           receivingOrderCode={prepareSummary.receivingOrderCode}
           isLoading={finishMutation.isPending}
         />
