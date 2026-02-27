@@ -4478,9 +4478,22 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir queries backend (substituir locationCode: por code: em todos os arquivos)
 - [x] Reduzir erros de 42 para ~30 (erros restantes são de outras naturezas)
 - [x] Testar sistema (home page funcionando, todos os módulos acessíveis)
-- [ ] Salvar checkpoint
+- [x] Salvar checkpoint (7fbae756)
 
 **Observação:** Os erros restantes são principalmente relacionados a:
 - Incompatibilidades de tipos Product em diferentes módulos
 - Tipos de status (strings literais vs enums)
 - Avisos de tipo Drizzle (MySqlColumn vs Aliased) que não afetam funcionamento
+
+
+## 🐛 BUG: Admin bloqueado por validação de tenant - 27/02/2026
+
+**Problema:** Usuário Admin (role: "admin") com tenantId: null não consegue acessar /collector/receiving
+**Erro:** "Usuário sem Tenant vinculado"
+**Requisito:** Usuário Admin deve ter acesso a TODOS os clientes sem precisar de tenant vinculado
+
+**Ações:**
+- [x] Identificar onde validação de tenant está bloqueando Admin (blindConferenceRouter.ts)
+- [x] Ajustar lógica: isGlobalAdmin agora aceita tenantId === 1 OU tenantId === null
+- [x] Testar acesso de Admin (página /collector/receiving funcionando sem erros)
+- [ ] Salvar checkpoint

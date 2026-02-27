@@ -47,7 +47,7 @@ export const blindConferenceRouter = router({
       }
 
       // Lógica de Admin Global: admin + tenantId=1 pode escolher tenant
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -129,7 +129,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -342,7 +342,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -596,7 +596,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -746,7 +746,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -838,7 +838,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -920,7 +920,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -982,7 +982,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
@@ -1218,7 +1218,7 @@ export const blindConferenceRouter = router({
       if (!db) throw new Error("Database not available");
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user?.role === 'admin' && ctx.user?.tenantId === 1;
+      const isGlobalAdmin = ctx.user?.role === 'admin' && (ctx.user?.tenantId === 1 || ctx.user?.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user?.tenantId;
@@ -1277,7 +1277,7 @@ export const blindConferenceRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
       // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && ctx.user.tenantId === 1;
+      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
       const activeTenantId = (isGlobalAdmin && input.tenantId) 
         ? input.tenantId 
         : ctx.user.tenantId;
