@@ -276,9 +276,9 @@ export function CollectorPicking() {
       toast.success(data.message);
       
       // Atualizar rota e executar lógica após dados estarem atualizados
-      refreshRoute(() => {
+      refreshRoute((updatedRoute) => {
         if (data.allocationCompleted) {
-          advanceItem();
+          advanceItem(updatedRoute);
         } else {
           productInputRef.current?.focus();
         }
@@ -312,9 +312,9 @@ export function CollectorPicking() {
         setPendingAllocationId(null);
         setScreen("scan_product");
         
-        refreshRoute(() => {
+        refreshRoute((updatedRoute) => {
           if (data.allocationCompleted) {
-            advanceItem();
+            advanceItem(updatedRoute);
           } else {
             setTimeout(() => productInputRef.current?.focus(), 100);
           }
@@ -343,8 +343,8 @@ export function CollectorPicking() {
         }
         setScreen("scan_product");
         
-        refreshRoute(() => {
-          advanceItem();
+        refreshRoute((updatedRoute) => {
+          advanceItem(updatedRoute);
         });
       },
       onError: (err) => toast.error(err.message),
@@ -372,24 +372,26 @@ export function CollectorPicking() {
   });
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function refreshRoute(onComplete?: () => void) {
+  function refreshRoute(onComplete?: (updatedRoute: RouteLocation[]) => void) {
     if (!selectedOrderId) return;
     utils.collectorPicking.getRoute
       .fetch({ pickingOrderId: selectedOrderId })
       .then((r) => {
-        setRoute(r as RouteLocation[]);
-        // Executar callback após estado ser atualizado
+        const updatedRoute = r as RouteLocation[];
+        setRoute(updatedRoute);
+        // Executar callback IMEDIATAMENTE com dados atualizados
         if (onComplete) {
-          setTimeout(onComplete, 50); // Pequeno delay para garantir que React atualizou o estado
+          setTimeout(() => onComplete(updatedRoute), 50); // Delay para React processar, mas passa dados diretos
         }
       });
   }
 
-  function advanceItem() {
-    // IMPORTANTE: Esta função é chamada DENTRO do callback de refreshRoute(),
-    // então route/currentLocation já contém dados ATUALIZADOS do servidor
+  function advanceItem(updatedRoute?: RouteLocation[]) {
+    // IMPORTANTE: Esta função recebe dados ATUALIZADOS diretamente do refreshRoute(),
+    // evitando dependência de estado que pode estar desatualizado
     
-    const currentLoc = route[locationIdx];
+    const routeToUse = updatedRoute ?? route;
+    const currentLoc = routeToUse[locationIdx];
     
     if (!currentLoc) {
       console.warn("[advanceItem] currentLocation é undefined");

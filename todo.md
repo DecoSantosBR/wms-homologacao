@@ -4698,3 +4698,4 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] isLast já estava correto: verifica pendências globais
 - [x] advanceItem refatorado: reseta índice para 0 e busca primeiro item pendente
 - [x] Filtro advanceItem corrigido: agora inclui status in_progress
+- [x] refreshRoute corrigido: passa dados atualizados diretamente para callback
