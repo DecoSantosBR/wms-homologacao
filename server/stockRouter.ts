@@ -50,6 +50,8 @@ const registerMovementSchema = z.object({
   movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
   notes: z.string().optional(),
   tenantId: z.number().optional().nullable(),
+  /** Quando true, indica que um admin autenticou a liberação de itens blocked/damaged */
+  adminReleaseAuthorized: z.boolean().optional(),
 });
 
 // Schema de validação para histórico de movimentações

@@ -12,8 +12,11 @@ import {
   inventory,
   warehouseLocations,
   warehouseZones,
-  nonConformities
+  nonConformities,
+  systemUsers,
+  auditLogs,
 } from "../drizzle/schema";
+import crypto from "crypto";
 import { eq, and, or, desc, sql, isNull, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -749,7 +752,7 @@ export const blindConferenceRouter = router({
         locationZone: ncgLocation.zoneCode || null,
         quantity: input.quantity,
         reservedQuantity: 0,
-        status: "blocked", // 🔒 CRUCIAL: Picking ignora este status
+        status: "damaged", // 🔒 NCG/Avaria: permite entrada, bloqueia saída até liberação gerencial
       });
 
       // 5. ATUALIZAR QUANTIDADE BLOQUEADA NO ITEM DA ORDEM
@@ -1607,6 +1610,141 @@ export const blindConferenceRouter = router({
           sku: product.sku,
           description: product.description,
         } : null,
+      };
+    }),
+
+  /**
+   * Liberação Gerencial de Estoque Restrito
+   * Autentica um usuário admin/manager e libera itens com status blocked ou damaged
+   * para o status available, registrando em auditLogs.
+   *
+   * blocked: impede entrada E saída — requer liberação gerencial
+   * damaged: permite entrada, impede saída — requer liberação gerencial
+   */
+  releaseInventory: protectedProcedure
+    .input(z.object({
+      inventoryId: z.number().optional(),   // Liberar por ID de registro de estoque
+      labelCode: z.string().optional(),     // Liberar por código de etiqueta (LPN)
+      adminLogin: z.string().min(1),        // Login do admin autorizador
+      adminPassword: z.string().min(1),     // Senha do admin autorizador
+      reason: z.string().min(1),            // Motivo da liberação
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // 1. Autenticar o admin
+      const [adminUser] = await db
+        .select({
+          id: systemUsers.id,
+          tenantId: systemUsers.tenantId,
+          fullName: systemUsers.fullName,
+          passwordHash: systemUsers.passwordHash,
+          active: systemUsers.active,
+          failedLoginAttempts: systemUsers.failedLoginAttempts,
+          lockedUntil: systemUsers.lockedUntil,
+        })
+        .from(systemUsers)
+        .where(eq(systemUsers.login, input.adminLogin))
+        .limit(1);
+
+      if (!adminUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciais inválidas." });
+      }
+      if (!adminUser.active) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário inativo." });
+      }
+      if (adminUser.lockedUntil && adminUser.lockedUntil > new Date()) {
+        const mins = Math.ceil((adminUser.lockedUntil.getTime() - Date.now()) / 60000);
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Conta bloqueada. Tente em ${mins} min.` });
+      }
+
+      const hashedInput = crypto.createHash("sha256").update(input.adminPassword).digest("hex");
+      if (hashedInput !== adminUser.passwordHash) {
+        const newAttempts = (adminUser.failedLoginAttempts ?? 0) + 1;
+        const lockedUntil = newAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+        await db.update(systemUsers).set({
+          failedLoginAttempts: newAttempts,
+          ...(lockedUntil ? { lockedUntil } : {}),
+        }).where(eq(systemUsers.id, adminUser.id));
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciais inválidas." });
+      }
+
+      // Reset tentativas falhas
+      await db.update(systemUsers)
+        .set({ failedLoginAttempts: 0, lockedUntil: null })
+        .where(eq(systemUsers.id, adminUser.id));
+
+      // 2. Verificar se o admin tem permissão (role admin ou manager na tabela users OAuth)
+      // O ctx.user é o usuário que fez a requisição; o admin autorizador é adminUser (systemUsers)
+      // Verificar role do adminUser via userRoles
+      const { userRoles, roles } = await import("../drizzle/schema");
+      const adminRoles = await db
+        .select({ code: roles.code })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, adminUser.id));
+
+      const allowedRoles = ["ADMIN_SISTEMA", "SUPERVISOR", "GERENTE", "admin", "manager"];
+      const hasAdminRole = adminRoles.some(r => allowedRoles.includes(r.code));
+      if (!hasAdminRole) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário não possui permissão de gerente/administrador para liberar estoque." });
+      }
+
+      // 3. Buscar o(s) registro(s) de estoque a liberar
+      let inventoryRecords: any[] = [];
+      if (input.inventoryId) {
+        inventoryRecords = await db
+          .select()
+          .from(inventory)
+          .where(eq(inventory.id, input.inventoryId));
+      } else if (input.labelCode) {
+        inventoryRecords = await db
+          .select()
+          .from(inventory)
+          .where(eq(inventory.labelCode, input.labelCode));
+      } else {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Informe inventoryId ou labelCode." });
+      }
+
+      if (inventoryRecords.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registro de estoque não encontrado." });
+      }
+
+      const restricted = inventoryRecords.filter((r: any) => r.status === "blocked" || r.status === "damaged");
+      if (restricted.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Estoque não está em status restrito (blocked/damaged)." });
+      }
+
+      // 4. Liberar: atualizar status para available
+      const releasedIds: number[] = [];
+      for (const rec of restricted) {
+        await db.update(inventory)
+          .set({ status: "available" })
+          .where(eq(inventory.id, rec.id));
+        releasedIds.push(rec.id);
+
+        // 5. Registrar em auditLogs
+        await db.insert(auditLogs).values({
+          tenantId: rec.tenantId,
+          userId: adminUser.id,
+          action: "release_inventory",
+          entityType: "inventory",
+          entityId: rec.id,
+          oldValue: JSON.stringify({ status: rec.status }),
+          newValue: JSON.stringify({ status: "available", reason: input.reason }),
+          signature: crypto
+            .createHash("sha256")
+            .update(`${adminUser.id}:${rec.id}:${input.reason}:${Date.now()}`)
+            .digest("hex"),
+        });
+      }
+
+      return {
+        ok: true,
+        releasedCount: releasedIds.length,
+        releasedIds,
+        authorizedBy: adminUser.fullName,
       };
     }),
 });

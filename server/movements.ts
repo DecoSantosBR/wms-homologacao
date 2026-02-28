@@ -22,6 +22,11 @@ export interface RegisterMovementInput {
   notes?: string;
   tenantId?: number | null;
   performedBy: number;
+  /**
+   * Quando true, indica que um admin autenticou a liberação de itens
+   * com status blocked ou damaged. Obrigatório para mover esses itens.
+   */
+  adminReleaseAuthorized?: boolean;
 }
 
 /**
@@ -132,6 +137,44 @@ async function registerMovementInternal(
 
   if (fromInventory.length === 0) {
     throw new Error('Estoque não encontrado na origem');
+  }
+
+  // 🔒 VALIDAÇÃO DE STATUS RESTRITO (blocked e damaged)
+  // blocked: impede entrada E saída — requer liberação gerencial (admin)
+  // damaged: impede saída — requer liberação gerencial (admin); entrada livre
+  const restrictedItems = fromInventory.filter(
+    (item: any) => item.status === 'blocked' || item.status === 'damaged'
+  );
+  if (restrictedItems.length > 0 && !input.adminReleaseAuthorized) {
+    const status = restrictedItems[0].status;
+    const label = status === 'blocked' ? 'Bloqueado' : 'Avariado/NCG';
+    throw new Error(
+      `RESTRICTED_STATUS:${status}:Estoque com status "${label}" não pode ser movimentado sem liberação gerencial. Solicite autenticação de um administrador.`
+    );
+  }
+
+  // 🔒 VALIDAÇÃO DE ENTRADA EM ENDEREÇO BLOQUEADO (blocked impede entrada)
+  if (input.toLocationId && input.movementType !== 'disposal') {
+    const destInventoryStatus = await tx
+      .select({ status: inventory.status })
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.locationId, input.toLocationId),
+          sql`${inventory.quantity} > 0`
+        )
+      )
+      .limit(1);
+    const destLocStatus = await tx
+      .select({ status: warehouseLocations.status })
+      .from(warehouseLocations)
+      .where(eq(warehouseLocations.id, input.toLocationId))
+      .limit(1);
+    if (destLocStatus[0]?.status === 'blocked' && !input.adminReleaseAuthorized) {
+      throw new Error(
+        `RESTRICTED_STATUS:blocked:Endereço destino está Bloqueado e não pode receber itens sem liberação gerencial.`
+      );
+    }
   }
 
   // Validar regra de armazenagem do endereço destino (exceto para descarte)

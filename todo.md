@@ -4725,3 +4725,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 
 - [x] Corrigir botão Atualizar invisível em ClientPortalStock
 - [x] Aumentar transparência do overlay de background em 15% (de bg-black/55 para bg-black/70)
+
+---
+## 🔒 SEMÂNTICA blocked vs damaged - 28/02/2026
+- [ ] Corrigir registerNCG: gravar status "damaged" (não "blocked") no inventory
+- [ ] Corrigir rejectQuarantine: gravar status "damaged" (não "blocked") no inventory
+- [ ] Adicionar validação em movements.ts: bloquear entrada E saída de endereços com status "blocked"
+- [ ] Adicionar validação em movements.ts: bloquear saída de itens com status "damaged" sem liberação admin
+- [ ] Implementar procedure releaseFromDamaged: desbloqueio de damaged por senha de admin
+- [ ] Adicionar UI de liberação gerencial (modal com autenticação por senha admin)
+- [ ] Ajustar pickingAllocation: excluir itens com status "damaged" (além de "blocked")
+- [ ] Ajustar filtros de estoque disponível para excluir "damaged" além de "blocked"

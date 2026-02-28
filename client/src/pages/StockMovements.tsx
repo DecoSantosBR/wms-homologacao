@@ -14,10 +14,20 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { ArrowRightLeft, AlertCircle, Plus, History } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { ReleaseInventoryModal } from "@/components/ReleaseInventoryModal";
 import { format } from "date-fns";
 
 export default function StockMovements() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // Estado para liberação gerencial de estoque restrito
+  const [releaseModal, setReleaseModal] = useState<{
+    open: boolean;
+    status: "blocked" | "damaged";
+    labelCode?: string;
+    inventoryId?: number;
+    itemDescription?: string;
+    retryPayload?: Parameters<typeof registerMovement.mutate>[0];
+  }>({ open: false, status: "damaged" });
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [fromLocationId, setFromLocationId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -91,7 +101,32 @@ export default function StockMovements() {
       handleCloseDialog();
     },
     onError: (error) => {
-      toast.error(error.message || "Erro ao registrar movimentação");
+      const msg = error.message || "";
+      // Detectar erro de status restrito e abrir modal de liberação gerencial
+      if (msg.startsWith("RESTRICTED_STATUS:")) {
+        const parts = msg.split(":");
+        const restrictedStatus = parts[1] as "blocked" | "damaged";
+        const product = locationProducts.find(p => `${p.productId}-${p.batch || ""}` === selectedProduct);
+        setReleaseModal({
+          open: true,
+          status: restrictedStatus,
+          itemDescription: product
+            ? `${product.productDescription || ""} | Lote: ${product.batch || "sem lote"}`
+            : undefined,
+          retryPayload: {
+            productId: product?.productId || 0,
+            fromLocationId: Number(fromLocationId),
+            toLocationId: toLocationId ? Number(toLocationId) : undefined,
+            quantity: Number(quantity),
+            batch: product?.batch || undefined,
+            movementType,
+            notes: notes || undefined,
+            adminReleaseAuthorized: true,
+          },
+        });
+        return;
+      }
+      toast.error(msg || "Erro ao registrar movimentação");
     },
   });
 
@@ -435,6 +470,23 @@ export default function StockMovements() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Liberação Gerencial */}
+      <ReleaseInventoryModal
+        open={releaseModal.open}
+        restrictedStatus={releaseModal.status}
+        inventoryId={releaseModal.inventoryId}
+        labelCode={releaseModal.labelCode}
+        itemDescription={releaseModal.itemDescription}
+        onClose={() => setReleaseModal(prev => ({ ...prev, open: false }))}
+        onReleased={() => {
+          // Após liberação, retentar a movimentação original com adminReleaseAuthorized=true
+          if (releaseModal.retryPayload) {
+            registerMovement.mutate(releaseModal.retryPayload);
+          }
+          setReleaseModal(prev => ({ ...prev, open: false }));
+        }}
+      />
     </div>
   );
 }

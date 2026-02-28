@@ -300,9 +300,9 @@ export async function rejectQuarantine(
     .limit(1);
   
   if (item[0]) {
-    // Atualizar status do inventário para bloqueado
+    // Atualizar status do inventário para damaged (rejeição: permite entrada, bloqueia saída até liberação gerencial)
     await db.update(inventory).set({
-      status: "blocked",
+      status: "damaged",
     }).where(
       and(
         eq(inventory.productId, item[0].productId),
