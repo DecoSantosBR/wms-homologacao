@@ -18,22 +18,21 @@ import {
 } from "../drizzle/schema";
 import crypto from "crypto";
 import { eq, and, or, desc, sql, isNull, isNotNull } from "drizzle-orm";
-/** Normaliza Date | string | null para um objeto Date com hora zerada em UTC.
- * Drizzle MySQL date() espera Date no insert; sem isso o MySQL recebe a string
- * completa do objeto JS e rejeita a query.
+/** Normaliza Date | string | null para string "YYYY-MM-DD".
+ * Com { mode: "string" } no schema Drizzle, o campo date() aceita e retorna
+ * strings diretamente — sem conversão de Date e sem problemas de fuso horário.
  */
-function toDateVal(d: Date | string | null | undefined): Date | null {
+function toDateVal(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   if (typeof d === "string") {
-    // "YYYY-MM-DD" ou ISO — pegar apenas a parte da data e criar Date UTC
-    const datePart = d.split("T")[0].split(" ")[0]; // "YYYY-MM-DD"
-    return new Date(`${datePart}T00:00:00.000Z`);
+    // Já é string — pegar apenas a parte da data (YYYY-MM-DD)
+    return d.split("T")[0].split(" ")[0];
   }
-  // Já é Date — normalizar para meia-noite UTC usando a data local
+  // É um objeto Date — formatar como YYYY-MM-DD usando data local
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 
@@ -764,7 +763,7 @@ export const blindConferenceRouter = router({
         productId: orderItem.productId,
         locationId: ncgLocation.id,
         batch: orderItem.batch || null,
-        expiryDate: toDateVal(orderItem.expiryDate),
+        expiryDate: orderItem.expiryDate ?? null,
         uniqueCode: orderItem.uniqueCode || null,
         labelCode: labelCode,
         serialNumber: orderItem.serialNumber || null,
@@ -1345,7 +1344,7 @@ export const blindConferenceRouter = router({
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
-              expiryDate: toDateVal(item.expiryDate),
+              expiryDate: item.expiryDate ?? null,
               uniqueCode: item.uniqueCode || "",
               labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
               locationZone: 'REC',
