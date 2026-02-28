@@ -755,18 +755,46 @@ export const blindConferenceRouter = router({
         status: "damaged", // 🔒 NCG/Avaria: permite entrada, bloqueia saída até liberação gerencial
       });
 
-      // 5. ATUALIZAR blockedQuantity NO ITEM DA ORDEM (apenas auditoria)
-      // registerNCG é exclusivamente um registro de auditoria de não-conformidade.
-      // Toda leitura de etiqueta (incluindo NCG) passa pelo readLabel, que é a única
-      // fonte de verdade para receivedQuantity e packagesRead em blindConferenceItems.
-      // No prepareFinish: addressedQuantity = receivedQuantity - blockedQuantity
+      // 5. ATUALIZAR receivedQuantity E blockedQuantity NO ITEM DA ORDEM
+      // O registerNCG representa uma leitura de etiqueta como qualquer outra.
+      // receivedQuantity = total físico recebido (etiquetas normais + NCG)
+      // blockedQuantity  = apenas unidades NCG (para calcular addressedQuantity)
+      // addressedQuantity = receivedQuantity - blockedQuantity (calculado no prepareFinish)
+      const ncgUnitsPerBox = input.unitsPerBox || product?.unitsPerBox || 1;
+      const ncgPackages = Math.ceil(input.quantity / ncgUnitsPerBox);
+      // 5a. Incrementar receivedQuantity (total físico) e blockedQuantity no receivingOrderItems
       await db.update(receivingOrderItems)
         .set({
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${input.quantity}`,
           blockedQuantity: sql`${receivingOrderItems.blockedQuantity} + ${input.quantity}`,
           status: "receiving"
         })
         .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
-
+      // 5b. Registrar leitura NCG em blindConferenceItems (packagesRead + unitsRead)
+      // NCG é uma leitura de etiqueta como qualquer outra — deve aparecer no contador de volumes
+      const finalBatchNCG = input.batch || orderItem.batch || "";
+      const finalExpiryNCG = input.expiryDate
+        ? new Date(input.expiryDate)
+        : (orderItem.expiryDate ? new Date(String(orderItem.expiryDate)) : null);
+      const finalProductIdNCG = input.productId || orderItem.productId;
+      await db.insert(blindConferenceItems)
+        .values({
+          conferenceId: input.conferenceId,
+          productId: finalProductIdNCG,
+          batch: finalBatchNCG,
+          expiryDate: finalExpiryNCG,
+          tenantId: orderTenantId,
+          packagesRead: ncgPackages,
+          unitsRead: input.quantity,
+          expectedQuantity: 0,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            packagesRead: sql`${blindConferenceItems.packagesRead} + ${ncgPackages}`,
+            unitsRead: sql`${blindConferenceItems.unitsRead} + ${input.quantity}`,
+            updatedAt: new Date(),
+          },
+        });
       // 6. (JÁ FEITO NO PASSO 3) Etiqueta já foi criada/atualizada com status BLOCKED
 
       // 7. REGISTRAR NÃO-CONFORMIDADE
@@ -1093,17 +1121,13 @@ export const blindConferenceRouter = router({
 
        for (const orderItem of orderItems) {
         // SEMÂNTICA DEFINITIVA DOS CAMPOS:
-        // receivedQuantity (banco) = unidades conferidas pelo readLabel (etiquetas normais) = 480
-        // blockedQuantity (banco)  = unidades NCG registradas pelo registerNCG = 80
-        // 
-        // Para EXIBIÇÃO no modal de finalização:
-        // receivedQuantity (summary) = receivedQtyDB + blockedQtyDB = 560 (total físico recebido)
-        // addressedQuantity          = receivedQtyDB = 480 (vai para endereços normais)
-        // blockedQuantity            = blockedQtyDB = 80 (vai para endereço NCG)
-        const receivedQtyDB = (orderItem.receivedQuantity || 0);           // 480 (readLabel)
-        const blockedQtyDB  = (orderItem.blockedQuantity  || 0);           // 80  (registerNCG)
-        const addressableQty = receivedQtyDB;                              // 480 (endereçável)
-        const totalPhysicalReceived = receivedQtyDB + blockedQtyDB;        // 560 (total físico)
+        // receivedQuantity (banco) = total físico recebido: readLabel (normais) + registerNCG (NCG) = 560
+        // blockedQuantity (banco)  = apenas unidades NCG registradas pelo registerNCG = 80
+        // addressedQuantity        = receivedQuantity - blockedQuantity = 480 (vai para endereços normais)
+        const receivedQtyDB  = (orderItem.receivedQuantity || 0);  // 560 (total físico)
+        const blockedQtyDB   = (orderItem.blockedQuantity  || 0);  // 80  (NCG)
+        const addressableQty = receivedQtyDB - blockedQtyDB;       // 480 (endereçável)
+        const totalPhysicalReceived = receivedQtyDB;               // 560 (já é o total físico)
 
         await db.update(receivingOrderItems)
           .set({
