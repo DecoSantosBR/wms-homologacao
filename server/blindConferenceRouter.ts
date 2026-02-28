@@ -1369,15 +1369,15 @@ export const blindConferenceRouter = router({
               const blockedQty = Number(item.blockedQuantity) || 0;
               if (blockedQty <= 0) continue;
               // Verificar se já existe inventory quarantine para este uniqueCode em NCG
-              // O registro NCG usa uniqueCode com sufixo "-NCG" para não colidir com o registro REC
-              const ncgUniqueCode = `${item.uniqueCode || ""}-NCG`;
+              // O registro NCG usa o mesmo uniqueCode do registro REC — é o mesmo produto físico
               const existingDamaged = await tx.select()
                 .from(inventory)
                 .where(
                   and(
-                    eq(inventory.uniqueCode, ncgUniqueCode),
+                    eq(inventory.uniqueCode, item.uniqueCode || ""),
                     eq(inventory.tenantId, activeTenantId),
-                    eq(inventory.status, "quarantine")
+                    eq(inventory.status, "quarantine"),
+                    eq(inventory.locationId, ncgLocation[0].id)
                   )
                 )
                 .limit(1);
@@ -1389,14 +1389,15 @@ export const blindConferenceRouter = router({
                 // Registro NCG (quarantine):
                 // - labelCode original: o coletor usa esse código para identificar e movimentar o item.
                 //   O uniqueIndex foi removido do schema — o mesmo labelCode pode existir em múltiplas zonas.
-                // - uniqueCode com sufixo '-NCG': identificação interna para distinguir do registro REC no banco.
+                // - uniqueCode original: é o mesmo produto físico, apenas com status diferente.
+                //   A segregação é feita por locationId (NCG) + status (quarantine).
                 await tx.insert(inventory).values({
                   tenantId: activeTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
                   expiryDate: toDateStr(item.expiryDate) as any,
-                  uniqueCode: `${item.uniqueCode || ""}-NCG`,
+                  uniqueCode: item.uniqueCode || "",
                   labelCode: item.labelCode || null,
                   serialNumber: null,
                   locationZone: ncgZoneCode,

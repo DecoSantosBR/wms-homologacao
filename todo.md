@@ -4773,3 +4773,8 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar filtro status='available' na busca de stockData em getProductByCode (evita retornar saldo quarantine)
 - [x] Corrigir fromInventory em movements.ts: filtrar por status='available' para não incluir registros quarantine do mesmo endereço na movimentação normal
 - [x] Liberação gerencial (adminReleaseAuthorized=true) continua incluindo todos os status (blocked/quarantine)
+
+---
+## 🐛 Bug fix: uniqueCode NCG com sufixo errado - 28/02/2026
+- [x] Remover sufixo '-NCG' do uniqueCode no insert NCG (mesmo produto = mesmo uniqueCode)
+- [x] Corrigir busca existingDamaged para usar item.uniqueCode sem sufixo + filtrar por locationId NCG
