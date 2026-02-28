@@ -14,6 +14,9 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
+  // Desabilitar redirecionamento durante testes E2E
+  if (import.meta.env.VITE_E2E_TESTING === 'true') return;
+
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;

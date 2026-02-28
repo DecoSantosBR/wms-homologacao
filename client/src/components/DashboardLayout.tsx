@@ -21,15 +21,22 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Warehouse, TruckIcon, ClipboardList, Shield } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Users, label: "Clientes", path: "/tenants" },
+  { icon: Package, label: "Produtos", path: "/products" },
+  { icon: Warehouse, label: "Endereços", path: "/locations" },
+  { icon: TruckIcon, label: "Recebimento", path: "/receiving" },
+  { icon: ClipboardList, label: "Picking", path: "/picking" },
+  { icon: Package, label: "Estoque", path: "/inventory" },
+  { icon: Users, label: "Usuários", path: "/users" },
+  { icon: Shield, label: "Perfis", path: "/roles" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -61,10 +68,10 @@ export default function DashboardLayout({
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-center text-white drop-shadow">
               Sign in to continue
             </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
+            <p className="text-sm text-white/70 text-center max-w-sm">
               Access to this dashboard requires authentication. Continue to launch the login flow.
             </p>
           </div>
@@ -89,6 +96,7 @@ export default function DashboardLayout({
           "--sidebar-width": `${sidebarWidth}px`,
         } as CSSProperties
       }
+      className="bg-transparent"
     >
       <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
         {children}
@@ -171,7 +179,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    WMS Med@x
                   </span>
                 </div>
               ) : null}
