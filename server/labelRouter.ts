@@ -4,6 +4,7 @@ import { getDb } from "./db";
 import { labelAssociations, inventory, products } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { toMySQLDate } from "../shared/utils";
 
 export const labelRouter = router({
   /**
@@ -123,7 +124,7 @@ export const labelRouter = router({
         uniqueCode: uniqueCode,
         productId: product.id,
         batch: batch || "",
-        expiryDate: expiryDate,
+        expiryDate: toMySQLDate(expiryDate ? new Date(String(expiryDate)) : null) as any,
         unitsPerBox: unitsPerBox,
         totalUnits: unitsPerBox,
         associatedBy: ctx.user.id,

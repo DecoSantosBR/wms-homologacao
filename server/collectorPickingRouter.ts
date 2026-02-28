@@ -540,7 +540,7 @@ export const collectorPickingRouter = router({
             labelCode: input.scannedCode,
             productId: alloc.productId,
             batch: alloc.batch ?? null,
-            expiryDate: inv.expiryDate ?? null,
+            expiryDate: toMySQLDate(inv.expiryDate ? new Date(String(inv.expiryDate)) : null) as any,
             unitsPerBox: 1, // Padrão 1 unidade por embalagem
             associatedBy: 0, // Sistema (userId 0)
             tenantId: tenantId,

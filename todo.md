@@ -44,3 +44,4 @@
 - [x] CORRIGIDO: coluna tenantId ausente na tabela users do TiDB Cloud — adicionada via ALTER TABLE. Schema Drizzle e banco agora sincronizados. OAuth login deve funcionar.
 - [x] Comparar schema Drizzle com todas as tabelas do TiDB Cloud e identificar colunas faltantes
 - [x] Adicionada coluna status ao schema Drizzle de labelAssociations (estava no banco mas faltava no schema TypeScript)
+- [x] CORRIGIDO: normalizar expiryDate para YYYY-MM-DD em todos os inserts de labelAssociations, productLabels, receivingOrderItems e blindConferenceItems (blindConferenceRouter, collectorPickingRouter, labelRouter, waveRouter, routers.ts)

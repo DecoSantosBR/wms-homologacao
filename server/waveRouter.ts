@@ -2,6 +2,7 @@ import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
 import { getUniqueCode } from "./utils/uniqueCode";
+import { toMySQLDate } from "../shared/utils";
 import { pickingWaves, pickingWaveItems, pickingOrders, pickingOrderItems, inventory, products, labelAssociations, pickingAllocations, warehouseLocations, labelReadings } from "../drizzle/schema";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { createWave, getWaveById } from "./waveLogic";
@@ -855,7 +856,7 @@ export const waveRouter = router({
         labelCode: input.labelCode,
         productId: input.productId,
         batch: input.batch || null,
-        expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+        expiryDate: toMySQLDate(input.expiryDate ? new Date(input.expiryDate) : null) as any,
         unitsPerBox: input.quantity,
         uniqueCode: getUniqueCode(product.sku, input.batch || ""),
         associatedBy: ctx.user.id,

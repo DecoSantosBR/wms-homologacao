@@ -473,7 +473,7 @@ export const blindConferenceRouter = router({
         uniqueCode: uniqueCode,
         productId: input.productId,
         batch: input.batch,
-        expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+        expiryDate: toDateStr(input.expiryDate) as any,
         unitsPerBox: input.unitsPerBox,
         totalUnits: actualUnitsReceived,
         associatedBy: userId,
@@ -486,7 +486,7 @@ export const blindConferenceRouter = router({
           conferenceId: input.conferenceId,
           productId: input.productId,
           batch: input.batch || "",
-          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+          expiryDate: toDateStr(input.expiryDate) as any,
           tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           packagesRead: 1,
           unitsRead: actualUnitsReceived, // Primeira leitura: actualUnitsReceived (pode ser fracionado)
@@ -735,7 +735,7 @@ export const blindConferenceRouter = router({
         const finalUnitsPerBox = input.unitsPerBox || product?.unitsPerBox || 1;
         const finalBatch = input.batch || orderItem.batch || null;
         const finalExpiryDateRaw = input.expiryDate || (orderItem.expiryDate ? String(orderItem.expiryDate) : null) || null;
-        const finalExpiryDate = finalExpiryDateRaw ? new Date(finalExpiryDateRaw) : null;
+        const finalExpiryDate = toDateStr(finalExpiryDateRaw) as any;
         const finalProductId = input.productId || orderItem.productId;
         
         await db.insert(labelAssociations).values({
@@ -771,9 +771,7 @@ export const blindConferenceRouter = router({
       // 5b. Registrar leitura NCG em blindConferenceItems (packagesRead + unitsRead)
       // NCG é uma leitura de etiqueta como qualquer outra — deve aparecer no contador de volumes
       const finalBatchNCG = input.batch || orderItem.batch || "";
-      const finalExpiryNCG = input.expiryDate
-        ? new Date(input.expiryDate)
-        : (orderItem.expiryDate ? new Date(String(orderItem.expiryDate)) : null);
+      const finalExpiryNCG = toDateStr(input.expiryDate || (orderItem.expiryDate ? String(orderItem.expiryDate) : null)) as any;
       const finalProductIdNCG = input.productId || orderItem.productId;
       await db.insert(blindConferenceItems)
         .values({

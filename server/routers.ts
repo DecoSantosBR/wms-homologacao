@@ -1024,12 +1024,12 @@ export const appRouter = router({
             productId,
             productSku: input.productSku,
             batch: input.batch,
-            expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            expiryDate: toMySQLDate(input.expiryDate ? new Date(input.expiryDate) : null) as any,
             createdBy: ctx.user!.id,
           }).onDuplicateKeyUpdate({
             set: {
               productId,
-              expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+              expiryDate: toMySQLDate(input.expiryDate ? new Date(input.expiryDate) : null) as any,
             },
           });
           
@@ -1128,12 +1128,12 @@ export const appRouter = router({
             productId,
             productSku: input.productSku,
             batch: input.batch,
-            expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+            expiryDate: toMySQLDate(input.expiryDate ? new Date(input.expiryDate) : null) as any,
             createdBy: ctx.user!.id,
           }).onDuplicateKeyUpdate({
             set: {
               productId,
-              expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+              expiryDate: toMySQLDate(input.expiryDate ? new Date(input.expiryDate) : null) as any,
             },
           });
           
@@ -1249,12 +1249,12 @@ export const appRouter = router({
                 productId,
                 productSku: item.productSku,
                 batch: item.batch,
-                expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+                expiryDate: toMySQLDate(item.expiryDate ? new Date(item.expiryDate) : null) as any,
                 createdBy: ctx.user!.id,
               }).onDuplicateKeyUpdate({
                 set: {
                   productId,
-                  expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+                  expiryDate: toMySQLDate(item.expiryDate ? new Date(item.expiryDate) : null) as any,
                 },
               });
             }
@@ -1595,7 +1595,7 @@ export const appRouter = router({
                 receivedQuantity: 0,
                 addressedQuantity: 0,
                 batch: produtoNFE.lote || null,
-                expiryDate: produtoNFE.validade ? new Date(produtoNFE.validade) : null,
+                expiryDate: toMySQLDate(produtoNFE.validade ? new Date(produtoNFE.validade) : null) as any,
                 expectedGtin: produtoNFE.ean || produtoNFE.eanTributavel || null,
                 uniqueCode: uniqueCode,
                 labelCode: preLinkedLabelCode, // PRÉ-VÍNCULO: etiqueta já conhecida ou NULL
