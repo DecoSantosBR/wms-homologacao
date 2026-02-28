@@ -341,12 +341,7 @@ export const stockRouter = router({
           unitsPerBox: labelAssociations.unitsPerBox,
         })
         .from(labelAssociations)
-        .where(
-          and(
-            eq(labelAssociations.labelCode, input.code),
-            eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
-          )
-        )
+        .where(eq(labelAssociations.labelCode, input.code))
         .limit(1);
 
       let productId: number;
@@ -359,66 +354,7 @@ export const stockRouter = router({
         labelBatch = labelAssoc[0].batch || null;
         labelUnitsPerBox = labelAssoc[0].unitsPerBox;
       } else {
-        // Etiqueta não encontrada com status AVAILABLE
-        // Verificar se existe com outro status
-        const labelAnyStatus = await dbConn
-          .select({
-            status: labelAssociations.status,
-            productId: labelAssociations.productId,
-          })
-          .from(labelAssociations)
-          .where(eq(labelAssociations.labelCode, input.code))
-          .limit(1);
-
-        if (labelAnyStatus[0]) {
-          // Etiqueta existe mas não está AVAILABLE
-          const status = labelAnyStatus[0].status;
-          if (status === 'RECEIVING') {
-            throw new Error(`Produto aguardando liberação de recebimento (código: ${input.code})`);
-          } else if (status === 'BLOCKED') {
-            // ✅ CORREÇÃO DE ESCOPO: Antes de bloquear, verificar se há saldo 'available'
-            // no endereço de origem. O mesmo labelCode pode existir em REC (available)
-            // e em NCG (quarantine) simultaneamente. A labelAssociation BLOCKED refere-se
-            // ao saldo NCG, mas o saldo REC pode ainda ser movimentado normalmente.
-            if (input.locationCode) {
-              const originLoc = await dbConn
-                .select({ id: warehouseLocations.id })
-                .from(warehouseLocations)
-                .where(eq(warehouseLocations.code, input.locationCode))
-                .limit(1);
-
-              if (originLoc[0]) {
-                const availableInOrigin = await dbConn
-                  .select({ id: inventory.id, quantity: inventory.quantity, reservedQuantity: inventory.reservedQuantity })
-                  .from(inventory)
-                  .where(
-                    and(
-                      eq(inventory.labelCode, input.code),
-                      eq(inventory.locationId, originLoc[0].id),
-                      eq(inventory.status, 'available')
-                    )
-                  )
-                  .limit(1);
-
-                if (availableInOrigin[0] && availableInOrigin[0].quantity > 0) {
-                  // Há saldo disponível no endereço de origem — usar esse productId e continuar
-                  productId = labelAnyStatus[0].productId;
-                  // Não lançar erro — o saldo REC está disponível para movimentação
-                } else {
-                  throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
-                }
-              } else {
-                throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
-              }
-            } else {
-              throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
-            }
-          } else if (status === 'EXPIRED') {
-            throw new Error(`Produto vencido (código: ${input.code})`);
-          } else {
-            throw new Error(`Produto indisponível (status: ${status}, código: ${input.code})`);
-          }
-        }
+        // Etiqueta não encontrada — sem labelAssociation para esse código
 
         // Etiqueta não existe - tentar buscar diretamente por SKU (fallback)
         const productBySku = await dbConn

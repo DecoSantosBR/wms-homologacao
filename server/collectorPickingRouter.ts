@@ -457,7 +457,6 @@ export const collectorPickingRouter = router({
           and(
             eq(labelAssociations.labelCode, input.scannedCode),
             eq(labelAssociations.productId, alloc.productId),
-            eq(labelAssociations.status, "AVAILABLE"), // Apenas etiquetas disponíveis para separação
             alloc.batch ? eq(labelAssociations.batch, alloc.batch) : sql`1=1`
           )
         )

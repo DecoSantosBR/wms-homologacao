@@ -721,7 +721,6 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   expiryDate: date("expiryDate"), // Data de validade do lote
   unitsPerBox: int("unitsPerBox").notNull(), // Quantidade de unidades por caixa
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
-  status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no fluxo de recebimento
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
 }, (table) => ({

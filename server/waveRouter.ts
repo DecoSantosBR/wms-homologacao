@@ -136,8 +136,7 @@ export const waveRouter = router({
             .where(
               and(
                 eq(labelAssociations.productId, item.productId),
-                eq(labelAssociations.batch, item.batch),
-                eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
+                eq(labelAssociations.batch, item.batch)
               )
             )
             .limit(1);
@@ -211,8 +210,7 @@ export const waveRouter = router({
           .where(
             and(
               eq(labelAssociations.productId, waveItem.productId),
-              eq(labelAssociations.batch, waveItem.batch),
-              eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
+              eq(labelAssociations.batch, waveItem.batch)
             )
           )
           .limit(1);
@@ -738,12 +736,7 @@ export const waveRouter = router({
           unitsPerBox: labelAssociations.unitsPerBox,
         })
         .from(labelAssociations)
-        .where(
-          and(
-            eq(labelAssociations.labelCode, input.productCode),
-            eq(labelAssociations.status, "AVAILABLE") // Apenas etiquetas disponíveis
-          )
-        )
+        .where(eq(labelAssociations.labelCode, input.productCode))
         .limit(1);
 
       if (!association) {

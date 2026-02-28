@@ -476,7 +476,6 @@ export const blindConferenceRouter = router({
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         unitsPerBox: input.unitsPerBox,
         totalUnits: actualUnitsReceived,
-        status: "RECEIVING", // Etiqueta criada durante conferência fica bloqueada até fechamento
         associatedBy: userId,
         tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
       });
@@ -747,14 +746,8 @@ export const blindConferenceRouter = router({
           batch: finalBatch,
           expiryDate: finalExpiryDate,
           unitsPerBox: finalUnitsPerBox,
-          status: "BLOCKED", // Já nasce bloqueada (NCG)
           associatedBy: userId,
         });
-      } else {
-        // Se já existe, atualizar status para BLOCKED
-        await db.update(labelAssociations)
-          .set({ status: "BLOCKED" })
-          .where(eq(labelAssociations.labelCode, labelCode));
       }
 
       // 4. INVENTÁRIO NCG: criado apenas no confirmFinish com formato de data consistente
@@ -1439,17 +1432,7 @@ export const blindConferenceRouter = router({
         // Buscar todos os produtos conferidos para liberar suas etiquetas
         const productIds = itemsWithQty.map(item => item.productId);
         
-        if (productIds.length > 0) {
-          await tx.update(labelAssociations)
-            .set({ status: "AVAILABLE" })
-            .where(
-              and(
-                eq(labelAssociations.tenantId, activeTenantId),
-                eq(labelAssociations.status, "RECEIVING"),
-                sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
-              )
-            );
-        }
+        // Etiquetas ativas: status controlado por inventory.status (sem atualização em labelAssociations)
 
         // 5. FINALIZAR SESSÃO
         await tx.update(blindConferenceSessions)
@@ -1657,18 +1640,7 @@ export const blindConferenceRouter = router({
             .where(eq(receivingOrderItems.id, item.id));
         }
 
-        // 6. ATIVAR ETIQUETAS EM MASSA (RECEIVING → AVAILABLE)
-        const productIds = items.map(item => item.productId);
-        
-        await tx.update(labelAssociations)
-          .set({ status: "AVAILABLE" })
-          .where(
-            and(
-              eq(labelAssociations.tenantId, activeTenantId),
-              eq(labelAssociations.status, "RECEIVING"),
-              sql`${labelAssociations.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`
-            )
-          );
+        // 6. ETIQUETAS ATIVAS: status controlado por inventory.status (sem atualização em labelAssociations)
 
         // 7. FINALIZAR ORDEM DE RECEBIMENTO
         await tx.update(receivingOrders)
@@ -1741,7 +1713,6 @@ export const blindConferenceRouter = router({
           batch: label.batch,
           expiryDate: label.expiryDate,
           unitsPerBox: label.unitsPerBox,
-          status: label.status,
         },
         product: product ? {
           id: product.id,

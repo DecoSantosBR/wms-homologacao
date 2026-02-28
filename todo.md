@@ -4778,3 +4778,15 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 ## 🐛 Bug fix: uniqueCode NCG com sufixo errado - 28/02/2026
 - [x] Remover sufixo '-NCG' do uniqueCode no insert NCG (mesmo produto = mesmo uniqueCode)
 - [x] Corrigir busca existingDamaged para usar item.uniqueCode sem sufixo + filtrar por locationId NCG
+
+---
+## 🔧 Refatoração: remover coluna status de labelAssociations - 28/02/2026
+- [x] Remover coluna status do schema de labelAssociations
+- [x] Migrar banco (DROP COLUMN status em labelAssociations via ALTER TABLE)
+- [x] Remover insert/update de status RECEIVING, BLOCKED, AVAILABLE em blindConferenceRouter.ts
+- [x] Remover filtros por status AVAILABLE em waveRouter.ts (3 pontos)
+- [x] Remover filtro por status AVAILABLE em collectorPickingRouter.ts
+- [x] Remover filtro por status AVAILABLE em stage.ts
+- [x] Remover campo status do retorno de checkLabelExists em blindConferenceRouter.ts
+- [x] Simplificar getProductByCode em stockRouter.ts: busca direta sem filtro de status
+- [x] Zero erros TypeScript após todas as alterações
