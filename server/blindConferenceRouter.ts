@@ -478,7 +478,7 @@ export const blindConferenceRouter = router({
         totalUnits: actualUnitsReceived,
         associatedBy: userId,
         associatedAt: new Date(),
-        status: 'RECEIVING' as any,
+        status: 'AVAILABLE' as any,
         tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
       });
 
@@ -750,7 +750,7 @@ export const blindConferenceRouter = router({
           unitsPerBox: finalUnitsPerBox,
           associatedBy: userId,
           associatedAt: new Date(),
-          status: 'RECEIVING' as any,
+          status: 'AVAILABLE' as any,
         });
       }
 

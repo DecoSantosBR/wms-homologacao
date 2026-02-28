@@ -47,3 +47,5 @@
 - [x] CORRIGIDO: normalizar expiryDate para YYYY-MM-DD em todos os inserts de labelAssociations, productLabels, receivingOrderItems e blindConferenceItems (blindConferenceRouter, collectorPickingRouter, labelRouter, waveRouter, routers.ts)
 - [x] CORRIGIDO: colunas associatedAt e status em labelAssociations agora passadas explicitamente (new Date() e 'RECEIVING'/'AVAILABLE') em todos os 5 inserts para evitar que Drizzle gere DEFAULT literal rejeitado pelo TiDB
 - [x] CORRIGIDO: servidor reiniciado para carregar código novo com associatedAt/status explícitos. ENUM no banco aceita RECEIVING corretamente. Problema era cache do servidor de dev.
+- [x] CORRIGIDO: status 'RECEIVING' trocado por 'AVAILABLE' em todos os inserts de labelAssociations (etiqueta não tem status de recebimento)
+- [x] CORRIGIDO: dados de teste com tenantId=2 removidos da tabela labelAssociations (bloqueavam inserts por constraint UNIQUE global em labelCode)
