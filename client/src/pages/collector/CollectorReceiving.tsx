@@ -446,6 +446,16 @@ export function CollectorReceiving() {
                       setSelectedReceivingOrderItemId(selectedLine.id);
                       setSelectedUniqueCode(uniqueCode);
                       if (selectedLine.batch) setBatch(selectedLine.batch);
+                      // Preencher data de validade automaticamente
+                      const ed = selectedLine.expiryDate;
+                      if (ed) {
+                        const d = ed instanceof Date ? ed : new Date(ed);
+                        if (!isNaN(d.getTime())) {
+                          setExpiryDate(d.toISOString().split('T')[0]);
+                        }
+                      } else {
+                        setExpiryDate("");
+                      }
                     }
                   }}
                   placeholder="Selecione o produto"
@@ -740,8 +750,14 @@ export function CollectorReceiving() {
                       setNcgUniqueCode(item.uniqueCode || `${item.productId}-${item.id}`);
                       setNcgProductId(item.productId);
                       setNcgBatch(item.batch || "");
+                      // Preencher data de validade automaticamente — tratar Date, string ISO e null
                       const ed = item.expiryDate;
-                      setNcgExpiryDate(ed instanceof Date ? ed.toISOString().split('T')[0] : (ed ?? ""));
+                      if (ed) {
+                        const d = ed instanceof Date ? ed : new Date(ed);
+                        setNcgExpiryDate(!isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "");
+                      } else {
+                        setNcgExpiryDate("");
+                      }
                     }
                   }}
                 />

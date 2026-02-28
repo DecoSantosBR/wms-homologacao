@@ -4762,3 +4762,7 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir status visual "Quarentena" nos endereços NCG (fundo amarelo, letras vermelhas) em Locations.tsx
 - [x] Corrigir status visual "Quarentena" nas posições de estoque em StockPositions.tsx
 - [x] Adicionar 'quarantine' ao filtro de status em StockPositions.tsx
+
+---
+## 🐛 Bug fix: auto-preenchimento de data de validade no modal de nova etiqueta - 28/02/2026
+- [x] Corrigir preenchimento automático da data de validade ao selecionar produto no modal de cadastro de nova etiqueta (dialog de associação e tela NCG-register-label)
