@@ -998,7 +998,7 @@ export const blindConferenceRouter = router({
         batch: blindConferenceItems.batch,
         expiryDate: blindConferenceItems.expiryDate,
         packagesRead: blindConferenceItems.packagesRead,
-        unitsRead: blindConferenceItems.unitsRead, // CAMPO ADICIONADO
+        unitsRead: blindConferenceItems.unitsRead,
         expectedQuantity: blindConferenceItems.expectedQuantity,
       })
         .from(blindConferenceItems)
@@ -1010,18 +1010,49 @@ export const blindConferenceRouter = router({
           )
         );
 
+      // 1b. BUSCAR blockedQuantity de receivingOrderItems para somar ao unitsRead
+      // NCG registra em receivingOrderItems.blockedQuantity, não em blindConferenceItems
+      const session = await db.select({ receivingOrderId: blindConferenceSessions.receivingOrderId })
+        .from(blindConferenceSessions)
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
+        .limit(1);
+      const receivingOrderId = session[0]?.receivingOrderId;
+      const orderItemsForSummary = receivingOrderId
+        ? await db.select({
+            productId: receivingOrderItems.productId,
+            batch: receivingOrderItems.batch,
+            blockedQuantity: receivingOrderItems.blockedQuantity,
+          })
+          .from(receivingOrderItems)
+          .where(
+            and(
+              eq(receivingOrderItems.receivingOrderId, receivingOrderId),
+              eq(receivingOrderItems.tenantId, activeTenantId)
+            )
+          )
+        : [];
+
       return {
         conferenceId: input.conferenceId,
-        conferenceItems: items.map(item => ({
-          productId: item.productId,
-          productSku: item.productSku || "",
-          productName: item.productName || "",
-          batch: item.batch || null,
-          expiryDate: item.expiryDate,
-          packagesRead: item.packagesRead,
-          unitsRead: item.unitsRead, // CAMPO ADICIONADO
-          expectedQuantity: item.expectedQuantity,
-        }))
+        conferenceItems: items.map(item => {
+          // Buscar blockedQuantity do item correspondente (mesmo productId + batch)
+          const orderItem = orderItemsForSummary.find(
+            oi => oi.productId === item.productId && oi.batch === item.batch
+          );
+          const blockedQty = orderItem?.blockedQuantity || 0;
+          return {
+            productId: item.productId,
+            productSku: item.productSku || "",
+            productName: item.productName || "",
+            batch: item.batch || null,
+            expiryDate: item.expiryDate,
+            packagesRead: item.packagesRead,
+            // ✅ FIX: unitsRead inclui as unidades bloqueadas por NCG
+            unitsRead: (item.unitsRead || 0) + blockedQty,
+            blockedUnits: blockedQty, // campo auxiliar para exibição
+            expectedQuantity: item.expectedQuantity,
+          };
+        })
       };
     }),
 
@@ -1101,13 +1132,15 @@ export const blindConferenceRouter = router({
           .where(eq(products.id, orderItem.productId))
           .limit(1);
 
+        // ✅ FIX: receivedQuantity no summary = endereçável + bloqueado (total físico recebido)
+        const totalPhysicalReceived = (orderItem.receivedQuantity || 0) + (orderItem.blockedQuantity || 0);
         summary.push({
           productId: orderItem.productId,
           productSku: product?.sku || '',
           productDescription: product?.description || '',
           batch: orderItem.batch,
           expectedQuantity: orderItem.expectedQuantity,
-          receivedQuantity: orderItem.receivedQuantity,
+          receivedQuantity: totalPhysicalReceived,
           blockedQuantity: orderItem.blockedQuantity,
           addressedQuantity: addressableQty,
         });
