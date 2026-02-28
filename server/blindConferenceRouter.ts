@@ -755,46 +755,17 @@ export const blindConferenceRouter = router({
         status: "damaged", // 🔒 NCG/Avaria: permite entrada, bloqueia saída até liberação gerencial
       });
 
-      // 5. ATUALIZAR QUANTIDADE BLOQUEADA E RECEBIDA NO ITEM DA ORDEM
-      // receivedQuantity = total físico recebido (endereçável + bloqueado)
-      // blockedQuantity = apenas as unidades NCG/avaria
-      // addressedQuantity = receivedQuantity - blockedQuantity (calculado no prepareFinish)
+      // 5. ATUALIZAR blockedQuantity NO ITEM DA ORDEM (apenas auditoria)
+      // registerNCG é exclusivamente um registro de auditoria de não-conformidade.
+      // Toda leitura de etiqueta (incluindo NCG) passa pelo readLabel, que é a única
+      // fonte de verdade para receivedQuantity e packagesRead em blindConferenceItems.
+      // No prepareFinish: addressedQuantity = receivedQuantity - blockedQuantity
       await db.update(receivingOrderItems)
         .set({
-          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${input.quantity}`,
           blockedQuantity: sql`${receivingOrderItems.blockedQuantity} + ${input.quantity}`,
           status: "receiving"
         })
         .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
-
-      // 5b. ✅ FIX: INCREMENTAR packagesRead e unitsRead em blindConferenceItems para contabilizar volumes NCG
-      // O volume NCG é uma caixa física recebida e deve aparecer no contador de volumes da conferência
-      const finalBatchForItem = input.batch || orderItem.batch || "";
-      const finalExpiryForItem = input.expiryDate
-        ? new Date(input.expiryDate)
-        : (orderItem.expiryDate ? new Date(String(orderItem.expiryDate)) : null);
-      const finalProductIdForItem = input.productId || orderItem.productId;
-      const ncgUnitsPerBox = input.unitsPerBox || product?.unitsPerBox || 1;
-      // Calcular quantos volumes (caixas) o NCG representa
-      const ncgPackages = Math.ceil(input.quantity / ncgUnitsPerBox);
-      await db.insert(blindConferenceItems)
-        .values({
-          conferenceId: input.conferenceId,
-          productId: finalProductIdForItem,
-          batch: finalBatchForItem,
-          expiryDate: finalExpiryForItem,
-          tenantId: orderTenantId,
-          packagesRead: ncgPackages,
-          unitsRead: 0, // unitsRead de NCG não conta como endereçável — blockedQty é somado no getSummary
-          expectedQuantity: 0,
-        })
-        .onDuplicateKeyUpdate({
-          set: {
-            packagesRead: sql`${blindConferenceItems.packagesRead} + ${ncgPackages}`,
-            // Não incrementa unitsRead aqui: o getSummary já soma blockedQty separadamente
-            updatedAt: new Date(),
-          },
-        });
 
       // 6. (JÁ FEITO NO PASSO 3) Etiqueta já foi criada/atualizada com status BLOCKED
 
@@ -1043,49 +1014,21 @@ export const blindConferenceRouter = router({
           )
         );
 
-      // 1b. BUSCAR blockedQuantity de receivingOrderItems para somar ao unitsRead
-      // NCG registra em receivingOrderItems.blockedQuantity, não em blindConferenceItems
-      const session = await db.select({ receivingOrderId: blindConferenceSessions.receivingOrderId })
-        .from(blindConferenceSessions)
-        .where(eq(blindConferenceSessions.id, input.conferenceId))
-        .limit(1);
-      const receivingOrderId = session[0]?.receivingOrderId;
-      const orderItemsForSummary = receivingOrderId
-        ? await db.select({
-            productId: receivingOrderItems.productId,
-            batch: receivingOrderItems.batch,
-            blockedQuantity: receivingOrderItems.blockedQuantity,
-          })
-          .from(receivingOrderItems)
-          .where(
-            and(
-              eq(receivingOrderItems.receivingOrderId, receivingOrderId),
-              eq(receivingOrderItems.tenantId, activeTenantId)
-            )
-          )
-        : [];
-
+      // readLabel é a única fonte de verdade para unitsRead e packagesRead.
+      // Toda etiqueta lida (incluindo NCG) passa pelo readLabel, então unitsRead já
+      // inclui as unidades NCG. Não é necessário buscar blockedQuantity aqui.
       return {
         conferenceId: input.conferenceId,
-        conferenceItems: items.map(item => {
-          // Buscar blockedQuantity do item correspondente (mesmo productId + batch)
-          const orderItem = orderItemsForSummary.find(
-            oi => oi.productId === item.productId && oi.batch === item.batch
-          );
-          const blockedQty = orderItem?.blockedQuantity || 0;
-          return {
-            productId: item.productId,
-            productSku: item.productSku || "",
-            productName: item.productName || "",
-            batch: item.batch || null,
-            expiryDate: item.expiryDate,
-            packagesRead: item.packagesRead,
-            // ✅ FIX: unitsRead inclui as unidades bloqueadas por NCG
-            unitsRead: (item.unitsRead || 0) + blockedQty,
-            blockedUnits: blockedQty, // campo auxiliar para exibição
-            expectedQuantity: item.expectedQuantity,
-          };
-        })
+        conferenceItems: items.map(item => ({
+          productId: item.productId,
+          productSku: item.productSku || "",
+          productName: item.productName || "",
+          batch: item.batch || null,
+          expiryDate: item.expiryDate,
+          packagesRead: item.packagesRead,
+          unitsRead: (item.unitsRead || 0),
+          expectedQuantity: item.expectedQuantity,
+        }))
       };
     }),
 
@@ -1148,11 +1091,14 @@ export const blindConferenceRouter = router({
 
       const summary = [];
 
-      for (const orderItem of orderItems) {
-        // receivedQuantity = total físico recebido (endereçável + bloqueado)
-        // blockedQuantity = unidades NCG/avaria
-        // addressedQuantity = receivedQuantity - blockedQuantity (unidades que vão para endereços normais)
-        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
+       for (const orderItem of orderItems) {
+        // SEMÂNTICA CORRETA DOS CAMPOS:
+        // receivedQuantity (banco) = total físico recebido (readLabel incrementa para TODA etiqueta, incluindo NCG) = 560
+        // blockedQuantity (banco) = unidades NCG/avaria (registerNCG incrementa apenas este campo) = 80
+        // addressedQuantity = receivedQuantity - blockedQuantity = 480 (vai para endereços normais)
+        const receivedQtyDB = (orderItem.receivedQuantity || 0);           // 560 (total físico)
+        const blockedQtyDB = (orderItem.blockedQuantity || 0);             // 80 (NCG)
+        const addressableQty = receivedQtyDB - blockedQtyDB;               // 480 (endereçável)
         
         await db.update(receivingOrderItems)
           .set({
@@ -1161,24 +1107,20 @@ export const blindConferenceRouter = router({
             updatedAt: new Date()
           })
           .where(eq(receivingOrderItems.id, orderItem.id));
-
         // Buscar produto para exibir no resumo
         const [product] = await db.select({ sku: products.sku, description: products.description })
           .from(products)
           .where(eq(products.id, orderItem.productId))
           .limit(1);
-
-        // ✅ FIX: receivedQuantity no summary = endereçável + bloqueado (total físico recebido)
-        const totalPhysicalReceived = (orderItem.receivedQuantity || 0) + (orderItem.blockedQuantity || 0);
         summary.push({
           productId: orderItem.productId,
           productSku: product?.sku || '',
           productDescription: product?.description || '',
           batch: orderItem.batch,
           expectedQuantity: orderItem.expectedQuantity,
-          receivedQuantity: totalPhysicalReceived,
-          blockedQuantity: orderItem.blockedQuantity,
-          addressedQuantity: addressableQty,
+          receivedQuantity: receivedQtyDB,   // 560: total físico (readLabel + NCG)
+          blockedQuantity: blockedQtyDB,     // 80: NCG
+          addressedQuantity: addressableQty, // 480: endereçável
         });
       }
 
