@@ -763,6 +763,35 @@ export const blindConferenceRouter = router({
         })
         .where(eq(receivingOrderItems.id, input.receivingOrderItemId));
 
+      // 5b. ✅ FIX: INCREMENTAR packagesRead e unitsRead em blindConferenceItems para contabilizar volumes NCG
+      // O volume NCG é uma caixa física recebida e deve aparecer no contador de volumes da conferência
+      const finalBatchForItem = input.batch || orderItem.batch || "";
+      const finalExpiryForItem = input.expiryDate
+        ? new Date(input.expiryDate)
+        : (orderItem.expiryDate ? new Date(String(orderItem.expiryDate)) : null);
+      const finalProductIdForItem = input.productId || orderItem.productId;
+      const ncgUnitsPerBox = input.unitsPerBox || product?.unitsPerBox || 1;
+      // Calcular quantos volumes (caixas) o NCG representa
+      const ncgPackages = Math.ceil(input.quantity / ncgUnitsPerBox);
+      await db.insert(blindConferenceItems)
+        .values({
+          conferenceId: input.conferenceId,
+          productId: finalProductIdForItem,
+          batch: finalBatchForItem,
+          expiryDate: finalExpiryForItem,
+          tenantId: orderTenantId,
+          packagesRead: ncgPackages,
+          unitsRead: 0, // unitsRead de NCG não conta como endereçável — blockedQty é somado no getSummary
+          expectedQuantity: 0,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            packagesRead: sql`${blindConferenceItems.packagesRead} + ${ncgPackages}`,
+            // Não incrementa unitsRead aqui: o getSummary já soma blockedQty separadamente
+            updatedAt: new Date(),
+          },
+        });
+
       // 6. (JÁ FEITO NO PASSO 3) Etiqueta já foi criada/atualizada com status BLOCKED
 
       // 7. REGISTRAR NÃO-CONFORMIDADE
@@ -1116,7 +1145,11 @@ export const blindConferenceRouter = router({
       const summary = [];
 
       for (const orderItem of orderItems) {
-        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
+        // ✅ FIX: addressableQty = receivedQuantity (unidades conferidas normalmente)
+        // receivedQuantity: unidades conferidas sem NCG (vão para endereços normais)
+        // blockedQuantity: unidades NCG (já foram para o endereço NCG no registerNCG)
+        // Não subtrair blockedQuantity pois ele não está incluso em receivedQuantity
+        const addressableQty = (orderItem.receivedQuantity || 0);
         
         await db.update(receivingOrderItems)
           .set({
