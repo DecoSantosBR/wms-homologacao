@@ -723,6 +723,7 @@ export const labelAssociations = mysqlTable("labelAssociations", {
   totalUnits: int("totalUnits").default(0).notNull(), // Total de unidades armazenadas
   associatedBy: int("associatedBy").notNull(), // userId
   associatedAt: timestamp("associatedAt").defaultNow().notNull(),
+  status: mysqlEnum("status", ["RECEIVING", "AVAILABLE", "BLOCKED", "EXPIRED"]).default("AVAILABLE").notNull(), // Status da etiqueta no estoque
 }, (table) => ({
   labelCodeIdx: index("label_assoc_label_code_idx").on(table.labelCode),
   uniqueCodeIdx: index("label_assoc_unique_code_idx").on(table.uniqueCode),
