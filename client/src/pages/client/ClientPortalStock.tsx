@@ -24,13 +24,12 @@ import { Package, Search, X, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type StockStatus = "available" | "quarantine" | "blocked" | "damaged" | "expired";
+type StockStatus = "available" | "quarantine" | "blocked" | "expired";
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; color: string }> = {
   available:  { label: "Disponível",  color: "bg-green-100 text-green-800 border-green-200" },
   quarantine: { label: "Quarentena",  color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   blocked:    { label: "Bloqueado",   color: "bg-red-100 text-red-800 border-red-200" },
-  damaged:    { label: "Avariado",    color: "bg-orange-100 text-orange-800 border-orange-200" },
   expired:    { label: "Vencido",     color: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 

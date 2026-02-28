@@ -24,7 +24,7 @@ export interface RegisterMovementInput {
   performedBy: number;
   /**
    * Quando true, indica que um admin autenticou a liberação de itens
-   * com status blocked ou damaged. Obrigatório para mover esses itens.
+   * com status blocked ou quarantine. Obrigatório para mover esses itens.
    */
   adminReleaseAuthorized?: boolean;
 }
@@ -139,15 +139,15 @@ async function registerMovementInternal(
     throw new Error('Estoque não encontrado na origem');
   }
 
-  // 🔒 VALIDAÇÃO DE STATUS RESTRITO (blocked e damaged)
+  // 🔒 VALIDAÇÃO DE STATUS RESTRITO (blocked e quarantine)
   // blocked: impede entrada E saída — requer liberação gerencial (admin)
-  // damaged: impede saída — requer liberação gerencial (admin); entrada livre
+  // quarantine: impede saída — requer liberação gerencial (admin); entrada livre
   const restrictedItems = fromInventory.filter(
-    (item: any) => item.status === 'blocked' || item.status === 'damaged'
+    (item: any) => item.status === 'blocked' || item.status === 'quarantine'
   );
   if (restrictedItems.length > 0 && !input.adminReleaseAuthorized) {
     const status = restrictedItems[0].status;
-    const label = status === 'blocked' ? 'Bloqueado' : 'Avariado/NCG';
+    const label = status === 'blocked' ? 'Bloqueado' : 'Quarentena/NCG';
     throw new Error(
       `RESTRICTED_STATUS:${status}:Estoque com status "${label}" não pode ser movimentado sem liberação gerencial. Solicite autenticação de um administrador.`
     );

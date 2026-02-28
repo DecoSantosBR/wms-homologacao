@@ -15,7 +15,7 @@ export interface InventoryFilters {
   locationId?: number;
   zoneId?: number;
   batch?: string;
-  status?: "available" | "quarantine" | "blocked" | "damaged" | "expired";
+  status?: "available" | "quarantine" | "blocked" | "expired";
   minQuantity?: number;
   search?: string; // Busca por SKU ou descrição do produto
 }

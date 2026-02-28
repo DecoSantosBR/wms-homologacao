@@ -419,7 +419,7 @@ export const clientPortalRouter = router({
     .input(z.object({
       search: z.string().optional(),
       batch: z.string().optional(),
-      status: z.enum(["available", "quarantine", "blocked", "damaged", "expired"]).optional(),
+      status: z.enum(["available", "quarantine", "blocked", "expired"]).optional(),
       expiryBefore: z.string().optional(), // ISO date
       page: z.number().min(1).default(1),
       pageSize: z.number().min(1).max(200).default(50),

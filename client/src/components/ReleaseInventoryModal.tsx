@@ -1,11 +1,11 @@
 /**
  * ReleaseInventoryModal
  *
- * Modal de liberação gerencial para itens com status "blocked" ou "damaged".
+ * Modal de liberação gerencial para itens com status "blocked" ou "quarantine".
  *
  * Semântica:
- *  - blocked : impede entrada E saída → requer autenticação de admin para qualquer movimentação
- *  - damaged : permite entrada, impede saída → requer autenticação de admin para saída
+ *  - blocked    : impede entrada E saída → requer autenticação de admin para qualquer movimentação
+ *  - quarantine : permite entrada, impede saída → requer autenticação de admin para saída
  *
  * Fluxo:
  *  1. O sistema detecta o erro RESTRICTED_STATUS ao tentar mover o item.
@@ -36,8 +36,8 @@ interface ReleaseInventoryModalProps {
   onClose: () => void;
   /** Chamado após liberação bem-sucedida para retentar a operação original */
   onReleased: () => void;
-  /** Status que gerou o bloqueio: "blocked" | "damaged" */
-  restrictedStatus: "blocked" | "damaged";
+  /** Status que gerou o bloqueio: "blocked" | "quarantine" */
+  restrictedStatus: "blocked" | "quarantine";
   /** Identificador do item: inventoryId ou labelCode */
   inventoryId?: number;
   labelCode?: string;
@@ -105,7 +105,7 @@ export function ReleaseInventoryModal({
   };
 
   const statusLabel =
-    restrictedStatus === "blocked" ? "Bloqueado" : "Avariado / NCG";
+    restrictedStatus === "blocked" ? "Bloqueado" : "Quarentena / NCG";
   const statusColor =
     restrictedStatus === "blocked"
       ? "text-red-700 bg-red-50 border-red-200"
@@ -137,7 +137,7 @@ export function ReleaseInventoryModal({
                 </p>
               ) : (
                 <p className="mt-1 text-xs">
-                  Este item está <strong>Avariado / NCG</strong> — saída
+                  Este item está em <strong>Quarentena / NCG</strong> — saída
                   impedida até liberação gerencial.
                 </p>
               )}

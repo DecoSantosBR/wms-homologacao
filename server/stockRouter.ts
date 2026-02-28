@@ -50,7 +50,7 @@ const registerMovementSchema = z.object({
   movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
   notes: z.string().optional(),
   tenantId: z.number().optional().nullable(),
-  /** Quando true, indica que um admin autenticou a liberação de itens blocked/damaged */
+  /** Quando true, indica que um admin autenticou a liberação de itens blocked/quarantine */
   adminReleaseAuthorized: z.boolean().optional(),
 });
 
@@ -276,9 +276,8 @@ export const stockRouter = router({
           location: pos.locationCode,
           zone: pos.zoneName || 'N/A',
           status: pos.status === 'available' ? 'Disponível' : 
-                  pos.status === 'quarantine' ? 'Quarentena' :
-                  pos.status === 'blocked' ? 'Bloqueado' :
-                  pos.status === 'damaged' ? 'Danificado' : 'Expirado',
+                  pos.status === 'quarantine' ? 'Quarentena/NCG' :
+                  pos.status === 'blocked' ? 'Bloqueado' : 'Expirado',
           expiry: pos.expiryDate ? new Date(pos.expiryDate).toLocaleDateString('pt-BR') : 'N/A',
         });
       });

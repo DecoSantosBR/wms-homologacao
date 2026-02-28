@@ -22,12 +22,12 @@ export default function StockMovements() {
   // Estado para liberação gerencial de estoque restrito
   const [releaseModal, setReleaseModal] = useState<{
     open: boolean;
-    status: "blocked" | "damaged";
+    status: "blocked" | "quarantine";
     labelCode?: string;
     inventoryId?: number;
     itemDescription?: string;
     retryPayload?: Parameters<typeof registerMovement.mutate>[0];
-  }>({ open: false, status: "damaged" });
+  }>({ open: false, status: "quarantine" });
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [fromLocationId, setFromLocationId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -105,7 +105,7 @@ export default function StockMovements() {
       // Detectar erro de status restrito e abrir modal de liberação gerencial
       if (msg.startsWith("RESTRICTED_STATUS:")) {
         const parts = msg.split(":");
-        const restrictedStatus = parts[1] as "blocked" | "damaged";
+        const restrictedStatus = parts[1] as "blocked" | "quarantine";
         const product = locationProducts.find(p => `${p.productId}-${p.batch || ""}` === selectedProduct);
         setReleaseModal({
           open: true,

@@ -1365,14 +1365,14 @@ export const blindConferenceRouter = router({
             for (const item of itemsWithQty) {
               const blockedQty = Number(item.blockedQuantity) || 0;
               if (blockedQty <= 0) continue;
-              // Verificar se já existe inventory damaged para este uniqueCode em NCG
+              // Verificar se já existe inventory quarantine para este uniqueCode em NCG
               const existingDamaged = await tx.select()
                 .from(inventory)
                 .where(
                   and(
                     eq(inventory.uniqueCode, item.uniqueCode || ""),
                     eq(inventory.tenantId, activeTenantId),
-                    eq(inventory.status, "damaged")
+                    eq(inventory.status, "quarantine")
                   )
                 )
                 .limit(1);
@@ -1392,7 +1392,7 @@ export const blindConferenceRouter = router({
                   locationZone: ncgZoneCode,
                   quantity: blockedQty,
                   reservedQuantity: 0,
-                  status: "damaged",
+                  status: "quarantine",
                 });
               }
             }
@@ -1716,11 +1716,11 @@ export const blindConferenceRouter = router({
 
   /**
    * Liberação Gerencial de Estoque Restrito
-   * Autentica um usuário admin/manager e libera itens com status blocked ou damaged
+   * Autentica um usuário admin/manager e libera itens com status blocked ou quarantine
    * para o status available, registrando em auditLogs.
    *
    * blocked: impede entrada E saída — requer liberação gerencial
-   * damaged: permite entrada, impede saída — requer liberação gerencial
+   * quarantine: permite entrada, impede saída — requer liberação gerencial
    */
   releaseInventory: protectedProcedure
     .input(z.object({
@@ -1812,9 +1812,9 @@ export const blindConferenceRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Registro de estoque não encontrado." });
       }
 
-      const restricted = inventoryRecords.filter((r: any) => r.status === "blocked" || r.status === "damaged");
+      const restricted = inventoryRecords.filter((r: any) => r.status === "blocked" || r.status === "quarantine");
       if (restricted.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Estoque não está em status restrito (blocked/damaged)." });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Estoque não está em status restrito (blocked/quarantine)." });
       }
 
       // 4. Liberar: atualizar status para available
