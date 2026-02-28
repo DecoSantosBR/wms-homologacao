@@ -34,3 +34,7 @@
 - [x] Validar build de produção (vite build + esbuild OK)
 - [x] Testes vitest passando (1/1)
 - [x] Criar checkpoint e publicar
+
+## Bugs
+
+- [x] Verificado: erro "OAuth callback failed" era esperado (código OAuth inválido no teste). Fluxo OAuth real funciona corretamente — página de login Manus exibida com sucesso
