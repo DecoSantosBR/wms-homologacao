@@ -325,7 +325,13 @@ export function CollectorReceiving() {
         const productId = labelData.label.productId;
 
         // Buscar o receivingOrderItem correspondente na ordem atual
-        const matchingItem = orderItems?.find(i => i.productId === productId);
+        // ✅ FIX: filtrar por productId E batch para evitar vínculo ao lote errado quando há múltiplos lotes do mesmo SKU
+        const labelBatch = labelData.label.batch || null;
+        const matchingItem = (
+          labelBatch
+            ? orderItems?.find(i => i.productId === productId && i.batch === labelBatch)
+            : undefined
+        ) ?? orderItems?.find(i => i.productId === productId);
 
         if (!matchingItem) {
           // Produto da etiqueta não está nesta ordem — registrar como NCG sem vínculo de item
@@ -813,7 +819,12 @@ export function CollectorReceiving() {
                     }
                     
                     // Ir para Tela 3 (Registro de NCG)
-                    const item = orderItems?.find(i => i.productId === ncgProductId);
+                    // ✅ FIX: filtrar por productId E batch para garantir vínculo ao lote correto
+                    const item = (
+                      ncgBatch
+                        ? orderItems?.find(i => i.productId === ncgProductId && i.batch === ncgBatch)
+                        : undefined
+                    ) ?? orderItems?.find(i => i.productId === ncgProductId);
                     if (!item) {
                       toast.error("Item da ordem não encontrado");
                       return;
