@@ -47,7 +47,7 @@ export function Combobox({
   const [search, setSearch] = React.useState("")
 
   const selectedOption = options.find((option) => option.value === value)
-  
+
   // Filtragem manual por substring exato (case-insensitive)
   const filteredOptions = React.useMemo(() => {
     if (!search) return options;
@@ -57,6 +57,15 @@ export function Combobox({
       return searchText.includes(searchLower);
     });
   }, [options, search]);
+
+  // Mapa de lowercase → valor original para lidar com normalização do cmdk
+  const valueMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    options.forEach((option) => {
+      map[option.value.toLowerCase()] = option.value;
+    });
+    return map;
+  }, [options]);
 
   return (
     <Popover open={open} onOpenChange={(isOpen) => {
@@ -79,8 +88,8 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder={searchPlaceholder} 
+          <CommandInput
+            placeholder={searchPlaceholder}
             value={search}
             onValueChange={setSearch}
           />
@@ -90,10 +99,12 @@ export function Combobox({
               {filteredOptions.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.searchTerms || option.label}
-                  onSelect={() => {
-                    onValueChange(option.value === value ? "" : option.value)
-                    setOpen(false)
+                  value={option.value}
+                  onSelect={(selectedValue) => {
+                    // cmdk normaliza o value para lowercase — recuperar o original
+                    const originalValue = valueMap[selectedValue.toLowerCase()] ?? selectedValue;
+                    onValueChange(originalValue === value ? "" : originalValue);
+                    setOpen(false);
                   }}
                 >
                   <Check
