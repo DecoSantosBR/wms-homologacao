@@ -544,7 +544,9 @@ export const collectorPickingRouter = router({
             unitsPerBox: 1, // Padrão 1 unidade por embalagem
             associatedBy: 0, // Sistema (userId 0)
             tenantId: tenantId,
-            uniqueCode: getUniqueCode(alloc.productSku || "", alloc.batch || "")
+            uniqueCode: getUniqueCode(alloc.productSku || "", alloc.batch || ""),
+            associatedAt: new Date(),
+            status: 'AVAILABLE' as any,
           });
 
           // Atualizar scannedBatch para continuar fluxo

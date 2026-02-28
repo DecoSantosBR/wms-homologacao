@@ -860,6 +860,8 @@ export const waveRouter = router({
         unitsPerBox: input.quantity,
         uniqueCode: getUniqueCode(product.sku, input.batch || ""),
         associatedBy: ctx.user.id,
+        associatedAt: new Date(),
+        status: 'AVAILABLE' as any,
       });
 
       // Buscar item da onda

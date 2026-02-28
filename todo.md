@@ -45,3 +45,4 @@
 - [x] Comparar schema Drizzle com todas as tabelas do TiDB Cloud e identificar colunas faltantes
 - [x] Adicionada coluna status ao schema Drizzle de labelAssociations (estava no banco mas faltava no schema TypeScript)
 - [x] CORRIGIDO: normalizar expiryDate para YYYY-MM-DD em todos os inserts de labelAssociations, productLabels, receivingOrderItems e blindConferenceItems (blindConferenceRouter, collectorPickingRouter, labelRouter, waveRouter, routers.ts)
+- [x] CORRIGIDO: colunas associatedAt e status em labelAssociations agora passadas explicitamente (new Date() e 'RECEIVING'/'AVAILABLE') em todos os 5 inserts para evitar que Drizzle gere DEFAULT literal rejeitado pelo TiDB

@@ -129,6 +129,8 @@ export const labelRouter = router({
         totalUnits: unitsPerBox,
         associatedBy: ctx.user.id,
         tenantId: tenantId,
+        associatedAt: new Date(),
+        status: 'AVAILABLE' as any,
       });
 
       console.log(`[PICKING] Etiqueta ${labelCode} criada para produto ${product.sku} (lote: ${batch || 'sem lote'}) - onda: ${waveId}`);
