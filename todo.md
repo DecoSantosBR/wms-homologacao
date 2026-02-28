@@ -41,3 +41,4 @@
 
 - [x] Verificado: erro "OAuth callback failed" era esperado (código OAuth inválido no teste). Fluxo OAuth real funciona corretamente — página de login Manus exibida com sucesso
 - [x] CORRIGIDO: env.ts com Zod estava no bundle de produção antigo (build de 07:10). Novo build gerado com env.ts simplificado (sem Zod). Checkpoint atualizado. (código OAuth inválido no teste). Fluxo OAuth real funciona corretamente — página de login Manus exibida com sucesso
+- [x] CORRIGIDO: coluna tenantId ausente na tabela users do TiDB Cloud — adicionada via ALTER TABLE. Schema Drizzle e banco agora sincronizados. OAuth login deve funcionar.
