@@ -4801,3 +4801,9 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Melhorar contraste dos cards de itens (bg-slate-50 border-slate-200 em vez de bg-white border-gray-100)
 - [x] Melhorar contraste da grade de quantidades (bg-slate-100, divide-slate-300)
 - [x] Melhorar contraste da lista de próximos itens (bg-white border-gray-200)
+
+---
+## 🐛 Bug fix: transição de status após finalização do picking - 28/02/2026
+- [x] Diagnosticar causa raiz: advanceItem ia direto para 'all_done' sem chamar completeMut
+- [x] Corrigir advanceItem: sempre vai para 'location_done' (completeMut é disparado pelo botão)
+- [x] Adicionar atualização de pickingWaves.status para 'picked' na procedure complete quando todos os pedidos da onda estiverem concluídos

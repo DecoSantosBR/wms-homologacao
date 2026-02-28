@@ -1120,6 +1120,36 @@ export const collectorPickingRouter = router({
         })
         .where(eq(pickingOrders.id, input.pickingOrderId));
 
+      // Verificar se todos os pedidos da onda foram concluídos e atualizar a onda
+      const [updatedOrder] = await db
+        .select({ waveId: pickingOrders.waveId })
+        .from(pickingOrders)
+        .where(eq(pickingOrders.id, input.pickingOrderId))
+        .limit(1);
+
+      if (updatedOrder?.waveId) {
+        const waveOrders = await db
+          .select({ status: pickingOrders.status })
+          .from(pickingOrders)
+          .where(eq(pickingOrders.waveId, updatedOrder.waveId));
+
+        const allWaveOrdersDone = waveOrders.every(
+          (o) => o.status === "picked" || o.status === "divergent"
+        );
+
+        if (allWaveOrdersDone) {
+          const waveHasDivergences = waveOrders.some((o) => o.status === "divergent");
+          await db
+            .update(pickingWaves)
+            .set({
+              status: waveHasDivergences ? "picked" : "picked",
+              pickedBy: ctx.user.id,
+              pickedAt: new Date(),
+            })
+            .where(eq(pickingWaves.id, updatedOrder.waveId));
+        }
+      }
+
       if (hasShortPicked) {
         console.warn(
           `[PICKING] Pedido ${input.pickingOrderId} finalizado com divergências (short-picked). ` +

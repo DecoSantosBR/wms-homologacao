@@ -418,11 +418,10 @@ export function CollectorPicking() {
       // Agora sim verificamos se vamos para o próximo endereço ou se acabou tudo.
       console.log("[advanceItem] Todos os itens do endereço foram separados");
       
-      if (locationIdx < route.length - 1) {
-        setScreen("location_done");
-      } else {
-        setScreen("all_done");
-      }
+      // Sempre vai para location_done — seja para avançar ao próximo endereço
+      // ou para exibir o botão "Finalizar Pedido" (último endereço).
+      // O completeMut é disparado pelo botão na tela location_done.
+      setScreen("location_done");
     }
   }
 
