@@ -96,6 +96,10 @@ async function registerMovementInternal(
 
   // 🔒 Bloquear registros de estoque da origem com SELECT FOR UPDATE
   // Ordenar por ID para evitar deadlocks
+  // ✅ CORREÇÃO DE ESCOPO: Filtrar por status='available' para não incluir registros
+  // quarantine/blocked do mesmo endereço na movimentação normal. Registros quarantine
+  // pertencem à zona NCG e não devem bloquear a movimentação do saldo disponível.
+  // Exceção: se adminReleaseAuthorized=true, incluir todos os status (liberação gerencial).
   const fromInventory = await tx
     .select()
     .from(inventory)
@@ -104,7 +108,10 @@ async function registerMovementInternal(
         eq(inventory.locationId, input.fromLocationId),
         eq(inventory.productId, input.productId),
         input.batch ? eq(inventory.batch, input.batch) : sql`1=1`,
-        tenantId ? eq(inventory.tenantId, tenantId) : sql`1=1`
+        tenantId ? eq(inventory.tenantId, tenantId) : sql`1=1`,
+        // Movimentação normal: apenas saldo 'available'
+        // Liberação gerencial: inclui 'blocked' e 'quarantine' também
+        !input.adminReleaseAuthorized ? eq(inventory.status, 'available') : sql`1=1`
       )
     )
     .orderBy(inventory.id) // Ordenar para evitar deadlocks

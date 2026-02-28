@@ -4766,3 +4766,10 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 ---
 ## 🐛 Bug fix: auto-preenchimento de data de validade no modal de nova etiqueta - 28/02/2026
 - [x] Corrigir preenchimento automático da data de validade ao selecionar produto no modal de cadastro de nova etiqueta (dialog de associação e tela NCG-register-label)
+
+---
+## 🐛 Bug fix: escopo de validação na movimentação de inventory - 28/02/2026
+- [x] Corrigir getProductByCode (stockRouter.ts): quando labelAssociation BLOCKED, verificar saldo 'available' no endereço de origem antes de lançar erro
+- [x] Adicionar filtro status='available' na busca de stockData em getProductByCode (evita retornar saldo quarantine)
+- [x] Corrigir fromInventory em movements.ts: filtrar por status='available' para não incluir registros quarantine do mesmo endereço na movimentação normal
+- [x] Liberação gerencial (adminReleaseAuthorized=true) continua incluindo todos os status (blocked/quarantine)

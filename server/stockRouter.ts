@@ -376,7 +376,43 @@ export const stockRouter = router({
           if (status === 'RECEIVING') {
             throw new Error(`Produto aguardando liberação de recebimento (código: ${input.code})`);
           } else if (status === 'BLOCKED') {
-            throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
+            // ✅ CORREÇÃO DE ESCOPO: Antes de bloquear, verificar se há saldo 'available'
+            // no endereço de origem. O mesmo labelCode pode existir em REC (available)
+            // e em NCG (quarantine) simultaneamente. A labelAssociation BLOCKED refere-se
+            // ao saldo NCG, mas o saldo REC pode ainda ser movimentado normalmente.
+            if (input.locationCode) {
+              const originLoc = await dbConn
+                .select({ id: warehouseLocations.id })
+                .from(warehouseLocations)
+                .where(eq(warehouseLocations.code, input.locationCode))
+                .limit(1);
+
+              if (originLoc[0]) {
+                const availableInOrigin = await dbConn
+                  .select({ id: inventory.id, quantity: inventory.quantity, reservedQuantity: inventory.reservedQuantity })
+                  .from(inventory)
+                  .where(
+                    and(
+                      eq(inventory.labelCode, input.code),
+                      eq(inventory.locationId, originLoc[0].id),
+                      eq(inventory.status, 'available')
+                    )
+                  )
+                  .limit(1);
+
+                if (availableInOrigin[0] && availableInOrigin[0].quantity > 0) {
+                  // Há saldo disponível no endereço de origem — usar esse productId e continuar
+                  productId = labelAnyStatus[0].productId;
+                  // Não lançar erro — o saldo REC está disponível para movimentação
+                } else {
+                  throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
+                }
+              } else {
+                throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
+              }
+            } else {
+              throw new Error(`Produto bloqueado - avaria ou quarentena (código: ${input.code})`);
+            }
           } else if (status === 'EXPIRED') {
             throw new Error(`Produto vencido (código: ${input.code})`);
           } else {
@@ -435,7 +471,10 @@ export const stockRouter = router({
             .where(
               and(
                 eq(inventory.productId, product[0].id),
-                eq(inventory.locationId, location[0].id)
+                eq(inventory.locationId, location[0].id),
+                // ✅ CORREÇÃO DE ESCOPO: Filtrar apenas saldo 'available' para não retornar
+                // registros quarantine do mesmo endereço (ex: zona REC com saldo NCG)
+                eq(inventory.status, 'available')
               )
             )
             .limit(1);
