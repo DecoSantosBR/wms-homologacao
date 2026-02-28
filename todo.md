@@ -4736,3 +4736,11 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Adicionar UI de liberação gerencial (modal com autenticação por senha admin)
 - [x] Ajustar pickingAllocation: excluir itens com status "quarantine" (além de "blocked")
 - [x] Substituir termo "damaged" por "quarantine" em todo o sistema (28/02/2026)
+
+---
+## 🐛 Bug fix: insert inventory no confirmFinish - 28/02/2026
+- [x] Remover sql template literal do expiryDate nos inserts de inventory (causava desalinhamento de parâmetros)
+- [x] Passar toDateStr() como string direta (YYYY-MM-DD) com cast `as any` para mysql2
+- [x] Forcar serialNumber: null explícito nos dois inserts (REC e NCG) para evitar deslocamento de parâmetros
+- [x] Usar activeTenantId (em vez de orderTenantId) nos inserts para consistência
+- [x] Adicionar createdAt/updatedAt explícitos nos inserts

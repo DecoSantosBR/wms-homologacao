@@ -1328,17 +1328,20 @@ export const blindConferenceRouter = router({
           } else {
             // Criar novo inventory
             await tx.insert(inventory).values({
-              tenantId: orderTenantId,
+              tenantId: activeTenantId,
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
-              expiryDate: toDateStr(item.expiryDate) ? sql`${toDateStr(item.expiryDate)}` : null,
+              expiryDate: toDateStr(item.expiryDate) as any,  // string YYYY-MM-DD aceita pelo mysql2
               uniqueCode: item.uniqueCode || "",
-              labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
+              labelCode: item.labelCode || null,
+              serialNumber: null,                             // explícito para não deslocar parâmetros
               locationZone: 'REC',
               quantity: Number(item.addressedQuantity) || 0,
               reservedQuantity: 0,
               status: "available",
+              createdAt: new Date(),
+              updatedAt: new Date(),
             });
           }
         }
@@ -1382,17 +1385,20 @@ export const blindConferenceRouter = router({
                   .where(eq(inventory.id, existingDamaged[0].id));
               } else {
                 await tx.insert(inventory).values({
-                  tenantId: orderTenantId,
+                  tenantId: activeTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
-                  expiryDate: toDateStr(item.expiryDate) ? sql`${toDateStr(item.expiryDate)}` : null,
+                  expiryDate: toDateStr(item.expiryDate) as any,  // string YYYY-MM-DD aceita pelo mysql2
                   uniqueCode: item.uniqueCode || "",
                   labelCode: item.labelCode || null,
+                  serialNumber: null,                             // explícito para não deslocar parâmetros
                   locationZone: ncgZoneCode,
                   quantity: blockedQty,
                   reservedQuantity: 0,
                   status: "quarantine",
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
                 });
               }
             }
