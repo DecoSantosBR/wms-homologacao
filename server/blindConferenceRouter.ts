@@ -1092,14 +1092,19 @@ export const blindConferenceRouter = router({
       const summary = [];
 
        for (const orderItem of orderItems) {
-        // SEMÂNTICA CORRETA DOS CAMPOS:
-        // receivedQuantity (banco) = total físico recebido (readLabel incrementa para TODA etiqueta, incluindo NCG) = 560
-        // blockedQuantity (banco) = unidades NCG/avaria (registerNCG incrementa apenas este campo) = 80
-        // addressedQuantity = receivedQuantity - blockedQuantity = 480 (vai para endereços normais)
-        const receivedQtyDB = (orderItem.receivedQuantity || 0);           // 560 (total físico)
-        const blockedQtyDB = (orderItem.blockedQuantity || 0);             // 80 (NCG)
-        const addressableQty = receivedQtyDB - blockedQtyDB;               // 480 (endereçável)
-        
+        // SEMÂNTICA DEFINITIVA DOS CAMPOS:
+        // receivedQuantity (banco) = unidades conferidas pelo readLabel (etiquetas normais) = 480
+        // blockedQuantity (banco)  = unidades NCG registradas pelo registerNCG = 80
+        // 
+        // Para EXIBIÇÃO no modal de finalização:
+        // receivedQuantity (summary) = receivedQtyDB + blockedQtyDB = 560 (total físico recebido)
+        // addressedQuantity          = receivedQtyDB = 480 (vai para endereços normais)
+        // blockedQuantity            = blockedQtyDB = 80 (vai para endereço NCG)
+        const receivedQtyDB = (orderItem.receivedQuantity || 0);           // 480 (readLabel)
+        const blockedQtyDB  = (orderItem.blockedQuantity  || 0);           // 80  (registerNCG)
+        const addressableQty = receivedQtyDB;                              // 480 (endereçável)
+        const totalPhysicalReceived = receivedQtyDB + blockedQtyDB;        // 560 (total físico)
+
         await db.update(receivingOrderItems)
           .set({
             addressedQuantity: addressableQty,
@@ -1118,9 +1123,9 @@ export const blindConferenceRouter = router({
           productDescription: product?.description || '',
           batch: orderItem.batch,
           expectedQuantity: orderItem.expectedQuantity,
-          receivedQuantity: receivedQtyDB,   // 560: total físico (readLabel + NCG)
-          blockedQuantity: blockedQtyDB,     // 80: NCG
-          addressedQuantity: addressableQty, // 480: endereçável
+          receivedQuantity: totalPhysicalReceived, // 560: total físico para exibição
+          blockedQuantity: blockedQtyDB,           // 80: NCG
+          addressedQuantity: addressableQty,       // 480: endereçável
         });
       }
 
