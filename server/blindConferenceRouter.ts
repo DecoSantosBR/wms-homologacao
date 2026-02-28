@@ -18,20 +18,20 @@ import {
 } from "../drizzle/schema";
 import crypto from "crypto";
 import { eq, and, or, desc, sql, isNull, isNotNull } from "drizzle-orm";
-/** Normaliza Date | string | null para string "YYYY-MM-DD".
- * Com { mode: "string" } no schema Drizzle, o campo date() aceita e retorna
- * strings diretamente — sem conversão de Date e sem problemas de fuso horário.
+/** Extrai a parte YYYY-MM-DD de um Date ou string, ignorando timezone.
+ * Usa a representação UTC do Date para evitar que o offset local mude o dia.
+ * Retorna null se o valor for nulo/undefined.
  */
-function toDateVal(d: Date | string | null | undefined): string | null {
+function toDateStr(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   if (typeof d === "string") {
-    // Já é string — pegar apenas a parte da data (YYYY-MM-DD)
+    // "YYYY-MM-DD" ou "YYYY-MM-DD HH:MM:SS" — pegar apenas a parte da data
     return d.split("T")[0].split(" ")[0];
   }
-  // É um objeto Date — formatar como YYYY-MM-DD usando data local
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  // É um objeto Date — usar UTC para evitar que offset local mude o dia
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -757,21 +757,8 @@ export const blindConferenceRouter = router({
           .where(eq(labelAssociations.labelCode, labelCode));
       }
 
-      // 4. CRIAR REGISTRO DE INVENTÁRIO BLOQUEADO EM NCG
-      await db.insert(inventory).values({
-        tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
-        productId: orderItem.productId,
-        locationId: ncgLocation.id,
-        batch: orderItem.batch || null,
-        expiryDate: orderItem.expiryDate ?? null,
-        uniqueCode: orderItem.uniqueCode || null,
-        labelCode: labelCode,
-        serialNumber: orderItem.serialNumber || null,
-        locationZone: ncgLocation.zoneCode || null,
-        quantity: input.quantity,
-        reservedQuantity: 0,
-        status: "damaged", // 🔒 NCG/Avaria: permite entrada, bloqueia saída até liberação gerencial
-      });
+      // 4. INVENTÁRIO NCG: criado apenas no confirmFinish com formato de data consistente
+      // O registerNCG apenas registra a não-conformidade para auditoria.
 
       // 5. ATUALIZAR receivedQuantity E blockedQuantity NO ITEM DA ORDEM
       // O registerNCG representa uma leitura de etiqueta como qualquer outra.
@@ -1244,6 +1231,7 @@ export const blindConferenceRouter = router({
           labelCode: receivingOrderItems.labelCode,
           tenantId: receivingOrderItems.tenantId,
           addressedQuantity: receivingOrderItems.addressedQuantity,
+          blockedQuantity: receivingOrderItems.blockedQuantity,
         })
           .from(receivingOrderItems)
           .where(
@@ -1344,7 +1332,7 @@ export const blindConferenceRouter = router({
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
-              expiryDate: item.expiryDate ?? null,
+              expiryDate: toDateStr(item.expiryDate) ? sql`${toDateStr(item.expiryDate)}` : null,
               uniqueCode: item.uniqueCode || "",
               labelCode: item.labelCode || null, // Copiar labelCode de receivingOrderItems
               locationZone: 'REC',
@@ -1355,6 +1343,61 @@ export const blindConferenceRouter = router({
           }
         }
 
+        // 5b. CRIAR INVENTORY DAMAGED PARA ITENS COM NCG (blockedQuantity > 0)
+        // Buscar endereço NCG para o tenant
+        const ncgZone = await tx.select()
+          .from(warehouseZones)
+          .where(eq(warehouseZones.code, 'NCG'))
+          .limit(1);
+        if (ncgZone.length > 0) {
+          const ncgLocation = await tx.select()
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.tenantId, activeTenantId),
+                eq(warehouseLocations.zoneId, ncgZone[0].id)
+              )
+            )
+            .limit(1);
+          if (ncgLocation.length > 0) {
+            const ncgLocationId = ncgLocation[0].id;
+            const ncgZoneCode = ncgLocation[0].zoneCode || 'NCG';
+            for (const item of itemsWithQty) {
+              const blockedQty = Number(item.blockedQuantity) || 0;
+              if (blockedQty <= 0) continue;
+              // Verificar se já existe inventory damaged para este uniqueCode em NCG
+              const existingDamaged = await tx.select()
+                .from(inventory)
+                .where(
+                  and(
+                    eq(inventory.uniqueCode, item.uniqueCode || ""),
+                    eq(inventory.tenantId, activeTenantId),
+                    eq(inventory.status, "damaged")
+                  )
+                )
+                .limit(1);
+              if (existingDamaged.length > 0) {
+                await tx.update(inventory)
+                  .set({ quantity: blockedQty, locationId: ncgLocationId, updatedAt: new Date() })
+                  .where(eq(inventory.id, existingDamaged[0].id));
+              } else {
+                await tx.insert(inventory).values({
+                  tenantId: orderTenantId,
+                  productId: item.productId,
+                  locationId: ncgLocationId,
+                  batch: item.batch || "",
+                  expiryDate: toDateStr(item.expiryDate) ? sql`${toDateStr(item.expiryDate)}` : null,
+                  uniqueCode: item.uniqueCode || "",
+                  labelCode: item.labelCode || null,
+                  locationZone: ncgZoneCode,
+                  quantity: blockedQty,
+                  reservedQuantity: 0,
+                  status: "damaged",
+                });
+              }
+            }
+          }
+        }
         // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
         // Buscar todos os produtos conferidos para liberar suas etiquetas
         const productIds = itemsWithQty.map(item => item.productId);
