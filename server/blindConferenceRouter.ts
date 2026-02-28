@@ -755,9 +755,13 @@ export const blindConferenceRouter = router({
         status: "damaged", // 🔒 NCG/Avaria: permite entrada, bloqueia saída até liberação gerencial
       });
 
-      // 5. ATUALIZAR QUANTIDADE BLOQUEADA NO ITEM DA ORDEM
+      // 5. ATUALIZAR QUANTIDADE BLOQUEADA E RECEBIDA NO ITEM DA ORDEM
+      // receivedQuantity = total físico recebido (endereçável + bloqueado)
+      // blockedQuantity = apenas as unidades NCG/avaria
+      // addressedQuantity = receivedQuantity - blockedQuantity (calculado no prepareFinish)
       await db.update(receivingOrderItems)
         .set({
+          receivedQuantity: sql`${receivingOrderItems.receivedQuantity} + ${input.quantity}`,
           blockedQuantity: sql`${receivingOrderItems.blockedQuantity} + ${input.quantity}`,
           status: "receiving"
         })
@@ -1145,11 +1149,10 @@ export const blindConferenceRouter = router({
       const summary = [];
 
       for (const orderItem of orderItems) {
-        // ✅ FIX: addressableQty = receivedQuantity (unidades conferidas normalmente)
-        // receivedQuantity: unidades conferidas sem NCG (vão para endereços normais)
-        // blockedQuantity: unidades NCG (já foram para o endereço NCG no registerNCG)
-        // Não subtrair blockedQuantity pois ele não está incluso em receivedQuantity
-        const addressableQty = (orderItem.receivedQuantity || 0);
+        // receivedQuantity = total físico recebido (endereçável + bloqueado)
+        // blockedQuantity = unidades NCG/avaria
+        // addressedQuantity = receivedQuantity - blockedQuantity (unidades que vão para endereços normais)
+        const addressableQty = (orderItem.receivedQuantity || 0) - (orderItem.blockedQuantity || 0);
         
         await db.update(receivingOrderItems)
           .set({
