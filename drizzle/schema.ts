@@ -254,7 +254,7 @@ export const warehouseLocations = mysqlTable("warehouseLocations", {
   position: varchar("position", { length: 10 }), // Quadrante (obrigatório apenas para tipo "fraction")
   locationType: mysqlEnum("locationType", ["whole", "fraction"]).default("whole").notNull(), // Inteira ou Fração
   storageRule: mysqlEnum("storageRule", ["single", "multi"]).default("single").notNull(), // Único item/lote ou Multi-item
-  status: mysqlEnum("status", ["livre", "available", "occupied", "blocked", "counting"]).default("livre").notNull(),
+  status: mysqlEnum("status", ["livre", "available", "occupied", "blocked", "counting", "quarantine"]).default("livre").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -427,7 +427,9 @@ export const inventory = mysqlTable("inventory", {
 }, (table) => ({
   tenantProductIdx: index("tenant_product_idx").on(table.tenantId, table.productId),
   locationIdx: index("location_idx").on(table.locationId),
-  uniqueLabelIdx: uniqueIndex("unique_label_tenant_idx").on(table.labelCode, table.tenantId), // ✅ 1 LPN = 1 Inventory
+  // uniqueLabelIdx removido: o mesmo labelCode pode existir em múltiplas zonas (ex: REC available + NCG quarantine)
+  // A unicidade é controlada pela lógica de negócio (1 labelCode por zona/status)
+  labelCodeIdx: index("label_code_tenant_idx").on(table.labelCode, table.tenantId),
 }));
 
 export const inventoryMovements = mysqlTable("inventoryMovements", {

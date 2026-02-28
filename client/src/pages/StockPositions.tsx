@@ -69,6 +69,7 @@ export default function StockPositions() {
       available: { label: "Disponível", className: "bg-green-100 text-green-800 border-green-300" },
       occupied: { label: "Ocupado", className: "bg-blue-100 text-blue-800 border-blue-300" },
       blocked: { label: "Bloqueado", className: "bg-red-100 text-red-800 border-red-300" },
+      quarantine: { label: "Quarentena", className: "bg-yellow-100 text-red-700 border-yellow-400 font-semibold" },
       counting: { label: "Em Contagem", className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
     };
     const config = statusConfig[status] || statusConfig.livre;
@@ -274,6 +275,7 @@ export default function StockPositions() {
                   { value: "available", label: "Disponível" },
                   { value: "occupied", label: "Ocupado" },
                   { value: "blocked", label: "Bloqueado" },
+                  { value: "quarantine", label: "Quarentena" },
                   { value: "counting", label: "Em Contagem" },
                 ]}
                 selected={statusFilter}

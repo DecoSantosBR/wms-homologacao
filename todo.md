@@ -4751,3 +4751,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Corrigir insert NCG: labelCode = null (etiqueta física pertence ao registro REC)
 - [x] Corrigir insert NCG: uniqueCode com sufixo "-NCG" para distinguir do registro REC
 - [x] Corrigir busca existingDamaged: usar ncgUniqueCode (com sufixo "-NCG")
+
+---
+## 🐛 Bug fix: labelCode NCG e status visual Quarentena - 28/02/2026
+- [x] Corrigir insert NCG: labelCode original preenchido (uniqueIndex removido do schema)
+- [x] Remover uniqueIndex (labelCode, tenantId) — substituido por index normal (mesmo labelCode em múltiplas zonas)
+- [x] Adicionar 'quarantine' ao enum de status de warehouseLocations
+- [x] Atualizar status do endereço NCG para 'quarantine' no confirmFinish
+- [x] Atualizar status do endereço REC para 'occupied' no confirmFinish
+- [x] Corrigir status visual "Quarentena" nos endereços NCG (fundo amarelo, letras vermelhas) em Locations.tsx
+- [x] Corrigir status visual "Quarentena" nas posições de estoque em StockPositions.tsx
+- [x] Adicionar 'quarantine' ao filtro de status em StockPositions.tsx

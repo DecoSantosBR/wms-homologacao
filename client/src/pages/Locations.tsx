@@ -684,22 +684,22 @@ export default function Locations() {
                           </TableCell>
                           <TableCell>
                             <Badge 
-                              variant={
-                                location.status === "livre" ? "outline" :
-                                location.status === "available" ? "default" : 
-                                "secondary"
-                              }
+                              variant="outline"
                               className={
                                 location.status === "livre" ? "border-gray-300 text-gray-600" :
-                                location.status === "available" ? "" :
+                                location.status === "available" ? "bg-green-100 text-green-800 border-green-300" :
                                 location.status === "occupied" ? "bg-blue-100 text-blue-800 border-blue-300" :
-                                "bg-red-100 text-red-800 border-red-300"
+                                location.status === "blocked" ? "bg-red-100 text-red-800 border-red-300" :
+                                location.status === "quarantine" ? "bg-yellow-100 text-red-700 border-yellow-400 font-semibold" :
+                                location.status === "counting" ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
+                                "border-gray-300 text-gray-600"
                               }
                             >
                               {location.status === "livre" ? "Livre" :
                                location.status === "available" ? "Disponível" : 
                                location.status === "occupied" ? "Ocupado" : 
                                location.status === "blocked" ? "Bloqueado" :
+                               location.status === "quarantine" ? "Quarentena" :
                                location.status === "counting" ? "Contagem" :
                                location.status}
                             </Badge>

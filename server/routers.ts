@@ -594,7 +594,7 @@ export const appRouter = router({
         const { id, isBlocked, ...updateData } = input;
         
         // Determinar status baseado em isBlocked e estoque
-        let status: "livre" | "available" | "occupied" | "blocked" | "counting";
+        let status: "livre" | "available" | "occupied" | "blocked" | "counting" | "quarantine";
         
         if (isBlocked === true) {
           // Usuário marcou como bloqueado

@@ -1386,17 +1386,18 @@ export const blindConferenceRouter = router({
                   .set({ quantity: blockedQty, locationId: ncgLocationId, updatedAt: new Date() })
                   .where(eq(inventory.id, existingDamaged[0].id));
               } else {
-                // NOTA: labelCode = null no registro NCG para não violar o uniqueIndex (labelCode, tenantId).
-                // O labelCode identifica a etiqueta física e já está no registro available (REC).
-                // O registro quarantine (NCG) é contabil: representa a quantidade bloqueada do lote.
+                // Registro NCG (quarantine):
+                // - labelCode original: o coletor usa esse código para identificar e movimentar o item.
+                //   O uniqueIndex foi removido do schema — o mesmo labelCode pode existir em múltiplas zonas.
+                // - uniqueCode com sufixo '-NCG': identificação interna para distinguir do registro REC no banco.
                 await tx.insert(inventory).values({
                   tenantId: activeTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
-                  expiryDate: toDateStr(item.expiryDate) as any,  // string YYYY-MM-DD aceita pelo mysql2
-                  uniqueCode: `${item.uniqueCode || ""}-NCG`,     // sufixo para distinguir do registro REC
-                  labelCode: null,                                // null: evita violação do unique_label_tenant_idx
+                  expiryDate: toDateStr(item.expiryDate) as any,
+                  uniqueCode: `${item.uniqueCode || ""}-NCG`,
+                  labelCode: item.labelCode || null,
                   serialNumber: null,
                   locationZone: ncgZoneCode,
                   quantity: blockedQty,
@@ -1409,6 +1410,30 @@ export const blindConferenceRouter = router({
             }
           }
         }
+        // 5c. ATUALIZAR STATUS DOS ENDEREÇOS
+        // Endereço REC: occupied (tem estoque)
+        await tx.update(warehouseLocations)
+          .set({ status: "occupied", updatedAt: new Date() })
+          .where(eq(warehouseLocations.id, locationId));
+
+        // Endereço NCG: quarantine (tem itens em quarentena)
+        if (ncgZone.length > 0) {
+          const ncgLocForUpdate = await tx.select({ id: warehouseLocations.id })
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.tenantId, activeTenantId),
+                eq(warehouseLocations.zoneId, ncgZone[0].id)
+              )
+            )
+            .limit(1);
+          if (ncgLocForUpdate.length > 0) {
+            await tx.update(warehouseLocations)
+              .set({ status: "quarantine", updatedAt: new Date() })
+              .where(eq(warehouseLocations.id, ncgLocForUpdate[0].id));
+          }
+        }
+
         // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
         // Buscar todos os produtos conferidos para liberar suas etiquetas
         const productIds = itemsWithQty.map(item => item.productId);
