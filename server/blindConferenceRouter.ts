@@ -1369,11 +1369,13 @@ export const blindConferenceRouter = router({
               const blockedQty = Number(item.blockedQuantity) || 0;
               if (blockedQty <= 0) continue;
               // Verificar se já existe inventory quarantine para este uniqueCode em NCG
+              // O registro NCG usa uniqueCode com sufixo "-NCG" para não colidir com o registro REC
+              const ncgUniqueCode = `${item.uniqueCode || ""}-NCG`;
               const existingDamaged = await tx.select()
                 .from(inventory)
                 .where(
                   and(
-                    eq(inventory.uniqueCode, item.uniqueCode || ""),
+                    eq(inventory.uniqueCode, ncgUniqueCode),
                     eq(inventory.tenantId, activeTenantId),
                     eq(inventory.status, "quarantine")
                   )
@@ -1384,15 +1386,18 @@ export const blindConferenceRouter = router({
                   .set({ quantity: blockedQty, locationId: ncgLocationId, updatedAt: new Date() })
                   .where(eq(inventory.id, existingDamaged[0].id));
               } else {
+                // NOTA: labelCode = null no registro NCG para não violar o uniqueIndex (labelCode, tenantId).
+                // O labelCode identifica a etiqueta física e já está no registro available (REC).
+                // O registro quarantine (NCG) é contabil: representa a quantidade bloqueada do lote.
                 await tx.insert(inventory).values({
                   tenantId: activeTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
                   expiryDate: toDateStr(item.expiryDate) as any,  // string YYYY-MM-DD aceita pelo mysql2
-                  uniqueCode: item.uniqueCode || "",
-                  labelCode: item.labelCode || null,
-                  serialNumber: null,                             // explícito para não deslocar parâmetros
+                  uniqueCode: `${item.uniqueCode || ""}-NCG`,     // sufixo para distinguir do registro REC
+                  labelCode: null,                                // null: evita violação do unique_label_tenant_idx
+                  serialNumber: null,
                   locationZone: ncgZoneCode,
                   quantity: blockedQty,
                   reservedQuantity: 0,

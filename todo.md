@@ -4744,3 +4744,10 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Forcar serialNumber: null explícito nos dois inserts (REC e NCG) para evitar deslocamento de parâmetros
 - [x] Usar activeTenantId (em vez de orderTenantId) nos inserts para consistência
 - [x] Adicionar createdAt/updatedAt explícitos nos inserts
+
+---
+## 🐛 Bug fix: unique constraint no insert NCG - 28/02/2026
+- [x] Identificar causa raiz: violação do uniqueIndex (labelCode, tenantId) no insert NCG
+- [x] Corrigir insert NCG: labelCode = null (etiqueta física pertence ao registro REC)
+- [x] Corrigir insert NCG: uniqueCode com sufixo "-NCG" para distinguir do registro REC
+- [x] Corrigir busca existingDamaged: usar ncgUniqueCode (com sufixo "-NCG")
