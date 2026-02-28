@@ -201,12 +201,14 @@ export const blindConferenceRouter = router({
       console.log("[readLabel] Usando tenantId da ordem:", orderTenantId);
 
       // 1. BUSCA GLOBAL DA ETIQUETA (Identidade Permanente)
+      // ✅ USA orderTenantId (tenant da ordem) para buscar a etiqueta,
+      // pois a etiqueta é inserida com o tenantId da ordem, não do usuário logado
       const label = await db.select()
         .from(labelAssociations)
         .where(
           and(
             eq(labelAssociations.labelCode, input.labelCode),
-            eq(labelAssociations.tenantId, activeTenantId)
+            eq(labelAssociations.tenantId, orderTenantId)
           )
         )
         .limit(1);
@@ -442,7 +444,7 @@ export const blindConferenceRouter = router({
       const actualUnitsReceived = input.totalUnitsReceived || input.unitsPerBox; // ✅ Fallback para unitsPerBox
 
       // 1. CRIAR ETIQUETA PERMANENTE NO ESTOQUE GLOBAL
-      console.log("🔍 [associateLabel] Buscando etiqueta existente:", input.labelCode, "| tenantId:", activeTenantId);
+      console.log("🔍 [associateLabel] Buscando etiqueta existente:", input.labelCode, "| orderTenantId:", orderTenantId);
       
       let existingLabel;
       try {
@@ -451,7 +453,7 @@ export const blindConferenceRouter = router({
           .where(
             and(
               eq(labelAssociations.labelCode, input.labelCode),
-              eq(labelAssociations.tenantId, activeTenantId)
+              eq(labelAssociations.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
             )
           )
           .limit(1);
@@ -719,12 +721,13 @@ export const blindConferenceRouter = router({
       }
 
       // Verificar se etiqueta já existe
+      // ✅ USA orderTenantId (tenant da ordem) para buscar a etiqueta
       const [existingLabel] = await db.select()
         .from(labelAssociations)
         .where(
           and(
             eq(labelAssociations.labelCode, labelCode),
-            eq(labelAssociations.tenantId, activeTenantId)
+            eq(labelAssociations.tenantId, orderTenantId)
           )
         )
         .limit(1);

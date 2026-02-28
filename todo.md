@@ -49,3 +49,4 @@
 - [x] CORRIGIDO: servidor reiniciado para carregar código novo com associatedAt/status explícitos. ENUM no banco aceita RECEIVING corretamente. Problema era cache do servidor de dev.
 - [x] CORRIGIDO: status 'RECEIVING' trocado por 'AVAILABLE' em todos os inserts de labelAssociations (etiqueta não tem status de recebimento)
 - [x] CORRIGIDO: dados de teste com tenantId=2 removidos da tabela labelAssociations (bloqueavam inserts por constraint UNIQUE global em labelCode)
+- [x] CORRIGIDO: readLabel, associateLabel e registerNCG agora usam orderTenantId (tenant da ordem) em vez de activeTenantId (tenant do usuário) para buscar etiquetas em labelAssociations
