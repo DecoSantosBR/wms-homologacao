@@ -1547,4 +1547,66 @@ export const blindConferenceRouter = router({
         };
       });
     }),
+
+  /**
+   * checkLabelExists: Verifica se uma etiqueta já está cadastrada em labelAssociations
+   * Usado no fluxo NCG para autofill do produto quando a etiqueta já existe
+   */
+  checkLabelExists: protectedProcedure
+    .input(z.object({
+      labelCode: z.string(),
+      tenantId: z.number().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const isGlobalAdmin = ctx.user?.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
+      const activeTenantId = (isGlobalAdmin && input.tenantId)
+        ? input.tenantId
+        : ctx.user?.tenantId;
+
+      if (!activeTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
+      }
+
+      // Buscar etiqueta em labelAssociations (mesmo padrão do readLabel)
+      const [label] = await db.select()
+        .from(labelAssociations)
+        .where(
+          and(
+            eq(labelAssociations.labelCode, input.labelCode),
+            eq(labelAssociations.tenantId, activeTenantId)
+          )
+        )
+        .limit(1);
+
+      if (!label) {
+        return { exists: false, label: null, product: null };
+      }
+
+      // Buscar dados do produto vinculado à etiqueta
+      const [product] = await db.select()
+        .from(products)
+        .where(eq(products.id, label.productId))
+        .limit(1);
+
+      return {
+        exists: true,
+        label: {
+          id: label.id,
+          labelCode: label.labelCode,
+          productId: label.productId,
+          batch: label.batch,
+          expiryDate: label.expiryDate,
+          unitsPerBox: label.unitsPerBox,
+          status: label.status,
+        },
+        product: product ? {
+          id: product.id,
+          sku: product.sku,
+          description: product.description,
+        } : null,
+      };
+    }),
 });

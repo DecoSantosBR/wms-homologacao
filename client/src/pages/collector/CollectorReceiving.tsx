@@ -52,6 +52,7 @@ export function CollectorReceiving() {
   
   // Tela 2: Registro de etiqueta (quando etiqueta não existe)
   const [ncgProductId, setNcgProductId] = useState<number | null>(null);
+  const [ncgSelectedItemId, setNcgSelectedItemId] = useState<string>(""); // ✅ ID do item selecionado no combobox
   const [ncgUniqueCode, setNcgUniqueCode] = useState<string>("");
   const [ncgBatch, setNcgBatch] = useState<string>("");
   const [ncgExpiryDate, setNcgExpiryDate] = useState<string>("");
@@ -314,23 +315,47 @@ export function CollectorReceiving() {
     }
 
     try {
-      // Verificar se etiqueta existe em labelAssociations
-      const response = await fetch(
-        `/api/trpc/blindConference.checkLabelExists?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { labelCode: ncgLabelCode.trim() } }))}`,
-        { credentials: 'include' }
-      );
-      
-      const result = await response.json();
-      const labelData = result[0]?.result?.data;
+      // Verificar se etiqueta existe em labelAssociations via tRPC
+      const labelData = await utils.blindConference.checkLabelExists.fetch({
+        labelCode: ncgLabelCode.trim(),
+      });
 
-      if (labelData?.exists) {
-        // Etiqueta existe: ir direto para Tela 3 (Registro de NCG)
+      if (labelData?.exists && labelData.label) {
+        // Etiqueta existe: autofill com dados da etiqueta e ir para Tela 3
+        const productId = labelData.label.productId;
+
+        // Buscar o receivingOrderItem correspondente na ordem atual
+        const matchingItem = orderItems?.find(i => i.productId === productId);
+
+        if (!matchingItem) {
+          // Produto da etiqueta não está nesta ordem — registrar como NCG sem vínculo de item
+          // Usar o primeiro item da ordem como fallback (o backend vai criar o registro NCG)
+          toast.warning("Produto da etiqueta não encontrado nesta ordem. Selecione manualmente.");
+          // Preencher campos da Tela 2 com dados da etiqueta para facilitar
+          const ed = labelData.label.expiryDate;
+          setNcgBatch(labelData.label.batch || "");
+          setNcgExpiryDate(ed ? new Date(ed).toISOString().split('T')[0] : "");
+          setNcgUnitsPerBox(labelData.label.unitsPerBox || 1);
+          setNcgProductId(productId);
+          setStep("ncg-register-label");
+          return;
+        }
+
+        // Autofill: produto encontrado na ordem — ir direto para Tela 3 (modal NCG)
+        const ed = labelData.label.expiryDate;
+        const expiryStr = ed ? new Date(ed).toISOString().split('T')[0] : "";
+
         setSelectedItemForNCG({
-          receivingOrderItemId: labelData.receivingOrderItemId,
+          receivingOrderItemId: matchingItem.id,
           labelCode: ncgLabelCode.trim(),
-          maxQuantity: labelData.maxQuantity || 999999,
+          maxQuantity: matchingItem.expectedQuantity || 999999,
           labelExists: true,
         });
+        // Preencher campos auxiliares para o modal
+        setNcgBatch(labelData.label.batch || "");
+        setNcgExpiryDate(expiryStr);
+        setNcgUnitsPerBox(labelData.label.unitsPerBox || 1);
+        setNcgProductId(productId);
         setIsNCGModalOpen(true);
       } else {
         // Etiqueta NÃO existe: ir para Tela 2 (Registro de Etiqueta)
@@ -701,8 +726,9 @@ export function CollectorReceiving() {
                     sku: item.productSku ?? "",
                     description: `Lote: ${item.batch || 'SEM LOTE'}`,
                   }))}
-                  value={ncgUniqueCode}
+                  value={ncgSelectedItemId}
                   onValueChange={(selectedId) => {
+                    setNcgSelectedItemId(selectedId);
                     const item = orderItems?.find(i => i.id.toString() === selectedId);
                     if (item) {
                       setNcgUniqueCode(item.uniqueCode || `${item.productId}-${item.id}`);
