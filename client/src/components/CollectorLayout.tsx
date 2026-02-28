@@ -34,7 +34,7 @@ export function CollectorLayout({ children, title }: CollectorLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-slate-100">
         <div className="container px-4 py-6">
           {children}
         </div>

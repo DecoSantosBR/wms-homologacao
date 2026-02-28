@@ -4790,3 +4790,14 @@ Eliminar permanentemente qualquer possibilidade de agrupamento incorreto usando 
 - [x] Remover campo status do retorno de checkLabelExists em blindConferenceRouter.ts
 - [x] Simplificar getProductByCode em stockRouter.ts: busca direta sem filtro de status
 - [x] Zero erros TypeScript após todas as alterações
+
+---
+## 🎨 UX: contraste tela /collector/picking - 28/02/2026
+- [x] Melhorar contraste dos cards: CollectorLayout main agora usa bg-slate-100 (fundo sólido)
+- [x] Aumentar contraste dos textos secundários (text-gray-400/500 → text-gray-600/700)
+- [x] Melhorar visibilidade da barra de progresso (h-2 → h-2.5, trilha bg-gray-300)
+- [x] Melhorar contraste do input de bipar (border-2 border-slate-400, bg-white explícito)
+- [x] Melhorar contraste do botão "Reportar Problema" (bg-red-50, border-red-400, text-red-700)
+- [x] Melhorar contraste dos cards de itens (bg-slate-50 border-slate-200 em vez de bg-white border-gray-100)
+- [x] Melhorar contraste da grade de quantidades (bg-slate-100, divide-slate-300)
+- [x] Melhorar contraste da lista de próximos itens (bg-white border-gray-200)

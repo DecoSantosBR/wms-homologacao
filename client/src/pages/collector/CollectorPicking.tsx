@@ -798,7 +798,7 @@ export function CollectorPicking() {
           <div className="flex gap-3 pt-1">
             <Button
               variant="outline"
-              className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+              className="flex-1 text-red-700 border-red-400 bg-red-50 hover:bg-red-100 font-semibold"
               onClick={() => {
                 setReportTarget("location");
                 setReportReason("");
@@ -871,7 +871,7 @@ export function CollectorPicking() {
                 <p className="font-bold text-gray-900 leading-tight">
                   {currentItem.productName}
                 </p>
-                <p className="text-sm text-gray-500 mt-0.5">
+                <p className="text-sm text-gray-700 font-medium mt-0.5">
                   {currentItem.productSku}
                 </p>
                 {currentItem.batch && (
@@ -883,9 +883,9 @@ export function CollectorPicking() {
             </div>
 
             {/* Quantity */}
-            <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-3 divide-x divide-gray-200">
+            <div className="bg-slate-100 rounded-lg p-3 grid grid-cols-3 divide-x divide-slate-300">
               <div className="text-center px-2">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                <p className="text-xs text-gray-700 font-semibold uppercase tracking-wide">
                   Esperado
                 </p>
                 <p className="text-2xl font-black text-gray-900">
@@ -893,7 +893,7 @@ export function CollectorPicking() {
                 </p>
               </div>
               <div className="text-center px-2">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                <p className="text-xs text-gray-700 font-semibold uppercase tracking-wide">
                   Separado
                 </p>
                 <p className="text-2xl font-black text-green-600">
@@ -901,7 +901,7 @@ export function CollectorPicking() {
                 </p>
               </div>
               <div className="text-center px-2">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                <p className="text-xs text-gray-700 font-semibold uppercase tracking-wide">
                   Restante
                 </p>
                 <p className="text-2xl font-black text-blue-700">{remaining}</p>
@@ -918,23 +918,23 @@ export function CollectorPicking() {
 
           {/* Other pending items */}
           {pendingItems.length > 1 && (
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
+            <div className="bg-white border border-gray-200 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 px-1">
                 Próximos itens neste endereço
               </p>
               {pendingItems.slice(1, 4).map((it) => (
                 <div
                   key={it.allocationId}
-                  className="flex items-center justify-between px-2 py-1.5 text-sm text-gray-500"
+                  className="flex items-center justify-between px-2 py-1.5 text-sm text-gray-700"
                 >
                   <span className="truncate">{it.productName}</span>
-                  <span className="ml-2 font-medium flex-shrink-0">
+                  <span className="ml-2 font-semibold flex-shrink-0">
                     {it.pickedQuantity}/{it.quantity}
                   </span>
                 </div>
               ))}
               {pendingItems.length > 4 && (
-                <p className="text-xs text-gray-400 px-2 pt-1">
+                <p className="text-xs text-gray-600 px-2 pt-1">
                   +{pendingItems.length - 4} mais...
                 </p>
               )}
@@ -943,7 +943,7 @@ export function CollectorPicking() {
 
           {/* Scan */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-sm font-semibold text-gray-800">
               Bipe a etiqueta do produto:
             </p>
             <div className="flex gap-2">
@@ -973,7 +973,7 @@ export function CollectorPicking() {
                   }
                 }}
                 placeholder="Código / etiqueta do produto"
-                className="font-mono h-12 text-base"
+                className="font-mono h-12 text-base border-2 border-slate-400 focus:border-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
                 autoComplete="off"
                 disabled={scanProductMut.isPending}
               />
@@ -1021,7 +1021,7 @@ export function CollectorPicking() {
           <div className="flex gap-3 pt-1">
             <Button
               variant="outline"
-              className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+              className="flex-1 text-red-700 border-red-400 bg-red-50 hover:bg-red-100 font-semibold"
               onClick={() => {
                 setReportTarget("product");
                 setReportReason("");
