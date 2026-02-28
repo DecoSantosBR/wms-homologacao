@@ -18,6 +18,10 @@ import {
 } from "../drizzle/schema";
 import crypto from "crypto";
 import { eq, and, or, desc, sql, isNull, isNotNull } from "drizzle-orm";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { getUniqueCode } from "./utils/uniqueCode";
+
 /** Extrai a parte YYYY-MM-DD de um Date ou string, ignorando timezone.
  * Usa a representação UTC do Date para evitar que o offset local mude o dia.
  * Retorna null se o valor for nulo/undefined.
@@ -35,10 +39,25 @@ function toDateStr(d: Date | string | null | undefined): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { getUniqueCode } from "./utils/uniqueCode";
+/**
+ * Helper: Busca o tenantId real da ordem de recebimento vinculada à sessão de conferência.
+ * Usar este valor em todos os filtros de blindConferenceItems e labelAssociations,
+ * pois os dados são gravados com o tenantId da ORDEM, não do usuário logado.
+ */
+async function getOrderTenantId(db: Awaited<ReturnType<typeof getDb>>, conferenceId: number): Promise<number> {
+  if (!db) throw new Error("Database not available");
+  const [session] = await db.select({ receivingOrderId: blindConferenceSessions.receivingOrderId })
+    .from(blindConferenceSessions)
+    .where(eq(blindConferenceSessions.id, conferenceId))
+    .limit(1);
+  if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Sessão de conferência não encontrada" });
+  const [order] = await db.select({ tenantId: receivingOrders.tenantId })
+    .from(receivingOrders)
+    .where(eq(receivingOrders.id, session.receivingOrderId))
+    .limit(1);
+  if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Ordem de recebimento não encontrada" });
+  return order.tenantId;
+}
 
 export const blindConferenceRouter = router({
   /**
@@ -850,10 +869,10 @@ export const blindConferenceRouter = router({
       }
 
       console.log("[undoLastReading] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
-
+      // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
+      const orderTenantId = await getOrderTenantId(db, input.conferenceId);
       const batchValue = input.batch || "";
-
-      // 1. BUSCAR ITEM NA CONFERÊNCIA
+      // 1. BUSCAR ITEM NA CONFERÊNCIAIA
       const conferenceItem = await db.select()
         .from(blindConferenceItems)
         .where(
@@ -861,7 +880,7 @@ export const blindConferenceRouter = router({
             eq(blindConferenceItems.conferenceId, input.conferenceId),
             eq(blindConferenceItems.productId, input.productId),
             eq(blindConferenceItems.batch, batchValue),
-            eq(blindConferenceItems.tenantId, activeTenantId)
+            eq(blindConferenceItems.tenantId, orderTenantId)
           )
         )
         .limit(1);
@@ -885,7 +904,7 @@ export const blindConferenceRouter = router({
               eq(blindConferenceItems.conferenceId, input.conferenceId),
               eq(blindConferenceItems.productId, input.productId),
               eq(blindConferenceItems.batch, batchValue),
-              eq(blindConferenceItems.tenantId, activeTenantId)
+              eq(blindConferenceItems.tenantId, orderTenantId)
             )
           );
       } else {
@@ -900,7 +919,7 @@ export const blindConferenceRouter = router({
               eq(blindConferenceItems.conferenceId, input.conferenceId),
               eq(blindConferenceItems.productId, input.productId),
               eq(blindConferenceItems.batch, batchValue),
-              eq(blindConferenceItems.tenantId, activeTenantId)
+              eq(blindConferenceItems.tenantId, orderTenantId)
             )
           );
       }
@@ -942,8 +961,9 @@ export const blindConferenceRouter = router({
       }
 
       console.log("[adjustQuantity] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
-
-      const batchValue = input.batch || "";
+      // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
+      const orderTenantId = await getOrderTenantId(db, input.conferenceId);
+      const batchValue = input.batch || "";;
 
       // 1. BUSCAR ITEM NA CONFERÊNCIA
       const conferenceItem = await db.select()
@@ -953,7 +973,7 @@ export const blindConferenceRouter = router({
             eq(blindConferenceItems.conferenceId, input.conferenceId),
             eq(blindConferenceItems.productId, input.productId),
             eq(blindConferenceItems.batch, batchValue),
-            eq(blindConferenceItems.tenantId, activeTenantId)
+            eq(blindConferenceItems.tenantId, orderTenantId)
           )
         )
         .limit(1);
@@ -975,7 +995,7 @@ export const blindConferenceRouter = router({
             eq(blindConferenceItems.conferenceId, input.conferenceId),
             eq(blindConferenceItems.productId, input.productId),
             eq(blindConferenceItems.batch, batchValue),
-            eq(blindConferenceItems.tenantId, activeTenantId)
+            eq(blindConferenceItems.tenantId, orderTenantId)
           )
         );
 
@@ -1023,8 +1043,9 @@ export const blindConferenceRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
       }
 
-      console.log("[getSummary] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
-
+       console.log("[getSummary] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
+      const orderTenantId = await getOrderTenantId(db, input.conferenceId);
       // 1. BUSCAR ITENS DA CONFERÊNCIA
       const items = await db.select({
         productId: blindConferenceItems.productId,
@@ -1041,7 +1062,7 @@ export const blindConferenceRouter = router({
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
-            eq(blindConferenceItems.tenantId, activeTenantId)
+            eq(blindConferenceItems.tenantId, orderTenantId)
           )
         );
 
@@ -1547,8 +1568,14 @@ export const blindConferenceRouter = router({
       }
 
       console.log("[closeReceivingOrder] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
-
-      // TRANSAÇÃO ATÔMICA: Tudo ou nada
+      // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
+      const [receivingOrderForTenant] = await db.select({ tenantId: receivingOrders.tenantId })
+        .from(receivingOrders)
+        .where(eq(receivingOrders.id, input.receivingOrderId))
+        .limit(1);
+      if (!receivingOrderForTenant) throw new TRPCError({ code: "NOT_FOUND", message: "Ordem de recebimento não encontrada" });
+      const orderTenantId = receivingOrderForTenant.tenantId;
+      // TRANSAÇÃO ATÔMICA: Tudo ou nadaa
       return await db.transaction(async (tx) => {
         // 1. BUSCAR TODOS OS ITENS ESPERADOS (XML)
         const items = await tx.select()
@@ -1587,7 +1614,7 @@ export const blindConferenceRouter = router({
               and(
                 eq(blindConferenceItems.productId, item.productId),
                 eq(blindConferenceItems.batch, item.batch || ""),
-                eq(blindConferenceItems.tenantId, activeTenantId)
+                eq(blindConferenceItems.tenantId, orderTenantId)
               )
             );
 
@@ -1626,7 +1653,7 @@ export const blindConferenceRouter = router({
               and(
                 eq(blindConferenceItems.productId, item.productId),
                 eq(blindConferenceItems.batch, item.batch || ""),
-                eq(blindConferenceItems.tenantId, activeTenantId)
+                eq(blindConferenceItems.tenantId, orderTenantId)
               )
             );
 
