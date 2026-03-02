@@ -1368,22 +1368,31 @@ export const blindConferenceRouter = router({
               })
               .where(eq(inventory.id, existingInventory[0].id));
           } else {
-            // Criar novo inventory
+            // Criar novo inventory (idempotente: ON DUPLICATE KEY UPDATE evita erro em retentativas)
             await tx.insert(inventory).values({
               tenantId: orderTenantId,
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
-              expiryDate: toDateStr(item.expiryDate) as any,  // string YYYY-MM-DD aceita pelo mysql2
+              expiryDate: toDateStr(item.expiryDate) as any,
               uniqueCode: item.uniqueCode || "",
               labelCode: item.labelCode || null,
-              serialNumber: null,                             // explícito para não deslocar parâmetros
+              serialNumber: null,
               locationZone: 'REC',
               quantity: Number(item.addressedQuantity) || 0,
               reservedQuantity: 0,
               status: "available",
               createdAt: new Date(),
               updatedAt: new Date(),
+            }).onDuplicateKeyUpdate({
+              // ✅ Se o labelCode já existe (ex: retentativa), atualiza quantity e locationId
+              set: {
+                quantity: Number(item.addressedQuantity) || 0,
+                locationId: locationId,
+                locationZone: 'REC',
+                status: "available",
+                updatedAt: new Date(),
+              },
             });
           }
         }
