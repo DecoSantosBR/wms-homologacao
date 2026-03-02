@@ -877,10 +877,14 @@ export const blindConferenceRouter = router({
       }
 
       const currentPackages = conferenceItem[0].packagesRead;
+      const currentUnitsRead = conferenceItem[0].unitsRead ?? 0;
 
       if (currentPackages <= 0) {
         throw new Error("Não há leituras para desfazer");
       }
+
+      // Calcular quantas unidades por caixa (média arredondada)
+      const unitsPerPackage = currentPackages > 0 ? Math.round(currentUnitsRead / currentPackages) : 0;
 
       // 2. DECREMENTO ATÔMICO
       if (currentPackages === 1) {
@@ -895,10 +899,11 @@ export const blindConferenceRouter = router({
             )
           );
       } else {
-        // Caso contrário, decrementar
+        // Decrementar packagesRead E unitsRead
         await db.update(blindConferenceItems)
           .set({
             packagesRead: sql`${blindConferenceItems.packagesRead} - 1`,
+            unitsRead: sql`GREATEST(0, ${blindConferenceItems.unitsRead} - ${unitsPerPackage})`,
             updatedAt: new Date()
           })
           .where(
@@ -914,7 +919,8 @@ export const blindConferenceRouter = router({
       return {
         success: true,
         message: "Última leitura desfeita com sucesso",
-        newPackagesRead: Math.max(0, currentPackages - 1)
+        newPackagesRead: Math.max(0, currentPackages - 1),
+        newUnitsRead: Math.max(0, currentUnitsRead - unitsPerPackage)
       };
     }),
 
