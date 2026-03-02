@@ -1409,11 +1409,12 @@ export const blindConferenceRouter = router({
             for (const item of itemsWithQty) {
               const blockedQty = Number(item.blockedQuantity) || 0;
               if (blockedQty <= 0) continue;
+              const ncgUniqueCode = `${item.uniqueCode || ""}-NCG`;
               const existingDamaged = await tx.select()
                 .from(inventory)
                 .where(
                   and(
-                    eq(inventory.uniqueCode, item.uniqueCode || ""),
+                    eq(inventory.uniqueCode, ncgUniqueCode), // ✅ busca pelo uniqueCode com sufixo -NCG
                     eq(inventory.tenantId, orderTenantId),
                     eq(inventory.status, "quarantine"),
                     eq(inventory.locationId, ncgLocation[0].id)
@@ -1425,14 +1426,17 @@ export const blindConferenceRouter = router({
                   .set({ quantity: blockedQty, locationId: ncgLocationId, updatedAt: new Date() })
                   .where(eq(inventory.id, existingDamaged[0].id));
               } else {
+                // ✅ labelCode = null no registro NCG para evitar violação da UNIQUE KEY (labelCode, tenantId)
+                // O labelCode já está no inventory REC e na tabela nonConformities para rastreabilidade
+                // O uniqueCode NCG usa sufixo '-NCG' para diferenciar do registro REC
                 await tx.insert(inventory).values({
                   tenantId: orderTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
                   expiryDate: toDateStr(item.expiryDate) as any,
-                  uniqueCode: item.uniqueCode || "",
-                  labelCode: item.labelCode || null,
+                  uniqueCode: `${item.uniqueCode || ""}-NCG`,
+                  labelCode: null, // ✅ null para evitar UNIQUE KEY violation com o registro REC
                   serialNumber: null,
                   locationZone: ncgZoneCode,
                   quantity: blockedQty,
