@@ -220,11 +220,12 @@ export default function Locations() {
 
   const handleUpdateSubmit = () => {
     if (!selectedLocation) return;
+    const { isBlocked, ...formWithoutIsBlocked } = editForm;
     updateMutation.mutate({
       id: selectedLocation.id,
-      ...editForm,
+      ...formWithoutIsBlocked,
       tenantId: editForm.tenantId || undefined,
-      status: editForm.status, // ✅ Envia status explícito (inclui quarantine)
+      isBlocked,
     });
   };
 
