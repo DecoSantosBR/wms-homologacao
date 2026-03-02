@@ -1170,6 +1170,72 @@ export const collectorPickingRouter = router({
     }),
 
   /**
+   * Desfazer última bipagem de produto no picking (LIFO)
+   * Decrementa pickedQuantity na alocação e nas tabelas sincronizadas
+   */
+  undoLastScan: protectedProcedure
+    .input(z.object({
+      allocationId: z.number(),
+      pickingOrderId: z.number(),
+      quantityToUndo: z.number().min(1).default(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [alloc] = await db
+        .select()
+        .from(pickingAllocations)
+        .where(and(
+          eq(pickingAllocations.id, input.allocationId),
+          eq(pickingAllocations.pickingOrderId, input.pickingOrderId)
+        ))
+        .limit(1);
+
+      if (!alloc) throw new TRPCError({ code: "NOT_FOUND", message: "Alocação não encontrada" });
+      if (alloc.pickedQuantity <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma bipagem para desfazer nesta alocação" });
+
+      const qty = Math.min(input.quantityToUndo, alloc.pickedQuantity);
+
+      // Reverter alocação
+      await db.update(pickingAllocations)
+        .set({
+          pickedQuantity: sql`${pickingAllocations.pickedQuantity} - ${qty}`,
+          status: sql`CASE WHEN ${pickingAllocations.pickedQuantity} - ${qty} <= 0 THEN 'pending' ELSE 'in_progress' END`,
+        })
+        .where(eq(pickingAllocations.id, alloc.id));
+
+      // Reverter pickingWaveItems e pickingOrderItems
+      const { pickingOrderItems, pickingWaveItems } = await import("../drizzle/schema");
+
+      if (alloc.waveId) {
+        await db.update(pickingWaveItems)
+          .set({
+            pickedQuantity: sql`GREATEST(0, ${pickingWaveItems.pickedQuantity} - ${qty})`,
+            status: sql`CASE WHEN ${pickingWaveItems.pickedQuantity} - ${qty} <= 0 THEN 'picking' ELSE ${pickingWaveItems.status} END`,
+          })
+          .where(and(
+            eq(pickingWaveItems.waveId, alloc.waveId),
+            eq(pickingWaveItems.productId, alloc.productId),
+            alloc.batch ? eq(pickingWaveItems.batch, alloc.batch) : sql`1=1`
+          ));
+      }
+
+      await db.update(pickingOrderItems)
+        .set({
+          pickedQuantity: sql`GREATEST(0, ${pickingOrderItems.pickedQuantity} - ${qty})`,
+          status: sql`CASE WHEN ${pickingOrderItems.pickedQuantity} - ${qty} <= 0 THEN 'pending' ELSE 'picking' END`,
+        })
+        .where(and(
+          eq(pickingOrderItems.pickingOrderId, input.pickingOrderId),
+          eq(pickingOrderItems.productId, alloc.productId),
+          alloc.batch ? eq(pickingOrderItems.batch, alloc.batch) : sql`1=1`
+        ));
+
+      return { ok: true, quantityReverted: qty, message: `Última bipagem desfeita (${qty} un.)` };
+    }),
+
+  /**
    * Buscar rota atualizada de um pedido (para sincronização durante o fluxo)
    */
   getRoute: protectedProcedure

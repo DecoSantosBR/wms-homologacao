@@ -32,12 +32,12 @@ export function CollectorReceiving() {
   const [unitsPerBox, setUnitsPerBox] = useState<number>(1);
   const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
-  // Estado efêmero para rastrear último item bipado (para undo)
-  const [lastSuccessfulItem, setLastSuccessfulItem] = useState<{
+  // Pilha LIFO para desfazer leituras (cada entrada = 1 bipagem)
+  const [undoStack, setUndoStack] = useState<Array<{
     productId: number;
     batch: string;
     scannedCode: string;
-  } | null>(null);
+  }>>([]);
   
   // NCG (Não Conformidade)
   const [ncgLabelCode, setNcgLabelCode] = useState("");
@@ -137,12 +137,12 @@ export function CollectorReceiving() {
             selectedUniqueCode: uniqueCode,
           });
           
-          // Salvar último item bipado para undo
-          setLastSuccessfulItem({
+          // Empilhar item bipado na pilha LIFO
+          setUndoStack(prev => [...prev, {
             productId: data.association.productId,
             batch: data.association.batch || "",
             scannedCode: labelCode,
-          });
+          }]);
         }
         
         toast.success("Etiqueta lida!", {
@@ -374,19 +374,23 @@ export function CollectorReceiving() {
   };
 
   const handleUndo = () => {
-    if (!conferenceId || !lastSuccessfulItem) {
+    if (!conferenceId || undoStack.length === 0) {
       toast.error("Nenhum item para desfazer");
       return;
     }
+    // Pegar o topo da pilha (LIFO)
+    const topItem = undoStack[undoStack.length - 1];
     
     undoLastReadingMutation.mutate({
       conferenceId,
-      productId: lastSuccessfulItem.productId,
-      batch: lastSuccessfulItem.batch,
+      productId: topItem.productId,
+      batch: topItem.batch,
     }, {
       onSuccess: () => {
-        setLastSuccessfulItem(null); // Limpa para evitar múltiplos undos
+        // Remover o topo da pilha após sucesso
+        setUndoStack(prev => prev.slice(0, -1));
         toast.info("Leitura estornada com sucesso");
+        utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
       }
     });
   };
@@ -981,7 +985,7 @@ export function CollectorReceiving() {
           <Button
             variant="outline"
             onClick={handleUndo}
-            disabled={!summary?.conferenceItems.length || undoLastReadingMutation.isPending}
+            disabled={undoStack.length === 0 || undoLastReadingMutation.isPending}
             className="h-12"
           >
             <Undo2 className="w-5 h-5 mr-2" />

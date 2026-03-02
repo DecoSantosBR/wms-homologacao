@@ -139,6 +139,63 @@ export const stageRouter = {
     }),
 
   /**
+   * Desfazer última bipagem no stage (LIFO)
+   * Decrementa checkedQuantity do item identificado pelo stageCheckItemId
+   */
+  undoLastStageItem: protectedProcedure
+    .input(z.object({
+      stageCheckId: z.number(),
+      stageCheckItemId: z.number(),
+      quantityToUndo: z.number().min(1).default(1),
+    }))
+    .mutation(async ({ input }) => {
+      const { getDb } = await import("./db");
+      const { stageCheckItems } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+
+      const [item] = await db
+        .select()
+        .from(stageCheckItems)
+        .where(eq(stageCheckItems.id, input.stageCheckItemId))
+        .limit(1);
+
+      if (!item || item.stageCheckId !== input.stageCheckId) {
+        throw new Error("Item de conferência não encontrado");
+      }
+      if (item.checkedQuantity <= 0) {
+        throw new Error("Nenhuma bipagem para desfazer neste item");
+      }
+
+      const qty = Math.min(input.quantityToUndo, item.checkedQuantity);
+      const newChecked = item.checkedQuantity - qty;
+      const newDivergence = newChecked - item.expectedQuantity;
+
+       await db.update(stageCheckItems)
+        .set({
+          checkedQuantity: newChecked,
+          divergence: newDivergence,
+        })
+        .where(eq(stageCheckItems.id, item.id));
+      // Buscar nome do produto para retornar ao frontend
+      const { products } = await import("../drizzle/schema");
+      const [prod] = await db
+        .select({ description: products.description })
+        .from(products)
+        .where(eq(products.id, item.productId))
+        .limit(1);
+      return {
+        ok: true,
+        quantityReverted: qty,
+        newCheckedQuantity: newChecked,
+        newRemainingQuantity: item.expectedQuantity - newChecked,
+        productName: prod?.description ?? "",
+        message: `Última bipagem desfeita (${qty} un.)`,
+      };
+    }),
+
+  /**
    * Cancela conferência de Stage em andamento
    * Deleta registros de stageCheck e stageCheckItems
    */

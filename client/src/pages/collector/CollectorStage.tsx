@@ -29,6 +29,7 @@ import {
   XCircle,
   AlertCircle,
   Scan,
+  Undo2,
 } from "lucide-react";
 import {
   Dialog,
@@ -81,6 +82,13 @@ export function CollectorStage() {
   const [manualLabelCode, setManualLabelCode] = useState("");
   const productInputRef = useRef<HTMLInputElement>(null);
 
+  // Pilha LIFO para desfazer bipagens no stage
+  const [undoStack, setUndoStack] = useState<Array<{
+    stageCheckItemId: number;
+    quantityAdded: number;
+    productName: string;
+  }>>([]);
+
   // ── Queries ────────────────────────────────────────────────────────────────
   const orderQuery = trpc.stage.getOrderForStage.useQuery(
     { customerOrderNumber: orderNumber },
@@ -107,6 +115,14 @@ export function CollectorStage() {
         setShowFractionalModal(true);
       } else {
         toast.success(data.message);
+        // Empilhar bipagem na pilha LIFO
+        if (data.stageCheckItemId) {
+          setUndoStack(prev => [...prev, {
+            stageCheckItemId: data.stageCheckItemId,
+            quantityAdded: data.quantityAdded,
+            productName: data.productName,
+          }]);
+        }
         setScannedItems((prev) => {
           // ✅ CORREÇÃO: Atualizar se já existe (comparar por SKU+Lote) ou adicionar
           const exists = prev.findIndex(
@@ -163,6 +179,37 @@ export function CollectorStage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const undoMut = trpc.stage.undoLastStageItem.useMutation({
+    onSuccess: (data: any) => {
+      setUndoStack(prev => prev.slice(0, -1));
+      // Atualizar scannedItems com a quantidade revertida
+      setScannedItems(prev => prev.map(item =>
+        item.productName === data.productName
+          ? { ...item, checkedQuantity: data.newCheckedQuantity, remainingQuantity: data.newRemainingQuantity }
+          : item
+      ).filter(item => item.checkedQuantity > 0));
+      toast.info(data.message);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      toast.error("Nenhuma bipagem para desfazer");
+      return;
+    }
+    if (!checkId) {
+      toast.error("Conferência não iniciada");
+      return;
+    }
+    const top = undoStack[undoStack.length - 1];
+    undoMut.mutate({
+      stageCheckId: checkId,
+      stageCheckItemId: top.stageCheckItemId,
+      quantityToUndo: top.quantityAdded,
+    });
+  };
 
   const generateLabelsMut = trpc.stage.generateVolumeLabels.useMutation();
 
@@ -549,20 +596,32 @@ export function CollectorStage() {
                 </CardContent>
               </Card>
             )}
-
-            {/* ── Finalizar ─────────────────────────────────────────────── */}
-            <Button
-              onClick={handleCompleteCheck}
-              disabled={
-                completeCheckMut.isPending || scannedItems.length === 0
-              }
-              size="lg"
-              className="w-full h-14 bg-green-600 hover:bg-green-700"
-            >
-              {completeCheckMut.isPending
-                ? "Finalizando..."
-                : "Finalizar Conferência"}
-            </Button>
+            {/* Desfazer + Finalizar */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 h-14"
+                onClick={handleUndo}
+                disabled={undoStack.length === 0 || undoMut.isPending}
+                title={undoStack.length === 0 ? "Nenhuma bipagem para desfazer" : `Desfazer: ${undoStack[undoStack.length - 1]?.productName}`}
+              >
+                <Undo2 className="h-5 w-5 mr-2" />
+                Desfazer{undoStack.length > 0 ? ` (${undoStack.length})` : ""}
+              </Button>
+              <Button
+                onClick={handleCompleteCheck}
+                disabled={
+                  completeCheckMut.isPending || scannedItems.length === 0
+                }
+                size="lg"
+                className="flex-1 h-14 bg-green-600 hover:bg-green-700"
+              >
+                {completeCheckMut.isPending
+                  ? "Finalizando..."
+                  : "Finalizar Conferência"}
+              </Button>
+            </div>
           </>
         )}
       </div>

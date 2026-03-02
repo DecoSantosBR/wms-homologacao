@@ -184,6 +184,14 @@ export function CollectorPicking() {
   const [reportReason, setReportReason] = useState("");
   const [insufficientQtyInput, setInsufQtyInput] = useState("");
 
+  // Pilha LIFO para desfazer bipagens no picking
+  const [undoStack, setUndoStack] = useState<Array<{
+    allocationId: number;
+    pickingOrderId: number;
+    quantityAdded: number;
+    productName: string;
+  }>>([]);
+
   const locationInputRef = useRef<HTMLInputElement>(null);
   const productInputRef = useRef<HTMLInputElement>(null);
   const fractionalInputRef = useRef<HTMLInputElement>(null);
@@ -274,6 +282,16 @@ export function CollectorPicking() {
       }
 
       toast.success(data.message);
+
+      // Empilhar bipagem na pilha LIFO
+      if (currentItem) {
+        setUndoStack(prev => [...prev, {
+          allocationId: currentItem.allocationId,
+          pickingOrderId: currentItem.pickingOrderId,
+          quantityAdded: data.quantityAdded ?? 1,
+          productName: currentItem.productName,
+        }]);
+      }
       
       // Atualizar rota e executar lógica após dados estarem atualizados
       refreshRoute((updatedRoute) => {
@@ -308,6 +326,15 @@ export function CollectorPicking() {
     trpc.collectorPicking.recordFractionalQuantity.useMutation({
       onSuccess: (data) => {
         toast.success(`+${data.quantityAdded} registrado.`);
+        // Empilhar bipagem fracionada na pilha LIFO
+        if (pendingAllocationId !== null && currentItem) {
+          setUndoStack(prev => [...prev, {
+            allocationId: pendingAllocationId,
+            pickingOrderId: currentItem.pickingOrderId,
+            quantityAdded: data.quantityAdded,
+            productName: currentItem.productName,
+          }]);
+        }
         setFractionalInput("");
         setPendingAllocationId(null);
         setScreen("scan_product");
@@ -349,6 +376,28 @@ export function CollectorPicking() {
       },
       onError: (err) => toast.error(err.message),
     });
+
+  const undoMut = trpc.collectorPicking.undoLastScan.useMutation({
+    onSuccess: (data) => {
+      setUndoStack(prev => prev.slice(0, -1));
+      toast.info(data.message);
+      refreshRoute();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      toast.error("Nenhuma bipagem para desfazer");
+      return;
+    }
+    const top = undoStack[undoStack.length - 1];
+    undoMut.mutate({
+      allocationId: top.allocationId,
+      pickingOrderId: top.pickingOrderId,
+      quantityToUndo: top.quantityAdded,
+    });
+  };
 
   const pauseMut = trpc.collectorPicking.pause.useMutation({
     onSuccess: () => {
@@ -1030,6 +1079,16 @@ export function CollectorPicking() {
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               Reportar Falta/Avaria
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleUndo}
+              disabled={undoStack.length === 0 || undoMut.isPending}
+              title={undoStack.length === 0 ? "Nenhuma bipagem para desfazer" : `Desfazer: ${undoStack[undoStack.length - 1]?.productName}`}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Desfazer
             </Button>
             <Button
               variant="ghost"

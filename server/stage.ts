@@ -433,6 +433,7 @@ export async function recordStageItem(params: {
 
   return {
     isFractional: false,
+    stageCheckItemId: item.id, // ID para pilha LIFO de undo
     productSku: product.sku,
     labelCode: params.labelCode,
     batch: label.batch,
