@@ -1350,68 +1350,83 @@ export const blindConferenceRouter = router({
           }
         }
 
-// 5b. CRIAR INVENTORY DAMAGED PARA ITENS COM NCG (blockedQuantity > 0)
-// ... busca de ncgZone e ncgLocation ...
-
-if (ncgLocation.length > 0) {
-  const ncgLocationId = ncgLocation[0].id;
-  const ncgZoneCode = ncgLocation[0].zoneCode || 'NCG';
-
-  for (const item of itemsWithQty) {
-    const blockedQty = Number(item.blockedQuantity) || 0;
-    if (blockedQty <= 0) continue;
-
-    const existingDamaged = await tx.select()
-      .from(inventory)
-      .where(
-        and(
-          eq(inventory.uniqueCode, item.uniqueCode || ""),
-          eq(inventory.tenantId, activeTenantId),
-          eq(inventory.status, "quarantine"), // Busca correta por status de quarentena
-          eq(inventory.locationId, ncgLocationId)
-        )
-      )
-      .limit(1);
-
-    if (existingDamaged.length > 0) {
-      await tx.update(inventory)
-        .set({ quantity: blockedQty, updatedAt: new Date() })
-        .where(eq(inventory.id, existingDamaged[0].id));
-    } else {
-      await tx.insert(inventory).values({
-        tenantId: activeTenantId,
-        productId: item.productId,
-        locationId: ncgLocationId,
-        batch: item.batch || "",
-        expiryDate: toDateStr(item.expiryDate) as any,
-        uniqueCode: item.uniqueCode || "",
-        labelCode: item.labelCode || null,
-        serialNumber: null,
-        locationZone: ncgZoneCode,
-        quantity: blockedQty,
-        reservedQuantity: 0,
-        status: "quarantine", // ✅ CORRETO: Status para o PRODUTO (Inventory)
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
-  }
-}
-
-// 5c. ATUALIZAR STATUS DOS ENDEREÇOS (WAREHOUSE LOCATIONS)
-// Endereço físico deve ser 'active' ou 'occupied'
-await tx.update(warehouseLocations)
-  .set({ status: "active", updatedAt: new Date() }) // ✅ CORRETO: Status para o LOCAL (WarehouseLocation)
-  .where(eq(warehouseLocations.id, locationId));
-
-if (ncgZone.length > 0) {
-  // ... busca ncgLocForUpdate ...
-  if (ncgLocForUpdate.length > 0) {
-    await tx.update(warehouseLocations)
-      .set({ status: "active", updatedAt: new Date() }) // ✅ CORRETO: Status para o LOCAL (WarehouseLocation)
-      .where(eq(warehouseLocations.id, ncgLocForUpdate[0].id));
-  }
-}
+        // 5b. CRIAR INVENTORY PARA ITENS COM NCG (blockedQuantity > 0)
+        const ncgZone = await tx.select()
+          .from(warehouseZones)
+          .where(eq(warehouseZones.code, 'NCG'))
+          .limit(1);
+        if (ncgZone.length > 0) {
+          const ncgLocation = await tx.select()
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.tenantId, orderTenantId),
+                eq(warehouseLocations.zoneId, ncgZone[0].id)
+              )
+            )
+            .limit(1);
+          if (ncgLocation.length > 0) {
+            const ncgLocationId = ncgLocation[0].id;
+            const ncgZoneCode = ncgLocation[0].zoneCode || 'NCG';
+            for (const item of itemsWithQty) {
+              const blockedQty = Number(item.blockedQuantity) || 0;
+              if (blockedQty <= 0) continue;
+              const existingDamaged = await tx.select()
+                .from(inventory)
+                .where(
+                  and(
+                    eq(inventory.uniqueCode, item.uniqueCode || ""),
+                    eq(inventory.tenantId, orderTenantId),
+                    eq(inventory.status, "quarantine"),
+                    eq(inventory.locationId, ncgLocation[0].id)
+                  )
+                )
+                .limit(1);
+              if (existingDamaged.length > 0) {
+                await tx.update(inventory)
+                  .set({ quantity: blockedQty, locationId: ncgLocationId, updatedAt: new Date() })
+                  .where(eq(inventory.id, existingDamaged[0].id));
+              } else {
+                await tx.insert(inventory).values({
+                  tenantId: orderTenantId,
+                  productId: item.productId,
+                  locationId: ncgLocationId,
+                  batch: item.batch || "",
+                  expiryDate: toDateStr(item.expiryDate) as any,
+                  uniqueCode: item.uniqueCode || "",
+                  labelCode: item.labelCode || null,
+                  serialNumber: null,
+                  locationZone: ncgZoneCode,
+                  quantity: blockedQty,
+                  reservedQuantity: 0,
+                  status: "quarantine",
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+              }
+            }
+          }
+        }
+        // 5c. ATUALIZAR STATUS DOS ENDEREÇOS
+        await tx.update(warehouseLocations)
+          .set({ status: "occupied", updatedAt: new Date() })
+          .where(eq(warehouseLocations.id, locationId));
+        if (ncgZone.length > 0) {
+          const ncgLocForUpdate = await tx.select({ id: warehouseLocations.id })
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.tenantId, orderTenantId),
+                eq(warehouseLocations.zoneId, ncgZone[0].id)
+              )
+            )
+            .limit(1);
+          if (ncgLocForUpdate.length > 0) {
+            await tx.update(warehouseLocations)
+              .set({ status: "quarantine", updatedAt: new Date() })
+              .where(eq(warehouseLocations.id, ncgLocForUpdate[0].id));
+          }
+        }
         // 5. ATIVAR ETIQUETAS (RECEIVING → AVAILABLE)
         // Buscar todos os produtos conferidos para liberar suas etiquetas
         const productIds = itemsWithQty.map(item => item.productId);
