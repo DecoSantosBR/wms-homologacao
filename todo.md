@@ -51,4 +51,9 @@
 - [x] CORRIGIDO: dados de teste com tenantId=2 removidos da tabela labelAssociations (bloqueavam inserts por constraint UNIQUE global em labelCode)
 - [x] CORRIGIDO: readLabel, associateLabel e registerNCG agora usam orderTenantId (tenant da ordem) em vez de activeTenantId (tenant do usuário) para buscar etiquetas em labelAssociations
 - [x] CORRIGIDO: correção sistêmica — todas as procedures (undoLastReading, adjustQuantity, getSummary, prepareFinish, finish, closeReceivingOrder) agora usam orderTenantId (tenant da ordem) em vez de activeTenantId (tenant do usuário) para filtrar blindConferenceItems
-- [ ] BUG: finish falha com "Nenhum item encontrado para criar inventory" — receivingOrderItems filtrado por activeTenantId em vez de orderTenantId
+- [x] BUG: finish falha com "Nenhum item encontrado para criar inventory" — receivingOrderItems filtrado por activeTenantId em vez de orderTenantId
+
+## Manutenção
+
+- [ ] Procedure tRPC cleanupOrphanInventory no backend com critérios de órfão
+- [ ] UI de manutenção na tela de Inventário com botão de limpeza manual e relatório de resultado

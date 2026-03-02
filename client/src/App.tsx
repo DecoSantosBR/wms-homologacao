@@ -28,6 +28,7 @@ import StageCheck from "./pages/StageCheck";
 import ScannerTest from "./pages/ScannerTest";
 import PrintSettings from "./pages/PrintSettings";
 import Reports from "./pages/Reports";
+import Maintenance from "./pages/Maintenance";
 import { CollectorHome } from "./pages/collector/CollectorHome";
 import { CollectorReceiving } from "./pages/collector/CollectorReceiving";
 import { CollectorPicking } from "./pages/collector/CollectorPicking";
@@ -73,6 +74,7 @@ function Router() {
       <Route path={"/scanner-test"} component={ScannerTest} />
       <Route path={"/settings/printing"} component={PrintSettings} />
       <Route path={"/reports"} component={Reports} />
+      <Route path={"/maintenance"} component={Maintenance} />
         <Route path="/collector" component={CollectorHome} />
         <Route path="/collector/receiving" component={CollectorReceiving} />
         <Route path="/collector/picking" component={CollectorPicking} />
