@@ -65,6 +65,7 @@ export default function Locations() {
     locationType: "whole" as "whole" | "fraction",
     storageRule: "single" as "single" | "multi",
     isBlocked: false,
+    status: "livre" as "livre" | "available" | "occupied" | "blocked" | "counting" | "quarantine",
   });
 
   // Zone states
@@ -207,6 +208,7 @@ export default function Locations() {
       locationType: location.locationType || "whole",
       storageRule: location.storageRule || "single",
       isBlocked: location.status === "blocked",
+      status: location.status || "livre",
     });
     setEditDialogOpen(true);
   };
@@ -222,6 +224,7 @@ export default function Locations() {
       id: selectedLocation.id,
       ...editForm,
       tenantId: editForm.tenantId || undefined,
+      status: editForm.status, // ✅ Envia status explícito (inclui quarantine)
     });
   };
 
@@ -557,6 +560,7 @@ export default function Locations() {
                         <SelectItem value="occupied">Ocupado</SelectItem>
                         <SelectItem value="blocked">Bloqueado</SelectItem>
                         <SelectItem value="counting">Em Contagem</SelectItem>
+                        <SelectItem value="quarantine">Quarentena</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -1005,17 +1009,26 @@ export default function Locations() {
               </Select>
             </div>
 
-            <div className="flex items-center space-x-2 pt-4 border-t">
-              <Checkbox
-                id="edit-isBlocked"
-                checked={editForm.isBlocked}
-                onCheckedChange={(checked) =>
-                  setEditForm({ ...editForm, isBlocked: checked === true })
+            <div className="col-span-2 space-y-2 pt-4 border-t">
+              <Label htmlFor="edit-status">Status do Endereço</Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value: any) =>
+                  setEditForm({ ...editForm, status: value, isBlocked: value === "blocked" })
                 }
-              />
-              <Label htmlFor="edit-isBlocked" className="text-sm font-normal cursor-pointer">
-                Endereço bloqueado (não disponível para uso)
-              </Label>
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="livre">Livre</SelectItem>
+                  <SelectItem value="available">Disponível</SelectItem>
+                  <SelectItem value="occupied">Ocupado</SelectItem>
+                  <SelectItem value="blocked">Bloqueado</SelectItem>
+                  <SelectItem value="counting">Em Contagem</SelectItem>
+                  <SelectItem value="quarantine">Quarentena (NCG)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

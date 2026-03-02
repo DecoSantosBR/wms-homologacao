@@ -184,16 +184,10 @@ export const blindConferenceRouter = router({
       console.log("[readLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
+      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não activeTenantId)
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
-        .where(
-          isGlobalAdmin
-            ? eq(blindConferenceSessions.id, input.conferenceId)
-            : and(
-                eq(blindConferenceSessions.id, input.conferenceId),
-                eq(blindConferenceSessions.tenantId, activeTenantId)
-              )
-        )
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
       
       if (conferenceSession.length === 0) {
@@ -289,7 +283,7 @@ export const blindConferenceRouter = router({
             and(
               eq(receivingOrderItems.receivingOrderId, conference.receivingOrderId),
               eq(receivingOrderItems.uniqueCode, uniqueCode),
-              eq(receivingOrderItems.tenantId, activeTenantId)
+              eq(receivingOrderItems.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
             )
           )
           .limit(1);
@@ -317,7 +311,7 @@ export const blindConferenceRouter = router({
             .where(
               and(
                 eq(receivingOrderItems.id, orderItem.id), // ✅ ID correto
-                eq(receivingOrderItems.tenantId, activeTenantId)
+                eq(receivingOrderItems.tenantId, orderTenantId)
               )
             );
         }
@@ -354,7 +348,7 @@ export const blindConferenceRouter = router({
           and(
             eq(receivingOrderItems.receivingOrderId, conference.receivingOrderId),
             eq(receivingOrderItems.uniqueCode, uniqueCodeForOrderItem),
-            eq(receivingOrderItems.tenantId, activeTenantId)
+            eq(receivingOrderItems.tenantId, orderTenantId)
           )
         )
         .limit(1);
@@ -414,16 +408,10 @@ export const blindConferenceRouter = router({
       console.log("[associateLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
+      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não activeTenantId)
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
-        .where(
-          isGlobalAdmin
-            ? eq(blindConferenceSessions.id, input.conferenceId)
-            : and(
-                eq(blindConferenceSessions.id, input.conferenceId),
-                eq(blindConferenceSessions.tenantId, activeTenantId)
-              )
-        )
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
         .limit(1);
       
       if (conferenceSession.length === 0) {
@@ -550,12 +538,11 @@ export const blindConferenceRouter = router({
       const existingItem = await db.select()
         .from(receivingOrderItems)
         .where(
-          isGlobalAdmin
-            ? eq(receivingOrderItems.id, input.receivingOrderItemId)
-            : and(
-                eq(receivingOrderItems.id, input.receivingOrderItemId),
-                eq(receivingOrderItems.tenantId, activeTenantId)
-              )
+          // ✅ Busca por ID (chave primária) + orderTenantId (tenant da ordem, não do usuário)
+          and(
+            eq(receivingOrderItems.id, input.receivingOrderItemId),
+            eq(receivingOrderItems.tenantId, orderTenantId)
+          )
         )
         .limit(1);
       
@@ -624,7 +611,7 @@ export const blindConferenceRouter = router({
         .where(
           and(
             eq(receivingOrderItems.id, item.id), // ✅ ID correto da busca (variável segura)
-            eq(receivingOrderItems.tenantId, activeTenantId)
+            eq(receivingOrderItems.tenantId, orderTenantId)
           )
         );
       
@@ -685,21 +672,6 @@ export const blindConferenceRouter = router({
 
       console.log("[registerNCG] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
-      // 1. BUSCAR LOCALIZAÇÃO NCG (Não Conformidade/Quarentena)
-      const [ncgLocation] = await db.select()
-        .from(warehouseLocations)
-        .where(
-          and(
-            eq(warehouseLocations.zoneCode, "NCG"), // Busca por zoneCode NCG
-            eq(warehouseLocations.tenantId, activeTenantId)
-          )
-        )
-        .limit(1);
-
-      if (!ncgLocation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Localização NCG não configurada" });
-      }
-
       // 2. BUSCAR DADOS DO ITEM DA ORDEM
       const [orderItem] = await db.select()
         .from(receivingOrderItems)
@@ -721,6 +693,21 @@ export const blindConferenceRouter = router({
       }
       
       const orderTenantId = receivingOrder.tenantId;
+
+      // 1. BUSCAR LOCALIZAÇÃO NCG (Não Conformidade/Quarentena)
+      const [ncgLocation] = await db.select()
+        .from(warehouseLocations)
+        .where(
+          and(
+            eq(warehouseLocations.zoneCode, "NCG"), // Busca por zoneCode NCG
+            eq(warehouseLocations.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
+          )
+        )
+        .limit(1);
+
+      if (!ncgLocation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Localização NCG não configurada" });
+      }
       console.log("[registerNCG] Usando tenantId da ordem:", orderTenantId);
 
       // ✅ BUSCAR PRODUTO PARA OBTER SKU E unitsPerBox
@@ -1130,16 +1117,16 @@ export const blindConferenceRouter = router({
       if (!order) {
         throw new Error("Ordem de recebimento não encontrada");
       }
-
+      const orderTenantId = order.tenantId;
       // 3. CALCULAR E ATUALIZAR addressedQuantity
       const orderItems = await db.select()
         .from(receivingOrderItems)
         .where(
           and(
             eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
-            eq(receivingOrderItems.tenantId, activeTenantId)
+            eq(receivingOrderItems.tenantId, orderTenantId)
           )
-        );
+        );;
 
       const summary = [];
 
@@ -1252,16 +1239,14 @@ export const blindConferenceRouter = router({
           addressedQuantity: receivingOrderItems.addressedQuantity,
           blockedQuantity: receivingOrderItems.blockedQuantity,
         })
-          .from(receivingOrderItems)
+            .from(receivingOrderItems)
           .where(
             and(
               eq(receivingOrderItems.receivingOrderId, session[0].receivingOrderId),
-              eq(receivingOrderItems.tenantId, activeTenantId)
+              eq(receivingOrderItems.tenantId, orderTenantId)
             )
           );
-
-        console.log('[finish] Items com addressedQuantity:', itemsWithQty.length);
-
+        console.log('[finish] Items com addressedQuantity:', itemsWithQty.length, '| orderTenantId:', orderTenantId);
         if (itemsWithQty.length === 0) {
           throw new Error("Nenhum item encontrado para criar inventory");
         }
@@ -1280,7 +1265,7 @@ export const blindConferenceRouter = router({
           .from(warehouseLocations)
           .where(
             and(
-              eq(warehouseLocations.tenantId, activeTenantId),
+              eq(warehouseLocations.tenantId, orderTenantId),
               eq(warehouseLocations.zoneId, zoneREC[0].id)
             )
           )
@@ -1328,7 +1313,7 @@ export const blindConferenceRouter = router({
             .where(
               and(
                 eq(inventory.uniqueCode, item.uniqueCode || ""),
-                eq(inventory.tenantId, activeTenantId),
+                eq(inventory.tenantId, orderTenantId),
                 eq(inventory.locationZone, 'REC')
               )
             )
@@ -1347,7 +1332,7 @@ export const blindConferenceRouter = router({
           } else {
             // Criar novo inventory
             await tx.insert(inventory).values({
-              tenantId: activeTenantId,
+              tenantId: orderTenantId,
               productId: item.productId,
               locationId: locationId,
               batch: item.batch || "",
@@ -1376,7 +1361,7 @@ export const blindConferenceRouter = router({
             .from(warehouseLocations)
             .where(
               and(
-                eq(warehouseLocations.tenantId, activeTenantId),
+                eq(warehouseLocations.tenantId, orderTenantId),
                 eq(warehouseLocations.zoneId, ncgZone[0].id)
               )
             )
@@ -1394,7 +1379,7 @@ export const blindConferenceRouter = router({
                 .where(
                   and(
                     eq(inventory.uniqueCode, item.uniqueCode || ""),
-                    eq(inventory.tenantId, activeTenantId),
+                    eq(inventory.tenantId, orderTenantId),
                     eq(inventory.status, "quarantine"),
                     eq(inventory.locationId, ncgLocation[0].id)
                   )
@@ -1411,7 +1396,7 @@ export const blindConferenceRouter = router({
                 // - uniqueCode original: é o mesmo produto físico, apenas com status diferente.
                 //   A segregação é feita por locationId (NCG) + status (quarantine).
                 await tx.insert(inventory).values({
-                  tenantId: activeTenantId,
+                  tenantId: orderTenantId,
                   productId: item.productId,
                   locationId: ncgLocationId,
                   batch: item.batch || "",
@@ -1442,7 +1427,7 @@ export const blindConferenceRouter = router({
             .from(warehouseLocations)
             .where(
               and(
-                eq(warehouseLocations.tenantId, activeTenantId),
+                eq(warehouseLocations.tenantId, orderTenantId),
                 eq(warehouseLocations.zoneId, ncgZone[0].id)
               )
             )
@@ -1492,6 +1477,7 @@ export const blindConferenceRouter = router({
     .input(z.object({
       sku: z.string(),
       batch: z.string(),
+      conferenceId: z.number().optional(), // Opcional: para buscar orderTenantId
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .query(async ({ input, ctx }) => {
@@ -1508,6 +1494,11 @@ export const blindConferenceRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
       }
 
+      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa activeTenantId
+      const orderTenantId = input.conferenceId
+        ? await getOrderTenantId(db, input.conferenceId)
+        : activeTenantId;
+
       // Gera uniqueCode (SKU+Lote)
       const uniqueCode = getUniqueCode(input.sku, input.batch);
 
@@ -1520,7 +1511,7 @@ export const blindConferenceRouter = router({
         .where(
           and(
             eq(receivingOrderItems.uniqueCode, uniqueCode),
-            eq(receivingOrderItems.tenantId, activeTenantId)
+            eq(receivingOrderItems.tenantId, orderTenantId) // ✅ USA orderTenantId
           )
         )
         .limit(1);
@@ -1583,7 +1574,7 @@ export const blindConferenceRouter = router({
           .where(
             and(
               eq(receivingOrderItems.receivingOrderId, input.receivingOrderId),
-              eq(receivingOrderItems.tenantId, activeTenantId)
+              eq(receivingOrderItems.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
             )
           );
 
@@ -1700,6 +1691,7 @@ export const blindConferenceRouter = router({
   checkLabelExists: protectedProcedure
     .input(z.object({
       labelCode: z.string(),
+      conferenceId: z.number().optional(), // Opcional: para buscar orderTenantId
       tenantId: z.number().optional(),
     }))
     .query(async ({ input, ctx }) => {
@@ -1715,13 +1707,18 @@ export const blindConferenceRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
       }
 
+      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa activeTenantId
+      const orderTenantId = input.conferenceId
+        ? await getOrderTenantId(db, input.conferenceId)
+        : activeTenantId;
+
       // Buscar etiqueta em labelAssociations (mesmo padrão do readLabel)
       const [label] = await db.select()
         .from(labelAssociations)
         .where(
           and(
             eq(labelAssociations.labelCode, input.labelCode),
-            eq(labelAssociations.tenantId, activeTenantId)
+            eq(labelAssociations.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
           )
         )
         .limit(1);

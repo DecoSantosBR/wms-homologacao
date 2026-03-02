@@ -586,17 +586,21 @@ export const appRouter = router({
         locationType: z.enum(["whole", "fraction"]).default("whole"),
         storageRule: z.enum(["single", "multi"]).default("single"),
         isBlocked: z.boolean().optional(),
+        status: z.enum(["livre", "available", "occupied", "blocked", "counting", "quarantine"]).optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        const { id, isBlocked, ...updateData } = input;
+        const { id, isBlocked, status: inputStatus, ...updateData } = input;
         
-        // Determinar status baseado em isBlocked e estoque
+        // Determinar status: prioridade para status explícito, depois isBlocked, depois manter atual
         let status: "livre" | "available" | "occupied" | "blocked" | "counting" | "quarantine";
         
-        if (isBlocked === true) {
+        if (inputStatus) {
+          // Status explícito fornecido (inclui quarantine)
+          status = inputStatus;
+        } else if (isBlocked === true) {
           // Usuário marcou como bloqueado
           status = "blocked";
         } else if (isBlocked === false) {
@@ -608,7 +612,7 @@ export const appRouter = router({
           
           status = (stockCheck?.total || 0) > 0 ? "occupied" : "livre";
         } else {
-          // isBlocked não fornecido - manter status atual
+          // Nenhum status fornecido - manter status atual
           const [current] = await db
             .select({ status: warehouseLocations.status })
             .from(warehouseLocations)
