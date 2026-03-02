@@ -695,18 +695,41 @@ export const blindConferenceRouter = router({
       const orderTenantId = receivingOrder.tenantId;
 
       // 1. BUSCAR LOCALIZAÇÃO NCG (Não Conformidade/Quarentena)
-      const [ncgLocation] = await db.select()
+      // Tentativa 1: busca por zoneCode = 'NCG' + tenantId da ordem
+      let [ncgLocation] = await db.select()
         .from(warehouseLocations)
         .where(
           and(
-            eq(warehouseLocations.zoneCode, "NCG"), // Busca por zoneCode NCG
-            eq(warehouseLocations.tenantId, orderTenantId) // ✅ USA orderTenantId (tenant da ordem)
+            eq(warehouseLocations.zoneCode, "NCG"),
+            eq(warehouseLocations.tenantId, orderTenantId)
           )
         )
         .limit(1);
 
+      // Tentativa 2 (fallback): busca por zoneId da zona NCG + tenantId
       if (!ncgLocation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Localização NCG não configurada" });
+        const [ncgZone] = await db.select({ id: warehouseZones.id })
+          .from(warehouseZones)
+          .where(eq(warehouseZones.code, "NCG"))
+          .limit(1);
+        if (ncgZone) {
+          [ncgLocation] = await db.select()
+            .from(warehouseLocations)
+            .where(
+              and(
+                eq(warehouseLocations.zoneId, ncgZone.id),
+                eq(warehouseLocations.tenantId, orderTenantId)
+              )
+            )
+            .limit(1);
+        }
+      }
+
+      if (!ncgLocation) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Localização NCG não configurada. Cadastre um endereço na zona NCG para este cliente."
+        });
       }
       console.log("[registerNCG] Usando tenantId da ordem:", orderTenantId);
 
