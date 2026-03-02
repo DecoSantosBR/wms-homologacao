@@ -29,10 +29,19 @@ import { getUniqueCode } from "./utils/uniqueCode";
 function toDateStr(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   if (typeof d === "string") {
-    // "YYYY-MM-DD" ou "YYYY-MM-DD HH:MM:SS" — pegar apenas a parte da data
-    return d.split("T")[0].split(" ")[0];
+    // Rejeitar strings que não parecem datas válidas (ex: lotes como "22D10LB112")
+    const trimmed = d.trim();
+    if (!trimmed) return null;
+    // Aceitar apenas formatos: YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, YYYY-MM-DD HH:MM:SS
+    if (!/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return null;
+    const datePart = trimmed.split("T")[0].split(" ")[0];
+    // Validar que é uma data real
+    const parsed = new Date(datePart + "T00:00:00Z");
+    if (isNaN(parsed.getTime())) return null;
+    return datePart;
   }
   // É um objeto Date — usar UTC para evitar que offset local mude o dia
+  if (isNaN(d.getTime())) return null;
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -242,7 +251,7 @@ export const blindConferenceRouter = router({
           conferenceId: input.conferenceId,
           productId: labelData.productId,
           batch: labelData.batch || "",
-          expiryDate: labelData.expiryDate,
+          expiryDate: toDateStr(labelData.expiryDate) as any, // ✅ toDateStr converte string vazia para null
           tenantId: orderTenantId, // ✅ USA tenantId DA ORDEM
           packagesRead: 1,
           unitsRead: labelData.unitsPerBox, // Primeira leitura: 1 caixa * unitsPerBox
