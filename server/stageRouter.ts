@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import {
   getOrderForStage,
   startStageCheck,
@@ -18,19 +19,19 @@ export const stageRouter = {
    * Busca pedido por customerOrderNumber para iniciar conferência
    * Apenas pedidos com status 'completed' podem ser conferidos
    */
-  getOrderForStage: protectedProcedure
+  getOrderForStage: tenantProcedure
     .input(z.object({
       customerOrderNumber: z.string(),
     }))
     .query(async ({ input, ctx }) => {
-      return await getOrderForStage(input.customerOrderNumber, ctx.user.tenantId);
+      return await getOrderForStage(input.customerOrderNumber, ctx.effectiveTenantId);
     }),
 
   /**
    * Inicia conferência de Stage para um pedido
    * Cria registro de stageCheck e retorna itens (sem quantidades esperadas)
    */
-  startStageCheck: protectedProcedure
+  startStageCheck: tenantProcedure
     .input(z.object({
       pickingOrderId: z.number(),
       customerOrderNumber: z.string(),
@@ -40,14 +41,14 @@ export const stageRouter = {
         pickingOrderId: input.pickingOrderId,
         customerOrderNumber: input.customerOrderNumber,
         operatorId: ctx.user.id,
-        tenantId: ctx.user.tenantId,
+        tenantId: ctx.effectiveTenantId,
       });
     }),
 
   /**
    * Registra item conferido (produto bipado + quantidade informada)
    */
-  recordStageItem: protectedProcedure
+  recordStageItem: tenantProcedure
     .input(z.object({
       stageCheckId: z.number(),
       labelCode: z.string(),
@@ -60,7 +61,7 @@ export const stageRouter = {
         labelCode: input.labelCode,
         quantity: input.quantity,
         autoIncrement: input.autoIncrement,
-        tenantId: ctx.user.tenantId,
+        tenantId: ctx.effectiveTenantId,
       });
     }),
 
@@ -68,7 +69,7 @@ export const stageRouter = {
    * Finaliza conferência de Stage
    * Valida divergências, baixa estoque e atualiza status do pedido
    */
-  completeStageCheck: protectedProcedure
+  completeStageCheck: tenantProcedure
     .input(z.object({
       stageCheckId: z.number(),
       notes: z.string().optional(),
@@ -79,29 +80,29 @@ export const stageRouter = {
         stageCheckId: input.stageCheckId,
         notes: input.notes,
         force: input.force,
-        tenantId: ctx.user.tenantId,
+        tenantId: ctx.effectiveTenantId,
       });
     }),
 
   /**
    * Busca conferência ativa (in_progress) do operador
    */
-  getActiveStageCheck: protectedProcedure
+  getActiveStageCheck: tenantProcedure
     .query(async ({ ctx }) => {
-      return await getActiveStageCheck(ctx.user.id, ctx.user.tenantId);
+      return await getActiveStageCheck(ctx.user.id, ctx.effectiveTenantId);
     }),
 
   /**
    * Lista histórico de conferências de Stage
    */
-  getStageCheckHistory: protectedProcedure
+  getStageCheckHistory: tenantProcedure
     .input(z.object({
       limit: z.number().default(50),
       offset: z.number().default(0),
     }))
     .query(async ({ input, ctx }) => {
       return await getStageCheckHistory({
-        tenantId: ctx.user.tenantId,
+        tenantId: ctx.effectiveTenantId,
         limit: input.limit,
         offset: input.offset,
       });
@@ -111,7 +112,7 @@ export const stageRouter = {
    * Gera etiquetas de volumes em PDF
    * Retorna PDF em base64 para impressão automática
    */
-  generateVolumeLabels: protectedProcedure
+  generateVolumeLabels: tenantProcedure
     .input(z.object({
       customerOrderNumber: z.string(),
       customerName: z.string(),
@@ -142,7 +143,7 @@ export const stageRouter = {
    * Desfazer última bipagem no stage (LIFO)
    * Decrementa checkedQuantity do item identificado pelo stageCheckItemId
    */
-  undoLastStageItem: protectedProcedure
+  undoLastStageItem: tenantProcedure
     .input(z.object({
       stageCheckId: z.number(),
       stageCheckItemId: z.number(),
@@ -199,7 +200,7 @@ export const stageRouter = {
    * Cancela conferência de Stage em andamento
    * Deleta registros de stageCheck e stageCheckItems
    */
-  cancelStageCheck: protectedProcedure
+  cancelStageCheck: tenantProcedure
     .input(z.object({
       stageCheckId: z.number(),
     }))
@@ -207,7 +208,7 @@ export const stageRouter = {
       const { cancelStageCheck } = await import("./stage");
       return await cancelStageCheck({
         stageCheckId: input.stageCheckId,
-        tenantId: ctx.user.tenantId,
+        tenantId: ctx.effectiveTenantId,
       });
     }),
 };

@@ -4,6 +4,7 @@
  */
 
 import { router, protectedProcedure } from "./_core/trpc.js";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { getDb } from "./db.js";
 import { 
   invoices, 
@@ -35,7 +36,7 @@ export const shippingRouter = router({
   /**
    * Listar pedidos prontos para expedição (status: staged)
    */
-  listOrders: protectedProcedure
+  listOrders: tenantProcedure
     .input(
       z.object({
         status: z.enum(["awaiting_invoice", "invoice_linked", "in_manifest", "shipped"]).optional(),
@@ -45,7 +46,8 @@ export const shippingRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? null : effectiveTenantId;
 
       const conditions: any[] = [
         eq(pickingOrders.status, "staged"), // Apenas pedidos conferidos no Stage
@@ -83,7 +85,7 @@ export const shippingRouter = router({
   /**
    * Importar XML de Nota Fiscal
    */
-  importInvoice: protectedProcedure
+  importInvoice: tenantProcedure
     .input(
       z.object({
         xmlContent: z.string(), // Conteúdo do XML
@@ -101,7 +103,8 @@ export const shippingRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const tenantId = ctx.user.role === "admin" ? input.customerId : ctx.user.tenantId!;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? input.customerId : effectiveTenantId;
 
       // Verificar se NF já foi importada
       const existing = await db
@@ -143,7 +146,7 @@ export const shippingRouter = router({
   /**
    * Listar Notas Fiscais
    */
-  listInvoices: protectedProcedure
+  listInvoices: tenantProcedure
     .input(
       z.object({
         status: z.enum(["imported", "linked", "in_manifest", "shipped"]).optional(),
@@ -153,7 +156,8 @@ export const shippingRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? null : effectiveTenantId;
 
       const conditions: any[] = [];
 
@@ -192,7 +196,7 @@ export const shippingRouter = router({
   /**
    * Vincular NF a Pedido
    */
-  linkInvoiceToOrder: protectedProcedure
+  linkInvoiceToOrder: tenantProcedure
     .input(
       z.object({
         invoiceNumber: z.string(),
@@ -353,7 +357,7 @@ export const shippingRouter = router({
   /**
    * Desvincular NF de Pedido
    */
-  unlinkInvoice: protectedProcedure
+  unlinkInvoice: tenantProcedure
     .input(
       z.object({
         invoiceNumber: z.string(),
@@ -413,7 +417,7 @@ export const shippingRouter = router({
   /**
    * Excluir NF Importada
    */
-  deleteInvoice: protectedProcedure
+  deleteInvoice: tenantProcedure
     .input(
       z.object({
         invoiceNumber: z.string(),
@@ -469,7 +473,7 @@ export const shippingRouter = router({
   /**
    * Criar Romaneio
    */
-  createManifest: protectedProcedure
+  createManifest: tenantProcedure
     .input(
       z.object({
         carrierName: z.string(),
@@ -657,7 +661,7 @@ export const shippingRouter = router({
   /**
    * Listar Romaneios
    */
-  listManifests: protectedProcedure
+  listManifests: tenantProcedure
     .input(
       z.object({
         status: z.enum(["draft", "ready", "collected", "shipped"]).optional(),
@@ -667,7 +671,8 @@ export const shippingRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? null : effectiveTenantId;
 
       const conditions: any[] = [];
 
@@ -691,7 +696,7 @@ export const shippingRouter = router({
   /**
    * Finalizar Expedição (Romaneio)
    */
-  finalizeManifest: protectedProcedure
+  finalizeManifest: tenantProcedure
     .input(z.object({ manifestId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -1000,7 +1005,7 @@ export const shippingRouter = router({
     }),
 
   // Gerar PDF do romaneio
-  generateManifestPDF: protectedProcedure
+  generateManifestPDF: tenantProcedure
     .input(z.object({ manifestId: z.number() }))
     .query(async ({ input, ctx }) => {
       const db = await getDb();
@@ -1075,7 +1080,7 @@ export const shippingRouter = router({
   /**
    * Excluir múltiplos romaneios
    */
-  deleteMany: protectedProcedure
+  deleteMany: tenantProcedure
     .input(
       z.object({
         ids: z.array(z.number()).min(1, "Selecione pelo menos um romaneio"),
@@ -1212,7 +1217,7 @@ export const shippingRouter = router({
    * Cancelar expedição de pedido
    * Retorna pedido para status "picked" para nova conferência no Stage
    */
-  cancelShipping: protectedProcedure
+  cancelShipping: tenantProcedure
     .input(
       z.object({
         orderId: z.number(),
@@ -1237,7 +1242,8 @@ export const shippingRouter = router({
       }
 
       // Validar tenant
-      const tenantId = ctx.user.role === "admin" ? null : ctx.user.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? null : effectiveTenantId;
       if (tenantId !== null && order.tenantId !== tenantId) {
         throw new TRPCError({
           code: "FORBIDDEN",

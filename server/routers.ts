@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
@@ -1625,25 +1626,19 @@ export const appRouter = router({
   // ========================================
   picking: router({
     // Sugerir endereços para picking (FIFO/FEFO)
-    suggestLocations: protectedProcedure
+    suggestLocations: tenantProcedure
       .input(
         z.object({
           productId: z.number(),
           requestedQuantity: z.number().positive(),
-          tenantId: z.number().optional(), // Admin pode passar tenantId do pedido
+          tenantId: z.number().optional(), // Admin Global pode passar tenantId específico
         })
       )
       .query(async ({ input, ctx }) => {
-        // Admin pode especificar tenantId, usuário comum usa o próprio
-        const tenantId = input.tenantId || ctx.user.tenantId;
-        
-        if (!tenantId) {
-          // Se admin não passou tenantId, retornar vazio
-          return [];
-        }
+        const { effectiveTenantId } = ctx;
         
         const suggestions = await suggestPickingLocations({
-          tenantId,
+          tenantId: effectiveTenantId,
           productId: input.productId,
           requestedQuantity: input.requestedQuantity,
         });
@@ -1652,7 +1647,7 @@ export const appRouter = router({
       }),
 
     // Listar pedidos de separação
-    list: protectedProcedure
+    list: tenantProcedure
       .input(
         z.object({
           limit: z.number().default(100),
@@ -1662,69 +1657,45 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         
-        // Admin vê todos os pedidos, usuário comum vê apenas do seu tenant
-        let orders;
-        if (ctx.user.role === "admin") {
-          orders = await db
-            .select({
-              id: pickingOrders.id,
-              tenantId: pickingOrders.tenantId,
-              clientName: tenants.name, // Nome do cliente (tenant) correto
-              orderNumber: pickingOrders.orderNumber,
-              customerOrderNumber: pickingOrders.customerOrderNumber,
-              customerName: pickingOrders.customerName,
-              priority: pickingOrders.priority,
-              status: pickingOrders.status,
-              totalItems: pickingOrders.totalItems,
-              totalQuantity: pickingOrders.totalQuantity,
-              scheduledDate: pickingOrders.scheduledDate,
-              createdAt: pickingOrders.createdAt,
-              createdBy: pickingOrders.createdBy,
-              assignedTo: pickingOrders.assignedTo,
-              pickedBy: pickingOrders.pickedBy,
-              pickedAt: pickingOrders.pickedAt,
-              nfeNumber: pickingOrders.nfeNumber,
-              nfeKey: pickingOrders.nfeKey,
-            })
-            .from(pickingOrders)
-            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
-            .orderBy(desc(pickingOrders.createdAt))
-            .limit(input.limit);
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          orders = await db
-            .select({
-              id: pickingOrders.id,
-              tenantId: pickingOrders.tenantId,
-              clientName: tenants.name, // Nome do cliente (tenant) correto
-              orderNumber: pickingOrders.orderNumber,
-              customerOrderNumber: pickingOrders.customerOrderNumber,
-              customerName: pickingOrders.customerName,
-              priority: pickingOrders.priority,
-              status: pickingOrders.status,
-              totalItems: pickingOrders.totalItems,
-              totalQuantity: pickingOrders.totalQuantity,
-              scheduledDate: pickingOrders.scheduledDate,
-              createdAt: pickingOrders.createdAt,
-              createdBy: pickingOrders.createdBy,
-              assignedTo: pickingOrders.assignedTo,
-              pickedBy: pickingOrders.pickedBy,
-              pickedAt: pickingOrders.pickedAt,
-              nfeNumber: pickingOrders.nfeNumber,
-              nfeKey: pickingOrders.nfeKey,
-            })
-            .from(pickingOrders)
-            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
-            .where(eq(pickingOrders.tenantId, tenantId))
-            .orderBy(desc(pickingOrders.createdAt))
-            .limit(input.limit);
-        }
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        const selectFields = {
+          id: pickingOrders.id,
+          tenantId: pickingOrders.tenantId,
+          clientName: tenants.name,
+          orderNumber: pickingOrders.orderNumber,
+          customerOrderNumber: pickingOrders.customerOrderNumber,
+          customerName: pickingOrders.customerName,
+          priority: pickingOrders.priority,
+          status: pickingOrders.status,
+          totalItems: pickingOrders.totalItems,
+          totalQuantity: pickingOrders.totalQuantity,
+          scheduledDate: pickingOrders.scheduledDate,
+          createdAt: pickingOrders.createdAt,
+          createdBy: pickingOrders.createdBy,
+          assignedTo: pickingOrders.assignedTo,
+          pickedBy: pickingOrders.pickedBy,
+          pickedAt: pickingOrders.pickedAt,
+          nfeNumber: pickingOrders.nfeNumber,
+          nfeKey: pickingOrders.nfeKey,
+        };
+
+        const baseQuery = db
+          .select(selectFields)
+          .from(pickingOrders)
+          .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
+          .orderBy(desc(pickingOrders.createdAt))
+          .limit(input.limit);
+
+        // Admin global sem tenant específico vê todos; demais filtram pelo próprio tenant
+        const orders = isGlobalAdmin
+          ? await baseQuery
+          : await baseQuery.where(eq(pickingOrders.tenantId, effectiveTenantId));
 
         return orders;
       }),
 
     // Criar pedido de separação
-    create: protectedProcedure
+    create: tenantProcedure
       .input(
         z.object({
           tenantId: z.number(), // Cliente para quem o pedido está sendo criado
@@ -1745,15 +1716,11 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         
-        // Validação de permissões:
-        // - Admin pode criar pedido para qualquer cliente
+        // Validação de permissões via assertSameTenant:
+        // - Admin Global pode criar pedido para qualquer cliente
         // - Usuário comum só pode criar para seu próprio tenant
-        if (ctx.user.role !== "admin" && ctx.user.tenantId !== input.tenantId) {
-          throw new TRPCError({ 
-            code: "FORBIDDEN", 
-            message: "Você não tem permissão para criar pedidos para este cliente" 
-          });
-        }
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        assertSameTenant(input.tenantId, effectiveTenantId, isGlobalAdmin, "pedido de picking");
         
         const tenantId = input.tenantId;
         const userId = ctx.user.id;
@@ -1967,75 +1934,44 @@ export const appRouter = router({
       }),
 
     // Buscar pedido por ID
-    getById: protectedProcedure
+    getById: tenantProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        // Admin pode ver qualquer pedido, usuário comum apenas do seu tenant
-        let order;
-        if (ctx.user.role === "admin") {
-          const [result] = await db
-            .select({
-              id: pickingOrders.id,
-              tenantId: pickingOrders.tenantId,
-              clientName: tenants.name, // Nome do cliente (tenant)
-              orderNumber: pickingOrders.orderNumber,
-              customerOrderNumber: pickingOrders.customerOrderNumber,
-              customerName: pickingOrders.customerName,
-              priority: pickingOrders.priority,
-              status: pickingOrders.status,
-              totalItems: pickingOrders.totalItems,
-              totalQuantity: pickingOrders.totalQuantity,
-              scheduledDate: pickingOrders.scheduledDate,
-              createdAt: pickingOrders.createdAt,
-              createdBy: pickingOrders.createdBy,
-              assignedTo: pickingOrders.assignedTo,
-              pickedBy: pickingOrders.pickedBy,
-              pickedAt: pickingOrders.pickedAt,
-              nfeNumber: pickingOrders.nfeNumber,
-              nfeKey: pickingOrders.nfeKey,
-            })
-            .from(pickingOrders)
-            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
-            .where(eq(pickingOrders.id, input.id))
-            .limit(1);
-          order = result;
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          const [result] = await db
-            .select({
-              id: pickingOrders.id,
-              tenantId: pickingOrders.tenantId,
-              clientName: tenants.name, // Nome do cliente (tenant)
-              orderNumber: pickingOrders.orderNumber,
-              customerOrderNumber: pickingOrders.customerOrderNumber,
-              customerName: pickingOrders.customerName,
-              priority: pickingOrders.priority,
-              status: pickingOrders.status,
-              totalItems: pickingOrders.totalItems,
-              totalQuantity: pickingOrders.totalQuantity,
-              scheduledDate: pickingOrders.scheduledDate,
-              createdAt: pickingOrders.createdAt,
-              createdBy: pickingOrders.createdBy,
-              assignedTo: pickingOrders.assignedTo,
-              pickedBy: pickingOrders.pickedBy,
-              pickedAt: pickingOrders.pickedAt,
-              nfeNumber: pickingOrders.nfeNumber,
-              nfeKey: pickingOrders.nfeKey,
-            })
-            .from(pickingOrders)
-            .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
-            .where(
-              and(
-                eq(pickingOrders.id, input.id),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            )
-            .limit(1);
-          order = result;
-        }
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        const selectFields = {
+          id: pickingOrders.id,
+          tenantId: pickingOrders.tenantId,
+          clientName: tenants.name,
+          orderNumber: pickingOrders.orderNumber,
+          customerOrderNumber: pickingOrders.customerOrderNumber,
+          customerName: pickingOrders.customerName,
+          priority: pickingOrders.priority,
+          status: pickingOrders.status,
+          totalItems: pickingOrders.totalItems,
+          totalQuantity: pickingOrders.totalQuantity,
+          scheduledDate: pickingOrders.scheduledDate,
+          createdAt: pickingOrders.createdAt,
+          createdBy: pickingOrders.createdBy,
+          assignedTo: pickingOrders.assignedTo,
+          pickedBy: pickingOrders.pickedBy,
+          pickedAt: pickingOrders.pickedAt,
+          nfeNumber: pickingOrders.nfeNumber,
+          nfeKey: pickingOrders.nfeKey,
+        };
+
+        const whereClause = isGlobalAdmin
+          ? eq(pickingOrders.id, input.id)
+          : and(eq(pickingOrders.id, input.id), eq(pickingOrders.tenantId, effectiveTenantId));
+
+        const [order] = await db
+          .select(selectFields)
+          .from(pickingOrders)
+          .leftJoin(tenants, eq(pickingOrders.tenantId, tenants.id))
+          .where(whereClause)
+          .limit(1);
 
         if (!order) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
@@ -2061,7 +1997,7 @@ export const appRouter = router({
       }),
 
     // Atualizar status do pedido
-    updateStatus: protectedProcedure
+    updateStatus: tenantProcedure
       .input(
         z.object({
           id: z.number(),
@@ -2072,30 +2008,21 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        // Admin pode atualizar qualquer pedido, usuário comum apenas do seu tenant
-        if (ctx.user.role === "admin") {
-          await db
-            .update(pickingOrders)
-            .set({ status: input.status })
-            .where(eq(pickingOrders.id, input.id));
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          await db
-            .update(pickingOrders)
-            .set({ status: input.status })
-            .where(
-              and(
-                eq(pickingOrders.id, input.id),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            );
-        }
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        const whereClause = isGlobalAdmin
+          ? eq(pickingOrders.id, input.id)
+          : and(eq(pickingOrders.id, input.id), eq(pickingOrders.tenantId, effectiveTenantId));
+
+        await db
+          .update(pickingOrders)
+          .set({ status: input.status })
+          .where(whereClause);
 
         return { success: true };
       }),
 
     // Atualizar pedido completo (apenas pendentes)
-    update: protectedProcedure
+    update: tenantProcedure
       .input(
         z.object({
           id: z.number(),
@@ -2116,29 +2043,18 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+
         // Buscar pedido para validar permissões e status
-        let order;
-        if (ctx.user.role === "admin") {
-          const [result] = await db
-            .select()
-            .from(pickingOrders)
-            .where(eq(pickingOrders.id, input.id))
-            .limit(1);
-          order = result;
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          const [result] = await db
-            .select()
-            .from(pickingOrders)
-            .where(
-              and(
-                eq(pickingOrders.id, input.id),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            )
-            .limit(1);
-          order = result;
-        }
+        const whereClause = isGlobalAdmin
+          ? eq(pickingOrders.id, input.id)
+          : and(eq(pickingOrders.id, input.id), eq(pickingOrders.tenantId, effectiveTenantId));
+
+        const [order] = await db
+          .select()
+          .from(pickingOrders)
+          .where(whereClause)
+          .limit(1);
 
         if (!order) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
@@ -2152,8 +2068,8 @@ export const appRouter = router({
           });
         }
 
-        // Validar permissão para alterar tenantId (apenas admin)
-        if (ctx.user.role !== "admin" && input.tenantId !== order.tenantId) {
+        // Validar permissão para alterar tenantId (apenas admin global)
+        if (!isGlobalAdmin && input.tenantId !== order.tenantId) {
           throw new TRPCError({ 
             code: "FORBIDDEN", 
             message: "Você não tem permissão para alterar o cliente do pedido" 
@@ -2352,7 +2268,7 @@ export const appRouter = router({
       }),
 
     // Excluir pedidos em lote
-    deleteBatch: protectedProcedure
+    deleteBatch: tenantProcedure
       .input(
         z.object({
           ids: z.array(z.number()).min(1),
@@ -2362,25 +2278,17 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        // Validar permissões e buscar pedidos
-        let ordersToDelete;
-        if (ctx.user.role === "admin") {
-          ordersToDelete = await db
-            .select({ id: pickingOrders.id, status: pickingOrders.status })
-            .from(pickingOrders)
-            .where(inArray(pickingOrders.id, input.ids));
-        } else {
-          const tenantId = ctx.user.tenantId!;
-          ordersToDelete = await db
-            .select({ id: pickingOrders.id, status: pickingOrders.status })
-            .from(pickingOrders)
-            .where(
-              and(
-                inArray(pickingOrders.id, input.ids),
-                eq(pickingOrders.tenantId, tenantId)
-              )
-            );
-        }
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+
+        // Validar permissões e buscar pedidos (admin global vê todos, demais filtram por tenant)
+        const deleteWhereClause = isGlobalAdmin
+          ? inArray(pickingOrders.id, input.ids)
+          : and(inArray(pickingOrders.id, input.ids), eq(pickingOrders.tenantId, effectiveTenantId));
+
+        const ordersToDelete = await db
+          .select({ id: pickingOrders.id, status: pickingOrders.status })
+          .from(pickingOrders)
+          .where(deleteWhereClause);
 
         if (ordersToDelete.length === 0) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum pedido encontrado para exclusão" });
@@ -2512,26 +2420,24 @@ export const appRouter = router({
       }),
 
     // Listar ondas de separação
-    listWaves: protectedProcedure
+    listWaves: tenantProcedure
       .input(
         z.object({
           status: z.enum(["pending", "picking", "picked", "staged", "completed", "cancelled"]).optional(),
-          tenantId: z.number().optional(), // Admin pode filtrar por cliente
+          tenantId: z.number().optional(), // Admin Global pode filtrar por cliente
         }).optional()
       )
       .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-        const tenantId = ctx.user.role === "admin" && input?.tenantId 
-          ? input.tenantId 
-          : ctx.user.tenantId;
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        // Admin global pode ver todas as ondas; demais filtram pelo próprio tenant
+        const wavesWhereClause = isGlobalAdmin
+          ? (input?.tenantId ? eq(pickingWaves.tenantId, input.tenantId) : undefined)
+          : eq(pickingWaves.tenantId, effectiveTenantId);
 
-        if (!tenantId) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário deve pertencer a um cliente" });
-        }
-
-        let query = db
+        const waves = await db
           .select({
             id: pickingWaves.id,
             waveNumber: pickingWaves.waveNumber,
@@ -2546,9 +2452,7 @@ export const appRouter = router({
             createdAt: pickingWaves.createdAt,
           })
           .from(pickingWaves)
-          .where(eq(pickingWaves.tenantId, tenantId));
-
-        const waves = await query;
+          .where(wavesWhereClause);
 
         // Filtrar por status se fornecido
         if (input?.status) {
@@ -2559,21 +2463,19 @@ export const appRouter = router({
       }),
 
     // Buscar detalhes de uma onda
-    getWaveById: protectedProcedure
+    getWaveById: tenantProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input, ctx }) => {
         const { getWaveById } = await import("./waveLogic");
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
         
         try {
           const wave = await getWaveById(input.id);
-          
-          // Verificar permissão
-          if (ctx.user.role !== "admin" && wave.tenantId !== ctx.user.tenantId) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
-          }
-          
+          // Validar isolamento de tenant
+          assertSameTenant(wave.tenantId, effectiveTenantId, isGlobalAdmin, "onda de separação");
           return wave;
         } catch (error: any) {
+          if (error.code === "FORBIDDEN") throw error;
           throw new TRPCError({
             code: "NOT_FOUND",
             message: error.message || "Onda não encontrada",
@@ -2582,7 +2484,7 @@ export const appRouter = router({
       }),
 
     // Atualizar status da onda
-    updateWaveStatus: protectedProcedure
+    updateWaveStatus: tenantProcedure
       .input(
         z.object({
           id: z.number(),
@@ -2607,10 +2509,9 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Onda não encontrada" });
         }
 
-        // Verificar permissão
-        if (ctx.user.role !== "admin" && wave.tenantId !== ctx.user.tenantId) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
-        }
+        // Verificar permissão via assertSameTenant
+        const { effectiveTenantId, isGlobalAdmin } = ctx;
+        assertSameTenant(wave.tenantId, effectiveTenantId, isGlobalAdmin, "onda de separação");
 
         // Atualizar status e campos relacionados
         const updateData: any = { status: input.status };
@@ -2950,8 +2851,11 @@ export const appRouter = router({
                 continue;
               }
 
-              // Validar permissões
-              if (ctx.user.role !== "admin" && ctx.user.tenantId !== tenant.id) {
+              // Validar permissões via assertSameTenant
+              try {
+                const { effectiveTenantId: eTid, isGlobalAdmin: isGA } = ctx as any;
+                assertSameTenant(tenant.id, eTid, isGA, "pedido de picking");
+              } catch {
                 results.errors.push({
                   pedido: orderNumber,
                   erro: "Você não tem permissão para criar pedidos para este cliente",

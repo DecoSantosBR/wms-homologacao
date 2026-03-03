@@ -10,6 +10,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { getDb } from "./db";
 import { getUniqueCode } from "./utils/uniqueCode";
 import { toMySQLDate } from "../shared/utils";
@@ -170,7 +171,7 @@ export const collectorPickingRouter = router({
    * Listar pedidos disponíveis para picking no coletor
    * Retorna pedidos com status "pending" ou "paused" do tenant do operador
    */
-  listOrders: protectedProcedure
+  listOrders: tenantProcedure
     .input(
       z.object({
         tenantId: z.number().optional(), // Admin pode filtrar por tenant
@@ -184,10 +185,7 @@ export const collectorPickingRouter = router({
           message: "Database unavailable",
         });
 
-      const tenantId =
-        ctx.user.role === "admin"
-          ? input.tenantId ?? null
-          : ctx.user.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
 
       const rows = await db
         .select({
@@ -202,8 +200,9 @@ export const collectorPickingRouter = router({
         .from(pickingWaves)
         .where(
           and(
-            tenantId ? eq(pickingWaves.tenantId, tenantId) : undefined,
-            sql`${pickingWaves.status} IN ('pending', 'in_progress', 'picking')` // ✅ Incluir ondas em picking/pausadas
+            // Admin global sem tenant específico vê todas as ondas; demais usuários filtram pelo próprio tenant
+            (!isGlobalAdmin || effectiveTenantId) ? eq(pickingWaves.tenantId, effectiveTenantId) : undefined,
+            sql`${pickingWaves.status} IN ('pending', 'in_progress', 'picking')`
           )
         )
         .orderBy(asc(pickingWaves.createdAt));
@@ -216,7 +215,7 @@ export const collectorPickingRouter = router({
    * - Se não existirem alocações, gera-as agora (chama generatePickingAllocations)
    * - Retorna a rota completa + progresso salvo
    */
-  startOrResume: protectedProcedure
+  startOrResume: tenantProcedure
     .input(z.object({ waveId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -260,18 +259,10 @@ export const collectorPickingRouter = router({
         });
       }
 
-      // Verificar tenant (usar primeiro pedido como referência)
+      // Validar isolamento de tenant (assertSameTenant lança FORBIDDEN se cross-tenant)
       const firstOrder = waveOrders[0];
-      if (
-        ctx.user.role !== "admin" &&
-        ctx.user.tenantId !== null &&
-        firstOrder.tenantId !== ctx.user.tenantId
-      ) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Onda pertence a outro cliente",
-        });
-      }
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      assertSameTenant(firstOrder.tenantId, effectiveTenantId, isGlobalAdmin, "onda de picking");
 
       // Gerar alocações para todos os pedidos da onda (se necessário)
       const { generatePickingAllocations } = await import(
@@ -363,7 +354,7 @@ export const collectorPickingRouter = router({
    * Confirmar leitura de endereço
    * Verifica se o endereço bipado corresponde ao endereço esperado na rota
    */
-  confirmLocation: protectedProcedure
+  confirmLocation: tenantProcedure
     .input(
       z.object({
         pickingOrderId: z.number(),
@@ -998,7 +989,7 @@ export const collectorPickingRouter = router({
   /**
    * Salvar progresso (pausar picking)
    */
-  pause: protectedProcedure
+  pause: tenantProcedure
     .input(
       z.object({
         pickingOrderId: z.number(),
@@ -1173,7 +1164,7 @@ export const collectorPickingRouter = router({
    * Desfazer última bipagem de produto no picking (LIFO)
    * Decrementa pickedQuantity na alocação e nas tabelas sincronizadas
    */
-  undoLastScan: protectedProcedure
+  undoLastScan: tenantProcedure
     .input(z.object({
       allocationId: z.number(),
       pickingOrderId: z.number(),

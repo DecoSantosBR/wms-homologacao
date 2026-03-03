@@ -1,4 +1,5 @@
 import { protectedProcedure, router } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { getDb } from "./db";
 import { 
   blindConferenceSessions, 
@@ -72,40 +73,17 @@ export const blindConferenceRouter = router({
   /**
    * 1. Iniciar Sessão de Conferência Cega
    */
-  start: protectedProcedure
+  start: tenantProcedure
     .input(z.object({
       receivingOrderId: z.number(),
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
     }))
     .mutation(async ({ input, ctx }) => {
-      console.log("[blindConference.start] Context:", {
-        hasUser: !!ctx.user,
-        userId: ctx.user?.id,
-        userName: ctx.user?.name,
-        userRole: ctx.user?.role,
-        userTenantId: ctx.user?.tenantId
-      });
-
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-
-      const userId = ctx.user?.id;
-      if (!userId) {
-        console.error("[blindConference.start] User not authenticated! ctx.user:", ctx.user);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-      }
-
-      // Lógica de Admin Global: admin + tenantId=1 pode escolher tenant
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-      
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[start] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const userId = ctx.user.id;
+      console.log("[start] Tenant Ativo:", effectiveTenantId, "| isGlobalAdmin:", isGlobalAdmin);
 
       // Verificar se ordem existe
       const order = await db.select().from(receivingOrders).where(eq(receivingOrders.id, input.receivingOrderId)).limit(1);
@@ -167,7 +145,7 @@ export const blindConferenceRouter = router({
    * Regra: 1 etiqueta = 1 produto + 1 lote específico (ou sem lote)
    * Busca etiqueta global e registra progresso em blindConferenceItems
    */
-  readLabel: protectedProcedure
+  readLabel: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       labelCode: z.string(),
@@ -177,23 +155,11 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[readLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
 
       // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
-      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não activeTenantId)
+      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não effectiveTenantId)
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
         .where(eq(blindConferenceSessions.id, input.conferenceId))
@@ -385,7 +351,7 @@ export const blindConferenceRouter = router({
   /**
    * 3. Associar Etiqueta a Produto (REFATORADO)
    */
-  associateLabel: protectedProcedure
+  associateLabel: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       labelCode: z.string(),
@@ -401,23 +367,11 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[associateLabel] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
 
       // 🔑 0. BUSCAR SESSÃO DE CONFERÊNCIA PRIMEIRO (ESCOPO RAIZ)
-      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não activeTenantId)
+      // ✅ Busca apenas por ID: a sessão é criada com orderTenantId (não effectiveTenantId)
       const conferenceSession = await db.select()
         .from(blindConferenceSessions)
         .where(eq(blindConferenceSessions.id, input.conferenceId))
@@ -648,7 +602,7 @@ export const blindConferenceRouter = router({
    * 3.5. Registrar Não-Conformidade (NCG)
    * REFATORADO: Cria inventory em NCG imediatamente e atualiza blockedQuantity
    */
-  registerNCG: protectedProcedure
+  registerNCG: tenantProcedure
     .input(z.object({
       receivingOrderItemId: z.number(), // ID do item da ordem
       labelCode: z.string().optional(), // Opcional: será gerado se não fornecido
@@ -666,20 +620,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[registerNCG] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
 
       // 2. BUSCAR DADOS DO ITEM DA ORDEM
       const [orderItem] = await db.select()
@@ -863,7 +805,7 @@ export const blindConferenceRouter = router({
   /**
    * 4. Desfazer Última Leitura (REFATORADO)
    */
-  undoLastReading: protectedProcedure
+  undoLastReading: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       productId: z.number(),
@@ -874,20 +816,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[undoLastReading] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
       // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
       const orderTenantId = await getOrderTenantId(db, input.conferenceId);
       const batchValue = input.batch || "";
@@ -959,7 +889,7 @@ export const blindConferenceRouter = router({
   /**
    * 5. Ajustar Quantidade (REFATORADO)
    */
-  adjustQuantity: protectedProcedure
+  adjustQuantity: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       productId: z.number(),
@@ -972,20 +902,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[adjustQuantity] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
       // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
       const orderTenantId = await getOrderTenantId(db, input.conferenceId);
       const batchValue = input.batch || "";;
@@ -1046,7 +964,7 @@ export const blindConferenceRouter = router({
   /**
    * 6. Obter Resumo da Conferência (REFATORADO)
    */
-  getSummary: protectedProcedure
+  getSummary: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
@@ -1055,20 +973,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-       console.log("[getSummary] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
       // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
       const orderTenantId = await getOrderTenantId(db, input.conferenceId);
       // 1. BUSCAR ITENS DA CONFERÊNCIA
@@ -1112,7 +1018,7 @@ export const blindConferenceRouter = router({
   /**
    * 6.5. Preparar Finalização - Calcular addressedQuantity e retornar resumo
    */
-  prepareFinish: protectedProcedure
+  prepareFinish: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       tenantId: z.number().optional(),
@@ -1121,17 +1027,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
 
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
 
       // 1. BUSCAR SESSÃO
       const session = await db.select()
@@ -1213,7 +1110,7 @@ export const blindConferenceRouter = router({
   /**
    * 7. Finalizar Conferência (REFATORADO)
    */
-  finish: protectedProcedure
+  finish: tenantProcedure
     .input(z.object({
       conferenceId: z.number(),
       tenantId: z.number().optional(), // Opcional: Admin Global pode enviar
@@ -1222,20 +1119,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[finish] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
 
       // TRANSAÇÃO ATÔMICA: Tudo ou nada (mesmo padrão do closeReceivingOrder)
       return await db.transaction(async (tx) => {
@@ -1512,7 +1397,7 @@ export const blindConferenceRouter = router({
    * 7. Buscar Data de Validade do XML (getExpiryDateFromXML)
    * Busca expiryDate de receivingOrderItems por SKU+Lote
    */
-  getExpiryDateFromXML: protectedProcedure
+  getExpiryDateFromXML: tenantProcedure
     .input(z.object({
       sku: z.string(),
       batch: z.string(),
@@ -1523,20 +1408,12 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user?.role === 'admin' && (ctx.user?.tenantId === 1 || ctx.user?.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user?.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
 
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa activeTenantId
+      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa effectiveTenantId
       const orderTenantId = input.conferenceId
         ? await getOrderTenantId(db, input.conferenceId)
-        : activeTenantId;
+        : effectiveTenantId;
 
       // Gera uniqueCode (SKU+Lote)
       const uniqueCode = getUniqueCode(input.sku, input.batch);
@@ -1574,7 +1451,7 @@ export const blindConferenceRouter = router({
    * 8. Fechar Ordem de Recebimento (closeReceivingOrder)
    * Valida divergências, atualiza saldos e ativa etiquetas (RECEIVING → AVAILABLE)
    */
-  closeReceivingOrder: protectedProcedure
+  closeReceivingOrder: tenantProcedure
     .input(z.object({
       receivingOrderId: z.number(),
       adminApprovalToken: z.string().optional(), // Senha do admin se houver divergência
@@ -1584,20 +1461,8 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
-
-      // Lógica de Admin Global
-      const isGlobalAdmin = ctx.user.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId) 
-        ? input.tenantId 
-        : ctx.user.tenantId;
-
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      console.log("[closeReceivingOrder] Tenant Ativo:", activeTenantId, "| isGlobalAdmin:", isGlobalAdmin);
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const userId = ctx.user.id;
       // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
       const [receivingOrderForTenant] = await db.select({ tenantId: receivingOrders.tenantId })
         .from(receivingOrders)
@@ -1727,7 +1592,7 @@ export const blindConferenceRouter = router({
    * checkLabelExists: Verifica se uma etiqueta já está cadastrada em labelAssociations
    * Usado no fluxo NCG para autofill do produto quando a etiqueta já existe
    */
-  checkLabelExists: protectedProcedure
+  checkLabelExists: tenantProcedure
     .input(z.object({
       labelCode: z.string(),
       conferenceId: z.number().optional(), // Opcional: para buscar orderTenantId
@@ -1737,19 +1602,12 @@ export const blindConferenceRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const isGlobalAdmin = ctx.user?.role === 'admin' && (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
-      const activeTenantId = (isGlobalAdmin && input.tenantId)
-        ? input.tenantId
-        : ctx.user?.tenantId;
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
 
-      if (!activeTenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem Tenant vinculado" });
-      }
-
-      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa activeTenantId
+      // ✅ USA orderTenantId se conferenceId for fornecido, caso contrário usa effectiveTenantId
       const orderTenantId = input.conferenceId
         ? await getOrderTenantId(db, input.conferenceId)
-        : activeTenantId;
+        : effectiveTenantId;
 
       // Buscar etiqueta em labelAssociations (mesmo padrão do readLabel)
       const [label] = await db.select()
@@ -1798,7 +1656,7 @@ export const blindConferenceRouter = router({
    * blocked: impede entrada E saída — requer liberação gerencial
    * quarantine: permite entrada, impede saída — requer liberação gerencial
    */
-  releaseInventory: protectedProcedure
+  releaseInventory: tenantProcedure
     .input(z.object({
       inventoryId: z.number().optional(),   // Liberar por ID de registro de estoque
       labelCode: z.string().optional(),     // Liberar por código de etiqueta (LPN)

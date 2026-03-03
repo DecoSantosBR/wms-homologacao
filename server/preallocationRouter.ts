@@ -30,7 +30,7 @@ export const preallocationRouter = router({
       const validations = await validatePreallocations(
         rows,
         input.receivingOrderId,
-        ctx.user.tenantId
+        (ctx as any).effectiveTenantId
       );
 
       const validCount = validations.filter((v) => v.isValid).length;

@@ -1,4 +1,5 @@
 import { router, protectedProcedure } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { z } from "zod";
 import { getDb } from "./db";
 import { getUniqueCode } from "./utils/uniqueCode";
@@ -13,7 +14,7 @@ export const waveRouter = router({
   /**
    * Listar ondas de separação
    */
-  list: protectedProcedure
+  list: tenantProcedure
     .input(z.object({
       status: z.enum(["pending", "picking", "picked", "staged", "completed", "cancelled"]).optional(),
       limit: z.number().min(1).max(500).default(100),
@@ -25,13 +26,12 @@ export const waveRouter = router({
 
       const conditions = [];
 
-      // Admins podem filtrar por tenantId; não-admins só veem as ondas do seu tenant
-      if (ctx.user?.role === "admin") {
-        if (input.tenantId) {
-          conditions.push(eq(pickingWaves.tenantId, input.tenantId));
-        }
-      } else if (ctx.user?.tenantId) {
-        conditions.push(eq(pickingWaves.tenantId, ctx.user.tenantId));
+      // Usar effectiveTenantId do middleware; admin global pode filtrar por tenant específico
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      if (!isGlobalAdmin || effectiveTenantId) {
+        conditions.push(eq(pickingWaves.tenantId, effectiveTenantId));
+      } else if (input.tenantId) {
+        conditions.push(eq(pickingWaves.tenantId, input.tenantId));
       }
 
       if (input.status) {
@@ -51,7 +51,7 @@ export const waveRouter = router({
   /**
    * Criar onda de separação consolidando múltiplos pedidos
    */
-  create: protectedProcedure
+  create: tenantProcedure
     .input(z.object({
       orderIds: z.array(z.number()).min(1, "Selecione pelo menos um pedido"),
     }))
@@ -69,7 +69,7 @@ export const waveRouter = router({
   /**
    * Buscar detalhes de uma onda
    */
-  getById: protectedProcedure
+  getById: tenantProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await getWaveById(input.id);
@@ -79,7 +79,7 @@ export const waveRouter = router({
    * Buscar progresso de execução de uma onda
    * Usado pela interface de picking para exibir status em tempo real
    */
-  getPickingProgress: protectedProcedure
+  getPickingProgress: tenantProcedure
     .input(z.object({ waveId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -169,7 +169,7 @@ export const waveRouter = router({
    * Registrar item separado (escanear etiqueta)
    * Atualiza quantidade separada e status do item
    */
-  registerPickedItem: protectedProcedure
+  registerPickedItem: tenantProcedure
     .input(z.object({
       waveId: z.number(),
       itemId: z.number(), // ID do pickingWaveItem
@@ -353,7 +353,7 @@ export const waveRouter = router({
   /**
    * Cancelar onda (apenas ondas pending/picking)
    */
-  cancel: protectedProcedure
+  cancel: tenantProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -378,7 +378,7 @@ export const waveRouter = router({
    * Excluir onda separada (completed)
    * Reverte separação, libera estoque reservado e cancela onda
    */
-  deleteCompleted: protectedProcedure
+  deleteCompleted: tenantProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -436,7 +436,7 @@ export const waveRouter = router({
    * Editar quantidades separadas de uma onda completed
    * Permite ajustar quantidades para corrigir erros de separação
    */
-  editCompleted: protectedProcedure
+  editCompleted: tenantProcedure
     .input(z.object({ 
       waveId: z.number(),
       items: z.array(z.object({
@@ -528,7 +528,7 @@ export const waveRouter = router({
   /**
    * Excluir onda (apenas ondas pendentes ou canceladas)
    */
-  delete: protectedProcedure
+  delete: tenantProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -585,7 +585,7 @@ export const waveRouter = router({
   /**
    * Gerar documento PDF da onda de separação
    */
-  generateDocument: protectedProcedure
+  generateDocument: tenantProcedure
     .input(z.object({
       id: z.number(),
     }))
@@ -603,7 +603,7 @@ export const waveRouter = router({
    * Finalizar onda de separação
    * Verifica se todos os itens foram separados e atualiza status da onda e pedidos
    */
-  completeWave: protectedProcedure
+  completeWave: tenantProcedure
     .input(z.object({
       waveId: z.number(),
     }))
@@ -668,7 +668,7 @@ export const waveRouter = router({
   /**
    * Validar endereço de separação (usado pelo coletor)
    */
-  validateLocation: protectedProcedure
+  validateLocation: tenantProcedure
     .input(z.object({
       waveId: z.number(),
       locationCode: z.string(),
@@ -716,7 +716,7 @@ export const waveRouter = router({
    * Escanear produto (usado pelo coletor)
    * Verifica se etiqueta está associada ou se precisa associar
    */
-  scanProduct: protectedProcedure
+  scanProduct: tenantProcedure
     .input(z.object({
       waveId: z.number(),
       locationId: z.number(),
@@ -807,7 +807,7 @@ export const waveRouter = router({
   /**
    * Associar etiqueta com produto (usado pelo coletor)
    */
-  associateLabel: protectedProcedure
+  associateLabel: tenantProcedure
     .input(z.object({
       waveId: z.number(),
       locationId: z.number(),
@@ -846,11 +846,8 @@ export const waveRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
       }
 
-      // Criar associação
-      const tenantId = ctx.user.tenantId;
-      if (!tenantId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem tenant vinculado" });
-      }
+      // Criar associação - usar effectiveTenantId do middleware de isolamento
+      const tenantId = ctx.effectiveTenantId;
       await db.insert(labelAssociations).values({
         tenantId,
         labelCode: input.labelCode,
@@ -907,7 +904,7 @@ export const waveRouter = router({
   /**
    * Cancelar onda de separação e reverter reservas atomicamente
    */
-  cancelWithRevert: protectedProcedure
+  cancelWithRevert: tenantProcedure
     .input(z.object({ waveId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();

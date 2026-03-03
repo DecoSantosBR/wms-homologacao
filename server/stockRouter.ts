@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { warehouseLocations, products, inventory, labelAssociations } from "../drizzle/schema";
 import { getDb } from "./db";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import {
   getInventoryPositions,
   getInventorySummary,
@@ -72,26 +73,30 @@ export const stockRouter = router({
   /**
    * Obtém posições de estoque com filtros avançados
    */
-  getPositions: protectedProcedure
+  getPositions: tenantProcedure
     .input(inventoryFiltersSchema)
-    .query(async ({ input }) => {
-
-      return await getInventoryPositions(input);
+    .query(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      // Não-admins sempre filtram pelo próprio tenant
+      const tenantId = isGlobalAdmin ? (input.tenantId ?? effectiveTenantId) : effectiveTenantId;
+      return await getInventoryPositions({ ...input, tenantId });
     }),
 
   /**
    * Obtém resumo de estoque (cards de métricas)
    */
-  getSummary: protectedProcedure
+  getSummary: tenantProcedure
     .input(inventoryFiltersSchema)
-    .query(async ({ input }) => {
-      return await getInventorySummary(input);
+    .query(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? (input.tenantId ?? effectiveTenantId) : effectiveTenantId;
+      return await getInventorySummary({ ...input, tenantId });
     }),
 
   /**
    * Obtém saldo disponível em um endereço
    */
-  getLocationStock: protectedProcedure
+  getLocationStock: tenantProcedure
     .input(
       z.object({
         locationId: z.number(),
@@ -110,7 +115,7 @@ export const stockRouter = router({
   /**
    * Obtém produtos com estoque abaixo do mínimo
    */
-  getLowStock: protectedProcedure
+  getLowStock: tenantProcedure
     .input(z.object({ minQuantity: z.number().optional() }))
     .query(async ({ input }) => {
       return await getLowStockProducts(input.minQuantity);
@@ -119,7 +124,7 @@ export const stockRouter = router({
   /**
    * Obtém produtos próximos do vencimento
    */
-  getExpiring: protectedProcedure
+  getExpiring: tenantProcedure
     .input(z.object({ daysThreshold: z.number().optional() }))
     .query(async ({ input }) => {
       return await getExpiringProducts(input.daysThreshold);
@@ -132,11 +137,17 @@ export const stockRouter = router({
   /**
    * Registra movimentação de estoque
    */
-  registerMovement: protectedProcedure
+  registerMovement: tenantProcedure
     .input(registerMovementSchema)
     .mutation(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      // Validar que o tenantId do input pertence ao tenant do usuário
+      if (input.tenantId) {
+        assertSameTenant(input.tenantId, effectiveTenantId, isGlobalAdmin, "movimentação de estoque");
+      }
       return await registerMovement({
         ...input,
+        tenantId: effectiveTenantId,
         performedBy: ctx.user.id,
       });
     }),
@@ -144,7 +155,7 @@ export const stockRouter = router({
   /**
    * Obtém histórico de movimentações
    */
-  getMovements: protectedProcedure
+  getMovements: tenantProcedure
     .input(movementHistorySchema)
     .query(async ({ input }) => {
       return await getMovementHistory(input);
@@ -153,30 +164,34 @@ export const stockRouter = router({
   /**
    * Obtém produtos disponíveis em um endereço
    */
-  getLocationProducts: protectedProcedure
+  getLocationProducts: tenantProcedure
     .input(z.object({ 
       locationId: z.number(),
       tenantId: z.number().optional().nullable(),
     }))
-    .query(async ({ input }) => {
-      return await getLocationProducts(input.locationId, input.tenantId);
+    .query(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? (input.tenantId ?? effectiveTenantId) : effectiveTenantId;
+      return await getLocationProducts(input.locationId, tenantId);
     }),
 
   /**
    * Lista endereços que possuem estoque alocado
    */
-  getLocationsWithStock: protectedProcedure
+  getLocationsWithStock: tenantProcedure
     .input(z.object({ 
       tenantId: z.number().optional().nullable(),
     }).optional())
-    .query(async ({ input }) => {
-      return await getLocationsWithStock(input?.tenantId);
+    .query(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? (input?.tenantId ?? effectiveTenantId) : effectiveTenantId;
+      return await getLocationsWithStock(tenantId);
     }),
 
   /**
    * Lista endereços de destino válidos baseado no tipo de movimentação
    */
-  getDestinationLocations: protectedProcedure
+  getDestinationLocations: tenantProcedure
     .input(z.object({
       movementType: z.enum(["transfer", "adjustment", "return", "disposal", "quality"]),
       productId: z.number().optional(),
@@ -190,7 +205,7 @@ export const stockRouter = router({
   /**
    * Sugere endereço de destino baseado em pré-alocação (zona REC)
    */
-  getSuggestedDestination: protectedProcedure
+  getSuggestedDestination: tenantProcedure
     .input(z.object({
       fromLocationId: z.number(),
       productId: z.number(),
@@ -208,21 +223,21 @@ export const stockRouter = router({
   /**
    * Obtém ocupação por zona
    */
-  getOccupancyByZone: protectedProcedure.query(async () => {
+  getOccupancyByZone: tenantProcedure.query(async () => {
     return await getOccupancyByZone();
   }),
 
   /**
    * Obtém ocupação geral do armazém
    */
-  getOverallOccupancy: protectedProcedure.query(async () => {
+  getOverallOccupancy: tenantProcedure.query(async () => {
     return await getOverallOccupancy();
   }),
 
   /**
    * Obtém sugestões de otimização
    */
-  getOptimizationSuggestions: protectedProcedure.query(async () => {
+  getOptimizationSuggestions: tenantProcedure.query(async () => {
     return await getOptimizationSuggestions();
   }),
 
@@ -233,9 +248,12 @@ export const stockRouter = router({
   /**
    * Exporta estoque para Excel
    */
-  exportToExcel: protectedProcedure
+  exportToExcel: tenantProcedure
     .input(inventoryFiltersSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tenantId = isGlobalAdmin ? (input.tenantId ?? effectiveTenantId) : effectiveTenantId;
+      input = { ...input, tenantId };
       const ExcelJS = (await import('exceljs')).default;
       const positions = await getInventoryPositions(input);
       
@@ -296,7 +314,7 @@ export const stockRouter = router({
   /**
    * Busca endereço por código
    */
-  getLocationByCode: protectedProcedure
+  getLocationByCode: tenantProcedure
     .input(z.object({ code: z.string() }))
     .query(async ({ input }) => {
       const dbConn = await getDb();
@@ -323,7 +341,7 @@ export const stockRouter = router({
   /**
    * Busca produto por código de etiqueta e retorna dados do estoque no endereço de origem
    */
-  getProductByCode: protectedProcedure
+  getProductByCode: tenantProcedure
     .input(z.object({ 
       code: z.string(),
       locationCode: z.string().optional(),

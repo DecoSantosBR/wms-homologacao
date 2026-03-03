@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc.js";
+import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { getDb } from "./db.js";
 import { 
   inventory, products, tenants, warehouseLocations, warehouseZones, pickingOrders, 
@@ -51,7 +52,7 @@ export const reportsRouter = router({
    * 1. Posição de Estoque
    * Visão detalhada do estoque por produto, lote, endereço e cliente
    */
-  stockPosition: protectedProcedure
+  stockPosition: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       productId: z.number().optional(),
@@ -66,7 +67,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, productId, batchNumber, expiryDateStart, expiryDateEnd, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       if (productId) conditions.push(eq(inventory.productId, productId));
@@ -116,7 +117,7 @@ export const reportsRouter = router({
    * 2. Estoque por Cliente
    * Totalização de estoque agrupado por cliente
    */
-  stockByTenant: protectedProcedure
+  stockByTenant: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       page: z.number().default(1),
@@ -127,7 +128,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       // Filtrar apenas registros com estoque > 0
@@ -160,7 +161,7 @@ export const reportsRouter = router({
    * 3. Estoque por Endereço
    * Ocupação e utilização de endereços de armazenagem
    */
-  stockByLocation: protectedProcedure
+  stockByLocation: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       locationType: z.enum(['whole', 'fraction']).optional(),
@@ -172,7 +173,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, locationType, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       if (locationType) conditions.push(eq(warehouseLocations.locationType, locationType));
@@ -210,7 +211,7 @@ export const reportsRouter = router({
    * 4. Produtos Próximos ao Vencimento
    * Alerta de produtos com validade próxima (FEFO)
    */
-  expiringProducts: protectedProcedure
+  expiringProducts: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       daysUntilExpiry: z.number().default(90),
@@ -222,7 +223,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, daysUntilExpiry, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + daysUntilExpiry);
@@ -265,7 +266,7 @@ export const reportsRouter = router({
    * 5. Disponibilidade de Produtos
    * Análise de disponibilidade vs reservas
    */
-  productAvailability: protectedProcedure
+  productAvailability: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       productId: z.number().optional(),
@@ -277,7 +278,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, productId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       const conditions = [];
       if (effectiveTenantId) conditions.push(eq(inventory.tenantId, effectiveTenantId));
       if (productId) conditions.push(eq(inventory.productId, productId));
@@ -313,7 +314,7 @@ export const reportsRouter = router({
    * 6. Movimentações de Estoque
    * Histórico detalhado de movimentações
    */
-  inventoryMovements: protectedProcedure
+  inventoryMovements: tenantProcedure
     .input(z.object({
       tenantId: z.number().optional(),
       productId: z.number().optional(),
@@ -329,7 +330,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { tenantId, productId, movementType, startDate, endDate, userId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       const conditions = [
         gte(inventoryMovements.createdAt, new Date(startDate)),
@@ -377,7 +378,7 @@ export const reportsRouter = router({
   /**
    * Salvar filtros favoritos
    */
-  saveFavorite: protectedProcedure
+  saveFavorite: tenantProcedure
     .input(z.object({
       reportType: z.string(),
       favoriteName: z.string(),
@@ -400,7 +401,7 @@ export const reportsRouter = router({
   /**
    * Listar filtros favoritos do usuário
    */
-  listFavorites: protectedProcedure
+  listFavorites: tenantProcedure
     .input(z.object({
       reportType: z.string().optional(),
     }).optional())
@@ -433,7 +434,7 @@ export const reportsRouter = router({
    * 1. Produtividade de Separação
    * Itens separados por hora, por operador
    */
-  pickingProductivity: protectedProcedure
+  pickingProductivity: tenantProcedure
     .input(z.object({
       startDate: z.string(),
       endDate: z.string(),
@@ -447,7 +448,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { startDate, endDate, operatorId, tenantId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       const conditions = [
         gte(pickingOrders.pickedAt, new Date(startDate)),
@@ -503,7 +504,7 @@ export const reportsRouter = router({
    * 2. Acuracidade de Picking
    * Divergências vs total de conferências
    */
-  pickingAccuracy: protectedProcedure
+  pickingAccuracy: tenantProcedure
     .input(z.object({
       startDate: z.string(),
       endDate: z.string(),
@@ -516,7 +517,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { startDate, endDate, tenantId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       // Buscar conferências de stage no período
       const conditions = [
@@ -569,7 +570,7 @@ export const reportsRouter = router({
    * 3. Tempo Médio de Ciclo
    * Tempo entre criação e finalização de pedidos
    */
-  averageCycleTime: protectedProcedure
+  averageCycleTime: tenantProcedure
     .input(z.object({
       startDate: z.string(),
       endDate: z.string(),
@@ -582,7 +583,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { startDate, endDate, tenantId, page, pageSize } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       const conditions = [
         gte(pickingOrders.createdAt, new Date(startDate)),
@@ -630,7 +631,7 @@ export const reportsRouter = router({
    * 4. Pedidos por Status
    * Distribuição de pedidos por status
    */
-  ordersByStatus: protectedProcedure
+  ordersByStatus: tenantProcedure
     .input(z.object({
       startDate: z.string().optional(),
       endDate: z.string().optional(),
@@ -641,7 +642,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       const { startDate, endDate, tenantId } = input;
-      const effectiveTenantId = ctx.user.role === 'admin' ? tenantId : ctx.user.tenantId;
+      const effectiveTenantId = ctx.isGlobalAdmin ? (tenantId ?? ctx.effectiveTenantId) : ctx.effectiveTenantId;
       
       const conditions = [];
       if (startDate) conditions.push(gte(pickingOrders.createdAt, new Date(startDate)));
@@ -679,7 +680,7 @@ export const reportsRouter = router({
    * 5. Performance de Operadores
    * Métricas individuais de operadores
    */
-  operatorPerformance: protectedProcedure
+  operatorPerformance: tenantProcedure
     .input(z.object({
       startDate: z.string(),
       endDate: z.string(),
@@ -742,7 +743,7 @@ export const reportsRouter = router({
   /**
    * Adicionar favorito
    */
-  addFavorite: protectedProcedure
+  addFavorite: tenantProcedure
     .input(z.object({
       id: z.number(),
     }))
@@ -763,7 +764,7 @@ export const reportsRouter = router({
   /**
    * Registrar geração de relatório (para auditoria)
    */
-  logReportGeneration: protectedProcedure
+  logReportGeneration: tenantProcedure
     .input(z.object({
       reportType: z.string(),
       reportCategory: z.enum(['stock', 'operational', 'shipping', 'audit']),
@@ -777,7 +778,7 @@ export const reportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
       await db.insert(reportLogs).values({
-        tenantId: ctx.user.tenantId ?? null,
+        tenantId: (ctx as any).effectiveTenantId ?? null,
         userId: ctx.user.id,
         reportType: input.reportType,
         reportCategory: input.reportCategory,
