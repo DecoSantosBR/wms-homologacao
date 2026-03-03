@@ -7,7 +7,58 @@
 
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { syncInventoryReservations } from "./syncReservations";
+
+/**
+ * Tabelas disponíveis para limpeza pelo Admin Global (tenantId === 1).
+ * Cada entrada define o nome da tabela SQL e uma descrição legível.
+ * ATENÇÃO: truncate é irreversível. Tabelas de configuração (users, products,
+ * locations, tenants) são intencionalmente excluídas desta lista.
+ */
+export const CLEANABLE_TABLES = [
+  { key: "inventory",              label: "Estoque (inventory)",                    sql: "inventory" },
+  { key: "inventoryMovements",     label: "Movimentações de Estoque",               sql: "inventoryMovements" },
+  { key: "labelAssociations",      label: "Associações de Etiqueta",                sql: "labelAssociations" },
+  { key: "labelReadings",          label: "Leituras de Etiqueta",                   sql: "labelReadings" },
+  { key: "blindConferenceSessions",label: "Sessões de Conferência Cega",            sql: "blindConferenceSessions" },
+  { key: "blindConferenceItems",   label: "Itens de Conferência Cega",              sql: "blindConferenceItems" },
+  { key: "blindConferenceAdjustments", label: "Ajustes de Conferência Cega",       sql: "blindConferenceAdjustments" },
+  { key: "receivingOrders",        label: "Ordens de Recebimento",                  sql: "receivingOrders" },
+  { key: "receivingOrderItems",    label: "Itens de Ordens de Recebimento",         sql: "receivingOrderItems" },
+  { key: "receivingConferences",   label: "Conferências de Recebimento",            sql: "receivingConferences" },
+  { key: "receivingDivergences",   label: "Divergências de Recebimento",            sql: "receivingDivergences" },
+  { key: "receivingPreallocations",label: "Pré-Alocações de Recebimento",           sql: "receivingPreallocations" },
+  { key: "nonConformities",        label: "Não-Conformidades (NCG)",                sql: "nonConformities" },
+  { key: "divergenceApprovals",    label: "Aprovações de Divergência",              sql: "divergenceApprovals" },
+  { key: "pickingOrders",          label: "Pedidos de Separação",                   sql: "pickingOrders" },
+  { key: "pickingOrderItems",      label: "Itens de Pedidos de Separação",          sql: "pickingOrderItems" },
+  { key: "pickingWaves",           label: "Ondas de Separação",                     sql: "pickingWaves" },
+  { key: "pickingWaveItems",       label: "Itens de Ondas de Separação",            sql: "pickingWaveItems" },
+  { key: "pickingAllocations",     label: "Alocações de Picking",                   sql: "pickingAllocations" },
+  { key: "pickingAuditLogs",       label: "Logs de Auditoria de Picking",           sql: "pickingAuditLogs" },
+  { key: "pickingProgress",        label: "Progresso de Picking",                   sql: "pickingProgress" },
+  { key: "stageChecks",            label: "Conferências de Expedição (Stage)",      sql: "stageChecks" },
+  { key: "stageCheckItems",        label: "Itens de Conferência de Expedição",      sql: "stageCheckItems" },
+  { key: "shipments",              label: "Expedições (Shipments)",                 sql: "shipments" },
+  { key: "shipmentManifests",      label: "Romaneios",                              sql: "shipmentManifests" },
+  { key: "shipmentManifestItems",  label: "Itens de Romaneio",                      sql: "shipmentManifestItems" },
+  { key: "invoices",               label: "Notas Fiscais (Invoices)",               sql: "invoices" },
+  { key: "pickingInvoiceItems",    label: "Itens de NF de Picking",                 sql: "pickingInvoiceItems" },
+  { key: "receivingInvoiceItems",  label: "Itens de NF de Recebimento",             sql: "receivingInvoiceItems" },
+  { key: "auditLogs",              label: "Logs de Auditoria Geral",                sql: "auditLogs" },
+  { key: "reportLogs",             label: "Logs de Relatórios",                     sql: "reportLogs" },
+  { key: "labelPrintHistory",      label: "Histórico de Impressão de Etiquetas",   sql: "labelPrintHistory" },
+  { key: "productLabels",          label: "Etiquetas de Produto",                   sql: "productLabels" },
+  { key: "productLocationMapping", label: "Mapeamento Produto-Endereço",            sql: "productLocationMapping" },
+  { key: "inventoryCounts",        label: "Contagens de Inventário",                sql: "inventoryCounts" },
+  { key: "inventoryCountItems",    label: "Itens de Contagem de Inventário",        sql: "inventoryCountItems" },
+  { key: "recalls",                label: "Recalls",                                sql: "recalls" },
+  { key: "returns",                label: "Devoluções",                             sql: "returns" },
+  { key: "clientPortalSessions",   label: "Sessões do Portal do Cliente",           sql: "clientPortalSessions" },
+] as const;
+
+export type CleanableTableKey = typeof CLEANABLE_TABLES[number]["key"];
 
 export const maintenanceRouter = router({
   /**
@@ -81,6 +132,141 @@ export const maintenanceRouter = router({
             orderStats.activeSeparatedOrders +
             orderStats.activeInWaveOrders,
         },
+      };
+    }),
+
+  /**
+   * Listar tabelas disponíveis para limpeza
+   */
+  listCleanableTables: protectedProcedure
+    .query(({ ctx }) => {
+      if (ctx.user.role !== "admin" || ctx.user.tenantId !== 1) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o Admin Global (tenantId: 1) pode acessar esta função" });
+      }
+      return CLEANABLE_TABLES.map(t => ({ key: t.key, label: t.label }));
+    }),
+
+  /**
+   * Truncar tabelas selecionadas
+   *
+   * Acesso restrito: role === 'admin' E tenantId === 1 (Global Admin Med@x).
+   * As tabelas são truncadas em ordem segura (filhos antes de pais) para
+   * evitar violações de FK. A operação é registrada no console para auditoria.
+   *
+   * dryRun = true  → apenas conta os registros, sem deletar
+   * dryRun = false → executa o DELETE em cada tabela selecionada
+   */
+  truncateTables: protectedProcedure
+    .input(
+      z.object({
+        tables: z.array(z.string()).min(1, "Selecione ao menos uma tabela"),
+        dryRun: z.boolean().default(true),
+        confirmPhrase: z.string().optional(), // deve ser "CONFIRMAR LIMPEZA" para dryRun=false
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // ── Verificação de acesso ──────────────────────────────────────────────
+      if (ctx.user.role !== "admin" || ctx.user.tenantId !== 1) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas o Admin Global (tenantId: 1) pode executar limpeza de tabelas",
+        });
+      }
+
+      if (!input.dryRun && input.confirmPhrase !== "CONFIRMAR LIMPEZA") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Frase de confirmação incorreta. Digite exatamente: CONFIRMAR LIMPEZA",
+        });
+      }
+
+      // ── Validar que todas as tabelas solicitadas estão na whitelist ────────
+      const allowedKeys = new Set(CLEANABLE_TABLES.map(t => t.key));
+      const invalidTables = input.tables.filter(t => !allowedKeys.has(t as CleanableTableKey));
+      if (invalidTables.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Tabelas não permitidas: ${invalidTables.join(", ")}`,
+        });
+      }
+
+      const { getDb } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // ── Ordenar tabelas para respeitar dependências FK (filhos primeiro) ───
+      // A ordem na CLEANABLE_TABLES já está estruturada de forma segura;
+      // mantemos a ordem de input mas priorizamos as tabelas filhas.
+      const FK_ORDER: CleanableTableKey[] = [
+        "clientPortalSessions", "reportLogs", "auditLogs",
+        "pickingAuditLogs", "pickingProgress", "pickingAllocations",
+        "pickingWaveItems", "pickingWaves", "stageCheckItems", "stageChecks",
+        "shipmentManifestItems", "shipmentManifests", "shipments",
+        "pickingInvoiceItems", "receivingInvoiceItems", "invoices",
+        "pickingOrderItems", "pickingOrders",
+        "blindConferenceAdjustments", "blindConferenceItems", "blindConferenceSessions",
+        "divergenceApprovals", "nonConformities",
+        "receivingDivergences", "receivingConferences", "receivingPreallocations",
+        "receivingOrderItems", "receivingOrders",
+        "labelReadings", "labelAssociations", "labelPrintHistory", "productLabels",
+        "inventoryCountItems", "inventoryCounts",
+        "inventoryMovements", "inventory",
+        "productLocationMapping", "returns", "recalls",
+      ];
+
+      const orderedTables = [
+        ...FK_ORDER.filter(k => input.tables.includes(k)),
+        ...input.tables.filter(k => !FK_ORDER.includes(k as CleanableTableKey)),
+      ];
+
+      // ── Contar registros (dry-run ou pré-confirmação) ──────────────────────
+      const counts: Record<string, number> = {};
+      for (const key of orderedTables) {
+        const tableInfo = CLEANABLE_TABLES.find(t => t.key === key)!;
+        const [row] = await db.execute(sql.raw(`SELECT COUNT(*) as cnt FROM \`${tableInfo.sql}\``)) as unknown as [{ cnt: number }[]];
+        counts[key] = Number(row[0]?.cnt ?? 0);
+      }
+
+      if (input.dryRun) {
+        return {
+          dryRun: true,
+          tables: orderedTables.map(key => ({
+            key,
+            label: CLEANABLE_TABLES.find(t => t.key === key)!.label,
+            recordCount: counts[key],
+          })),
+          totalRecords: Object.values(counts).reduce((a, b) => a + b, 0),
+          deletedTotal: 0,
+        };
+      }
+
+      // ── Executar limpeza ───────────────────────────────────────────────────
+      const results: Array<{ key: string; label: string; deleted: number }> = [];
+      let deletedTotal = 0;
+
+      // Desabilitar FK checks temporariamente para truncate seguro
+      await db.execute(sql.raw("SET FOREIGN_KEY_CHECKS = 0"));
+      try {
+        for (const key of orderedTables) {
+          const tableInfo = CLEANABLE_TABLES.find(t => t.key === key)!;
+          await db.execute(sql.raw(`DELETE FROM \`${tableInfo.sql}\``));
+          const deleted = counts[key];
+          results.push({ key, label: tableInfo.label, deleted });
+          deletedTotal += deleted;
+          console.log(
+            `[maintenanceRouter] TRUNCATE ${tableInfo.sql}: ${deleted} registros removidos por ${ctx.user.name} (id=${ctx.user.id}, tenantId=${ctx.user.tenantId})`
+          );
+        }
+      } finally {
+        await db.execute(sql.raw("SET FOREIGN_KEY_CHECKS = 1"));
+      }
+
+      return {
+        dryRun: false,
+        tables: results,
+        totalRecords: Object.values(counts).reduce((a, b) => a + b, 0),
+        deletedTotal,
       };
     }),
 
