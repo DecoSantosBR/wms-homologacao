@@ -123,10 +123,25 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             }
             
             .info-value {
+              display: inline-block;
+              min-width: 200px;
+              padding-bottom: 2px;
+            }
+
+            .info-value-blank {
               border-bottom: 1px solid #000;
               display: inline-block;
               min-width: 200px;
               padding-bottom: 2px;
+            }
+
+            .info-value-temp {
+              border-bottom: 1px solid #000;
+              display: inline-block;
+              width: 60px;
+              padding-bottom: 2px;
+              position: relative;
+              top: 3px;
             }
             
             .section-title {
@@ -253,7 +268,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
 
         <div className="title">ROMANEIO DE CARGA</div>
 
-        <div className="info-row">
+          <div className="info-row">
           <div className="info-field">
             <span className="info-label">Romaneio nº:</span>
             <span className="info-value">{data.manifest.number}</span>
@@ -271,7 +286,7 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Temperatura do Baú (°C):</span>
-            <span className="info-value"></span>
+            <span className="info-value-temp"></span>
           </div>
         </div>
 
@@ -300,18 +315,18 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
           </div>
           <div className="info-field">
             <span className="info-label">Placa:</span>
-            <span className="info-value"></span>
+            <span className="info-value-blank"></span>
           </div>
         </div>
 
         <div className="info-row">
           <div className="info-field">
             <span className="info-label">Motorista:</span>
-            <span className="info-value"></span>
+            <span className="info-value-blank"></span>
           </div>
           <div className="info-field">
             <span className="info-label">CNH:</span>
-            <span className="info-value"></span>
+            <span className="info-value-blank"></span>
           </div>
         </div>
 
@@ -360,15 +375,15 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
         <div className="signatures">
           <div className="signature-row">
             <div className="signature-field">
+              <div className="signature-line"></div>
               <div className="signature-label">Responsável:</div>
-              <div className="signature-line">Assinatura</div>
             </div>
           </div>
 
           <div className="signature-row">
             <div className="signature-field">
+              <div className="signature-line"></div>
               <div className="signature-label">Motorista:</div>
-              <div className="signature-line">Assinatura</div>
             </div>
           </div>
         </div>
