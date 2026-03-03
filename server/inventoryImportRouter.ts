@@ -43,28 +43,48 @@ function deriveStatusFromZone(zoneCode: string | null | undefined): "available" 
 }
 
 /**
- * Converte um valor de data do Excel para objeto Date.
- * Aceita:
+ * Normaliza um Date para meia-noite no horário LOCAL (startOfDay).
+ * Isso evita o "fuso horário fantasma": quando o servidor está em UTC
+ * e a data é 2030-12-24 00:00:00 UTC, ao converter para GMT-3 o dia
+ * seria 2030-12-23 21:00:00 — resultando em um dia a menos no banco.
+ * Usando getFullYear/getMonth/getDate (hora local) e reconstruindo a
+ * data com new Date(y, m, d) garantimos meia-noite local.
+ */
+function startOfDayLocal(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/**
+ * Converte um valor de data do Excel para objeto Date normalizado para
+ * meia-noite local (startOfDay). Aceita:
  *   - string "DD/MM/YYYY"
  *   - string "YYYY-MM-DD"
- *   - número serial do Excel (dias desde 1900-01-01)
+ *   - string "YYYY-MM-DD HH:MM:SS" (exportação MySQL)
+ *   - número serial do Excel (dias desde 1900-01-01, com bug de 1900-02-29)
+ *   - objeto Date
+ *
+ * Retorna null se o valor for inválido ou vazio.
  */
 function parseExcelDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
 
-  // Número serial do Excel
+  // ── Número serial do Excel ───────────────────────────────────────────────
+  // O Excel armazena datas como dias desde 1899-12-30 (com bug de 1900-02-29).
+  // Multiplicamos por ms/dia e somamos ao epoch do Excel para obter um Date UTC.
+  // Em seguida normalizamos para meia-noite local para evitar perda de um dia.
   if (typeof value === "number") {
-    // Excel serial: dias desde 1900-01-01 (com bug de 1900-02-29)
-    const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
-    const ms = value * 24 * 60 * 60 * 1000;
-    return new Date(excelEpoch.getTime() + ms);
+    if (value < 1) return null; // Serial inválido (0 = 1900-01-00)
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // 1899-12-30 UTC
+    const ms = Math.round(value) * 24 * 60 * 60 * 1000;
+    const rawDate = new Date(excelEpoch.getTime() + ms);
+    return startOfDayLocal(rawDate);
   }
 
   if (typeof value === "string") {
     const s = value.trim();
     if (!s) return null;
 
-    // DD/MM/YYYY
+    // DD/MM/YYYY — construído diretamente como hora local (sem UTC)
     const ddmmyyyy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (ddmmyyyy) {
       return new Date(
@@ -74,7 +94,7 @@ function parseExcelDate(value: unknown): Date | null {
       );
     }
 
-    // YYYY-MM-DD
+    // YYYY-MM-DD — construído diretamente como hora local
     const yyyymmdd = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (yyyymmdd) {
       return new Date(
@@ -84,12 +104,24 @@ function parseExcelDate(value: unknown): Date | null {
       );
     }
 
-    // Tentativa genérica
+    // YYYY-MM-DD HH:MM:SS (exportação MySQL com hora zerada)
+    // Extraímos apenas a parte da data e construímos como hora local
+    const yyyymmddHHMMSS = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T]/);
+    if (yyyymmddHHMMSS) {
+      return new Date(
+        parseInt(yyyymmddHHMMSS[1]),
+        parseInt(yyyymmddHHMMSS[2]) - 1,
+        parseInt(yyyymmddHHMMSS[3])
+      );
+    }
+
+    // Tentativa genérica — normalizar para meia-noite local
     const d = new Date(s);
-    if (!isNaN(d.getTime())) return d;
+    if (!isNaN(d.getTime())) return startOfDayLocal(d);
   }
 
-  if (value instanceof Date) return value;
+  // Objeto Date já existente — normalizar para meia-noite local
+  if (value instanceof Date) return startOfDayLocal(value);
 
   return null;
 }
@@ -252,8 +284,15 @@ export const inventoryImportRouter = router({
           // Gerar uniqueCode estritamente como SKU-Lote
           const uniqueCode = buildUniqueCode(row.sku, row.batch);
 
-          // Converter data de validade
+          // Converter e validar data de validade
+          // REGRA: data de validade é obrigatória — item sem validade é erro grave de inventário
           const expiryDateObj = parseExcelDate(row.expiryDate);
+          if (!expiryDateObj) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Linha ${lineNum} (SKU: ${row.sku}, Endereço: ${row.locationCode}): Data de validade ausente ou inválida. Um item-lote sem validade é um erro grave de inventário. Verifique se a coluna expiryDate está preenchida e no formato correto (DD/MM/AAAA, AAAA-MM-DD ou número serial do Excel).`,
+            });
+          }
           const expiryDateStr = toMySQLDate(expiryDateObj);
 
           // Verificar se já existe registro para este produto+lote+endereço+tenant

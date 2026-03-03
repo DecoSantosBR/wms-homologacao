@@ -348,7 +348,9 @@ export const maintenanceRouter = router({
         }
       }
 
-      // ── Critério 2: REC com quantity = 0 ──────────────────────────────────
+      // ── Critério 2: quantity = 0 em qualquer zona ─────────────────────────
+      // Inventory deve conter APENAS registros com saldo positivo.
+      // Registros com quantity=0 são resíduos de operações que não executaram o DELETE.
       const zeroQtyItems = await db
         .select({
           id: inventory.id,
@@ -360,10 +362,10 @@ export const maintenanceRouter = router({
           createdAt: inventory.createdAt,
         })
         .from(inventory)
-        .where(and(eq(inventory.locationZone, "REC"), eq(inventory.quantity, 0), tenantFilter));
+        .where(and(eq(inventory.quantity, 0), tenantFilter));
 
       for (const item of zeroQtyItems) {
-        orphans.push({ ...item, reason: "REC com quantity = 0 (resquício de operação incompleta)" });
+        orphans.push({ ...item, reason: `quantity = 0 na zona ${item.locationZone ?? 'desconhecida'} (resíduo de operação sem DELETE)` });
       }
 
       // ── Critério 3: locationId inexistente ────────────────────────────────

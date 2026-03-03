@@ -1355,12 +1355,16 @@ export const shippingRouter = router({
           });
         }
 
-        await db
-          .update(inventory)
-          .set({
-            quantity: expInventory.quantity - movement.quantity,
-          })
-          .where(eq(inventory.id, expInventory.id));
+        const newExpQuantity = expInventory.quantity - movement.quantity;
+        if (newExpQuantity <= 0) {
+          // Remover registro se quantidade zerou (inventory deve conter apenas registros com saldo)
+          await db.delete(inventory).where(eq(inventory.id, expInventory.id));
+        } else {
+          await db
+            .update(inventory)
+            .set({ quantity: newExpQuantity })
+            .where(eq(inventory.id, expInventory.id));
+        }
 
         // 2. Devolver para endereço de armazenagem (origem original)
         const storageConditions = [
