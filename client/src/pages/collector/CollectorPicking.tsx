@@ -402,6 +402,7 @@ export function CollectorPicking() {
   const pauseMut = trpc.collectorPicking.pause.useMutation({
     onSuccess: () => {
       toast.success("Progresso salvo. Retome quando quiser.");
+      utils.collectorPicking.listOrders.invalidate();
       resetAll();
     },
     onError: (err) => toast.error(err.message),

@@ -203,7 +203,7 @@ export const collectorPickingRouter = router({
         .where(
           and(
             tenantId ? eq(pickingWaves.tenantId, tenantId) : undefined,
-            sql`${pickingWaves.status} IN ('pending', 'in_progress')` // ✅ Incluir ondas interrompidas
+            sql`${pickingWaves.status} IN ('pending', 'in_progress', 'picking')` // ✅ Incluir ondas em picking/pausadas
           )
         )
         .orderBy(asc(pickingWaves.createdAt));
@@ -240,7 +240,7 @@ export const collectorPickingRouter = router({
         });
       }
 
-      if (!["pending", "in_progress"].includes(wave.status)) {
+      if (!['pending', 'in_progress', 'picking'].includes(wave.status)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Onda não pode ser iniciada (status: ${wave.status})`,
