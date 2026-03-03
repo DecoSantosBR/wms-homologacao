@@ -57,3 +57,4 @@
 
 - [ ] Procedure tRPC cleanupOrphanInventory no backend com critérios de órfão
 - [ ] UI de manutenção na tela de Inventário com botão de limpeza manual e relatório de resultado
+- [x] Importação massiva de saldos via Excel (inventoryImportRouter): labelCode não-único, status por zona, uniqueCode=SKU-Lote, transação atômica, acesso restrito tenantId=1

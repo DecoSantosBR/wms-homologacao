@@ -23,6 +23,7 @@ import { reportsRouter } from "./reportsRouter.js";
 import { maintenanceRouter } from "./maintenanceRouter";
 import { labelRouter } from "./labelRouter";
 import { clientPortalRouter } from "./clientPortalRouter";
+import { inventoryImportRouter } from "./inventoryImportRouter";
 import { collectorPickingRouter } from "./collectorPickingRouter";
 import { getUniqueCode } from "./utils/uniqueCode";
 import { toMySQLDate } from "../shared/utils";
@@ -42,6 +43,7 @@ export const appRouter = router({
   labels: labelRouter,
   clientPortal: clientPortalRouter,
   collectorPicking: collectorPickingRouter,
+  inventoryImport: inventoryImportRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

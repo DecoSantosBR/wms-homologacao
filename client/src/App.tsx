@@ -21,6 +21,7 @@ import Cadastros from "./pages/Cadastros";
 import Users from "./pages/Users";
 import Roles from "./pages/Roles";
 import NFEImport from "./pages/NFEImport";
+import InventoryImport from "./pages/InventoryImport";
 import StockPositions from "./pages/StockPositions";
 import StockMovements from "./pages/StockMovements";
 import OccupancyDashboard from "./pages/OccupancyDashboard";
@@ -67,6 +68,7 @@ function Router() {
       <Route path={"/users"} component={Users} />
       <Route path={"/roles"} component={Roles} />
       <Route path={"/nfe-import"} component={NFEImport} />
+      <Route path={"/inventory-import"} component={InventoryImport} />
       <Route path={"/stock"} component={StockPositions} />
       <Route path={"/stock/movements"} component={StockMovements} />
       <Route path={"/stock/occupancy"} component={OccupancyDashboard} />
