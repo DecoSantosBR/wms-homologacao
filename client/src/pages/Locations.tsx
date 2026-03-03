@@ -65,7 +65,7 @@ export default function Locations() {
     locationType: "whole" as "whole" | "fraction",
     storageRule: "single" as "single" | "multi",
     isBlocked: false,
-    status: "livre" as "livre" | "available" | "occupied" | "blocked" | "counting" | "quarantine",
+    status: "available" as "available" | "occupied" | "blocked" | "counting" | "quarantine",
   });
 
   // Zone states
@@ -208,7 +208,7 @@ export default function Locations() {
       locationType: location.locationType || "whole",
       storageRule: location.storageRule || "single",
       isBlocked: location.status === "blocked",
-      status: location.status || "livre",
+      status: location.status || "available",
     });
     setEditDialogOpen(true);
   };
@@ -556,7 +556,7 @@ export default function Locations() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os status</SelectItem>
-                        <SelectItem value="livre">Livre</SelectItem>
+                        <SelectItem value="available">Livre</SelectItem>
                         <SelectItem value="available">Disponível</SelectItem>
                         <SelectItem value="occupied">Ocupado</SelectItem>
                         <SelectItem value="blocked">Bloqueado</SelectItem>
@@ -691,7 +691,7 @@ export default function Locations() {
                             <Badge 
                               variant="outline"
                               className={
-                                location.status === "livre" ? "border-gray-300 text-gray-600" :
+                                location.status === "available" ? "border-gray-300 text-gray-600" :
                                 location.status === "available" ? "bg-green-100 text-green-800 border-green-300" :
                                 location.status === "occupied" ? "bg-blue-100 text-blue-800 border-blue-300" :
                                 location.status === "blocked" ? "bg-red-100 text-red-800 border-red-300" :
@@ -700,7 +700,7 @@ export default function Locations() {
                                 "border-gray-300 text-gray-600"
                               }
                             >
-                              {location.status === "livre" ? "Livre" :
+                              {location.status === "available" ? "Livre" :
                                location.status === "available" ? "Disponível" : 
                                location.status === "occupied" ? "Ocupado" : 
                                location.status === "blocked" ? "Bloqueado" :
@@ -1022,7 +1022,7 @@ export default function Locations() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="livre">Livre</SelectItem>
+                  <SelectItem value="available">Livre</SelectItem>
                   <SelectItem value="available">Disponível</SelectItem>
                   <SelectItem value="occupied">Ocupado</SelectItem>
                   <SelectItem value="blocked">Bloqueado</SelectItem>

@@ -572,7 +572,7 @@ export async function completeStageCheck(params: {
           eq(warehouseLocations.tenantId, pickingOrder.tenantId),
           or(
             eq(warehouseLocations.status, 'available'),
-            eq(warehouseLocations.status, 'livre')
+            eq(warehouseLocations.status, 'available')
           )
         )
       )
@@ -708,12 +708,12 @@ export async function completeStageCheck(params: {
             )
           );
 
-        // Se não há outros produtos, mudar status para "livre"
+        // Se não há outros produtos, mudar status para "available"
         if (otherProducts && otherProducts.count === 0) {
           await dbConn
             .update(warehouseLocations)
             .set({
-              status: "livre",
+              status: "available",
             })
             .where(eq(warehouseLocations.id, sourceInventory.locationId));
         }

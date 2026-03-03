@@ -755,7 +755,7 @@ export const shippingRouter = router({
                 eq(warehouseLocations.tenantId, pickingOrder.tenantId),
                 or(
                   eq(warehouseLocations.status, 'available'),
-                  eq(warehouseLocations.status, 'livre')
+                  eq(warehouseLocations.status, 'available')
                 )
               )
             )

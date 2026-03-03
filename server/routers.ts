@@ -589,7 +589,7 @@ export const appRouter = router({
         locationType: z.enum(["whole", "fraction"]).default("whole"),
         storageRule: z.enum(["single", "multi"]).default("single"),
         isBlocked: z.boolean().optional(),
-        status: z.enum(["livre", "available", "occupied", "blocked", "counting", "quarantine"]).optional(),
+        status: z.enum(["available", "available", "occupied", "blocked", "counting", "quarantine"]).optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -598,7 +598,7 @@ export const appRouter = router({
         const { id, isBlocked, status: inputStatus, ...updateData } = input;
         
         // Determinar status: prioridade para status explícito, depois isBlocked, depois manter atual
-        let status: "livre" | "available" | "occupied" | "blocked" | "counting" | "quarantine";
+        let status: "available" | "available" | "occupied" | "blocked" | "counting" | "quarantine";
         
         if (inputStatus) {
           // Status explícito fornecido (inclui quarantine)
@@ -613,7 +613,7 @@ export const appRouter = router({
             .from(inventory)
             .where(eq(inventory.locationId, id));
           
-          status = (stockCheck?.total || 0) > 0 ? "occupied" : "livre";
+          status = (stockCheck?.total || 0) > 0 ? "occupied" : "available";
         } else {
           // Nenhum status fornecido - manter status atual
           const [current] = await db
@@ -621,7 +621,7 @@ export const appRouter = router({
             .from(warehouseLocations)
             .where(eq(warehouseLocations.id, id))
             .limit(1);
-          status = current?.status || "livre";
+          status = current?.status || "available";
         }
         
         await db.update(warehouseLocations)
@@ -798,7 +798,7 @@ export const appRouter = router({
               position: row.quadrante || null,
               locationType,
               storageRule,
-              status: 'livre',
+              status: 'available',
             });
 
             results.success.push(code);

@@ -18,7 +18,7 @@ export interface InventoryFilters {
   locationId?: number;
   zoneId?: number;
   batch?: string;
-  status?: "livre" | "available" | "occupied" | "blocked" | "counting" | ("livre" | "available" | "occupied" | "blocked" | "counting")[];
+  status?: "available" | "available" | "occupied" | "blocked" | "counting" | ("available" | "available" | "occupied" | "blocked" | "counting")[];
   minQuantity?: number;
   search?: string;
   locationCode?: string;
@@ -113,19 +113,19 @@ export async function getInventoryPositions(
 
   const locationTenant = alias(tenants, "locationTenant");
 
-  // Se filtro inclui "livre" OU está vazio (todos os status), usar LEFT JOIN para incluir endereços vazios
-  const includeEmpty = statusArray.length === 0 || statusArray.includes("livre");
+  // Se filtro inclui "available" OU está vazio (todos os status), usar LEFT JOIN para incluir endereços vazios
+  const includeEmpty = statusArray.length === 0 || statusArray.includes("available");
 
   if (includeEmpty) {
     // LEFT JOIN: inclui endereços sem inventory
-    // Quando filtro é APENAS "livre", não filtrar por quantidade no JOIN
-    const onlyFreeFilter = statusArray.length === 1 && statusArray[0] === "livre";
+    // Quando filtro é APENAS "available", não filtrar por quantidade no JOIN
+    const onlyFreeFilter = statusArray.length === 1 && statusArray[0] === "available";
     
     const inventoryJoinConditions = [
       eq(inventory.locationId, warehouseLocations.id),
     ];
     
-    // Adicionar filtro de quantidade apenas se não for filtro exclusivo de "livre"
+    // Adicionar filtro de quantidade apenas se não for filtro exclusivo de "available"
     if (!onlyFreeFilter) {
       inventoryJoinConditions.push(gt(inventory.quantity, 0));
       // Adicionar outras condições de inventory

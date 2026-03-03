@@ -15,7 +15,9 @@
  * @returns uniqueCode no formato "SKU-LOTE"
  */
 export function getUniqueCode(sku: string, batch?: string | null): string {
-  return `${sku}-${batch || 'null'}`;
+  // Normaliza: remove espaços, trata string 'null' literal e vazio como ausência de lote
+  const cleanBatch = batch && batch.trim() !== '' && batch.trim() !== 'null' ? batch.trim() : 'null';
+  return `${sku.trim()}-${cleanBatch}`;
 }
 
 /**

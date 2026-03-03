@@ -33,8 +33,8 @@ const inventoryFiltersSchema = z.object({
   zoneId: z.number().optional(),
   batch: z.string().optional(),
   status: z.union([
-    z.enum(["livre", "available", "occupied", "blocked", "counting"]),
-    z.array(z.enum(["livre", "available", "occupied", "blocked", "counting"]))
+    z.enum(["available", "available", "occupied", "blocked", "counting"]),
+    z.array(z.enum(["available", "available", "occupied", "blocked", "counting"]))
   ]).optional(),
   minQuantity: z.number().optional(),
   search: z.string().optional(),

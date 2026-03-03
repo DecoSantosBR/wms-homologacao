@@ -394,11 +394,11 @@ async function updateLocationStatus(locationId: number) {
   const totalQuantity = Number(stock[0]?.total ?? 0);
 
   // Determinar novo status
-  let newStatus: "livre" | "available" | "occupied" | "blocked" | "counting";
+  let newStatus: "available" | "available" | "occupied" | "blocked" | "counting";
 
   if (totalQuantity === 0) {
     // Sem produtos = Livre
-    newStatus = "livre";
+    newStatus = "available";
   } else if (location.storageRule === "multi") {
     // Com produtos + multi-item = Disponível (aceita mais produtos)
     newStatus = "available";
