@@ -77,6 +77,7 @@ function Router() {
       <Route path={"/settings/printing"} component={PrintSettings} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/maintenance"} component={Maintenance} />
+      <Route path={"/admin"} component={Maintenance} />
         <Route path="/collector" component={CollectorHome} />
         <Route path="/collector/receiving" component={CollectorReceiving} />
         <Route path="/collector/picking" component={CollectorPicking} />
