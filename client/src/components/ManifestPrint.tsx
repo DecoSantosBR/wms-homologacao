@@ -184,30 +184,26 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
             }
             
             .signatures {
-              margin-top: 20px;
+              margin-top: 50px;
             }
-            
+
             .signature-row {
               display: flex;
-              justify-content: space-between;
-              margin-bottom: 20px;
+              flex-direction: column;
+              align-items: center;
+              margin-bottom: 30px;
             }
-            
-            .signature-field {
-              flex: 1;
-              margin: 0 20px;
+
+            .signature-line {
+              width: 300px;
+              border-top: 1px solid #000;
             }
-            
+
             .signature-label {
               font-weight: bold;
-              margin-bottom: 15px;
               font-size: 9pt;
-            }
-            
-            .signature-line {
-              border-top: 1px solid #000;
-              padding-top: 5px;
               text-align: center;
+              margin-top: 5px;
             }
             
             @media print {
@@ -374,17 +370,13 @@ export const ManifestPrint = forwardRef<{ print: () => void }, ManifestPrintProp
 
         <div className="signatures">
           <div className="signature-row">
-            <div className="signature-field">
-              <div className="signature-line"></div>
-              <div className="signature-label">Responsável:</div>
-            </div>
+            <div className="signature-line"></div>
+            <div className="signature-label">Responsável</div>
           </div>
 
           <div className="signature-row">
-            <div className="signature-field">
-              <div className="signature-line"></div>
-              <div className="signature-label">Motorista:</div>
-            </div>
+            <div className="signature-line"></div>
+            <div className="signature-label">Motorista</div>
           </div>
         </div>
       </div>
