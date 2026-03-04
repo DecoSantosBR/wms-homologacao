@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportOrdersDialog } from "@/components/ImportOrdersDialog";
 import { useBusinessError } from "@/hooks/useBusinessError";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { ProductCombobox } from "@/components/ProductCombobox";
 
 interface ProductItem {
@@ -25,6 +26,7 @@ interface ProductItem {
 }
 
 export default function PickingOrders() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -68,9 +70,11 @@ export default function PickingOrders() {
 
   const { data: orders, isLoading, refetch } = trpc.picking.list.useQuery({ limit: 100 });
   const { data: waves, isLoading: wavesLoading, refetch: refetchWaves } = trpc.wave.list.useQuery({ limit: 100 });
+  // Usa o tenantId do cliente selecionado ou, se não houver seleção, o tenant do usuário logado
+  const effectiveProductTenantId = selectedTenantId ? parseInt(selectedTenantId) : (user?.tenantId ?? null);
   const { data: products } = trpc.products.list.useQuery(
-    selectedTenantId ? { tenantId: parseInt(selectedTenantId) } : undefined,
-    { enabled: !!selectedTenantId } // Só buscar quando tenant estiver selecionado
+    effectiveProductTenantId ? { tenantId: effectiveProductTenantId } : undefined,
+    { enabled: !!effectiveProductTenantId }
   );
   const { data: editProducts_available } = trpc.products.list.useQuery(
     editTenantId ? { tenantId: parseInt(editTenantId) } : undefined,
@@ -801,8 +805,8 @@ export default function PickingOrders() {
                       products={products}
                       value={selectedProductId}
                       onValueChange={setSelectedProductId}
-                      placeholder={!selectedTenantId ? "Selecione um cliente primeiro" : products?.length === 0 ? "Nenhum produto cadastrado para este cliente" : "Selecione o produto"}
-                      disabled={!selectedTenantId}
+                      placeholder={products?.length === 0 ? "Nenhum produto cadastrado" : "Selecione o produto"}
+                      disabled={false}
                     />
                   </div>
 
