@@ -447,7 +447,7 @@ export default function PickingOrders() {
       return;
     }
 
-    const product = products?.find((p) => p.id === parseInt(selectedProductId));
+    const product = products?.find((p: any) => p.id === parseInt(selectedProductId));
     if (!product) {
       alert("Produto não encontrado.");
       return;
@@ -568,7 +568,7 @@ export default function PickingOrders() {
       return;
     }
 
-    const product = editProducts_available?.find((p) => p.id === parseInt(editSelectedProductId));
+    const product = editProducts_available?.find((p: any) => p.id === parseInt(editSelectedProductId));
     if (!product) {
       alert("Produto não encontrado.");
       return;

@@ -97,3 +97,9 @@
 
 - [x] BUG CORRIGIDO: Cards de Pedidos de Separação agora exibem Nº do Pedido Cliente como título (cód. interno como subtexto)
 - [x] BUG CORRIGIDO: Etiquetas de Separação (aba Pedidos) agora exibe Nº do Pedido Cliente como título
+
+## Filtros em /products
+
+- [x] Backend: atualizar procedure products.list para aceitar filtros tenantId, sku e category
+- [x] Frontend: adicionar dropdowns/inputs de Cliente, SKU e Categoria na página Products
+- [x] Frontend: aplicar filtros em tempo real (debounce) sem recarregar a página

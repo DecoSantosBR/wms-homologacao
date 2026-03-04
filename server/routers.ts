@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingAllocations, productLabels, printSettings, invoices } from "../drizzle/schema";
-import { eq, and, desc, inArray, sql, or } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, or, like } from "drizzle-orm";
 import { z } from "zod";
 import { parseNFE, isValidNFE } from "./nfeParser";
 import { warehouseZones } from "../drizzle/schema";
@@ -210,19 +210,27 @@ export const appRouter = router({
 
   products: router({
     list: protectedProcedure
-      .input(z.object({ tenantId: z.number().optional() }).optional())
+      .input(z.object({
+        tenantId: z.number().optional(),
+        sku: z.string().optional(),
+        category: z.string().optional(),
+        limit: z.number().default(200),
+      }).optional())
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
-        
-        let query = db.select().from(products);
-        
-        // Filtrar por tenantId se fornecido
-        if (input?.tenantId) {
-          query = query.where(eq(products.tenantId, input.tenantId)) as any;
+
+        const conditions: any[] = [];
+        if (input?.tenantId) conditions.push(eq(products.tenantId, input.tenantId));
+        if (input?.sku) conditions.push(like(products.sku, `%${input.sku}%`));
+        if (input?.category) conditions.push(eq(products.category, input.category));
+
+        let query = db.select().from(products) as any;
+        if (conditions.length > 0) {
+          query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
         }
-        
-        return query.orderBy(desc(products.createdAt)).limit(100);
+
+        return query.orderBy(desc(products.createdAt)).limit(input?.limit ?? 200);
       }),
 
     getById: protectedProcedure

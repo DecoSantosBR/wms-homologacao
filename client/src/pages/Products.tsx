@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -40,16 +40,46 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Package, Pencil, Trash2 } from "lucide-react";
+import { Package, Pencil, Trash2, Search, X } from "lucide-react";
 import { CreateProductDialog } from "@/components/CreateProductDialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { useBusinessError } from "@/hooks/useBusinessError";
 
 export default function Products() {
-  const { data: products, isLoading } = trpc.products.list.useQuery();
+  // Estados dos filtros
+  const [filterTenantId, setFilterTenantId] = useState<number | undefined>(undefined);
+  const [filterSku, setFilterSku] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [skuDebounced, setSkuDebounced] = useState("");
+
+  // Debounce do SKU
+  useEffect(() => {
+    const t = setTimeout(() => setSkuDebounced(filterSku), 400);
+    return () => clearTimeout(t);
+  }, [filterSku]);
+
+  const hasFilters = !!filterTenantId || !!skuDebounced || !!filterCategory;
+
+  const { data: products, isLoading } = trpc.products.list.useQuery(
+    hasFilters
+      ? {
+          tenantId: filterTenantId,
+          sku: skuDebounced || undefined,
+          category: filterCategory || undefined,
+        }
+      : undefined
+  );
   const { data: tenants } = trpc.tenants.list.useQuery();
   const utils = trpc.useUtils();
+
+  // Derivar categorias únicas dos produtos carregados (sem filtro de categoria)
+  const { data: allProducts } = trpc.products.list.useQuery(
+    filterTenantId ? { tenantId: filterTenantId } : undefined
+  );
+  const categories = Array.from(
+    new Set((allProducts ?? []).map((p: any) => p.category).filter(Boolean))
+  ).sort() as string[];
   
   // Hook de erros de negócio
   const businessError = useBusinessError();
@@ -210,7 +240,7 @@ export default function Products() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked && products) {
-      setSelectedIds(products.map(p => p.id));
+      setSelectedIds(products.map((p: any) => p.id));
     } else {
       setSelectedIds([]);
     }
@@ -281,7 +311,7 @@ export default function Products() {
       <div className="container mx-auto py-8">
         <Card>
           <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-2xl font-bold">Produtos Cadastrados</h2>
                 <p className="text-sm text-gray-600 mt-1">
@@ -301,6 +331,91 @@ export default function Products() {
                 )}
                 <CreateProductDialog />
               </div>
+            </div>
+
+            {/* Barra de Filtros */}
+            <div className="flex flex-wrap gap-3 mb-5 p-4 bg-muted/40 rounded-lg border">
+              {/* Filtro: Cliente */}
+              <div className="flex flex-col gap-1 min-w-[180px]">
+                <span className="text-xs font-medium text-muted-foreground">Cliente</span>
+                <Select
+                  value={filterTenantId ? String(filterTenantId) : "all"}
+                  onValueChange={(v) => {
+                    setFilterTenantId(v === "all" ? undefined : Number(v));
+                    setFilterCategory(""); // resetar categoria ao trocar cliente
+                  }}
+                >
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos os clientes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os clientes</SelectItem>
+                    {(tenants ?? []).map((t: any) => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro: SKU */}
+              <div className="flex flex-col gap-1 min-w-[180px]">
+                <span className="text-xs font-medium text-muted-foreground">SKU</span>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="h-9 pl-8 bg-background"
+                    placeholder="Buscar por SKU..."
+                    value={filterSku}
+                    onChange={(e) => setFilterSku(e.target.value)}
+                  />
+                  {filterSku && (
+                    <button
+                      className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setFilterSku("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtro: Categoria */}
+              <div className="flex flex-col gap-1 min-w-[180px]">
+                <span className="text-xs font-medium text-muted-foreground">Categoria</span>
+                <Select
+                  value={filterCategory || "all"}
+                  onValueChange={(v) => setFilterCategory(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Limpar filtros */}
+              {hasFilters && (
+                <div className="flex items-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setFilterTenantId(undefined);
+                      setFilterSku("");
+                      setFilterCategory("");
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar filtros
+                  </Button>
+                </div>
+              )}
             </div>
 
             {isLoading ? (
@@ -338,7 +453,7 @@ export default function Products() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {products.map((product) => (
+                    {products.map((product: any) => (
                       <TableRow key={product.id}>
                         <TableCell>
                           <Checkbox
