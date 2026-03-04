@@ -511,38 +511,74 @@ export const appRouter = router({
           const row = input.rows[i];
           const rowNum = i + 2; // linha 1 é cabeçalho
 
-          if (!row.sku?.trim()) {
-            results.push({ row: rowNum, sku: row.sku ?? "", status: "error", error: "SKU obrigatório" });
-            errors++;
-            continue;
-          }
-          if (!row.description?.trim()) {
-            results.push({ row: rowNum, sku: row.sku, status: "error", error: "Descrição obrigatória" });
+            // ── Validações de campos obrigatórios ──
+          const validationErrors: string[] = [];
+
+          if (!row.sku?.trim())
+            validationErrors.push("SKU obrigatório");
+
+          if (!row.description?.trim())
+            validationErrors.push("Descrição obrigatória");
+
+          // Unidades por Caixa: obrigatório e deve ser número > 0
+          const unitsPerBoxVal = row.unitsPerBox;
+          if (unitsPerBoxVal === undefined || unitsPerBoxVal === null || isNaN(Number(unitsPerBoxVal)) || Number(unitsPerBoxVal) <= 0)
+            validationErrors.push("Qtd por Caixa obrigatória e deve ser maior que zero");
+
+          // Controle Lote: obrigatório (deve ser boolean definido)
+          if (row.requiresBatchControl === undefined || row.requiresBatchControl === null)
+            validationErrors.push("Controle Lote obrigatório (sim ou nao)");
+
+          if (validationErrors.length > 0) {
+            results.push({ row: rowNum, sku: row.sku ?? "", status: "error", error: validationErrors.join(" | ") });
             errors++;
             continue;
           }
 
-          const storageRaw = (row.storageCondition ?? "").toLowerCase().replace(/[^a-z0-9_]/g, "_");
-          const storageCondition: StorageCond = (VALID_STORAGE as readonly string[]).includes(storageRaw)
-            ? (storageRaw as StorageCond)
-            : "ambient";
+          // ── Regra: Controle Validade segue Controle Lote ──
+          const requiresBatchControl = row.requiresBatchControl!;
+          // Se Controle Lote = sim → Controle Validade = sim; caso contrário = não
+          const requiresExpiryControl = requiresBatchControl;
 
+          // ── Normalizar Armazenagem ──
+          // Aceita português: "ambiente" → ambient, "refrigerado" → refrigerated_2_8, "congelado" → frozen_minus_20, "controlado" → controlled
+          const storageInput = (row.storageCondition ?? "").toLowerCase().trim();
+          const storageMap: Record<string, StorageCond> = {
+            ambiente: "ambient",
+            ambient: "ambient",
+            "refrigerado 2-8": "refrigerated_2_8",
+            "refrigerado": "refrigerated_2_8",
+            refrigerated_2_8: "refrigerated_2_8",
+            congelado: "frozen_minus_20",
+            frozen_minus_20: "frozen_minus_20",
+            controlado: "controlled",
+            controlled: "controlled",
+          };
+          const storageCondition: StorageCond = storageMap[storageInput] ?? "ambient";
+
+          // ── Payload com defaults automáticos para campos opcionais ──
           const payload = {
             tenantId: input.tenantId,
-            sku: row.sku.trim(),
-            description: row.description.trim(),
-            category: row.category?.trim() || undefined,
-            gtin: row.gtin?.trim() || undefined,
-            anvisaRegistry: row.anvisaRegistry?.trim() || undefined,
-            therapeuticClass: row.therapeuticClass?.trim() || undefined,
-            manufacturer: row.manufacturer?.trim() || undefined,
+            sku: row.sku!.trim(),
+            description: row.description!.trim(),
+            // Padrão: Medicamento
+            category: row.category?.trim() || "Medicamento",
+            // Padrão: null
+            gtin: row.gtin?.trim() || null,
+            anvisaRegistry: row.anvisaRegistry?.trim() || null,
+            manufacturer: row.manufacturer?.trim() || null,
+            // Padrão: Medicamentos e Insumos
+            therapeuticClass: row.therapeuticClass?.trim() || "Medicamentos e Insumos",
+            // Padrão: UN
             unitOfMeasure: row.unitOfMeasure?.trim() || "UN",
-            unitsPerBox: row.unitsPerBox ?? undefined,
+            unitsPerBox: Number(unitsPerBoxVal),
+            // Padrão: 0
             minQuantity: row.minQuantity ?? 0,
+            // Padrão: 1
             dispensingQuantity: row.dispensingQuantity ?? 1,
             storageCondition,
-            requiresBatchControl: row.requiresBatchControl ?? true,
-            requiresExpiryControl: row.requiresExpiryControl ?? true,
+            requiresBatchControl,
+            requiresExpiryControl,
           };
 
           try {

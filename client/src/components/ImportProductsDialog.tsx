@@ -31,48 +31,68 @@ import { Upload, FileSpreadsheet, Download, CheckCircle2, XCircle, RefreshCw, Al
 
 // Mapeamento de colunas da planilha → campos do sistema
 const COLUMN_MAP: Record<string, string> = {
-  sku: "sku",
+  // SKU
+  "sku": "sku",
+  "sku *": "sku",
   "código": "sku",
   "codigo": "sku",
   "cod.": "sku",
-  description: "description",
+  // Descrição
+  "description": "description",
   "descrição": "description",
+  "descrição *": "description",
   "descricao": "description",
   "nome": "description",
-  category: "category",
+  // Categoria
+  "category": "category",
   "categoria": "category",
-  gtin: "gtin",
+  // GTIN
+  "gtin": "gtin",
+  "gtin / ean": "gtin",
   "ean": "gtin",
   "código de barras": "gtin",
   "codigo de barras": "gtin",
+  // Registro ANVISA
   "registro anvisa": "anvisaRegistry",
   "anvisaregistry": "anvisaRegistry",
   "anvisa": "anvisaRegistry",
+  // Classe Terapêutica
   "classe terapêutica": "therapeuticClass",
   "classe terapeutica": "therapeuticClass",
   "therapeuticclass": "therapeuticClass",
+  // Fabricante
   "fabricante": "manufacturer",
-  manufacturer: "manufacturer",
+  "manufacturer": "manufacturer",
+  // Unidade de Medida
   "unidade": "unitOfMeasure",
   "unidade de medida": "unitOfMeasure",
   "unitmeasure": "unitOfMeasure",
   "unitsofmeasure": "unitOfMeasure",
   "unidademedida": "unitOfMeasure",
+  // Qtd por Caixa
   "qtd por caixa": "unitsPerBox",
+  "qtd por caixa *": "unitsPerBox",
   "quantidade por caixa": "unitsPerBox",
   "unitsperbox": "unitsPerBox",
+  // Qtd Mínima
+  "qtd mínima": "minQuantity",
   "qtd minima": "minQuantity",
   "quantidade mínima": "minQuantity",
   "quantidade minima": "minQuantity",
   "minquantity": "minQuantity",
+  // Qtd Dispensação
   "qtd dispensação": "dispensingQuantity",
   "quantidade dispensação": "dispensingQuantity",
   "dispensingquantity": "dispensingQuantity",
+  // Armazenagem
   "armazenagem": "storageCondition",
   "condição armazenagem": "storageCondition",
   "storagecondition": "storageCondition",
+  // Controle Lote
   "controle lote": "requiresBatchControl",
+  "controle lote *": "requiresBatchControl",
   "requiresbatchcontrol": "requiresBatchControl",
+  // Controle Validade
   "controle validade": "requiresExpiryControl",
   "requiresexpirycontrol": "requiresExpiryControl",
 };
@@ -107,79 +127,100 @@ function normalizeKey(key: string): string {
 
 function parseRows(sheet: XLSX.WorkSheet): ParsedRow[] {
   const raw = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
-  return raw.map((rawRow) => {
-    const mapped: Record<string, any> = {};
-    for (const [k, v] of Object.entries(rawRow)) {
-      const field = COLUMN_MAP[normalizeKey(k)];
-      if (field) {
-        if (field === "unitsPerBox" || field === "minQuantity" || field === "dispensingQuantity") {
-          const n = Number(v);
-          mapped[field] = isNaN(n) ? undefined : n;
-        } else if (field === "requiresBatchControl" || field === "requiresExpiryControl") {
-          const s = String(v).toLowerCase();
-          mapped[field] = s === "true" || s === "sim" || s === "1" || s === "s";
-        } else {
-          mapped[field] = String(v).trim() || undefined;
+  return raw
+    .map((rawRow) => {
+      const mapped: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawRow)) {
+        const field = COLUMN_MAP[normalizeKey(k)];
+        if (field) {
+          if (field === "unitsPerBox" || field === "minQuantity" || field === "dispensingQuantity") {
+            const n = Number(v);
+            mapped[field] = isNaN(n) || String(v).trim() === "" ? undefined : n;
+          } else if (field === "requiresBatchControl" || field === "requiresExpiryControl") {
+            const s = String(v).toLowerCase().trim();
+            // Aceita: sim, s, true, 1, yes, y  |  nao, não, false, 0, no, n
+            if (s === "" || s.startsWith("obrigat") || s.startsWith("preenchido")) {
+              // linha de instruções — ignorar
+              mapped[field] = undefined;
+            } else {
+              mapped[field] = s === "true" || s === "sim" || s === "s" || s === "1" || s === "yes" || s === "y";
+            }
+          } else {
+            const sv = String(v).trim();
+            // Ignorar células de instrução (começam com "OBRIGATÓRIO", "Padrão:", "Ex:")
+            if (sv.startsWith("OBRIGAT") || sv.startsWith("Padrão") || sv.startsWith("Ex:") || sv.startsWith("Preenchido")) {
+              mapped[field] = undefined;
+            } else {
+              mapped[field] = sv || undefined;
+            }
+          }
         }
       }
-    }
-    return mapped as ParsedRow;
-  }).filter((r) => r.sku || r.description); // ignorar linhas completamente vazias
+      return mapped as ParsedRow;
+    })
+    .filter((r) => {
+      // Ignorar linhas completamente vazias e a linha de instruções do template
+      if (!r.sku && !r.description) return false;
+      // Ignorar linha de instruções: SKU começa com "OBRIGATÓRIO" ou "Ex:"
+      const skuStr = String(r.sku ?? "");
+      if (skuStr.startsWith("OBRIGAT") || skuStr.startsWith("Ex:")) return false;
+      return true;
+    });
 }
 
 function downloadTemplate() {
-  // Cabeçalhos em português
+  // Cabeçalhos em português (* = obrigatório)
   const headers = [
-    "SKU",
-    "Descrição",
+    "SKU *",
+    "Descrição *",
     "Categoria",
     "GTIN / EAN",
     "Registro ANVISA",
     "Classe Terapêutica",
     "Fabricante",
     "Unidade de Medida",
-    "Qtd por Caixa",
+    "Qtd por Caixa *",
     "Qtd Mínima",
     "Qtd Dispensação",
     "Armazenagem",
-    "Controle Lote",
+    "Controle Lote *",
     "Controle Validade",
   ];
 
   // Linha de instruções (linha 2)
   const instructions = [
-    "Ex: MED001",
-    "Ex: Paracetamol 500mg",
-    "Ex: Analgésico",
-    "Ex: 7891234567890",
-    "Ex: 1.2345.0001.001-1",
-    "Ex: Analgésicos e antipiréticos",
-    "Ex: EMS S/A",
-    "UN, CX, FR, AMP...",
-    "Ex: 24",
-    "Ex: 0",
-    "Ex: 1",
-    "ambient | refrigerated_2_8 | frozen_minus_20 | controlled",
-    "sim ou nao",
-    "sim ou nao",
+    "OBRIGATÓRIO. Ex: MED001",
+    "OBRIGATÓRIO. Ex: Paracetamol 500mg",
+    "Padrão: Medicamento",
+    "Padrão: vazio",
+    "Padrão: vazio",
+    "Padrão: Medicamentos e Insumos",
+    "Padrão: vazio",
+    "Padrão: UN. Ex: CX, FR, AMP",
+    "OBRIGATÓRIO. Número inteiro > 0. Ex: 24",
+    "Padrão: 0",
+    "Padrão: 1",
+    "Padrão: Ambiente. Outros: Refrigerado, Congelado, Controlado",
+    "OBRIGATÓRIO. Digite: sim ou nao",
+    "Preenchido automaticamente igual ao Controle Lote",
   ];
 
   // Linha de exemplo preenchida (linha 3)
   const example = [
     "MED001",
     "Paracetamol 500mg",
-    "Analgésico",
-    "7891234567890",
-    "1.2345.0001.001-1",
-    "Analgésicos e antipiréticos",
-    "EMS S/A",
-    "CX",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
     24,
-    0,
-    1,
-    "ambient",
+    "",
+    "",
+    "",
     "sim",
-    "sim",
+    "",
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, instructions, example]);

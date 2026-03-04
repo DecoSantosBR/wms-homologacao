@@ -112,3 +112,10 @@
 - [x] Frontend: botão "Importar Excel" na página /products
 - [x] Frontend: exibir resumo pós-importação (X inseridos, Y atualizados, Z erros)
 - [x] Adaptar template de importação de produtos para cabeçalhos em português
+
+## Regras de Importação de Produtos
+
+- [x] Backend: validar campos obrigatórios (SKU, Descrição, Unidades por Caixa, Controle Lote) e regra Controle Validade = Controle Lote
+- [x] Backend: preencher automaticamente campos opcionais em branco com valores padrão
+- [x] Frontend: preview destaca linhas com campos obrigatórios faltantes em vermelho
+- [x] Frontend: template atualizado com cabeçalhos marcados com * para campos obrigatórios
