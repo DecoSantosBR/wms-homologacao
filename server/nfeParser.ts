@@ -93,8 +93,9 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
 
     // Extrair dados da identificação da nota
     const ide = Array.isArray(infNFe.ide) ? infNFe.ide[0] : infNFe.ide;
-    const numero = extractValue(ide?.nNF, "");
-    const serie = extractValue(ide?.serie, "");
+    // Garantir que numero e serie sejam sempre strings (xml2js pode retornar número 0 para série "0")
+    const numero = String(extractValue(ide?.nNF, ""));
+    const serie = String(extractValue(ide?.serie, "0"));
     const dataEmissao = extractValue(ide?.dhEmi, "");
 
     // Extrair dados do fornecedor (emitente)
@@ -118,9 +119,11 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
 
     // Extrair volumes transportados e peso bruto
     const transp = Array.isArray(infNFe.transp) ? infNFe.transp[0] : infNFe.transp;
-    const vol = transp?.vol;
-    const volumes = vol ? parseInt(extractValue(vol?.qVol, "1")) : 1;
-    const pesoB = vol ? parseFloat(extractValue(vol?.pesoB, "0")) : 0;
+    // vol pode ser array (múltiplos volumes) ou objeto único
+    const volRaw = transp?.vol;
+    const vol = Array.isArray(volRaw) ? volRaw[0] : volRaw;
+    const volumes = vol ? (parseInt(String(extractValue(vol?.qVol, "1"))) || 1) : 1;
+    const pesoB = vol ? (parseFloat(String(extractValue(vol?.pesoB, "0"))) || 0) : 0;
 
     // Extrair valor total da NF-e
     const total = Array.isArray(infNFe.total) ? infNFe.total[0] : infNFe.total;

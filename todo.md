@@ -139,6 +139,10 @@
 
 - [x] BUG CORRIGIDO: Stage — erro "Produto não pertence ao tenant atual" ao bipar etiqueta na conferência. recordStageItem agora usa o tenantId do stageCheck (pedido) em vez de ctx.effectiveTenantId (usuário logado)
 
+## Bugs
+
+- [x] BUG CORRIGIDO: Importação de NF-e — xml2js retornava número 0 (int) para <serie>0</serie> e <nNF>66666</nNF>. Corrigido com String() no nfeParser.ts para garantir que numero, serie e vol sejam sempre strings/números corretos
+
 ## Design Etiqueta de Volume (Stage)
 
 - [x] Redesenhar PDF de etiquetas de volume: logo Med@x esquerda, barcode direita, linha divisória, Destinatário/Pedido/Cliente/Volume bold (15cm x 7.5cm)
