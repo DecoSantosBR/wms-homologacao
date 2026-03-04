@@ -201,7 +201,7 @@ export const collectorPickingRouter = router({
         .where(
           and(
             // Admin global sem tenant específico vê todas as ondas; demais usuários filtram pelo próprio tenant
-            (!isGlobalAdmin || effectiveTenantId) ? eq(pickingWaves.tenantId, effectiveTenantId) : undefined,
+            isGlobalAdmin ? undefined : eq(pickingWaves.tenantId, effectiveTenantId),
             sql`${pickingWaves.status} IN ('pending', 'in_progress', 'picking')`
           )
         )

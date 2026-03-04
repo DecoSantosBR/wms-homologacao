@@ -28,10 +28,15 @@ export const waveRouter = router({
 
       // Usar effectiveTenantId do middleware; admin global pode filtrar por tenant específico
       const { effectiveTenantId, isGlobalAdmin } = ctx;
-      if (!isGlobalAdmin || effectiveTenantId) {
+      if (isGlobalAdmin) {
+        // Admin global: filtra por tenant específico apenas se fornecido no input
+        if (input.tenantId) {
+          conditions.push(eq(pickingWaves.tenantId, input.tenantId));
+        }
+        // Sem input.tenantId: retorna todas as ondas de todos os tenants
+      } else {
+        // Usuário normal: filtra sempre pelo seu próprio tenant
         conditions.push(eq(pickingWaves.tenantId, effectiveTenantId));
-      } else if (input.tenantId) {
-        conditions.push(eq(pickingWaves.tenantId, input.tenantId));
       }
 
       if (input.status) {
