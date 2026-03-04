@@ -92,3 +92,8 @@
 - [x] Frontend: abas "Pedidos" e "Ondas" na WavesSubScreen
 - [x] Frontend: aba Ondas lista pickingWaves (comportamento atual)
 - [x] Frontend: aba Pedidos lista pickingOrders com busca por número/cliente
+
+## Bugs
+
+- [x] BUG CORRIGIDO: Cards de Pedidos de Separação agora exibem Nº do Pedido Cliente como título (cód. interno como subtexto)
+- [x] BUG CORRIGIDO: Etiquetas de Separação (aba Pedidos) agora exibe Nº do Pedido Cliente como título

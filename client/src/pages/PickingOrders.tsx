@@ -1169,14 +1169,16 @@ export default function PickingOrders() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
+                    <h3 className="text-lg font-semibold">
+                      {order.customerOrderNumber ? `Nº ${order.customerOrderNumber}` : order.orderNumber}
+                    </h3>
                     {getStatusBadge(order.status)}
                     {getPriorityBadge(order.priority)}
                   </div>
 
                   <div className="text-sm text-muted-foreground space-y-1">
                     {order.customerOrderNumber && (
-                      <p className="font-medium text-foreground">Nº Pedido Cliente: {order.customerOrderNumber}</p>
+                      <p className="text-xs text-muted-foreground">Cód. interno: {order.orderNumber}</p>
                     )}
                     <p>Cliente: {order.clientName || "N/A"}</p>
                     <p>

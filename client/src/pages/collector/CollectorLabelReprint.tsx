@@ -240,10 +240,10 @@ function PickingOrdersTab() {
       {data?.map((row) => (
         <ItemRow
           key={row.id}
-          primary={row.orderNumber}
+          primary={row.customerOrderNumber ? `Nº ${row.customerOrderNumber}` : row.orderNumber}
           secondary={[
+            row.customerOrderNumber ? `Cód. interno: ${row.orderNumber}` : null,
             row.customerName,
-            row.customerOrderNumber ? `Ped. cliente: ${row.customerOrderNumber}` : null,
             `${row.totalItems ?? 0} itens`,
           ]
             .filter(Boolean)
