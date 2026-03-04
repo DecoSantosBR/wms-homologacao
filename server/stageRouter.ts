@@ -22,9 +22,14 @@ export const stageRouter = {
   getOrderForStage: tenantProcedure
     .input(z.object({
       customerOrderNumber: z.string(),
+      tenantId: z.number().optional(), // Global Admin pode filtrar por tenant
     }))
     .query(async ({ input, ctx }) => {
-      return await getOrderForStage(input.customerOrderNumber, ctx.effectiveTenantId);
+      // Global Admin sem tenantId específico: sem filtro (null = ver todos)
+      const tenantId = ctx.isGlobalAdmin
+        ? (input.tenantId ?? null)
+        : ctx.effectiveTenantId;
+      return await getOrderForStage(input.customerOrderNumber, tenantId);
     }),
 
   /**
@@ -37,11 +42,14 @@ export const stageRouter = {
       customerOrderNumber: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Para startStageCheck, sempre usa o tenantId do pedido (via pickingOrderId)
+      // Passa null para Global Admin sem tenant selecionado
+      const tenantId = ctx.isGlobalAdmin ? null : ctx.effectiveTenantId;
       return await startStageCheck({
         pickingOrderId: input.pickingOrderId,
         customerOrderNumber: input.customerOrderNumber,
         operatorId: ctx.user.id,
-        tenantId: ctx.effectiveTenantId,
+        tenantId,
       });
     }),
 
@@ -89,7 +97,9 @@ export const stageRouter = {
    */
   getActiveStageCheck: tenantProcedure
     .query(async ({ ctx }) => {
-      return await getActiveStageCheck(ctx.user.id, ctx.effectiveTenantId);
+      // Global Admin sem tenant selecionado: ver todas as conferências ativas
+      const tenantId = ctx.isGlobalAdmin ? null : ctx.effectiveTenantId;
+      return await getActiveStageCheck(ctx.user.id, tenantId);
     }),
 
   /**
@@ -99,10 +109,13 @@ export const stageRouter = {
     .input(z.object({
       limit: z.number().default(50),
       offset: z.number().default(0),
+      tenantId: z.number().optional(), // Global Admin pode filtrar por tenant
     }))
     .query(async ({ input, ctx }) => {
+      // Global Admin sem tenant selecionado: ver histórico de todos os tenants
+      const tenantId = ctx.isGlobalAdmin ? (input.tenantId ?? null) : ctx.effectiveTenantId;
       return await getStageCheckHistory({
-        tenantId: ctx.effectiveTenantId,
+        tenantId,
         limit: input.limit,
         offset: input.offset,
       });
@@ -206,9 +219,11 @@ export const stageRouter = {
     }))
     .mutation(async ({ input, ctx }) => {
       const { cancelStageCheck } = await import("./stage");
+      // Global Admin: sem filtro de tenant (null = acesso irrestrito)
+      const tenantId = ctx.isGlobalAdmin ? null : ctx.effectiveTenantId;
       return await cancelStageCheck({
         stageCheckId: input.stageCheckId,
-        tenantId: ctx.effectiveTenantId,
+        tenantId,
       });
     }),
 };

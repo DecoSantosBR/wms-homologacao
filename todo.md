@@ -124,3 +124,9 @@
 
 - [x] Atualizar PDF da etiqueta de pedido: logo Med@x esquerda, Nº Pedido/Cliente/Destinatário direita, barcode Code-128 centralizado na parte inferior
 - [x] Redesign etiqueta de pedido: fundo cinza claro, borda arredondada, marca d'água Med@x repetida, ícone caminhão/entrega antes do Destinatário, barcode grande centralizado
+
+## Auditoria Global Admin - Filtros de Tenant
+
+- [x] BUG CORRIGIDO: /collector/stage e /stage - stageRouter corrigido para passar null como tenantId para Global Admin
+- [x] Auditoria completa: waveRouter, shippingRouter, reportsRouter, stockRouter, blindConferenceRouter, routers.ts (picking/waves) já tratavam Global Admin corretamente
+- [x] stageRouter: getOrderForStage, startStageCheck, getActiveStageCheck, getStageCheckHistory, cancelStageCheck corrigidos
