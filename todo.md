@@ -186,3 +186,7 @@
 ## Bugs
 
 - [x] BUG CORRIGIDO: /shipping — ao excluir romanéio, ondas (pickingWaves) agora revertem para 'staged' (em vez de permanecer 'picked'). NFs permanecem corretamente em 'linked' (vinculadas ao pedido, mas fora do romanéio). Adicionado import de pickingWaves no shippingRouter.ts
+
+## Bugs
+
+- [x] BUG CORRIGIDO: /shipping — ao excluir romanéio, pickingOrders agora ficam com status='invoiced' + shippingStatus='invoice_linked' (NF vinculada, fora do romanéio, pronto para re-expedição)

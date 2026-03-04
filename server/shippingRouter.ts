@@ -1123,11 +1123,12 @@ export const shippingRouter = router({
         .delete(shipmentManifests)
         .where(inArray(shipmentManifests.id, input.ids));
 
-      // Atualizar status dos pedidos para "awaiting_invoice" (volta para fila de expedição)
+      // Atualizar status dos pedidos: status='invoiced' + shippingStatus='invoice_linked'
+      // (NF vinculada, fora de romaneio — volta para fila de expedição)
       if (orderIds.length > 0) {
         await db
           .update(pickingOrders)
-          .set({ shippingStatus: "awaiting_invoice" })
+          .set({ status: "invoiced", shippingStatus: "invoice_linked" })
           .where(inArray(pickingOrders.id, orderIds));
       }
 
