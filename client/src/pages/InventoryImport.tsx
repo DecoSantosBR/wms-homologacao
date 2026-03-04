@@ -39,6 +39,7 @@ import * as XLSX from "xlsx";
 
 interface ExcelRow {
   sku: string;
+  description?: string | null;
   batch?: string | null;
   labelCode?: string | null;
   locationCode: string;
@@ -90,6 +91,7 @@ function mapRow(raw: Record<string, unknown>): ExcelRow | null {
   };
 
   const sku = String(get(["sku", "codigo", "codigo produto", "produto"]) ?? "").trim();
+  const description = String(get(["descricao", "descrição", "description", "desc", "nome", "produto nome"]) ?? "").trim() || null;
   const locationCode = String(get(["endereco", "endereço", "location", "locationcode", "location_code", "codigo endereco"]) ?? "").trim();
   const quantityRaw = get(["quantidade", "qtd", "qty", "quantity"]);
   const quantity = typeof quantityRaw === "number" ? quantityRaw : parseInt(String(quantityRaw ?? "0"));
@@ -102,6 +104,7 @@ function mapRow(raw: Record<string, unknown>): ExcelRow | null {
 
   return {
     sku,
+    description,
     batch: String(get(["lote", "batch", "lot"]) ?? "").trim() || null,
     labelCode: String(get(["etiqueta", "labelcode", "label_code", "label", "lpn"]) ?? "").trim() || null,
     locationCode,
@@ -126,7 +129,7 @@ export default function InventoryImport() {
   const [rows, setRows] = useState<ExcelRow[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [importResult, setImportResult] = useState<{ inserted: number; updated: number; total: number; message: string } | null>(null);
+  const [importResult, setImportResult] = useState<{ inserted: number; updated: number; productsCreated: number; total: number; message: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const validateMutation = trpc.inventoryImport.validateBatch.useMutation();
@@ -226,6 +229,7 @@ export default function InventoryImport() {
     const template = [
       {
         SKU: "37379",
+        Descrição: "AMOXICILINA 500MG CAPSULAS",
         Lote: "13489",
         Etiqueta: "L001",
         Endereço: "A-01-01",
@@ -235,6 +239,7 @@ export default function InventoryImport() {
       },
       {
         SKU: "37379",
+        Descrição: "AMOXICILINA 500MG CAPSULAS",
         Lote: "13489",
         Etiqueta: "L001",
         Endereço: "NCG-01",

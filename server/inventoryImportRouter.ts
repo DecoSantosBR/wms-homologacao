@@ -172,6 +172,7 @@ export const inventoryImportRouter = router({
         rows: z.array(
           z.object({
             sku: z.string(),
+            description: z.string().optional().nullable(),
             batch: z.string().optional().nullable(),
             labelCode: z.string().optional().nullable(),
             locationCode: z.string(),
@@ -197,8 +198,9 @@ export const inventoryImportRouter = router({
       const results: {
         inserted: number;
         updated: number;
+        productsCreated: number;
         errors: Array<{ linha: number; sku: string; locationCode: string; erro: string }>;
-      } = { inserted: 0, updated: 0, errors: [] };
+      } = { inserted: 0, updated: 0, productsCreated: 0, errors: [] };
 
       // ── 2. Pré-carregar produtos e endereços para reduzir queries dentro da transação ──
       const skus = Array.from(new Set(input.rows.map(r => r.sku.trim())));
@@ -260,13 +262,37 @@ export const inventoryImportRouter = router({
 
           const row: InventoryRow = parseResult.data;
 
-          // Resolver produto
-          const product = productMap.get(row.sku);
+          // Resolver produto — auto-cadastrar se não existir
+          let product = productMap.get(row.sku);
           if (!product) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Linha ${lineNum}: Produto com SKU "${row.sku}" não encontrado no cadastro.`,
+            // Auto-cadastro: criar produto com SKU + Descrição + tenantId do estoque
+            const description = (rawRow as any).description?.trim() || row.sku;
+            const insertResult = await tx.insert(products).values({
+              tenantId: row.tenantId,
+              sku: row.sku,
+              description,
+              unitOfMeasure: "UN",
+              requiresBatchControl: 1 as any,
+              requiresExpiryControl: 1 as any,
+              requiresSerialControl: 0 as any,
+              storageCondition: "ambient",
+              minQuantity: 0,
+              dispensingQuantity: 1,
             });
+            const [newProduct] = await tx
+              .select({ id: products.id, sku: products.sku, tenantId: products.tenantId })
+              .from(products)
+              .where(and(eq(products.sku, row.sku), eq(products.tenantId, row.tenantId)))
+              .limit(1);
+            if (!newProduct) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Linha ${lineNum}: Falha ao criar produto com SKU "${row.sku}" automaticamente.`,
+              });
+            }
+            product = newProduct;
+            productMap.set(row.sku, newProduct);
+            results.productsCreated++;
           }
 
           // Resolver endereço
@@ -353,8 +379,11 @@ export const inventoryImportRouter = router({
         success: true,
         inserted: results.inserted,
         updated: results.updated,
+        productsCreated: results.productsCreated,
         total: input.rows.length,
-        message: `Importação concluída: ${results.inserted} inseridos, ${results.updated} atualizados.`,
+        message: `Importação concluída: ${results.inserted} inseridos, ${results.updated} atualizados${
+          results.productsCreated > 0 ? `, ${results.productsCreated} produto(s) cadastrado(s) automaticamente` : ""
+        }.`,
       };
     }),
 
@@ -368,6 +397,7 @@ export const inventoryImportRouter = router({
         rows: z.array(
           z.object({
             sku: z.string(),
+            description: z.string().optional().nullable(),
             batch: z.string().optional().nullable(),
             labelCode: z.string().optional().nullable(),
             locationCode: z.string(),
@@ -432,7 +462,8 @@ export const inventoryImportRouter = router({
         if (!rawRow.tenantId || rawRow.tenantId <= 0) erros.push("tenantId é obrigatório");
 
         if (rawRow.sku?.trim() && !productSkus.has(rawRow.sku.trim())) {
-          erros.push(`SKU "${rawRow.sku}" não encontrado no cadastro`);
+          // Produto não encontrado — será criado automaticamente na importação
+          // Não é um erro, apenas um aviso informativo
         }
         if (rawRow.locationCode?.trim() && !locationCodes.has(rawRow.locationCode.trim())) {
           erros.push(`Endereço "${rawRow.locationCode}" não encontrado no cadastro`);

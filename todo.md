@@ -172,3 +172,8 @@
 ## Bugs
 
 - [x] BUG CORRIGIDO: /products — INSERT/UPDATE de produto: booleanos requiresBatchControl/requiresExpiryControl agora convertidos para 0/1 explicitamente (MySQL/TiDB rejeita string "true"/"false" em tinyint(1))
+
+## Importação de Saldos — Melhorias
+
+- [x] Adicionar coluna "Descrição" ao template modelo de importação de saldos
+- [x] Auto-cadastro de produto durante importação: se SKU não existir, criar produto com SKU + Descrição + tenantId automaticamente (retorna productsCreated no resultado)
