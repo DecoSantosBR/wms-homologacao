@@ -86,9 +86,9 @@ async function registerMovementInternal(
       
       if (inventoryRecord[0]?.tenantId) {
         tenantId = inventoryRecord[0].tenantId;
-      } else {
-        throw new Error('Não foi possível determinar o cliente (tenantId) para esta movimentação. Verifique o cadastro do endereço e do produto.');
       }
+      // Se ainda null, continuar sem filtro de tenantId (endereço compartilhado como REC)
+      // O filtro por locationId + productId já é suficientemente seletivo
     }
   }
 

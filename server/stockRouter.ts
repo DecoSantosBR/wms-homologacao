@@ -145,9 +145,12 @@ export const stockRouter = router({
       if (input.tenantId) {
         assertSameTenant(input.tenantId, effectiveTenantId, isGlobalAdmin, "movimentação de estoque");
       }
+      // Para Global Admin (effectiveTenantId = null), usar o tenantId explicitamente
+      // fornecido no input (que vem do frontend com o tenantId do inventory)
+      const resolvedTenantId = effectiveTenantId ?? input.tenantId ?? null;
       return await registerMovement({
         ...input,
-        tenantId: effectiveTenantId,
+        tenantId: resolvedTenantId,
         performedBy: ctx.user.id,
       });
     }),

@@ -177,3 +177,7 @@
 
 - [x] Adicionar coluna "Descrição" ao template modelo de importação de saldos
 - [x] Auto-cadastro de produto durante importação: se SKU não existir, criar produto com SKU + Descrição + tenantId automaticamente (retorna productsCreated no resultado)
+
+## Bugs
+
+- [x] BUG CORRIGIDO: Movimentação REC → STORAGE — Global Admin (effectiveTenantId=null) não resolvia tenantId do inventory corretamente. Corrigido em stockRouter.ts (usa input.tenantId como fallback) e movements.ts (não lança erro se tenantId ainda null após fallbacks)
