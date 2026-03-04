@@ -168,3 +168,7 @@
 ## Bugs
 
 - [x] BUG CORRIGIDO: Importação de saldos de estoque — múltiplas linhas com mesmo SKU+Lote+Endereço+Tenant no template faziam a segunda linha sobrescrever a quantidade da primeira (UPDATE quantity = row.quantity). Corrigido em inventoryImportRouter.ts: UPDATE agora acumula (existing.quantity + row.quantity). Afetava M03-03-09 (-24), M03-01-11 (-154), M03-02-37 (-250).
+
+## Bugs
+
+- [x] BUG CORRIGIDO: /products — INSERT/UPDATE de produto: booleanos requiresBatchControl/requiresExpiryControl agora convertidos para 0/1 explicitamente (MySQL/TiDB rejeita string "true"/"false" em tinyint(1))

@@ -264,7 +264,12 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        await db.insert(products).values(input);
+        // ✅ Converter booleanos para 0/1 — MySQL/TiDB rejeita string "true"/"false" em colunas tinyint(1)
+        await db.insert(products).values({
+          ...input,
+          requiresBatchControl: input.requiresBatchControl ? 1 : 0,
+          requiresExpiryControl: input.requiresExpiryControl ? 1 : 0,
+        } as any);
         return { success: true };
       }),
 
@@ -292,8 +297,13 @@ export const appRouter = router({
         if (!db) throw new Error("Database not available");
         
         const { id, ...updateData } = input;
+        // ✅ Converter booleanos para 0/1 — MySQL/TiDB rejeita string "true"/"false" em colunas tinyint(1)
         await db.update(products)
-          .set(updateData)
+          .set({
+            ...updateData,
+            requiresBatchControl: updateData.requiresBatchControl ? 1 : 0,
+            requiresExpiryControl: updateData.requiresExpiryControl ? 1 : 0,
+          } as any)
           .where(eq(products.id, id));
         
         return { success: true };
