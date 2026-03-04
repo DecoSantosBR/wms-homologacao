@@ -474,8 +474,104 @@ export const appRouter = router({
           locations: availableStock,
         };
       }),
-  }),
 
+    // ── Importação de produtos via Excel ──
+    importFromExcel: protectedProcedure
+      .input(z.object({
+        tenantId: z.number(),
+        // Linhas da planilha já parseadas no frontend (base64 é pesado; enviamos JSON)
+        rows: z.array(z.object({
+          sku: z.string(),
+          description: z.string(),
+          category: z.string().optional(),
+          gtin: z.string().optional(),
+          anvisaRegistry: z.string().optional(),
+          therapeuticClass: z.string().optional(),
+          manufacturer: z.string().optional(),
+          unitOfMeasure: z.string().optional(),
+          unitsPerBox: z.number().optional(),
+          minQuantity: z.number().optional(),
+          dispensingQuantity: z.number().optional(),
+          storageCondition: z.string().optional(),
+          requiresBatchControl: z.boolean().optional(),
+          requiresExpiryControl: z.boolean().optional(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+        const VALID_STORAGE = ["ambient", "refrigerated_2_8", "frozen_minus_20", "controlled"] as const;
+        type StorageCond = typeof VALID_STORAGE[number];
+
+        const results: { row: number; sku: string; status: "inserted" | "updated" | "error"; error?: string }[] = [];
+        let inserted = 0, updated = 0, errors = 0;
+
+        for (let i = 0; i < input.rows.length; i++) {
+          const row = input.rows[i];
+          const rowNum = i + 2; // linha 1 é cabeçalho
+
+          if (!row.sku?.trim()) {
+            results.push({ row: rowNum, sku: row.sku ?? "", status: "error", error: "SKU obrigatório" });
+            errors++;
+            continue;
+          }
+          if (!row.description?.trim()) {
+            results.push({ row: rowNum, sku: row.sku, status: "error", error: "Descrição obrigatória" });
+            errors++;
+            continue;
+          }
+
+          const storageRaw = (row.storageCondition ?? "").toLowerCase().replace(/[^a-z0-9_]/g, "_");
+          const storageCondition: StorageCond = (VALID_STORAGE as readonly string[]).includes(storageRaw)
+            ? (storageRaw as StorageCond)
+            : "ambient";
+
+          const payload = {
+            tenantId: input.tenantId,
+            sku: row.sku.trim(),
+            description: row.description.trim(),
+            category: row.category?.trim() || undefined,
+            gtin: row.gtin?.trim() || undefined,
+            anvisaRegistry: row.anvisaRegistry?.trim() || undefined,
+            therapeuticClass: row.therapeuticClass?.trim() || undefined,
+            manufacturer: row.manufacturer?.trim() || undefined,
+            unitOfMeasure: row.unitOfMeasure?.trim() || "UN",
+            unitsPerBox: row.unitsPerBox ?? undefined,
+            minQuantity: row.minQuantity ?? 0,
+            dispensingQuantity: row.dispensingQuantity ?? 1,
+            storageCondition,
+            requiresBatchControl: row.requiresBatchControl ?? true,
+            requiresExpiryControl: row.requiresExpiryControl ?? true,
+          };
+
+          try {
+            // Verificar se já existe (mesmo tenantId + sku)
+            const existing = await db
+              .select({ id: products.id })
+              .from(products)
+              .where(and(eq(products.tenantId, input.tenantId), eq(products.sku, payload.sku)))
+              .limit(1);
+
+            if (existing.length > 0) {
+              const { tenantId: _t, sku: _s, ...updatePayload } = payload;
+              await db.update(products).set(updatePayload).where(eq(products.id, existing[0].id));
+              results.push({ row: rowNum, sku: payload.sku, status: "updated" });
+              updated++;
+            } else {
+              await db.insert(products).values(payload);
+              results.push({ row: rowNum, sku: payload.sku, status: "inserted" });
+              inserted++;
+            }
+          } catch (err: any) {
+            results.push({ row: rowNum, sku: payload.sku, status: "error", error: err?.message ?? "Erro desconhecido" });
+            errors++;
+          }
+        }
+
+        return { inserted, updated, errors, results };
+      }),
+  }),
   zones: router({
     list: protectedProcedure.query(async () => {
       const db = await getDb();

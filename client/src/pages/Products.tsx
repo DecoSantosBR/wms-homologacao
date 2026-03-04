@@ -40,8 +40,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Package, Pencil, Trash2, Search, X } from "lucide-react";
+import { Package, Pencil, Trash2, Search, X, FileSpreadsheet } from "lucide-react";
 import { CreateProductDialog } from "@/components/CreateProductDialog";
+import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { useBusinessError } from "@/hooks/useBusinessError";
@@ -59,6 +60,7 @@ export default function Products() {
     return () => clearTimeout(t);
   }, [filterSku]);
 
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const hasFilters = !!filterTenantId || !!skuDebounced || !!filterCategory;
 
   const { data: products, isLoading } = trpc.products.list.useQuery(
@@ -329,6 +331,10 @@ export default function Products() {
                     Excluir Selecionados ({selectedIds.length})
                   </Button>
                 )}
+                <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Importar Excel
+                  </Button>
                 <CreateProductDialog />
               </div>
             </div>
@@ -790,6 +796,15 @@ export default function Products() {
 
       {/* Modal de Erros de Negócio */}
       {businessError.ErrorModal}
+
+      {/* Dialog de Importação de Produtos */}
+      <ImportProductsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        tenants={(tenants ?? []) as { id: number; name: string }[]}
+        defaultTenantId={filterTenantId}
+        onSuccess={() => utils.products.list.invalidate()}
+      />
     </div>
   );
 }

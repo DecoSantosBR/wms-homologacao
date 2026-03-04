@@ -103,3 +103,11 @@
 - [x] Backend: atualizar procedure products.list para aceitar filtros tenantId, sku e category
 - [x] Frontend: adicionar dropdowns/inputs de Cliente, SKU e Categoria na página Products
 - [x] Frontend: aplicar filtros em tempo real (debounce) sem recarregar a página
+
+## Importação de Produtos via Excel
+
+- [x] Backend: instalar xlsx, criar procedure products.importFromExcel com validação e upsert
+- [x] Backend: download de planilha modelo gerado no frontend (sem chamada ao servidor)
+- [x] Frontend: componente ImportProductsDialog com upload drag-and-drop, preview de linhas e feedback de erros por linha
+- [x] Frontend: botão "Importar Excel" na página /products
+- [x] Frontend: exibir resumo pós-importação (X inseridos, Y atualizados, Z erros)
