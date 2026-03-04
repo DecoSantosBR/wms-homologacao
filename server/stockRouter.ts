@@ -145,9 +145,13 @@ export const stockRouter = router({
       if (input.tenantId) {
         assertSameTenant(input.tenantId, effectiveTenantId, isGlobalAdmin, "movimentação de estoque");
       }
-      // Para Global Admin (effectiveTenantId = null), usar o tenantId explicitamente
-      // fornecido no input (que vem do frontend com o tenantId do inventory)
-      const resolvedTenantId = effectiveTenantId ?? input.tenantId ?? null;
+      // Para Global Admin: se input.tenantId foi fornecido, usar esse valor.
+      // Se não foi fornecido, passar null para que a query de inventory
+      // não filtre por tenantId (o Global Admin pode mover estoque de qualquer tenant).
+      // Para usuários normais: usar effectiveTenantId (nunca null).
+      const resolvedTenantId = isGlobalAdmin
+        ? (input.tenantId ?? null)
+        : effectiveTenantId;
       return await registerMovement({
         ...input,
         tenantId: resolvedTenantId,
