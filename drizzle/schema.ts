@@ -911,6 +911,10 @@ export const stageChecks = mysqlTable("stageChecks", {
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
   notes: text("notes"),
+  // Campos de controle de sessão / trava de concorrência
+  lockedByUserId: int("lockedByUserId"), // ID do usuário com a trava ativa
+  lockedByName: varchar("lockedByName", { length: 200 }), // Nome para exibir no alerta
+  lastActivityAt: timestamp("lastActivityAt"), // Última atividade (heartbeat)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

@@ -49,6 +49,7 @@ export const stageRouter = {
         pickingOrderId: input.pickingOrderId,
         customerOrderNumber: input.customerOrderNumber,
         operatorId: ctx.user.id,
+        operatorName: ctx.user.name || ctx.user.email || `Usuário #${ctx.user.id}`,
         tenantId,
       });
     }),
@@ -207,6 +208,71 @@ export const stageRouter = {
         productName: prod?.description ?? "",
         message: `Última bipagem desfeita (${qty} un.)`,
       };
+    }),
+
+  /**
+   * Heartbeat: atualiza lastActivityAt para manter o lock ativo
+   */
+  stageHeartbeat: tenantProcedure
+    .input(z.object({ stageCheckId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const { getDb } = await import("./db");
+      const { stageChecks } = await import("../drizzle/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      await db.update(stageChecks)
+        .set({ lastActivityAt: new Date() })
+        .where(
+          and(
+            eq(stageChecks.id, input.stageCheckId),
+            eq(stageChecks.lockedByUserId, ctx.user.id)
+          )
+        );
+      return { ok: true };
+    }),
+
+  /**
+   * Libera o lock voluntariamente (saída do usuário)
+   */
+  releaseStageLock: tenantProcedure
+    .input(z.object({ stageCheckId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const { getDb } = await import("./db");
+      const { stageChecks } = await import("../drizzle/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      await db.update(stageChecks)
+        .set({ lockedByUserId: null, lockedByName: null })
+        .where(
+          and(
+            eq(stageChecks.id, input.stageCheckId),
+            eq(stageChecks.lockedByUserId, ctx.user.id)
+          )
+        );
+      return { ok: true };
+    }),
+
+  /**
+   * Força liberação do lock (apenas Global Admin)
+   */
+  forceReleaseStageLock: tenantProcedure
+    .input(z.object({ stageCheckId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.isGlobalAdmin) {
+        const { TRPCError } = await import("@trpc/server");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o administrador global pode forçar a liberação." });
+      }
+      const { getDb } = await import("./db");
+      const { stageChecks } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      await db.update(stageChecks)
+        .set({ lockedByUserId: null, lockedByName: null })
+        .where(eq(stageChecks.id, input.stageCheckId));
+      return { ok: true, message: "Lock liberado pelo administrador." };
     }),
 
   /**

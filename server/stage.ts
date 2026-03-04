@@ -112,6 +112,7 @@ export async function startStageCheck(params: {
   pickingOrderId: number;
   customerOrderNumber: string;
   operatorId: number;
+  operatorName: string;
   tenantId: number | null;
 }) {
   const dbConn = await getDb();
@@ -146,13 +147,53 @@ export async function startStageCheck(params: {
     .limit(1);
 
   if (existingChecks.length > 0) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "Já existe uma conferência em andamento para este pedido",
-    });
+    const existing = existingChecks[0];
+    const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
+    const now = new Date();
+    const lastActivity = existing.lastActivityAt ?? existing.startedAt;
+    const isExpired = (now.getTime() - lastActivity.getTime()) >= LOCK_TIMEOUT_MS;
+    const isGlobalAdmin = params.tenantId === null; // null = Global Admin
+    const isSameUser = existing.lockedByUserId === params.operatorId;
+    const isSameTenant = existing.tenantId === orderTenantId;
+
+    // Global Admin pode sempre assumir; mesmo usuário retoma; timeout libera para mesmo tenant
+    const canAssume = isGlobalAdmin || isSameUser || (isExpired && isSameTenant);
+
+    if (!canAssume) {
+      // Pedido travado por outro usuário ativo no mesmo tenant
+      const lockedBy = existing.lockedByName || `Usuário #${existing.lockedByUserId}`;
+      const minutesAgo = Math.floor((now.getTime() - lastActivity.getTime()) / 60000);
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: `Este pedido está sendo conferido por ${lockedBy} (há ${minutesAgo} min). Aguarde ou peça ao administrador para liberar.`,
+        cause: { lockedByName: lockedBy, lockedByUserId: existing.lockedByUserId, minutesAgo },
+      });
+    }
+
+    // Assumir o lock (retomar ou forçar liberação)
+    await dbConn.update(stageChecks)
+      .set({
+        lockedByUserId: params.operatorId,
+        lockedByName: params.operatorName,
+        lastActivityAt: now,
+        operatorId: params.operatorId,
+      })
+      .where(eq(stageChecks.id, existing.id));
+
+    return {
+      stageCheckId: existing.id,
+      customerOrderNumber: existing.customerOrderNumber,
+      message: isSameUser
+        ? "Conferência retomada. Continue bipando os produtos."
+        : isExpired
+          ? "Sessão anterior expirada. Conferência assumida."
+          : "Conferência liberada pelo administrador. Iniciando.",
+      resumed: true,
+    };
   }
 
   // Criar registro de conferência usando tenantId do pedido
+  const now = new Date();
   const [stageCheck] = await dbConn.insert(stageChecks).values({
     tenantId: orderTenantId,
     pickingOrderId: params.pickingOrderId,
@@ -160,6 +201,9 @@ export async function startStageCheck(params: {
     operatorId: params.operatorId,
     status: "in_progress",
     hasDivergence: false,
+    lockedByUserId: params.operatorId,
+    lockedByName: params.operatorName,
+    lastActivityAt: now,
   });
 
   // Buscar itens do pedido para criar registros de conferência

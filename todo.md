@@ -130,3 +130,20 @@
 - [x] BUG CORRIGIDO: /collector/stage e /stage - stageRouter corrigido para passar null como tenantId para Global Admin
 - [x] Auditoria completa: waveRouter, shippingRouter, reportsRouter, stockRouter, blindConferenceRouter, routers.ts (picking/waves) já tratavam Global Admin corretamente
 - [x] stageRouter: getOrderForStage, startStageCheck, getActiveStageCheck, getStageCheckHistory, cancelStageCheck corrigidos
+
+## Bugs
+
+- [x] BUG CORRIGIDO: /collector/stage - erro "Já existe uma conferência em andamento para este pedido" — sistema de lock com timeout implementado
+
+## Trava de Concorrência e Timeout — Stage
+
+- [x] Schema: adicionados campos lockedByUserId, lockedByName, lastActivityAt em stageChecks
+- [x] Backend: startStageCheck verifica lock ativo (< 10min) e bloqueia com nome do usuário
+- [x] Backend: startStageCheck assume lock após timeout (>= 10min) para mesmo tenant
+- [x] Backend: procedure stageHeartbeat atualiza lastActivityAt a cada 30s
+- [x] Backend: procedure releaseStageLock libera o lock (saída voluntária)
+- [x] Backend: procedure forceReleaseStageLock para Global Admin liberar qualquer lock
+- [x] Frontend: alerta âmbar "Pedido sendo conferido por [Nome]" quando bloqueado
+- [x] Frontend: modal de confirmação ao sair (botão Abandonar + beforeunload)
+- [x] Frontend: heartbeat automático a cada 30s enquanto na tela de conferência
+- [x] Frontend: botão "Abandonar" com modal de confirmação (libera lock voluntariamente)
