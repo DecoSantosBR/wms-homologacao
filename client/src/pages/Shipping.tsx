@@ -301,7 +301,7 @@ export default function Shipping() {
             <CardHeader>
               <CardTitle>Pedidos Prontos para Expedição</CardTitle>
               <CardDescription>
-                Pedidos com status "staged" (conferidos no Stage)
+                Pedidos conferidos no Stage (aguardando NF ou com NF vinculada, fora de romaneio)
               </CardDescription>
             </CardHeader>
             <CardContent>

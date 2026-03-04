@@ -673,6 +673,7 @@ export default function PickingOrders() {
       picking:    { label: "Separando",  className: "bg-blue-600 text-white",         icon: Package },
       picked:     { label: "Separado",   className: "bg-teal-600 text-white",         icon: CheckCircle2 },
       staged:     { label: "Conferido",  className: "bg-indigo-600 text-white",       icon: CheckCircle2 },
+      invoiced:   { label: "NF Vinculada", className: "bg-emerald-600 text-white",    icon: CheckCircle2 },
       completed:  { label: "Completo",   className: "bg-green-600 text-white",        icon: CheckCircle2 },
       checking:   { label: "Conferindo", className: "bg-amber-500 text-white",        icon: AlertCircle },
       packed:     { label: "Embalado",   className: "bg-purple-600 text-white",       icon: Package },
