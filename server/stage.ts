@@ -297,10 +297,29 @@ export async function recordStageItem(params: {
   labelCode: string;
   quantity?: number; // Opcional quando autoIncrement = true
   autoIncrement?: boolean; // Se true, incrementa automaticamente +1 caixa
-  tenantId: number | null;
+  tenantId: number | null; // tenant do usuário logado (null = Global Admin)
 }) {
   const dbConn = await getDb();
   if (!dbConn) throw new Error("Database connection failed");
+
+  // Buscar o stageCheck para obter o tenantId do PEDIDO (não do usuário)
+  // Isso é necessário para Global Admin que tem tenantId=null mas confere pedidos de outros tenants
+  const stageCheckResult = await dbConn
+    .select({ tenantId: stageChecks.tenantId })
+    .from(stageChecks)
+    .where(eq(stageChecks.id, params.stageCheckId))
+    .limit(1);
+
+  if (stageCheckResult.length === 0) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `Conferência #${params.stageCheckId} não encontrada`,
+    });
+  }
+
+  // tenantId efetivo para validação: usa o tenant do pedido (stageCheck)
+  // Se o usuário é Global Admin (params.tenantId === null), ainda valida pelo tenant do pedido
+  const orderTenantId = stageCheckResult[0].tenantId;
 
   // Buscar produto pela etiqueta de lote (labelAssociations)
   const labelResult = await dbConn
@@ -338,11 +357,12 @@ export async function recordStageItem(params: {
     });
   }
 
-  // Validar tenantId se necessário
-  if (params.tenantId !== null && product.tenantId !== params.tenantId) {
+  // Validar que o produto pertence ao tenant DO PEDIDO (não do usuário logado)
+  // Global Admin (params.tenantId === null) ainda valida pelo tenant do pedido
+  if (product.tenantId !== orderTenantId) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: `Produto não pertence ao tenant atual`,
+      message: `Produto não pertence ao tenant do pedido`,
     });
   }
 

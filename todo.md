@@ -135,6 +135,10 @@
 
 - [x] BUG CORRIGIDO: /collector/stage - erro "Já existe uma conferência em andamento para este pedido" — sistema de lock com timeout implementado
 
+## Bugs
+
+- [x] BUG CORRIGIDO: Stage — erro "Produto não pertence ao tenant atual" ao bipar etiqueta na conferência. recordStageItem agora usa o tenantId do stageCheck (pedido) em vez de ctx.effectiveTenantId (usuário logado)
+
 ## Trava de Concorrência e Timeout — Stage
 
 - [x] Schema: adicionados campos lockedByUserId, lockedByName, lastActivityAt em stageChecks
