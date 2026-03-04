@@ -119,3 +119,7 @@
 - [x] Backend: preencher automaticamente campos opcionais em branco com valores padrão
 - [x] Frontend: preview destaca linhas com campos obrigatórios faltantes em vermelho
 - [x] Frontend: template atualizado com cabeçalhos marcados com * para campos obrigatórios
+
+## Design da Etiqueta de Pedido
+
+- [x] Atualizar PDF da etiqueta de pedido: logo Med@x esquerda, Nº Pedido/Cliente/Destinatário direita, barcode Code-128 centralizado na parte inferior

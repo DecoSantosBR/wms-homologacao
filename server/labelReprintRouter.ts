@@ -78,6 +78,110 @@ async function buildLabelPdf(
 }
 
 // ---------------------------------------------------------------------------
+// Helper específico: Etiqueta de Pedido de Separação (novo design)
+// ---------------------------------------------------------------------------
+
+/** URL do logo Med@x (CDN) */
+const MEDAX_LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663187653950/VPbZo3VRZUT62wWDPHVeqm/medax-logo-crop_81828352.png";
+
+/**
+ * Gera PDF de etiqueta de Pedido de Separação:
+ *  - Logo Med@x (esquerda) + Nº Pedido / Cliente / Destinatário (direita)
+ *  - Código de barras Code-128 centralizado na parte inferior
+ * Tamanho: 15cm × 8cm
+ */
+async function buildPickingOrderLabelPdf(opts: {
+  orderNumber: string;
+  customerOrderNumber?: string | null;
+  clientName?: string | null;
+  recipientName?: string | null;
+}): Promise<string> {
+  const { orderNumber, customerOrderNumber, clientName, recipientName } = opts;
+  const displayNumber = customerOrderNumber?.trim() || orderNumber;
+
+  // Barcode
+  const barcodeBuffer = await bwipjs.toBuffer({
+    bcid: "code128",
+    text: displayNumber,
+    scale: 3,
+    height: 14,
+    includetext: true,
+    textxalign: "center",
+    textfont: "Helvetica",
+    textsize: 10,
+  });
+
+  // Baixar logo
+  let logoBuffer: Buffer | null = null;
+  try {
+    const res = await fetch(MEDAX_LOGO_URL);
+    if (res.ok) logoBuffer = Buffer.from(await res.arrayBuffer());
+  } catch { /* sem logo */ }
+
+  // PDF: 15cm × 8cm
+  const W = 425.2;
+  const H = 226.8;
+  const doc = new PDFDocument({
+    size: [W, H],
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+  });
+  const chunks: Buffer[] = [];
+  doc.on("data", (c: Buffer) => chunks.push(c));
+
+  // Fundo branco
+  doc.rect(0, 0, W, H).fill("#ffffff");
+
+  // Logo (esquerda, topo)
+  const logoX = 16;
+  const logoY = 14;
+  const logoW = 130;
+  const logoH = 55;
+  if (logoBuffer) {
+    doc.image(logoBuffer, logoX, logoY, { width: logoW, height: logoH, fit: [logoW, logoH] });
+  } else {
+    doc.fontSize(22).font("Helvetica-Bold").fillColor("#1a3a8c").text("Med@x", logoX, logoY + 8);
+    doc.fontSize(8).font("Helvetica").fillColor("#555555").text("Soluções Logísticas Para Saúde", logoX, logoY + 36);
+  }
+
+  // Dados do pedido (direita do logo)
+  const textX = logoX + logoW + 18;
+  const textW = W - textX - 16;
+
+  // Nº do Pedido (destaque)
+  doc.fontSize(18).font("Helvetica-Bold").fillColor("#000000")
+    .text(`N\u00ba do Pedido: ${displayNumber}`, textX, 14, { width: textW });
+
+  // Cliente
+  if (clientName?.trim()) {
+    doc.fontSize(12).font("Helvetica").fillColor("#222222")
+      .text(`Cliente: ${clientName.trim()}`, textX, 44, { width: textW });
+  }
+
+  // Destinatário
+  if (recipientName?.trim()) {
+    doc.fontSize(12).font("Helvetica").fillColor("#222222")
+      .text(`Destinatário: ${recipientName.trim()}`, textX, clientName?.trim() ? 64 : 44, { width: textW });
+  }
+
+  // Linha separadora
+  doc.moveTo(16, logoY + logoH + 10).lineTo(W - 16, logoY + logoH + 10)
+    .strokeColor("#cccccc").lineWidth(0.5).stroke();
+
+  // Barcode centralizado na parte inferior
+  const barcodeW = 280;
+  const barcodeH = 62;
+  const barcodeX = (W - barcodeW) / 2;
+  const barcodeY = H - barcodeH - 14;
+  doc.image(barcodeBuffer, barcodeX, barcodeY, { width: barcodeW, height: barcodeH });
+
+  doc.end();
+  const pdfBuffer = await new Promise<Buffer>((resolve) => {
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+  return `data:application/pdf;base64,${pdfBuffer.toString("base64")}`;
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -296,13 +400,25 @@ export const labelReprintRouter = router({
       if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
       if (!isGlobalAdmin && order.tenantId !== effectiveTenantId)
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
-      const pdf = await buildLabelPdf(
-        order.orderNumber,
-        `Pedido: ${order.orderNumber}`,
-        order.customerName ? `Cliente: ${order.customerName}` : "",
-        `Itens: ${order.totalItems ?? 0}  |  Status: ${order.status}`
-      );
-      return { success: true, labelCode: order.orderNumber, pdf };
+
+      // Buscar nome do tenant (cliente)
+      let clientName: string | null = null;
+      try {
+        const [tenant] = await db
+          .select({ name: tenants.name, tradeName: tenants.tradeName })
+          .from(tenants)
+          .where(eq(tenants.id, order.tenantId))
+          .limit(1);
+        clientName = tenant?.tradeName || tenant?.name || null;
+      } catch { /* sem tenant */ }
+
+      const pdf = await buildPickingOrderLabelPdf({
+        orderNumber: order.orderNumber,
+        customerOrderNumber: order.customerOrderNumber,
+        clientName,
+        recipientName: order.customerName,
+      });
+      return { success: true, labelCode: order.customerOrderNumber || order.orderNumber, pdf };
     }),
 
   // ── 3. VOLUMES ─────────────────────────────────────────────────────────────
