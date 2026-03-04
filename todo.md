@@ -123,3 +123,4 @@
 ## Design da Etiqueta de Pedido
 
 - [x] Atualizar PDF da etiqueta de pedido: logo Med@x esquerda, Nº Pedido/Cliente/Destinatário direita, barcode Code-128 centralizado na parte inferior
+- [x] Redesign etiqueta de pedido: fundo cinza claro, borda arredondada, marca d'água Med@x repetida, ícone caminhão/entrega antes do Destinatário, barcode grande centralizado

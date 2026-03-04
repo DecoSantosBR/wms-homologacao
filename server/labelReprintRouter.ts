@@ -85,9 +85,12 @@ async function buildLabelPdf(
 const MEDAX_LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663187653950/VPbZo3VRZUT62wWDPHVeqm/medax-logo-crop_81828352.png";
 
 /**
- * Gera PDF de etiqueta de Pedido de Separação:
- *  - Logo Med@x (esquerda) + Nº Pedido / Cliente / Destinatário (direita)
- *  - Código de barras Code-128 centralizado na parte inferior
+ * Gera PDF de etiqueta de Pedido de Separação (design v2):
+ *  - Fundo cinza claro (#e8ecf0) com borda arredondada azul-acinzentada
+ *  - Marca d'água "Med@x" repetida em grade (texto cinza claro)
+ *  - Logo Med@x (esquerda, topo) + Nº Pedido / Cliente / Destinatário (direita)
+ *  - Ícone de entrega (caminho SVG simplificado) antes do Destinatário
+ *  - Código de barras Code-128 grande centralizado na parte inferior
  * Tamanho: 15cm × 8cm
  */
 async function buildPickingOrderLabelPdf(opts: {
@@ -99,16 +102,13 @@ async function buildPickingOrderLabelPdf(opts: {
   const { orderNumber, customerOrderNumber, clientName, recipientName } = opts;
   const displayNumber = customerOrderNumber?.trim() || orderNumber;
 
-  // Barcode
+  // Barcode — grande, sem texto interno (texto será desenhado manualmente)
   const barcodeBuffer = await bwipjs.toBuffer({
     bcid: "code128",
     text: displayNumber,
-    scale: 3,
-    height: 14,
-    includetext: true,
-    textxalign: "center",
-    textfont: "Helvetica",
-    textsize: 10,
+    scale: 4,
+    height: 18,
+    includetext: false,
   });
 
   // Baixar logo
@@ -118,9 +118,11 @@ async function buildPickingOrderLabelPdf(opts: {
     if (res.ok) logoBuffer = Buffer.from(await res.arrayBuffer());
   } catch { /* sem logo */ }
 
-  // PDF: 15cm × 8cm
+  // PDF: 15cm × 8cm (em pontos: 1cm = 28.346pt)
   const W = 425.2;
   const H = 226.8;
+  const R = 12; // raio das bordas arredondadas
+
   const doc = new PDFDocument({
     size: [W, H],
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -128,51 +130,97 @@ async function buildPickingOrderLabelPdf(opts: {
   const chunks: Buffer[] = [];
   doc.on("data", (c: Buffer) => chunks.push(c));
 
-  // Fundo branco
-  doc.rect(0, 0, W, H).fill("#ffffff");
+  // ─ Fundo cinza claro com bordas arredondadas ─
+  doc.roundedRect(0, 0, W, H, R).fill("#e8ecf0");
 
-  // Logo (esquerda, topo)
-  const logoX = 16;
-  const logoY = 14;
-  const logoW = 130;
-  const logoH = 55;
+  // ─ Borda azul-acinzentada ─
+  doc.roundedRect(1.5, 1.5, W - 3, H - 3, R)
+    .strokeColor("#a0b0c8").lineWidth(2).stroke();
+
+  // ─ Marca d'água "Med@x" repetida em grade ─
+  doc.save();
+  doc.fontSize(22).font("Helvetica-Bold").fillColor("#c8cfd8").opacity(0.55);
+  const wmText = "Med@x";
+  const wmCols = 4;
+  const wmRows = 3;
+  const wmColW = W / wmCols;
+  const wmRowH = H / wmRows;
+  for (let row = 0; row < wmRows; row++) {
+    for (let col = 0; col < wmCols; col++) {
+      const wx = col * wmColW + wmColW * 0.1;
+      const wy = row * wmRowH + wmRowH * 0.3;
+      doc.text(wmText, wx, wy, { lineBreak: false });
+    }
+  }
+  doc.restore();
+
+  // ─ Logo (esquerda, topo) ─
+  const logoX = 14;
+  const logoY = 12;
+  const logoW = 140;
+  const logoH = 60;
   if (logoBuffer) {
     doc.image(logoBuffer, logoX, logoY, { width: logoW, height: logoH, fit: [logoW, logoH] });
   } else {
-    doc.fontSize(22).font("Helvetica-Bold").fillColor("#1a3a8c").text("Med@x", logoX, logoY + 8);
-    doc.fontSize(8).font("Helvetica").fillColor("#555555").text("Soluções Logísticas Para Saúde", logoX, logoY + 36);
+    doc.fontSize(24).font("Helvetica-Bold").fillColor("#1a3a8c").opacity(1)
+      .text("Med@x", logoX, logoY + 10, { lineBreak: false });
+    doc.fontSize(8).font("Helvetica").fillColor("#555555")
+      .text("Soluções Logísticas Para Saúde", logoX, logoY + 40, { lineBreak: false });
   }
 
-  // Dados do pedido (direita do logo)
-  const textX = logoX + logoW + 18;
-  const textW = W - textX - 16;
+  // ─ Dados do pedido (direita do logo) ─
+  const textX = logoX + logoW + 14;
+  const textW = W - textX - 14;
 
-  // Nº do Pedido (destaque)
-  doc.fontSize(18).font("Helvetica-Bold").fillColor("#000000")
-    .text(`N\u00ba do Pedido: ${displayNumber}`, textX, 14, { width: textW });
+  // Nº do Pedido (negrito, grande)
+  doc.fontSize(20).font("Helvetica-Bold").fillColor("#000000").opacity(1)
+    .text(`N\u00ba do Pedido: ${displayNumber}`, textX, 12, { width: textW, lineBreak: false });
 
   // Cliente
   if (clientName?.trim()) {
-    doc.fontSize(12).font("Helvetica").fillColor("#222222")
-      .text(`Cliente: ${clientName.trim()}`, textX, 44, { width: textW });
+    doc.fontSize(13).font("Helvetica").fillColor("#111111")
+      .text(`Cliente: ${clientName.trim()}`, textX, 40, { width: textW, lineBreak: false });
   }
 
-  // Destinatário
+  // Ícone de entrega (caminho SVG simplificado via linhas/curvas PDFKit)
+  // Desenhamos um caminhão minimalista usando formas básicas
+  const iconY = clientName?.trim() ? 65 : 40;
+  const iconX = textX;
+  // Corpo do caminhão
+  doc.save();
+  doc.strokeColor("#888888").fillColor("#888888").lineWidth(1);
+  // Caixa traseira
+  doc.rect(iconX, iconY + 2, 16, 10).stroke();
+  // Cabine
+  doc.rect(iconX + 16, iconY + 5, 8, 7).stroke();
+  // Para-brisa (triângulo)
+  doc.moveTo(iconX + 16, iconY + 5).lineTo(iconX + 22, iconY + 5).lineTo(iconX + 24, iconY + 8).closePath().stroke();
+  // Rodas
+  doc.circle(iconX + 5, iconY + 13, 3).fill();
+  doc.circle(iconX + 19, iconY + 13, 3).fill();
+  // Pin de localização
+  doc.circle(iconX + 30, iconY + 3, 4).stroke();
+  doc.moveTo(iconX + 30, iconY + 7).lineTo(iconX + 30, iconY + 14).stroke();
+  doc.restore();
+
+  // Destinatário (ao lado do ícone)
   if (recipientName?.trim()) {
-    doc.fontSize(12).font("Helvetica").fillColor("#222222")
-      .text(`Destinatário: ${recipientName.trim()}`, textX, clientName?.trim() ? 64 : 44, { width: textW });
+    doc.fontSize(13).font("Helvetica-Bold").fillColor("#111111")
+      .text("Destinatário: ", textX + 38, iconY + 2, { continued: true, lineBreak: false })
+      .font("Helvetica")
+      .text(recipientName.trim(), { lineBreak: false });
   }
 
-  // Linha separadora
-  doc.moveTo(16, logoY + logoH + 10).lineTo(W - 16, logoY + logoH + 10)
-    .strokeColor("#cccccc").lineWidth(0.5).stroke();
-
-  // Barcode centralizado na parte inferior
-  const barcodeW = 280;
-  const barcodeH = 62;
+  // ─ Barcode centralizado na parte inferior ─
+  const barcodeW = 340;
+  const barcodeH = 72;
   const barcodeX = (W - barcodeW) / 2;
-  const barcodeY = H - barcodeH - 14;
+  const barcodeY = H - barcodeH - 22;
   doc.image(barcodeBuffer, barcodeX, barcodeY, { width: barcodeW, height: barcodeH });
+
+  // Número do barcode centralizado abaixo
+  doc.fontSize(13).font("Helvetica").fillColor("#000000")
+    .text(displayNumber, 0, barcodeY + barcodeH + 2, { width: W, align: "center", lineBreak: false });
 
   doc.end();
   const pdfBuffer = await new Promise<Buffer>((resolve) => {
