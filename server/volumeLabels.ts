@@ -77,11 +77,11 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
 
       // ── SEÇÃO SUPERIOR: Logo (esquerda) + Barcode (direita) ──────────────
       // Linha divisória em y=70 — logo e barcode ficam acima dela
-      const dividerY = 70;
+      const dividerY = 85;  // Opção B: mais espaço para logo e barcode
 
       // Logo: cabe em ~55% da largura, altura máxima = dividerY - margin*2
-      const logoW = 130;
-      const logoH = dividerY - margin * 2;  // ~50pt
+      const logoW = 169;          // 130 × 1.3 = 169pt (+30%)
+      const logoH = dividerY - margin * 2;  // ~50pt (limitado pela altura da seção)
 
       if (logoExists) {
         doc.image(logoPath, margin, margin, {
