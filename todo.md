@@ -139,6 +139,10 @@
 
 - [x] BUG CORRIGIDO: Stage — erro "Produto não pertence ao tenant atual" ao bipar etiqueta na conferência. recordStageItem agora usa o tenantId do stageCheck (pedido) em vez de ctx.effectiveTenantId (usuário logado)
 
+## Design Etiqueta de Volume (Stage)
+
+- [x] Redesenhar PDF de etiquetas de volume: logo Med@x esquerda, barcode direita, linha divisória, Destinatário/Pedido/Cliente/Volume bold (15cm x 7.5cm)
+
 ## Trava de Concorrência e Timeout — Stage
 
 - [x] Schema: adicionados campos lockedByUserId, lockedByName, lastActivityAt em stageChecks

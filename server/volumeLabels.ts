@@ -17,110 +17,155 @@ interface VolumeLabel {
 }
 
 /**
- * Gera etiquetas de volumes em PDF (10cm x 5cm cada)
- * Inclui código de barras Code-128 do customerOrderNumber
+ * Gera etiquetas de volumes em PDF (15cm x 7.5cm cada)
+ *
+ * Layout fiel à imagem de referência:
+ * ┌─────────────────────────────────────────────────────┐
+ * │  [Logo Med@x]              [||||||||||||||||||||]   │
+ * │  Soluções Logísticas Para Saúde                     │
+ * ├─────────────────────────────────────────────────────┤
+ * │  Destinatário: HMV              Pedido: 005         │
+ * │  Cliente: AESC - Mãe de Deus - UCG                  │
+ * │                Volume 1 de 12                       │
+ * └─────────────────────────────────────────────────────┘
  */
 export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffer> {
-  try {
-    // Dimensões: 10cm x 5cm = 283.46pt x 141.73pt (1cm = 28.346pt)
-    const labelWidth = 283.46;
-    const labelHeight = 141.73;
+  // Dimensões: 15cm x 7.5cm em pontos (1cm = 28.346pt)
+  const labelWidth = 425.2;   // 15cm
+  const labelHeight = 212.6;  // 7.5cm
+  const margin = 14;
 
-    // Gerar todos os códigos de barras primeiro (async)
-    const barcodes = new Map<string, Buffer>();
-    for (const label of labels) {
-      if (!barcodes.has(label.customerOrderNumber)) {
-        const barcodeBuffer = await bwipjs.toBuffer({
-          bcid: "code128",
-          text: label.customerOrderNumber,
-          scale: 2,
-          height: 8,
-          includetext: false,
-        });
-        barcodes.set(label.customerOrderNumber, barcodeBuffer);
-      }
+  // Pré-gerar todos os códigos de barras (async, deduplica por pedido)
+  const barcodes = new Map<string, Buffer>();
+  for (const label of labels) {
+    if (!barcodes.has(label.customerOrderNumber)) {
+      const barcodeBuffer = await bwipjs.toBuffer({
+        bcid: "code128",
+        text: label.customerOrderNumber,
+        scale: 3,
+        height: 12,
+        includetext: false,
+        paddingwidth: 0,
+        paddingheight: 0,
+      });
+      barcodes.set(label.customerOrderNumber, barcodeBuffer);
     }
-
-    // Criar PDF
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({
-        size: [labelWidth, labelHeight],
-        margins: { top: 10, bottom: 10, left: 10, right: 10 },
-      });
-
-      const chunks: Buffer[] = [];
-      doc.on("data", (chunk) => chunks.push(chunk));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", reject);
-
-      // Carregar logo Med@x
-      const logoPath = path.join(__dirname, "assets", "medax-logo.png");
-      const logoExists = fs.existsSync(logoPath);
-
-      labels.forEach((label, index) => {
-        if (index > 0) {
-          doc.addPage({ size: [labelWidth, labelHeight], margins: { top: 10, bottom: 10, left: 10, right: 10 } });
-        }
-
-        let currentY = 10;
-
-        // Logo Med@x no canto superior esquerdo
-        if (logoExists) {
-          doc.image(logoPath, 10, currentY, { width: 60, height: 20 });
-        }
-
-        // Obter código de barras pré-gerado
-        const barcodeBuffer = barcodes.get(label.customerOrderNumber)!;
-
-        // Posicionar código de barras ao lado do logo (ou no topo se não houver logo)
-        const barcodeX = logoExists ? 80 : 10;
-        const barcodeWidth = logoExists ? labelWidth - 90 : labelWidth - 20;
-        doc.image(barcodeBuffer, barcodeX, currentY, { width: barcodeWidth, height: 30 });
-
-        currentY += 35;
-
-        // Número do pedido (texto alfanumérico)
-        doc.fontSize(12).font("Helvetica-Bold").text(
-          `Pedido: ${label.customerOrderNumber}`,
-          10,
-          currentY,
-          { width: labelWidth - 20, align: "center" }
-        );
-
-        currentY += 25;
-
-        // Destinatário
-        doc.fontSize(14).font("Helvetica-Bold").text(
-          `Destinatário: ${label.customerName}`,
-          10,
-          currentY,
-          { width: labelWidth - 20, align: "left" }
-        );
-
-        currentY += 20;
-
-        // Cliente (Tenant)
-        doc.fontSize(14).font("Helvetica-Bold").text(
-          `Cliente: ${label.tenantName}`,
-          10,
-          currentY,
-          { width: labelWidth - 20, align: "left" }
-        );
-
-        currentY += 25;
-
-        // Quantidade de volumes
-        doc.fontSize(14).font("Helvetica-Bold").text(
-          `Volume ${label.volumeNumber} de ${label.totalVolumes}`,
-          10,
-          currentY,
-          { width: labelWidth - 20, align: "center" }
-        );
-      });
-
-      doc.end();
-    });
-  } catch (error) {
-    throw error;
   }
+
+  // Carregar logo
+  const logoPath = path.join(__dirname, "assets", "medax-logo.png");
+  const logoExists = fs.existsSync(logoPath);
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: [labelWidth, labelHeight],
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
+      autoFirstPage: false,
+    });
+
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    labels.forEach((label, index) => {
+      doc.addPage({ size: [labelWidth, labelHeight], margins: { top: 0, bottom: 0, left: 0, right: 0 } });
+
+      // ── Fundo branco com borda arredondada simulada ───────────────────────
+      doc
+        .roundedRect(2, 2, labelWidth - 4, labelHeight - 4, 8)
+        .fillAndStroke("#FFFFFF", "#CCCCCC");
+
+      // ── SEÇÃO SUPERIOR: Logo (esquerda) + Barcode (direita) ──────────────
+      const topSectionHeight = 72;
+      const logoAreaWidth = 180;
+      const barcodeAreaX = logoAreaWidth + margin;
+      const barcodeAreaWidth = labelWidth - barcodeAreaX - margin;
+
+      // Logo Med@x
+      if (logoExists) {
+        doc.image(logoPath, margin, margin, {
+          width: logoAreaWidth - margin,
+          height: 52,
+          fit: [logoAreaWidth - margin, 52],
+        });
+      } else {
+        // Fallback texto se logo não existir
+        doc
+          .fontSize(20)
+          .font("Helvetica-Bold")
+          .fillColor("#1a3a8c")
+          .text("Med@x", margin, margin + 8, { width: logoAreaWidth - margin });
+        doc
+          .fontSize(8)
+          .font("Helvetica")
+          .fillColor("#666666")
+          .text("Soluções Logísticas Para Saúde", margin, margin + 34, { width: logoAreaWidth - margin });
+      }
+
+      // Código de barras (direita, alinhado ao topo)
+      const barcodeBuffer = barcodes.get(label.customerOrderNumber)!;
+      doc.image(barcodeBuffer, barcodeAreaX, margin + 4, {
+        width: barcodeAreaWidth,
+        height: 48,
+        fit: [barcodeAreaWidth, 48],
+      });
+
+      // ── Linha divisória horizontal ────────────────────────────────────────
+      const dividerY = topSectionHeight + 4;
+      doc
+        .moveTo(margin, dividerY)
+        .lineTo(labelWidth - margin, dividerY)
+        .lineWidth(1.2)
+        .strokeColor("#000000")
+        .stroke();
+
+      // ── SEÇÃO INFERIOR: Dados do pedido ───────────────────────────────────
+      doc.fillColor("#000000");
+
+      // Linha 1: Destinatário (esquerda) + Pedido (direita) — mesma linha
+      const line1Y = dividerY + 14;
+      const halfWidth = (labelWidth - margin * 2) / 2;
+
+      doc
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .text(`Destinatário: ${label.customerName}`, margin, line1Y, {
+          width: halfWidth + 10,
+          align: "left",
+          lineBreak: false,
+        });
+
+      doc
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .text(`Pedido: ${label.customerOrderNumber}`, margin + halfWidth - 10, line1Y, {
+          width: halfWidth + 10,
+          align: "right",
+          lineBreak: false,
+        });
+
+      // Linha 2: Cliente
+      const line2Y = line1Y + 28;
+      doc
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .text(`Cliente: ${label.tenantName}`, margin, line2Y, {
+          width: labelWidth - margin * 2,
+          align: "left",
+        });
+
+      // Linha 3: Volume N de X — centralizado e em destaque
+      const line3Y = line2Y + 30;
+      doc
+        .fontSize(16)
+        .font("Helvetica-Bold")
+        .text(`Volume ${label.volumeNumber} de ${label.totalVolumes}`, margin, line3Y, {
+          width: labelWidth - margin * 2,
+          align: "center",
+        });
+    });
+
+    doc.end();
+  });
 }
