@@ -301,6 +301,74 @@ function WavesTab() {
 function ShipmentsSubScreen({ onBack }: { onBack: () => void }) {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [volumeQty, setVolumeQty] = useState("1");
+
+  const { data, isLoading } = trpc.labelReprint.listStageVolumes.useQuery(
+    { search: query || undefined, limit: 30 },
+    { enabled: true }
+  );
+
+  const reprint = trpc.labelReprint.reprintStageVolume.useMutation({
+    onSuccess: (result) => {
+      toast.success("Etiquetas geradas!");
+      openPdfInNewTab(result.pdf);
+      setSelectedId(null);
+      setVolumeQty("1");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  function handlePrint(id: number) {
+    const qty = parseInt(volumeQty);
+    if (!qty || qty < 1) {
+      toast.error("Informe uma quantidade válida de volumes");
+      return;
+    }
+    reprint.mutate({ stageCheckId: id, totalVolumes: qty });
+  }
+
+  return (
+    <SubScreenWrapper title="Etiquetas de Volumes" onBack={onBack}>
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        onSearch={() => setQuery(search)}
+        placeholder="Nº do pedido do cliente..."
+      />
+      {/* Campo de quantidade de volumes */}
+      <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm">
+        <span className="text-sm font-medium text-slate-700 shrink-0">Qtd. volumes:</span>
+        <input
+          type="number"
+          min={1}
+          max={999}
+          value={volumeQty}
+          onChange={(e) => setVolumeQty(e.target.value)}
+          className="w-20 text-center border border-slate-300 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="text-xs text-slate-400">(será aplicado ao pedido selecionado)</span>
+      </div>
+      {isLoading && <LoadingRow />}
+      {!isLoading && (data?.length ?? 0) === 0 && <EmptyRow />}
+      {data?.map((row) => (
+        <ItemRow
+          key={row.id}
+          primary={`Pedido: ${row.customerOrderNumber}`}
+          secondary={[row.customerName, row.completedAt ? `Concluído: ${new Date(row.completedAt).toLocaleDateString("pt-BR")}` : null].filter(Boolean).join(" · ")}
+          badge={row.hasDivergence ? "Divergência" : row.status === "completed" ? "Concluído" : row.status}
+          loading={reprint.isPending && selectedId === row.id}
+          onPrint={() => { setSelectedId(row.id); handlePrint(row.id); }}
+        />
+      ))}
+    </SubScreenWrapper>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _ShipmentsSubScreenLegacy({ onBack }: { onBack: () => void }) {
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
 
   const { data, isLoading } = trpc.labelReprint.listShipments.useQuery(
     { search: query || undefined, limit: 30 },
@@ -316,7 +384,7 @@ function ShipmentsSubScreen({ onBack }: { onBack: () => void }) {
   });
 
   return (
-    <SubScreenWrapper title="Etiquetas de Volumes" onBack={onBack}>
+    <SubScreenWrapper title="Etiquetas de Volumes (Romaneio)" onBack={onBack}>
       <SearchBar
         value={search}
         onChange={setSearch}

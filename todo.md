@@ -141,6 +141,8 @@
 
 ## Bugs
 
+- [x] BUG CORRIGIDO: /collector/label-reprint — Etiquetas de Volumes agora busca stageChecks por customerOrderNumber. Novas procedures: listStageVolumes e reprintStageVolume. Operador informa qtd de volumes ao reimprimir.
+
 - [x] BUG CORRIGIDO: Importação de NF-e — xml2js retornava número 0 (int) para <serie>0</serie> e <nNF>66666</nNF>. Corrigido com String() no nfeParser.ts
 - [x] BUG CORRIGIDO: Importação de NF-e — chave de acesso extraída com 45 chars em vez de 44 (varchar(44) no banco). Corrigido com replace(/^NFe/) + slice(-44) no nfeParser.ts
 

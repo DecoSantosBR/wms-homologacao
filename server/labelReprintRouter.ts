@@ -30,6 +30,8 @@ import {
   warehouseZones,
   products,
   tenants,
+  stageChecks,
+  users,
 } from "../drizzle/schema";
 
 // ---------------------------------------------------------------------------
@@ -778,6 +780,121 @@ export const labelReprintRouter = router({
       return {
         success: true,
         count: locs.length,
+        pdf: `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,
+      };
+    }),
+
+  // ── 6. VOLUMES DE STAGE ───────────────────────────────────────────────────
+
+  /** Lista conferências de Stage concluídas para reimpressão de etiquetas de volume */
+  listStageVolumes: tenantProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        limit: z.number().default(30),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+
+      const tenantFilter = isGlobalAdmin
+        ? undefined
+        : eq(stageChecks.tenantId, effectiveTenantId);
+
+      // Filtro por número do pedido do cliente
+      const searchFilter = input.search
+        ? or(
+            like(stageChecks.customerOrderNumber, `%${input.search}%`),
+            like(pickingOrders.customerName, `%${input.search}%`)
+          )
+        : undefined;
+
+      const statusFilter = sql`${stageChecks.status} IN ('completed', 'divergent')`;
+
+      const whereClause = [tenantFilter, searchFilter, statusFilter]
+        .filter(Boolean)
+        .reduce((acc, f) => (acc ? and(acc, f!) : f!));
+
+      const rows = await db
+        .select({
+          id: stageChecks.id,
+          customerOrderNumber: stageChecks.customerOrderNumber,
+          customerName: pickingOrders.customerName,
+          status: stageChecks.status,
+          hasDivergence: stageChecks.hasDivergence,
+          completedAt: stageChecks.completedAt,
+          tenantId: stageChecks.tenantId,
+          pickingOrderId: stageChecks.pickingOrderId,
+        })
+        .from(stageChecks)
+        .leftJoin(pickingOrders, eq(stageChecks.pickingOrderId, pickingOrders.id))
+        .where(whereClause)
+        .orderBy(desc(stageChecks.completedAt))
+        .limit(input.limit);
+
+      return rows;
+    }),
+
+  /** Regera etiquetas de volume para um stageCheck */
+  reprintStageVolume: tenantProcedure
+    .input(
+      z.object({
+        stageCheckId: z.number(),
+        totalVolumes: z.number().min(1).max(999),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+
+      const [check] = await db
+        .select({
+          id: stageChecks.id,
+          tenantId: stageChecks.tenantId,
+          customerOrderNumber: stageChecks.customerOrderNumber,
+          pickingOrderId: stageChecks.pickingOrderId,
+        })
+        .from(stageChecks)
+        .where(eq(stageChecks.id, input.stageCheckId))
+        .limit(1);
+
+      if (!check) throw new TRPCError({ code: "NOT_FOUND", message: "Conferência não encontrada" });
+      if (!isGlobalAdmin && check.tenantId !== effectiveTenantId)
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+
+      // Buscar dados do pedido para a etiqueta
+      const [order] = await db
+        .select({ customerName: pickingOrders.customerName })
+        .from(pickingOrders)
+        .where(eq(pickingOrders.id, check.pickingOrderId))
+        .limit(1);
+
+      // Buscar nome do tenant
+      const [tenant] = await db
+        .select({ name: tenants.name })
+        .from(tenants)
+        .where(eq(tenants.id, check.tenantId))
+        .limit(1);
+
+      const { generateVolumeLabels } = await import("./volumeLabels");
+
+      const labels = Array.from({ length: input.totalVolumes }, (_, i) => ({
+        customerOrderNumber: check.customerOrderNumber,
+        customerName: order?.customerName ?? "N/A",
+        tenantName: tenant?.name ?? "N/A",
+        volumeNumber: i + 1,
+        totalVolumes: input.totalVolumes,
+      }));
+
+      const pdfBuffer = await generateVolumeLabels(labels);
+
+      return {
+        success: true,
         pdf: `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,
       };
     }),
