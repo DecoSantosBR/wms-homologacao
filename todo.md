@@ -59,3 +59,16 @@
 - [ ] UI de manutenção na tela de Inventário com botão de limpeza manual e relatório de resultado
 - [x] Importação massiva de saldos via Excel (inventoryImportRouter): labelCode não-único, status por zona, uniqueCode=SKU-Lote, transação atômica, acesso restrito tenantId=1
 - [x] CORRIGIDO: collectorPickingRouter.listOrders — Admin Global agora vê ondas de todos os tenants sem filtro de tenant; removido status inexistente 'in_progress' do filtro (apenas 'pending' e 'picking' são válidos)
+
+## Reimpressão de Etiquetas
+
+- [x] Backend: procedures tRPC para listar/reimprimir etiquetas de Recebimento
+- [x] Backend: procedures tRPC para listar/reimprimir etiquetas de Pedidos de Separação
+- [x] Backend: procedures tRPC para listar/reimprimir etiquetas de Volumes
+- [x] Backend: procedures tRPC para listar/reimprimir etiquetas de Produtos
+- [x] Backend: procedures tRPC para listar/reimprimir etiquetas de Endereços
+- [x] Frontend: página /collector/label-reprint com menu de 5 tipos (design coletor)
+- [x] Frontend: sub-páginas de cada tipo com busca e reimpressão
+- [x] Frontend: card "Reimpressão de Etiquetas" na Home (/home)
+- [x] Frontend: card "Reimpressão de Etiquetas" na tela /collector (coletor)
+- [x] Registrar rotas no App.tsx

@@ -35,6 +35,7 @@ import { CollectorReceiving } from "./pages/collector/CollectorReceiving";
 import { CollectorPicking } from "./pages/collector/CollectorPicking";
 import { CollectorStage } from "./pages/collector/CollectorStage";
 import { CollectorMovement } from "./pages/collector/CollectorMovement";
+import { CollectorLabelReprint } from "./pages/collector/CollectorLabelReprint";
 import { ClientPortalLogin } from "@/pages/client/ClientPortalLogin";
 import { ClientPortalFirstAccess } from "@/pages/client/ClientPortalFirstAccess";
 import { ClientPortalDashboard } from "@/pages/client/ClientPortalDashboard";
@@ -83,6 +84,7 @@ function Router() {
         <Route path="/collector/picking" component={CollectorPicking} />
         <Route path="/collector/stage" component={CollectorStage} />
         <Route path="/collector/movement" component={CollectorMovement} />
+        <Route path="/collector/label-reprint" component={CollectorLabelReprint} />
       
       {/* Portal do Cliente */}
       <Route path="/portal/login" component={ClientPortalLogin} />

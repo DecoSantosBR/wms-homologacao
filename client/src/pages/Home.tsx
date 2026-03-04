@@ -12,7 +12,8 @@ import {
   Warehouse,
   Shield,
   CheckSquare,
-  Smartphone
+  Smartphone,
+  Printer
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -197,6 +198,21 @@ export default function Home() {
         "Conformidade"
       ],
       href: "/admin"
+    },
+    {
+      title: "Reimpressão de Etiquetas",
+      description: "Reimprima etiquetas de recebimento, separação, volumes, produtos e endereços",
+      icon: Printer,
+      color: "text-teal-600",
+      bgColor: "bg-teal-50",
+      features: [
+        "Etiquetas de recebimento",
+        "Etiquetas de separação",
+        "Etiquetas de volumes",
+        "Etiquetas de produtos",
+        "Etiquetas de endereços"
+      ],
+      href: "/collector/label-reprint"
     }
   ];
 

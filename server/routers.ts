@@ -25,6 +25,7 @@ import { labelRouter } from "./labelRouter";
 import { clientPortalRouter } from "./clientPortalRouter";
 import { inventoryImportRouter } from "./inventoryImportRouter";
 import { collectorPickingRouter } from "./collectorPickingRouter";
+import { labelReprintRouter } from "./labelReprintRouter";
 import { getUniqueCode } from "./utils/uniqueCode";
 import { toMySQLDate } from "../shared/utils";
 
@@ -44,6 +45,7 @@ export const appRouter = router({
   clientPortal: clientPortalRouter,
   collectorPicking: collectorPickingRouter,
   inventoryImport: inventoryImportRouter,
+  labelReprint: labelReprintRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
