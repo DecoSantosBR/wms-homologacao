@@ -141,7 +141,8 @@
 
 ## Bugs
 
-- [x] BUG CORRIGIDO: Importação de NF-e — xml2js retornava número 0 (int) para <serie>0</serie> e <nNF>66666</nNF>. Corrigido com String() no nfeParser.ts para garantir que numero, serie e vol sejam sempre strings/números corretos
+- [x] BUG CORRIGIDO: Importação de NF-e — xml2js retornava número 0 (int) para <serie>0</serie> e <nNF>66666</nNF>. Corrigido com String() no nfeParser.ts
+- [x] BUG CORRIGIDO: Importação de NF-e — chave de acesso extraída com 45 chars em vez de 44 (varchar(44) no banco). Corrigido com replace(/^NFe/) + slice(-44) no nfeParser.ts
 
 ## Design Etiqueta de Volume (Stage)
 

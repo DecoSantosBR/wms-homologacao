@@ -88,8 +88,14 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
     }
 
     // Extrair chave de acesso
+    // O atributo Id tem formato "NFe" + 44 dígitos (ex: "NFe43220631...")
+    // Usamos replace(/^NFe/,'') para remover apenas o prefixo inicial
+    // e slice(-44) como fallback para garantir exatamente 44 dígitos
     const chaveAcessoRaw = Array.isArray(infNFe.Id) ? infNFe.Id[0] : infNFe.Id;
-    const chaveAcesso = chaveAcessoRaw?.replace("NFe", "") || "";
+    const chaveAcessoFull = String(chaveAcessoRaw || "").replace(/^NFe/, "");
+    const chaveAcesso = chaveAcessoFull.length > 44
+      ? chaveAcessoFull.slice(-44)
+      : chaveAcessoFull;
 
     // Extrair dados da identificação da nota
     const ide = Array.isArray(infNFe.ide) ? infNFe.ide[0] : infNFe.ide;
