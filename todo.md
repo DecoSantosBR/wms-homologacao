@@ -72,3 +72,15 @@
 - [x] Frontend: card "Reimpressão de Etiquetas" na Home (/home)
 - [x] Frontend: card "Reimpressão de Etiquetas" na tela /collector (coletor)
 - [x] Registrar rotas no App.tsx
+
+## Bugs
+
+- [x] BUG CORRIGIDO: Global Admin não conseguia visualizar etiquetas — isGlobalAdmin no tenantGuard agora usa apenas role='admin' (sem restrição de tenantId)
+
+## Reimpressão de Etiquetas de Endereços — Seleção em Lote
+
+- [x] Backend: procedure reprintLocationsBatch (gera PDF com N etiquetas de uma vez)
+- [x] Frontend: checkboxes individuais em cada linha de endereço
+- [x] Frontend: botão "Selecionar Todas" (baseado no filtro atual)
+- [x] Frontend: barra de ação flutuante com contador de selecionados e botão "Imprimir Selecionadas"
+- [x] Frontend: preview modal antes da impressão em lote

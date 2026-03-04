@@ -5,8 +5,8 @@
  *
  * Regras de negócio:
  *  - Usuários comuns: effectiveTenantId = ctx.user.tenantId (imutável, vindo do JWT)
- *  - Global Admin (role='admin' e tenantId=1 ou null): pode passar input.tenantId
- *    para operar em nome de qualquer tenant (suporte / auditoria).
+ *  - Global Admin (role='admin'): pode passar input.tenantId para operar em nome
+ *    de qualquer tenant (suporte / auditoria). Não há restrição de tenantId.
  *  - Se effectiveTenantId não puder ser determinado, lança FORBIDDEN.
  *
  * Uso:
@@ -17,7 +17,7 @@
  *       .input(z.object({ ... }))
  *       .query(async ({ input, ctx }) => {
  *         // ctx.effectiveTenantId é sempre seguro aqui
- *         // ctx.isGlobalAdmin é true apenas para admins do tenant 1
+ *         // ctx.isGlobalAdmin é true para qualquer usuário com role='admin'
  *       }),
  *   });
  *
@@ -39,7 +39,7 @@ export type TenantContext = Omit<TrpcContext, "user"> & {
   user: NonNullable<TrpcContext["user"]>;
   /** tenantId efetivo para esta requisição (nunca nulo após o middleware) */
   effectiveTenantId: number;
-  /** true somente para usuários com role='admin' e tenantId=1 (ou null) */
+  /** true para qualquer usuário com role='admin' (independente do tenantId) */
   isGlobalAdmin: boolean;
 };
 
@@ -56,9 +56,8 @@ export const resolveTenant = t.middleware(async ({ ctx, next, input }) => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Autenticação necessária." });
   }
 
-  const isGlobalAdmin =
-    ctx.user.role === "admin" &&
-    (ctx.user.tenantId === 1 || ctx.user.tenantId === null);
+  // Global Admin = qualquer usuário com role='admin', independente do tenantId
+  const isGlobalAdmin = ctx.user.role === "admin";
 
   // Para Global Admin, permite sobrescrever com input.tenantId
   let effectiveTenantId: number | null | undefined = ctx.user.tenantId;
@@ -70,9 +69,11 @@ export const resolveTenant = t.middleware(async ({ ctx, next, input }) => {
         ? (raw["tenantId"] as number)
         : null;
     if (inputTenantId) {
+      // Admin pode sobrescrever o tenant efetivo via input.tenantId
       effectiveTenantId = inputTenantId;
     }
-    // Global Admin sem input.tenantId pode operar sem filtro (visão global)
+    // Global Admin sem input.tenantId: effectiveTenantId permanece o seu próprio,
+    // mas as queries devem usar isGlobalAdmin=true para omitir o filtro de tenant
   }
 
   if (!isGlobalAdmin && !effectiveTenantId) {

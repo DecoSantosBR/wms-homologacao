@@ -474,6 +474,81 @@ export const labelReprintRouter = router({
       return rows;
     }),
 
+  /** Reimprime etiquetas de múltiplos endereços em um único PDF */
+  reprintLocationsBatch: tenantProcedure
+    .input(
+      z.object({
+        locationIds: z.array(z.number()).min(1).max(200),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+
+      // Buscar todos os endereços solicitados
+      const locs = await db
+        .select()
+        .from(warehouseLocations)
+        .where(sql`${warehouseLocations.id} IN (${sql.join(input.locationIds.map((id) => sql`${id}`), sql`, `)})`)
+        .orderBy(warehouseLocations.code);
+
+      if (locs.length === 0)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum endereço encontrado" });
+
+      // Verificar acesso cross-tenant
+      if (!isGlobalAdmin) {
+        const forbidden = locs.find((l) => l.tenantId !== effectiveTenantId);
+        if (forbidden)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado a endereço de outro tenant" });
+      }
+
+      // Gerar PDF com uma etiqueta por página (10cm × 5cm)
+      const barcodeBuffers = await Promise.all(
+        locs.map((loc) =>
+          bwipjs.toBuffer({
+            bcid: "code128",
+            text: loc.code,
+            scale: 2,
+            height: 10,
+            includetext: true,
+            textxalign: "center",
+          })
+        )
+      );
+
+      const doc = new PDFDocument({
+        size: [283.46, 141.73], // 10cm × 5cm
+        margins: { top: 8, bottom: 8, left: 8, right: 8 },
+        autoFirstPage: false,
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(c));
+
+      locs.forEach((loc, idx) => {
+        doc.addPage();
+        const details = [loc.aisle, loc.rack, loc.level].filter(Boolean).join(" / ");
+        doc.fontSize(9).font("Helvetica-Bold").text(`Endereço: ${loc.code}`, 8, 10, { width: 267 });
+        if (loc.zoneCode) doc.fontSize(8).font("Helvetica").text(`Zona: ${loc.zoneCode}`, 8, 22, { width: 267 });
+        if (details) doc.fontSize(7).font("Helvetica").text(details, 8, 33, { width: 267 });
+        doc.image(barcodeBuffers[idx], 42, 48, { width: 200, height: 50 });
+      });
+
+      doc.end();
+
+      const pdfBuffer = await new Promise<Buffer>((resolve) => {
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+
+      return {
+        success: true,
+        count: locs.length,
+        pdf: `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,
+      };
+    }),
+
   /** Reimprime etiqueta de endereço */
   reprintLocation: tenantProcedure
     .input(z.object({ locationId: z.number() }))

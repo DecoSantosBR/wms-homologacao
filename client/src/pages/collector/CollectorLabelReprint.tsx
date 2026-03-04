@@ -11,7 +11,7 @@
  * Cada tipo abre uma sub-tela com campo de busca + lista + botão de reimpressão.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { CollectorLayout } from "../../components/CollectorLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -29,6 +29,10 @@ import {
   Search,
   Printer,
   Loader2,
+  CheckSquare,
+  Square,
+  CheckCheck,
+  X,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -281,13 +285,15 @@ function ProductsSubScreen({ onBack }: { onBack: () => void }) {
 function LocationsSubScreen({ onBack }: { onBack: () => void }) {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showPreview, setShowPreview] = useState(false);
 
   const { data, isLoading } = trpc.labelReprint.listLocations.useQuery(
-    { search: query || undefined, limit: 50 },
+    { search: query || undefined, limit: 200 },
     { enabled: true }
   );
 
-  const reprint = trpc.labelReprint.reprintLocation.useMutation({
+  const reprintSingle = trpc.labelReprint.reprintLocation.useMutation({
     onSuccess: (result) => {
       toast.success("Etiqueta gerada!");
       openPdfInNewTab(result.pdf);
@@ -295,29 +301,229 @@ function LocationsSubScreen({ onBack }: { onBack: () => void }) {
     onError: (e) => toast.error(e.message),
   });
 
+  const reprintBatch = trpc.labelReprint.reprintLocationsBatch.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.count} etiqueta(s) gerada(s)!`);
+      openPdfInNewTab(result.pdf);
+      setSelected(new Set());
+      setShowPreview(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const allIds = useMemo(() => data?.map((r) => r.id) ?? [], [data]);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  const toggleOne = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allIds));
+    }
+  };
+
+  const selectedItems = data?.filter((r) => selected.has(r.id)) ?? [];
+
   return (
-    <SubScreenWrapper title="Etiquetas de Endereços" onBack={onBack}>
+    <div className="space-y-3 pb-24">
+      {/* Header com botão voltar */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-slate-700">
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Etiquetas de Endereços</h2>
+          <p className="text-sm text-slate-500">Selecione os endereços para reimprimir</p>
+        </div>
+      </div>
+
+      {/* Barra de busca */}
       <SearchBar
         value={search}
         onChange={setSearch}
-        onSearch={() => setQuery(search)}
-        placeholder="Código do endereço..."
+        onSearch={() => { setQuery(search); setSelected(new Set()); }}
+        placeholder="Código do endereço, zona..."
       />
+
+      {/* Barra de ações de seleção */}
+      {!isLoading && (data?.length ?? 0) > 0 && (
+        <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 px-4 py-2.5 shadow-sm">
+          <button
+            onClick={toggleAll}
+            className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            {allSelected ? (
+              <CheckSquare className="h-5 w-5 text-blue-600" />
+            ) : (
+              <Square className="h-5 w-5 text-slate-400" />
+            )}
+            {allSelected ? "Desmarcar todas" : `Selecionar todas (${allIds.length})`}
+          </button>
+          {someSelected && (
+            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+              {selected.size} selecionada{selected.size !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Lista de endereços */}
       {isLoading && <LoadingRow />}
-      {!isLoading && data?.length === 0 && <EmptyRow />}
-      {data?.map((row) => (
-        <ItemRow
-          key={row.id}
-          primary={row.code}
-          secondary={[row.zoneCode, row.aisle, row.rack, row.level]
-            .filter(Boolean)
-            .join(" / ")}
-          badge={row.status}
-          loading={reprint.isPending}
-          onPrint={() => reprint.mutate({ locationId: row.id })}
-        />
-      ))}
-    </SubScreenWrapper>
+      {!isLoading && (data?.length ?? 0) === 0 && <EmptyRow />}
+      {data?.map((row) => {
+        const isChecked = selected.has(row.id);
+        return (
+          <div
+            key={row.id}
+            className={`flex items-center gap-3 bg-white rounded-xl border px-4 py-3 shadow-sm transition-all ${
+              isChecked ? "border-blue-400 bg-blue-50/50" : "border-slate-200"
+            }`}
+          >
+            {/* Checkbox */}
+            <button
+              onClick={() => toggleOne(row.id)}
+              className="shrink-0 text-slate-400 hover:text-blue-600 transition-colors"
+            >
+              {isChecked ? (
+                <CheckSquare className="h-5 w-5 text-blue-600" />
+              ) : (
+                <Square className="h-5 w-5" />
+              )}
+            </button>
+
+            {/* Dados do endereço */}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-slate-800 truncate">{row.code}</p>
+              <p className="text-sm text-slate-500 truncate mt-0.5">
+                {[row.zoneCode, row.aisle, row.rack, row.level].filter(Boolean).join(" / ")}
+              </p>
+              {row.status && (
+                <Badge variant="outline" className="mt-1 text-xs capitalize">
+                  {row.status}
+                </Badge>
+              )}
+            </div>
+
+            {/* Botão imprimir individual */}
+            <Button
+              size="sm"
+              onClick={() => reprintSingle.mutate({ locationId: row.id })}
+              disabled={reprintSingle.isPending || reprintBatch.isPending}
+              variant="ghost"
+              className="shrink-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+            >
+              {reprintSingle.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        );
+      })}
+
+      {/* Barra flutuante de ação em lote */}
+      {someSelected && (
+        <div className="fixed bottom-20 left-0 right-0 z-50 px-4">
+          <div className="bg-slate-900 text-white rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-lg mx-auto">
+            <div className="flex-1">
+              <p className="font-semibold text-sm">
+                {selected.size} endereço{selected.size !== 1 ? "s" : ""} selecionado{selected.size !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-slate-400">Clique em Imprimir para gerar o PDF</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set())}
+              className="text-slate-400 hover:text-white hover:bg-slate-700 shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setShowPreview(true)}
+              disabled={reprintBatch.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5"
+            >
+              {reprintBatch.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCheck className="h-4 w-4" />
+              )}
+              Imprimir {selected.size}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de preview / confirmação */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-lg">Confirmar Impressão</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPreview(false)}
+                className="text-slate-500"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <p className="text-slate-600 text-sm">
+              Serão geradas <strong>{selected.size} etiqueta{selected.size !== 1 ? "s" : ""}</strong> em um único PDF:
+            </p>
+
+            {/* Lista de endereços selecionados */}
+            <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-100 rounded-xl p-3 bg-slate-50">
+              {selectedItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-800">{item.code}</span>
+                  <span className="text-slate-500 text-xs">
+                    {[item.zoneCode, item.aisle, item.rack, item.level].filter(Boolean).join(" / ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowPreview(false)}
+                disabled={reprintBatch.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                onClick={() => reprintBatch.mutate({ locationIds: Array.from(selected) })}
+                disabled={reprintBatch.isPending}
+              >
+                {reprintBatch.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+                ) : (
+                  <><Printer className="h-4 w-4" /> Gerar PDF</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
