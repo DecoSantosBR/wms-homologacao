@@ -190,3 +190,7 @@
 ## Bugs
 
 - [x] BUG CORRIGIDO: /shipping — ao excluir romanéio, pickingOrders agora ficam com status='invoiced' + shippingStatus='invoice_linked' (NF vinculada, fora do romanéio, pronto para re-expedição)
+
+## Bugs
+
+- [x] BUG CORRIGIDO: /shipping aba Pedidos — filtro agora inclui status 'staged' e 'invoiced' (inArray). Pedidos com NF vinculada fora de romanéio aparecem corretamente na listagem

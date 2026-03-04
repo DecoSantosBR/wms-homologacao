@@ -51,7 +51,8 @@ export const shippingRouter = router({
       const tenantId = isGlobalAdmin ? null : effectiveTenantId;
 
       const conditions: any[] = [
-        eq(pickingOrders.status, "staged"), // Apenas pedidos conferidos no Stage
+        // Pedidos prontos para expedição: 'staged' (aguardando NF) ou 'invoiced' (NF vinculada, fora de romanéio)
+        inArray(pickingOrders.status, ["staged", "invoiced"]),
       ];
 
       if (tenantId !== null) {
