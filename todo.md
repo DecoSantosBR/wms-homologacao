@@ -148,6 +148,8 @@
 
 ## Design Etiqueta de Volume (Stage)
 
+- [x] Ajustar layout: linha divisória em y=70px, logo 2x maior, barcode 60% maior, tamanho 10x5cm
+
 - [x] Redesenhar PDF de etiquetas de volume: logo Med@x esquerda, barcode direita, linha divisória, Destinatário/Pedido/Cliente/Volume bold (15cm x 7.5cm)
 
 ## Trava de Concorrência e Timeout — Stage

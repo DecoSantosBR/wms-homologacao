@@ -17,23 +17,22 @@ interface VolumeLabel {
 }
 
 /**
- * Gera etiquetas de volumes em PDF (15cm x 7.5cm cada)
+ * Gera etiquetas de volumes em PDF (10cm x 5cm cada)
  *
- * Layout fiel à imagem de referência:
+ * Layout:
  * ┌─────────────────────────────────────────────────────┐
  * │  [Logo Med@x]              [||||||||||||||||||||]   │
- * │  Soluções Logísticas Para Saúde                     │
- * ├─────────────────────────────────────────────────────┤
+ * ├─────────────────────────────────────────────────────┤  ← y=70
  * │  Destinatário: HMV              Pedido: 005         │
  * │  Cliente: AESC - Mãe de Deus - UCG                  │
  * │                Volume 1 de 12                       │
  * └─────────────────────────────────────────────────────┘
  */
 export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffer> {
-  // Dimensões: 15cm x 7.5cm em pontos (1cm = 28.346pt)
-  const labelWidth = 425.2;   // 15cm
-  const labelHeight = 212.6;  // 7.5cm
-  const margin = 14;
+  // Dimensões: 10cm x 5cm em pontos (1cm = 28.346pt)
+  const labelWidth = 283.46;   // 10cm
+  const labelHeight = 141.73;  // 5cm
+  const margin = 10;
 
   // Pré-gerar todos os códigos de barras (async, deduplica por pedido)
   const barcodes = new Map<string, Buffer>();
@@ -43,7 +42,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
         bcid: "code128",
         text: label.customerOrderNumber,
         scale: 3,
-        height: 12,
+        height: 14,
         includetext: false,
         paddingwidth: 0,
         paddingheight: 0,
@@ -68,67 +67,75 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    labels.forEach((label, index) => {
+    labels.forEach((label) => {
       doc.addPage({ size: [labelWidth, labelHeight], margins: { top: 0, bottom: 0, left: 0, right: 0 } });
 
-      // ── Fundo branco com borda arredondada simulada ───────────────────────
+      // ── Fundo branco com borda ────────────────────────────────────────────
       doc
-        .roundedRect(2, 2, labelWidth - 4, labelHeight - 4, 8)
+        .roundedRect(1, 1, labelWidth - 2, labelHeight - 2, 6)
         .fillAndStroke("#FFFFFF", "#CCCCCC");
 
       // ── SEÇÃO SUPERIOR: Logo (esquerda) + Barcode (direita) ──────────────
-      const topSectionHeight = 72;
-      const logoAreaWidth = 180;
-      const barcodeAreaX = logoAreaWidth + margin;
-      const barcodeAreaWidth = labelWidth - barcodeAreaX - margin;
+      // Linha divisória em y=70 — logo e barcode ficam acima dela
+      const dividerY = 70;
 
-      // Logo Med@x
+      // Logo: cabe em ~55% da largura, altura máxima = dividerY - margin*2
+      const logoW = 130;
+      const logoH = dividerY - margin * 2;  // ~50pt
+
       if (logoExists) {
         doc.image(logoPath, margin, margin, {
-          width: logoAreaWidth - margin,
-          height: 52,
-          fit: [logoAreaWidth - margin, 52],
+          width: logoW,
+          height: logoH,
+          fit: [logoW, logoH],
         });
       } else {
-        // Fallback texto se logo não existir
         doc
-          .fontSize(20)
+          .fontSize(16)
           .font("Helvetica-Bold")
           .fillColor("#1a3a8c")
-          .text("Med@x", margin, margin + 8, { width: logoAreaWidth - margin });
+          .text("Med@x", margin, margin + 4, { width: logoW });
         doc
-          .fontSize(8)
+          .fontSize(7)
           .font("Helvetica")
           .fillColor("#666666")
-          .text("Soluções Logísticas Para Saúde", margin, margin + 34, { width: logoAreaWidth - margin });
+          .text("Soluções Logísticas Para Saúde", margin, margin + 28, { width: logoW });
       }
 
-      // Código de barras (direita, alinhado ao topo)
+      // Barcode: ocupa o lado direito, 60% maior que a versão original (58×48 → 93×77)
+      // Ajustado para caber dentro da altura da seção superior (dividerY - margin)
+      const barcodeW = 110;
+      const barcodeH = Math.min(55, dividerY - margin - 4);
+      const barcodeX = labelWidth - margin - barcodeW;
+      const barcodeY = margin + (logoH - barcodeH) / 2;
+
       const barcodeBuffer = barcodes.get(label.customerOrderNumber)!;
-      doc.image(barcodeBuffer, barcodeAreaX, margin + 4, {
-        width: barcodeAreaWidth,
-        height: 48,
-        fit: [barcodeAreaWidth, 48],
+      doc.image(barcodeBuffer, barcodeX, barcodeY > margin ? barcodeY : margin, {
+        width: barcodeW,
+        height: barcodeH,
+        fit: [barcodeW, barcodeH],
       });
 
-      // ── Linha divisória horizontal ────────────────────────────────────────
-      const dividerY = topSectionHeight + 4;
+      // ── Linha divisória horizontal em y=70 ───────────────────────────────
       doc
         .moveTo(margin, dividerY)
         .lineTo(labelWidth - margin, dividerY)
-        .lineWidth(1.2)
+        .lineWidth(1.0)
         .strokeColor("#000000")
         .stroke();
 
       // ── SEÇÃO INFERIOR: Dados do pedido ───────────────────────────────────
       doc.fillColor("#000000");
 
-      // Linha 1: Destinatário (esquerda) + Pedido (direita) — mesma linha
-      const line1Y = dividerY + 14;
+      const remainingH = labelHeight - dividerY;
+      const textMarginTop = 8;
+
+      // Linha 1: Destinatário (esquerda) + Pedido (direita)
+      const line1Y = dividerY + textMarginTop;
       const halfWidth = (labelWidth - margin * 2) / 2;
 
       doc
-        .fontSize(14)
+        .fontSize(9)
         .font("Helvetica-Bold")
         .text(`Destinatário: ${label.customerName}`, margin, line1Y, {
           width: halfWidth + 10,
@@ -137,7 +144,7 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
         });
 
       doc
-        .fontSize(14)
+        .fontSize(9)
         .font("Helvetica-Bold")
         .text(`Pedido: ${label.customerOrderNumber}`, margin + halfWidth - 10, line1Y, {
           width: halfWidth + 10,
@@ -146,19 +153,19 @@ export async function generateVolumeLabels(labels: VolumeLabel[]): Promise<Buffe
         });
 
       // Linha 2: Cliente
-      const line2Y = line1Y + 28;
+      const line2Y = line1Y + 18;
       doc
-        .fontSize(14)
+        .fontSize(9)
         .font("Helvetica-Bold")
         .text(`Cliente: ${label.tenantName}`, margin, line2Y, {
           width: labelWidth - margin * 2,
           align: "left",
         });
 
-      // Linha 3: Volume N de X — centralizado e em destaque
-      const line3Y = line2Y + 30;
+      // Linha 3: Volume N de X — centralizado
+      const line3Y = line2Y + 18;
       doc
-        .fontSize(16)
+        .fontSize(10)
         .font("Helvetica-Bold")
         .text(`Volume ${label.volumeNumber} de ${label.totalVolumes}`, margin, line3Y, {
           width: labelWidth - margin * 2,
