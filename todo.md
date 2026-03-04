@@ -111,3 +111,4 @@
 - [x] Frontend: componente ImportProductsDialog com upload drag-and-drop, preview de linhas e feedback de erros por linha
 - [x] Frontend: botão "Importar Excel" na página /products
 - [x] Frontend: exibir resumo pós-importação (X inseridos, Y atualizados, Z erros)
+- [x] Adaptar template de importação de produtos para cabeçalhos em português

@@ -128,20 +128,80 @@ function parseRows(sheet: XLSX.WorkSheet): ParsedRow[] {
 }
 
 function downloadTemplate() {
+  // Cabeçalhos em português
   const headers = [
-    "sku", "description", "category", "gtin", "anvisaRegistry",
-    "therapeuticClass", "manufacturer", "unitOfMeasure", "unitsPerBox",
-    "minQuantity", "dispensingQuantity", "storageCondition",
-    "requiresBatchControl", "requiresExpiryControl",
+    "SKU",
+    "Descrição",
+    "Categoria",
+    "GTIN / EAN",
+    "Registro ANVISA",
+    "Classe Terapêutica",
+    "Fabricante",
+    "Unidade de Medida",
+    "Qtd por Caixa",
+    "Qtd Mínima",
+    "Qtd Dispensação",
+    "Armazenagem",
+    "Controle Lote",
+    "Controle Validade",
   ];
+
+  // Linha de instruções (linha 2)
+  const instructions = [
+    "Ex: MED001",
+    "Ex: Paracetamol 500mg",
+    "Ex: Analgésico",
+    "Ex: 7891234567890",
+    "Ex: 1.2345.0001.001-1",
+    "Ex: Analgésicos e antipiréticos",
+    "Ex: EMS S/A",
+    "UN, CX, FR, AMP...",
+    "Ex: 24",
+    "Ex: 0",
+    "Ex: 1",
+    "ambient | refrigerated_2_8 | frozen_minus_20 | controlled",
+    "sim ou nao",
+    "sim ou nao",
+  ];
+
+  // Linha de exemplo preenchida (linha 3)
   const example = [
-    "MED001", "Paracetamol 500mg", "Analgésico", "7891234567890",
-    "1.2345.0001.001-1", "Analgésicos e antipiréticos", "EMS S/A",
-    "CX", 24, 0, 1, "ambient", "true", "true",
+    "MED001",
+    "Paracetamol 500mg",
+    "Analgésico",
+    "7891234567890",
+    "1.2345.0001.001-1",
+    "Analgésicos e antipiréticos",
+    "EMS S/A",
+    "CX",
+    24,
+    0,
+    1,
+    "ambient",
+    "sim",
+    "sim",
   ];
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, instructions, example]);
+
   // Largura das colunas
-  ws["!cols"] = headers.map(() => ({ wch: 22 }));
+  ws["!cols"] = [
+    { wch: 14 }, // SKU
+    { wch: 30 }, // Descrição
+    { wch: 18 }, // Categoria
+    { wch: 18 }, // GTIN
+    { wch: 22 }, // Registro ANVISA
+    { wch: 28 }, // Classe Terapêutica
+    { wch: 20 }, // Fabricante
+    { wch: 18 }, // Unidade
+    { wch: 14 }, // Qtd Caixa
+    { wch: 12 }, // Qtd Mínima
+    { wch: 16 }, // Qtd Dispensação
+    { wch: 42 }, // Armazenagem
+    { wch: 14 }, // Controle Lote
+    { wch: 16 }, // Controle Validade
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Produtos");
   XLSX.writeFile(wb, "modelo_importacao_produtos.xlsx");
