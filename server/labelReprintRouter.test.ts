@@ -53,33 +53,27 @@ describe("labelReprintRouter", () => {
     expect(labelReprintRouter).toBeDefined();
   });
 
-  it("deve ter as 10 procedures esperadas (5 list + 5 reprint)", async () => {
+  it("deve ter as 13 procedures esperadas (6 list + 7 reprint/batch)", async () => {
     const { labelReprintRouter } = await import("./labelReprintRouter");
-    const procedures = Object.keys(labelReprintRouter._def.procedures ?? labelReprintRouter._def.record ?? {});
-    
-    // Verificar que as procedures existem no router
     const routerDef = labelReprintRouter as any;
-    const hasListReceiving = "listReceiving" in routerDef._def.record;
-    const hasReprintReceiving = "reprintReceiving" in routerDef._def.record;
-    const hasListWaves = "listWaves" in routerDef._def.record;
-    const hasReprintWave = "reprintWave" in routerDef._def.record;
-    const hasListShipments = "listShipments" in routerDef._def.record;
-    const hasReprintShipment = "reprintShipment" in routerDef._def.record;
-    const hasListProductLabels = "listProductLabels" in routerDef._def.record;
-    const hasReprintProductLabel = "reprintProductLabel" in routerDef._def.record;
-    const hasListLocations = "listLocations" in routerDef._def.record;
-    const hasReprintLocation = "reprintLocation" in routerDef._def.record;
-
-    expect(hasListReceiving).toBe(true);
-    expect(hasReprintReceiving).toBe(true);
-    expect(hasListWaves).toBe(true);
-    expect(hasReprintWave).toBe(true);
-    expect(hasListShipments).toBe(true);
-    expect(hasReprintShipment).toBe(true);
-    expect(hasListProductLabels).toBe(true);
-    expect(hasReprintProductLabel).toBe(true);
-    expect(hasListLocations).toBe(true);
-    expect(hasReprintLocation).toBe(true);
+    const expectedProcedures = [
+      "listReceiving",
+      "reprintReceiving",
+      "listWaves",
+      "reprintWave",
+      "listPickingOrders",
+      "reprintPickingOrder",
+      "listShipments",
+      "reprintShipment",
+      "listProductLabels",
+      "reprintProductLabel",
+      "listLocations",
+      "reprintLocation",
+      "reprintLocationsBatch",
+    ];
+    for (const proc of expectedProcedures) {
+      expect(proc in routerDef._def.record, `Procedure '${proc}' deve existir`).toBe(true);
+    }
   });
 
   it("deve estar registrado no appRouter como labelReprint", async () => {

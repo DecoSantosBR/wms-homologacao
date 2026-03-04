@@ -84,3 +84,11 @@
 - [x] Frontend: botão "Selecionar Todas" (baseado no filtro atual)
 - [x] Frontend: barra de ação flutuante com contador de selecionados e botão "Imprimir Selecionadas"
 - [x] Frontend: preview modal antes da impressão em lote
+
+## Etiquetas de Separação — Abas Pedidos e Ondas
+
+- [x] Backend: procedure listPickingOrders para listar pedidos de picking com busca
+- [x] Backend: procedure reprintPickingOrder para reimprimir etiqueta de pedido individual
+- [x] Frontend: abas "Pedidos" e "Ondas" na WavesSubScreen
+- [x] Frontend: aba Ondas lista pickingWaves (comportamento atual)
+- [x] Frontend: aba Pedidos lista pickingOrders com busca por número/cliente

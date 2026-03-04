@@ -158,6 +158,106 @@ function ReceivingSubScreen({ onBack }: { onBack: () => void }) {
 }
 
 function WavesSubScreen({ onBack }: { onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<"orders" | "waves">("orders");
+
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-slate-700">
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Etiquetas de Separação</h2>
+          <p className="text-sm text-slate-500">Reimprima etiquetas de pedidos ou ondas de picking</p>
+        </div>
+      </div>
+
+      {/* Abas */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        <button
+          onClick={() => setActiveTab("orders")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "orders"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Pedidos
+        </button>
+        <button
+          onClick={() => setActiveTab("waves")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "waves"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Ondas
+        </button>
+      </div>
+
+      {/* Conteúdo da aba ativa */}
+      {activeTab === "orders" ? <PickingOrdersTab /> : <WavesTab />}
+    </div>
+  );
+}
+
+function PickingOrdersTab() {
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  const { data, isLoading } = trpc.labelReprint.listPickingOrders.useQuery(
+    { search: query || undefined, limit: 50 },
+    { enabled: true }
+  );
+
+  const reprint = trpc.labelReprint.reprintPickingOrder.useMutation({
+    onSuccess: (result) => {
+      toast.success("Etiqueta gerada!");
+      openPdfInNewTab(result.pdf);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const PRIORITY_LABELS: Record<string, string> = {
+    emergency: "Emergência",
+    urgent: "Urgente",
+    normal: "Normal",
+    low: "Baixa",
+  };
+
+  return (
+    <div className="space-y-2">
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        onSearch={() => setQuery(search)}
+        placeholder="Número do pedido ou cliente..."
+      />
+      {isLoading && <LoadingRow />}
+      {!isLoading && (data?.length ?? 0) === 0 && <EmptyRow />}
+      {data?.map((row) => (
+        <ItemRow
+          key={row.id}
+          primary={row.orderNumber}
+          secondary={[
+            row.customerName,
+            row.customerOrderNumber ? `Ped. cliente: ${row.customerOrderNumber}` : null,
+            `${row.totalItems ?? 0} itens`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          badge={PRIORITY_LABELS[row.priority] ?? row.priority}
+          loading={reprint.isPending}
+          onPrint={() => reprint.mutate({ pickingOrderId: row.id })}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WavesTab() {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
 
@@ -175,7 +275,7 @@ function WavesSubScreen({ onBack }: { onBack: () => void }) {
   });
 
   return (
-    <SubScreenWrapper title="Etiquetas de Separação" onBack={onBack}>
+    <div className="space-y-2">
       <SearchBar
         value={search}
         onChange={setSearch}
@@ -183,7 +283,7 @@ function WavesSubScreen({ onBack }: { onBack: () => void }) {
         placeholder="Número da onda..."
       />
       {isLoading && <LoadingRow />}
-      {!isLoading && data?.length === 0 && <EmptyRow />}
+      {!isLoading && (data?.length ?? 0) === 0 && <EmptyRow />}
       {data?.map((row) => (
         <ItemRow
           key={row.id}
@@ -194,7 +294,7 @@ function WavesSubScreen({ onBack }: { onBack: () => void }) {
           onPrint={() => reprint.mutate({ waveId: row.id })}
         />
       ))}
-    </SubScreenWrapper>
+    </div>
   );
 }
 

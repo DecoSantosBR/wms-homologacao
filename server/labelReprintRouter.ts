@@ -236,6 +236,75 @@ export const labelReprintRouter = router({
       return { success: true, labelCode: wave.waveNumber, pdf };
     }),
 
+  /** Lista pedidos de picking para reimpressão */
+  listPickingOrders: tenantProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        limit: z.number().default(30),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const tFilter = isGlobalAdmin
+        ? undefined
+        : eq(pickingOrders.tenantId, effectiveTenantId);
+      const sFilter = input.search
+        ? or(
+            like(pickingOrders.orderNumber, `%${input.search}%`),
+            like(pickingOrders.customerName, `%${input.search}%`),
+            like(pickingOrders.customerOrderNumber, `%${input.search}%`)
+          )
+        : undefined;
+      const whereClause =
+        tFilter && sFilter ? and(tFilter, sFilter) : tFilter ?? sFilter;
+      const rows = await db
+        .select({
+          id: pickingOrders.id,
+          orderNumber: pickingOrders.orderNumber,
+          customerOrderNumber: pickingOrders.customerOrderNumber,
+          customerName: pickingOrders.customerName,
+          status: pickingOrders.status,
+          priority: pickingOrders.priority,
+          totalItems: pickingOrders.totalItems,
+          totalQuantity: pickingOrders.totalQuantity,
+          waveId: pickingOrders.waveId,
+          tenantId: pickingOrders.tenantId,
+          createdAt: pickingOrders.createdAt,
+        })
+        .from(pickingOrders)
+        .where(whereClause)
+        .orderBy(desc(pickingOrders.createdAt))
+        .limit(input.limit);
+      return rows;
+    }),
+
+  /** Reimprime etiqueta de um pedido de picking */
+  reprintPickingOrder: tenantProcedure
+    .input(z.object({ pickingOrderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { effectiveTenantId, isGlobalAdmin } = ctx;
+      const [order] = await db
+        .select()
+        .from(pickingOrders)
+        .where(eq(pickingOrders.id, input.pickingOrderId))
+        .limit(1);
+      if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" });
+      if (!isGlobalAdmin && order.tenantId !== effectiveTenantId)
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      const pdf = await buildLabelPdf(
+        order.orderNumber,
+        `Pedido: ${order.orderNumber}`,
+        order.customerName ? `Cliente: ${order.customerName}` : "",
+        `Itens: ${order.totalItems ?? 0}  |  Status: ${order.status}`
+      );
+      return { success: true, labelCode: order.orderNumber, pdf };
+    }),
+
   // ── 3. VOLUMES ─────────────────────────────────────────────────────────────
 
   /** Lista expedições (volumes) para reimpressão */
