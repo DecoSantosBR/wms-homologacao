@@ -297,7 +297,7 @@ export const inventoryImportRouter = router({
 
           // Verificar se já existe registro para este produto+lote+endereço+tenant
           const [existing] = await tx
-            .select({ id: inventory.id })
+            .select({ id: inventory.id, quantity: inventory.quantity })
             .from(inventory)
             .where(
               and(
@@ -312,11 +312,14 @@ export const inventoryImportRouter = router({
             .limit(1);
 
           if (existing) {
-            // Atualizar registro existente
+            // ✅ CORREÇÃO: Acumular quantidade (somar) em vez de sobrescrever.
+            // O template pode ter múltiplas linhas com o mesmo SKU+Lote+Endereço+Tenant
+            // representando lotes físicos distintos que devem ser somados.
+            const accumulatedQuantity = existing.quantity + row.quantity;
             await tx
               .update(inventory)
               .set({
-                quantity: row.quantity,
+                quantity: accumulatedQuantity,
                 labelCode: row.labelCode ?? null,
                 uniqueCode,
                 status,

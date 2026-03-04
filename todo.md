@@ -164,3 +164,7 @@
 - [x] Frontend: modal de confirmação ao sair (botão Abandonar + beforeunload)
 - [x] Frontend: heartbeat automático a cada 30s enquanto na tela de conferência
 - [x] Frontend: botão "Abandonar" com modal de confirmação (libera lock voluntariamente)
+
+## Bugs
+
+- [x] BUG CORRIGIDO: Importação de saldos de estoque — múltiplas linhas com mesmo SKU+Lote+Endereço+Tenant no template faziam a segunda linha sobrescrever a quantidade da primeira (UPDATE quantity = row.quantity). Corrigido em inventoryImportRouter.ts: UPDATE agora acumula (existing.quantity + row.quantity). Afetava M03-03-09 (-24), M03-01-11 (-154), M03-02-37 (-250).
