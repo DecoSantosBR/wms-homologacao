@@ -12,6 +12,7 @@ import {
   shipmentManifestItems,
   pickingOrders,
   pickingOrderItems,
+  pickingWaves,
   products,
   tenants,
   inventory,
@@ -1135,11 +1136,32 @@ export const shippingRouter = router({
       // ========================================================================
 
       // 1. Restaurar status das NFs vinculadas aos pedidos
+      // 'linked' = NF vinculada ao pedido, mas fora de romaneio (comportamento correto após exclusão do romaneio)
       if (orderIds.length > 0) {
         await db
           .update(invoices)
-          .set({ status: "linked" }) // Volta para status "linked" (vinculada ao pedido, mas não em romaneio)
+          .set({ status: "linked" })
           .where(inArray(invoices.pickingOrderId, orderIds));
+      }
+
+      // 2. Reverter ondas (pickingWaves) vinculadas aos pedidos para 'staged'
+      if (orderIds.length > 0) {
+        // Buscar waveIds dos pedidos afetados
+        const waveLinks = await db
+          .select({ waveId: pickingOrders.waveId })
+          .from(pickingOrders)
+          .where(inArray(pickingOrders.id, orderIds));
+
+        const waveIds = Array.from(new Set(
+          waveLinks.map(w => w.waveId).filter((id): id is number => id !== null && id !== undefined)
+        ));
+
+        if (waveIds.length > 0) {
+          await db
+            .update(pickingWaves)
+            .set({ status: "staged" })
+            .where(inArray(pickingWaves.id, waveIds));
+        }
       }
 
       // 2. Liberar reservas de estoque em EXP

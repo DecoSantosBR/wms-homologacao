@@ -182,3 +182,7 @@
 
 - [x] BUG CORRIGIDO: Movimentação REC → STORAGE — Global Admin (effectiveTenantId=null) não resolvia tenantId do inventory corretamente. Corrigido em stockRouter.ts (usa input.tenantId como fallback) e movements.ts (não lança erro se tenantId ainda null após fallbacks)
 - [x] BUG CORRIGIDO (definitivo): Movimentação de estoque — Global Admin (tenantId=1) filtrava inventory por tenantId=1, mas inventory pertencia a tenantId=30001. Corrigido em stockRouter.ts: Global Admin sem input.tenantId explícito passa null para registerMovement, que usa sql`1=1` no filtro de tenant (sem restrição de tenant)
+
+## Bugs
+
+- [x] BUG CORRIGIDO: /shipping — ao excluir romanéio, ondas (pickingWaves) agora revertem para 'staged' (em vez de permanecer 'picked'). NFs permanecem corretamente em 'linked' (vinculadas ao pedido, mas fora do romanéio). Adicionado import de pickingWaves no shippingRouter.ts
