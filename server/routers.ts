@@ -64,30 +64,33 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return { receivingToday: 0, pickingInProgress: 0, shippingPending: 0, totalProcessed: 0 };
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Recebimentos Hoje: OTs criadas hoje (qualquer status)
+      const receivingTodayResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(receivingOrders)
+        .where(sql`DATE(${receivingOrders.createdAt}) = CURDATE()`);
 
-      const receivingToday = await db.select().from(receivingOrders).where(
-        and(
-          eq(receivingOrders.status, 'scheduled')
-        )
-      );
+      // Pedidos em Separação: pedidos com status 'picking' (em andamento)
+      const pickingInProgressResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pickingOrders)
+        .where(eq(pickingOrders.status, 'picking'));
 
-      const pickingInProgress = await db.select().from(pickingOrders).where(
-        eq(pickingOrders.status, 'picking')
-      );
+      // Expedições Pendentes: pedidos conferidos (staged ou invoiced) aguardando expedição
+      const shippingPendingResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pickingOrders)
+        .where(inArray(pickingOrders.status, ['staged', 'invoiced']));
 
-      const shippingPendingResult = await db.select({ count: sql<number>`COUNT(*)` }).from(pickingOrders).where(
-        eq(pickingOrders.status, 'staged')
-      );
-
-      const totalProcessedResult = await db.select({ count: sql<number>`COUNT(*)` }).from(pickingOrders).where(
-        eq(pickingOrders.status, 'shipped')
-      );
+      // Total Processado: pedidos já expedidos
+      const totalProcessedResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pickingOrders)
+        .where(eq(pickingOrders.status, 'shipped'));
 
       return {
-        receivingToday: receivingToday.length,
-        pickingInProgress: pickingInProgress.length,
+        receivingToday: Number(receivingTodayResult[0]?.count ?? 0),
+        pickingInProgress: Number(pickingInProgressResult[0]?.count ?? 0),
         shippingPending: Number(shippingPendingResult[0]?.count ?? 0),
         totalProcessed: Number(totalProcessedResult[0]?.count ?? 0),
       };

@@ -13,12 +13,18 @@ import {
   Shield,
   CheckSquare,
   Smartphone,
-  Printer
+  Printer,
+  Loader2
 } from "lucide-react";
 import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
+  const { data: dashStats, isLoading: statsLoading } = trpc.dashboard.stats.useQuery(
+    undefined,
+    { enabled: isAuthenticated, refetchInterval: 30000 } // Atualiza a cada 30s
+  );
 
   // Estado de carregamento
   if (loading) {
@@ -216,12 +222,12 @@ export default function Home() {
     }
   ];
 
-  // Estatísticas rápidas
+  // Estatísticas rápidas — dados reais do banco
   const stats = [
-    { label: "Recebimentos Hoje", value: "12" },
-    { label: "Pedidos em Separação", value: "28" },
-    { label: "Expedições Pendentes", value: "15" },
-    { label: "Total Processado", value: "55" }
+    { label: "Recebimentos Hoje",    value: dashStats?.receivingToday   ?? null },
+    { label: "Pedidos em Separação", value: dashStats?.pickingInProgress ?? null },
+    { label: "Expedições Pendentes", value: dashStats?.shippingPending   ?? null },
+    { label: "Total Processado",     value: dashStats?.totalProcessed    ?? null },
   ];
 
   return (
@@ -299,7 +305,13 @@ export default function Home() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                  <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                  {statsLoading ? (
+                    <div className="flex justify-center py-1">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <p className="text-3xl font-bold text-primary">{stat.value ?? 0}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
