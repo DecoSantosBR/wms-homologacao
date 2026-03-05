@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Users, Package, MapPin, UserCog, FolderOpen } from "lucide-react";
+import { Users, Package, MapPin, UserCog, FolderOpen, ArrowRightLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function Cadastros() {
@@ -58,6 +58,20 @@ export default function Cadastros() {
         "Gerenciar usuários",
         "Atribuir perfis",
         "Controlar permissões",
+      ],
+    },
+    {
+      id: "unidades",
+      title: "Unidades de Medida",
+      description: "Motor de conversão dinâmico de unidades",
+      icon: ArrowRightLeft,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
+      href: "/unit-conversion",
+      features: [
+        "Mapear aliases do XML da NF-e",
+        "Definir fatores de conversão por produto",
+        "Gerenciar fila de pendências",
       ],
     },
   ];
