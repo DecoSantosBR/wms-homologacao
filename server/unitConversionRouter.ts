@@ -19,8 +19,10 @@ import {
   productConversions,
   unitPendingQueue,
   products,
+  tenants,
+  auditLogs,
 } from "../drizzle/schema";
-import { eq, and, desc, asc, or, like, sql } from "drizzle-orm";
+import { eq, and, desc, asc, or, like, sql, ne, inArray } from "drizzle-orm";
 
 // ============================================================================
 // HELPERS DO MOTOR DE CONVERSÃO
@@ -296,7 +298,169 @@ export const unitConversionRouter = router({
         });
       }
 
-      return { success: true };
+       // ----------------------------------------------------------------
+      // Buscar outros tenants que possuem o mesmo SKU (para Global Admin)
+      // ----------------------------------------------------------------
+      let crossTenantSuggestions: Array<{ tenantId: number; tenantName: string; productId: number }> = [];
+      if ((ctx.user as any).tenantId === 1) {
+        // Buscar SKU do produto salvo
+        const [savedProduct] = await db
+          .select({ sku: products.sku })
+          .from(products)
+          .where(eq(products.id, input.productId))
+          .limit(1);
+
+        if (savedProduct?.sku) {
+          // Produtos com mesmo SKU em outros tenants
+          const otherProducts = await db
+            .select({
+              productId: products.id,
+              productTenantId: products.tenantId,
+              tenantName: tenants.name,
+            })
+            .from(products)
+            .innerJoin(tenants, eq(products.tenantId, tenants.id))
+            .where(
+              and(
+                eq(products.sku, savedProduct.sku),
+                ne(products.tenantId, tenantId),
+                eq(products.status, "active")
+              )
+            );
+
+          // Filtrar apenas os que ainda não têm o mesmo fator cadastrado
+          for (const op of otherProducts) {
+            const existingFactor = await db
+              .select({ id: productConversions.id })
+              .from(productConversions)
+              .where(
+                and(
+                  eq(productConversions.tenantId, op.productTenantId!),
+                  eq(productConversions.productId, op.productId),
+                  eq(productConversions.unitCode, input.unitCode.toUpperCase().trim())
+                )
+              )
+              .limit(1);
+            crossTenantSuggestions.push({
+              tenantId: op.productTenantId!,
+              tenantName: op.tenantName,
+              productId: op.productId,
+            });
+          }
+          // Remover duplicatas por tenantId
+          crossTenantSuggestions = crossTenantSuggestions.filter(
+            (v, i, arr) => arr.findIndex((x) => x.tenantId === v.tenantId) === i
+          );
+        }
+      }
+
+      return { success: true, crossTenantSuggestions };
+    }),
+
+  /**
+   * Replica um fator de conversão para outros tenants (apenas Global Admin)
+   */
+  replicateConversion: protectedProcedure
+    .input(z.object({
+      sourceProductId: z.number(),
+      unitCode: z.string(),
+      factorToBase: z.number().positive(),
+      roundingStrategy: z.enum(["floor", "ceil", "round"]).default("round"),
+      notes: z.string().optional(),
+      targetTenantIds: z.array(z.number()),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Apenas Global Admin
+      if ((ctx.user as any).tenantId !== 1) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o Global Admin pode replicar conversões." });
+      }
+
+      // Buscar SKU do produto fonte
+      const [sourceProduct] = await db
+        .select({ sku: products.sku })
+        .from(products)
+        .where(eq(products.id, input.sourceProductId))
+        .limit(1);
+
+      if (!sourceProduct?.sku) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Produto fonte não encontrado." });
+      }
+
+      const unitCodeNorm = input.unitCode.toUpperCase().trim();
+      const replicated: number[] = [];
+
+      for (const targetTenantId of input.targetTenantIds) {
+        // Buscar produto com mesmo SKU no tenant alvo
+        const [targetProduct] = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(
+            and(
+              eq(products.sku, sourceProduct.sku),
+              eq(products.tenantId, targetTenantId),
+              eq(products.status, "active")
+            )
+          )
+          .limit(1);
+
+        if (!targetProduct) continue;
+
+        // Upsert do fator no tenant alvo
+        const existing = await db
+          .select({ id: productConversions.id })
+          .from(productConversions)
+          .where(
+            and(
+              eq(productConversions.tenantId, targetTenantId),
+              eq(productConversions.productId, targetProduct.id),
+              eq(productConversions.unitCode, unitCodeNorm)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db.update(productConversions)
+            .set({
+              factorToBase: String(input.factorToBase),
+              roundingStrategy: input.roundingStrategy,
+              notes: input.notes ?? null,
+            })
+            .where(eq(productConversions.id, existing[0].id));
+        } else {
+          await db.insert(productConversions).values({
+            tenantId: targetTenantId,
+            productId: targetProduct.id,
+            unitCode: unitCodeNorm,
+            factorToBase: String(input.factorToBase),
+            roundingStrategy: input.roundingStrategy,
+            notes: input.notes ?? null,
+          });
+        }
+        replicated.push(targetTenantId);
+      }
+
+      // Registrar no audit_log
+      if (replicated.length > 0) {
+        await db.insert(auditLogs).values({
+          tenantId: 1,
+          userId: (ctx.user as any).id,
+          action: "replicate_unit_conversion",
+          entityType: "product_conversions",
+          entityId: input.sourceProductId,
+          newValue: JSON.stringify({
+            sku: sourceProduct.sku,
+            unitCode: unitCodeNorm,
+            factorToBase: input.factorToBase,
+            roundingStrategy: input.roundingStrategy,
+            replicatedToTenants: replicated,
+          }),
+        });
+      }
+
+      return { success: true, replicatedCount: replicated.length, replicatedTenants: replicated };
     }),
 
   deleteConversion: protectedProcedure

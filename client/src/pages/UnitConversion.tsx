@@ -52,6 +52,8 @@ import {
   CheckCircle2,
   XCircle,
   Search,
+  Copy,
+  Users,
 } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -245,6 +247,27 @@ function ConversionsTab() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  // Estado do modal de replicação multi-tenant
+  const [replicateModal, setReplicateModal] = useState<{
+    open: boolean;
+    suggestions: Array<{ tenantId: number; tenantName: string; productId: number }>;
+    sourceProductId: number;
+    unitCode: string;
+    factorToBase: number;
+    roundingStrategy: "floor" | "ceil" | "round";
+    notes?: string;
+    selectedTenantIds: number[];
+  }>({
+    open: false,
+    suggestions: [],
+    sourceProductId: 0,
+    unitCode: "",
+    factorToBase: 0,
+    roundingStrategy: "round",
+    selectedTenantIds: [],
+  });
+
   const [form, setForm] = useState({
     productId: "",
     unitCode: "",
@@ -274,12 +297,45 @@ function ConversionsTab() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const replicateMutation = trpc.unitConversion.replicateConversion.useMutation({
+    onSuccess: (data) => {
+      utils.unitConversion.listConversions.invalidate();
+      setReplicateModal((m) => ({ ...m, open: false }));
+      toast.success(`Conversão replicada para ${data.replicatedCount} cliente(s) com sucesso.`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const upsertMutation = trpc.unitConversion.upsertConversion.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.unitConversion.listConversions.invalidate();
       setDialogOpen(false);
+
+      const savedProductId = parseInt(form.productId);
+      const savedUnitCode = form.unitCode;
+      const savedFactor = parseFloat(form.factorToBase);
+      const savedRounding = form.roundingStrategy;
+      const savedNotes = form.notes;
+
       setForm({ productId: "", unitCode: "", factorToBase: "", roundingStrategy: "round", notes: "" });
-      toast.success("Fator de conversão salvo.");
+      setSelectedProduct(null);
+      setProductQuery("");
+
+      // Se houver sugestões de replicação, abrir modal
+      if (data.crossTenantSuggestions && data.crossTenantSuggestions.length > 0) {
+        setReplicateModal({
+          open: true,
+          suggestions: data.crossTenantSuggestions,
+          sourceProductId: savedProductId,
+          unitCode: savedUnitCode,
+          factorToBase: savedFactor,
+          roundingStrategy: savedRounding,
+          notes: savedNotes || undefined,
+          selectedTenantIds: data.crossTenantSuggestions.map((s) => s.tenantId),
+        });
+      } else {
+        toast.success("Fator de conversão salvo.");
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -512,6 +568,94 @@ function ConversionsTab() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={upsertMutation.isPending}>
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Replicação Multi-Tenant */}
+      <Dialog
+        open={replicateModal.open}
+        onOpenChange={(open) => setReplicateModal((m) => ({ ...m, open }))}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-5 w-5 text-blue-600" />
+              Replicar Regra de Conversão
+            </DialogTitle>
+            <DialogDescription>
+              Este produto também está cadastrado para outros clientes. Deseja replicar esta regra de conversão automaticamente?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="bg-muted rounded-lg p-3 text-sm">
+              <p className="font-medium mb-1">Regra a replicar:</p>
+              <p className="text-muted-foreground">
+                <span className="font-mono bg-background px-1.5 py-0.5 rounded">{replicateModal.unitCode}</span>
+                {" × "}
+                <span className="font-semibold">{replicateModal.factorToBase}</span>
+                {" = 1 UN (• "}{replicateModal.roundingStrategy})
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <Users className="h-4 w-4" /> Clientes encontrados:
+              </p>
+              <div className="space-y-2">
+                {replicateModal.suggestions.map((s) => (
+                  <label
+                    key={s.tenantId}
+                    className="flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded"
+                      checked={replicateModal.selectedTenantIds.includes(s.tenantId)}
+                      onChange={(e) => {
+                        setReplicateModal((m) => ({
+                          ...m,
+                          selectedTenantIds: e.target.checked
+                            ? [...m.selectedTenantIds, s.tenantId]
+                            : m.selectedTenantIds.filter((id) => id !== s.tenantId),
+                        }));
+                      }}
+                    />
+                    <span className="text-sm font-medium">{s.tenantName}</span>
+                    <Badge variant="outline" className="ml-auto text-xs">ID {s.tenantId}</Badge>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReplicateModal((m) => ({ ...m, open: false }));
+                toast.success("Fator de conversão salvo (sem replicação).");
+              }}
+            >
+              Não, manter isolado
+            </Button>
+            <Button
+              disabled={replicateModal.selectedTenantIds.length === 0 || replicateMutation.isPending}
+              onClick={() => {
+                replicateMutation.mutate({
+                  sourceProductId: replicateModal.sourceProductId,
+                  unitCode: replicateModal.unitCode,
+                  factorToBase: replicateModal.factorToBase,
+                  roundingStrategy: replicateModal.roundingStrategy,
+                  notes: replicateModal.notes,
+                  targetTenantIds: replicateModal.selectedTenantIds,
+                });
+              }}
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Sim, replicar para {replicateModal.selectedTenantIds.length} cliente(s)
             </Button>
           </DialogFooter>
         </DialogContent>
