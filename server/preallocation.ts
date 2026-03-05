@@ -476,6 +476,7 @@ export async function executeAddressing(
       notes: `Endereçamento da ordem ${order.orderNumber} - ${prealloc.productDescription} (Lote: ${prealloc.batch})`,
       performedBy: userId,
       createdAt: new Date(),
+      conversionSource: "uCom", // ANVISA: unidade comercial já é a unidade base
     });
 
     // 4.5. Atualizar status da pré-alocação

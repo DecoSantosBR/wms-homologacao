@@ -332,6 +332,7 @@ async function registerMovementInternal(
     performedBy: input.performedBy,
     tenantId: tenantId || null,
     createdAt: new Date(),
+    conversionSource: "manual", // ANVISA: ajuste manual de estoque
   });
 
   // Atualizar status dos endereços

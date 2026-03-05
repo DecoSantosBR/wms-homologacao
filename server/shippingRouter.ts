@@ -874,6 +874,7 @@ export const shippingRouter = router({
               performedBy: ctx.user.id,
               notes: `Baixa de estoque ao finalizar romaneio ${manifest.manifestNumber} - Pedido ${pickingOrder.customerOrderNumber}`,
               tenantId: pickingOrder.tenantId,
+              conversionSource: "manual", // ANVISA: baixa de estoque na expedição
             });
 
             remainingToShip -= quantityToShip;
@@ -1495,6 +1496,7 @@ export const shippingRouter = router({
           performedBy: ctx.user.id,
           notes: `Estorno automático - Expedição cancelada do pedido ${order.customerOrderNumber || order.orderNumber}`,
           tenantId: order.tenantId,
+          conversionSource: "manual", // ANVISA: estorno de expedição cancelada
         });
       }
 

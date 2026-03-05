@@ -207,6 +207,7 @@ export async function moveToQuarantine(
     referenceId: receivingOrderId,
     performedBy: userId,
     notes: "Movido para quarentena após recebimento",
+    conversionSource: "uCom", // ANVISA: unidade comercial já é a unidade base
   });
 
   // Atualizar saldo de inventário em tempo real

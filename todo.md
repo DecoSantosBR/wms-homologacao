@@ -194,3 +194,12 @@
 ## Bugs
 
 - [x] BUG CORRIGIDO: /shipping aba Pedidos — filtro agora inclui status 'staged' e 'invoiced' (inArray). Pedidos com NF vinculada fora de romanéio aparecem corretamente na listagem
+## Rastreabilidade ANVISA — conversionSource obrigatório em inventoryMovements
+- [x] routers.ts (nfe.import): conversionSource inicializado como "uCom" (nunca "none") — ANVISA
+- [x] server/modules/receiving.ts: conversionSource: "uCom" adicionado (moveToQuarantine)
+- [x] server/modules/conference.ts: conversionSource: "uCom" adicionado (checkAndUpdateOrderStatus)
+- [x] server/preallocation.ts: conversionSource: "uCom" adicionado (executeAddressing)
+- [x] server/stage.ts: conversionSource: "manual" adicionado (movimentação após Stage)
+- [x] server/modules/picking.ts: conversionSource: "manual" adicionado (confirmPicking)
+- [x] server/shippingRouter.ts: conversionSource: "manual" adicionado (baixa de estoque + estorno)
+- [x] server/movements.ts: conversionSource: "manual" adicionado (ajuste manual)

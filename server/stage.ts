@@ -850,6 +850,7 @@ export async function completeStageCheck(params: {
         referenceId: stageCheck.pickingOrderId,
         performedBy: stageCheck.operatorId,
         notes: `Movimentação automática após conferência Stage - Pedido ${pickingOrder.customerOrderNumber}`,
+        conversionSource: "manual", // ANVISA: movimentação interna de expedição
       });
 
       // Alocação já foi processada (não precisa deletar)

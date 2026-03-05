@@ -1751,8 +1751,8 @@ export const appRouter = router({
 
               let finalQty = produtoNFE.quantidade;
               let conversionFactor: number | null = null;
-              let conversionSource: "uTrib" | "uCom" | "manual" | "none" = "none";
-
+              // ANVISA: conversionSource nunca pode ser 'none' — 'uCom' indica que a unidade comercial já é a unidade base
+              let conversionSource: "uTrib" | "uCom" | "manual" | "none" = "uCom";
               if (resolvedCode !== "UN") {
                 const key = `${productId}:${resolvedCode}`;
                 const factor = convCtx.conversionMap.get(key);
@@ -1816,7 +1816,7 @@ export const appRouter = router({
               `Erro ao processar ${produtoNFE.codigo}: ${error.message}`
             );
           }
-        }
+        } // Fim do for loop de produtos
         } // Fim do if tipo === "entrada"
 
         // ✅ BLOQUEIO DE RECEBIMENTO: Se qualquer item caiu na unitPendingQueue,

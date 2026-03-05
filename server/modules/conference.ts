@@ -368,6 +368,7 @@ async function checkAndUpdateOrderStatus(receivingOrderId: number) {
           referenceId: receivingOrderId,
           performedBy: order.createdBy,
           notes: `Endereçamento automático após conferência - NF-e ${order.nfeNumber} - Status: Quarentena (aguardando aprovação de qualidade)`,
+          conversionSource: "uCom", // ANVISA: unidade comercial já é a unidade base
         });
 
         // Atualizar saldo de inventário em tempo real

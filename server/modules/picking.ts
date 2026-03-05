@@ -389,6 +389,7 @@ export async function confirmPicking(
     referenceId: item.pickingOrderId,
     performedBy: userId,
     notes: `Picking do pedido ${order.orderNumber}`,
+    conversionSource: "manual", // ANVISA: operação interna de separação
   });
 
   // Atualizar saldo de inventário em tempo real (deduzir)
