@@ -24,10 +24,14 @@ export function ClientPortalLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const utils = trpc.useUtils();
 
   const loginMutation = trpc.clientPortal.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(`Bem-vindo, ${data.user.fullName.split(" ")[0]}!`);
+      // Invalida o cache de 'me' para que o Dashboard leia a sessão recém-criada
+      // e não faça redirect de volta para /portal/login
+      await utils.clientPortal.me.invalidate();
       setLocation("/portal");
     },
     onError: (err) => {

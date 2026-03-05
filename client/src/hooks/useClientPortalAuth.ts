@@ -30,10 +30,11 @@ export function useClientPortalAuth(options?: { redirectIfUnauthenticated?: bool
 
   useEffect(() => {
     if (!redirectIfUnauthenticated) return;
-    if (meQuery.isLoading) return;
+    // Aguarda o carregamento inicial E qualquer refetch em andamento (ex: após login)
+    if (meQuery.isLoading || meQuery.isFetching) return;
     if (meQuery.data) return;
     setLocation("/portal/login");
-  }, [redirectIfUnauthenticated, meQuery.isLoading, meQuery.data, setLocation]);
+  }, [redirectIfUnauthenticated, meQuery.isLoading, meQuery.isFetching, meQuery.data, setLocation]);
 
   const logout = useCallback(async () => {
     await logoutMutation.mutateAsync();
@@ -41,7 +42,8 @@ export function useClientPortalAuth(options?: { redirectIfUnauthenticated?: bool
 
   return {
     user: meQuery.data ?? null,
-    loading: meQuery.isLoading,
+    // loading = true enquanto carrega pela primeira vez OU durante refetch (ex: após login)
+    loading: meQuery.isLoading || meQuery.isFetching,
     isAuthenticated: Boolean(meQuery.data),
     logout,
   };
