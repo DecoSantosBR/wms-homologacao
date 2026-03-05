@@ -82,15 +82,36 @@ function StatCard({
 // ── Componente Principal ───────────────────────────────────────────────────
 
 export function ClientPortalDashboard() {
-  const { user } = useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { user, isAuthenticated, loading: authLoading } = useClientPortalAuth({ redirectIfUnauthenticated: true });
 
-  const { data: stockSummary, isLoading: loadingStock } = trpc.clientPortal.stockSummary.useQuery();
-  const { data: ordersSummary, isLoading: loadingOrders } = trpc.clientPortal.ordersSummary.useQuery();
-  const { data: recentOrders, isLoading: loadingRecent } = trpc.clientPortal.orders.useQuery({
-    pageSize: 5,
-    page: 1,
-  });
-  const { data: expiring } = trpc.clientPortal.expiringProducts.useQuery({ days: 30 });
+  // ⚠️ Só dispara queries após confirmar sessão ativa — evita erros UNAUTHORIZED na tela de login
+  const { data: stockSummary, isLoading: loadingStock } = trpc.clientPortal.stockSummary.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false }
+  );
+  const { data: ordersSummary, isLoading: loadingOrders } = trpc.clientPortal.ordersSummary.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false }
+  );
+  const { data: recentOrders, isLoading: loadingRecent } = trpc.clientPortal.orders.useQuery(
+    { pageSize: 5, page: 1 },
+    { enabled: isAuthenticated, retry: false }
+  );
+  const { data: expiring } = trpc.clientPortal.expiringProducts.useQuery(
+    { days: 30 },
+    { enabled: isAuthenticated, retry: false }
+  );
+
+  // Mostra loading enquanto verifica sessão
+  if (authLoading) {
+    return (
+      <ClientPortalLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
+      </ClientPortalLayout>
+    );
+  }
 
   const activeOrders = Object.entries(ordersSummary?.byStatus ?? {})
     .filter(([s]) => !["shipped", "cancelled"].includes(s))

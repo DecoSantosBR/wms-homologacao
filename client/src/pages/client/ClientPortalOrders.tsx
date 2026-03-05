@@ -69,19 +69,22 @@ function OrderBadge({ status }: { status: string }) {
 // ── Lista de Pedidos ───────────────────────────────────────────────────────
 
 export function ClientPortalOrders() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const { data, isLoading } = trpc.clientPortal.orders.useQuery({
-    search: search || undefined,
-    status: status === "all" ? undefined : (status as OrderStatus),
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { data, isLoading } = trpc.clientPortal.orders.useQuery(
+    {
+      search: search || undefined,
+      status: status === "all" ? undefined : (status as OrderStatus),
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    { enabled: isAuthenticated, retry: false }
+  );
 
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
   const hasFilters = search || status !== "all";
@@ -273,13 +276,13 @@ export function ClientPortalOrders() {
 // ── Detalhe do Pedido ──────────────────────────────────────────────────────
 
 export function ClientPortalOrderDetail() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
   const { id } = useParams<{ id: string }>();
   const orderId = parseInt(id ?? "0");
 
   const { data, isLoading } = trpc.clientPortal.orderDetail.useQuery(
     { orderId },
-    { enabled: orderId > 0 }
+    { enabled: isAuthenticated && orderId > 0, retry: false }
   );
 
   if (isLoading) {

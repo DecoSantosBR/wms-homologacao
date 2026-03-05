@@ -69,17 +69,20 @@ function ReceivingBadge({ status }: { status: string }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ClientPortalReceivings() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
 
   const [status, setStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const { data, isLoading } = trpc.clientPortal.receivings.useQuery({
-    status: status === "all" ? undefined : (status as ReceivingStatus),
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { data, isLoading } = trpc.clientPortal.receivings.useQuery(
+    {
+      status: status === "all" ? undefined : (status as ReceivingStatus),
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    { enabled: isAuthenticated, retry: false }
+  );
 
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
@@ -222,13 +225,13 @@ export function ClientPortalReceivings() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ClientPortalReceivingDetail() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
   const { id } = useParams<{ id: string }>();
   const receivingId = parseInt(id ?? "0");
 
   const { data, isLoading } = trpc.clientPortal.receivingDetail.useQuery(
     { receivingId },
-    { enabled: receivingId > 0 }
+    { enabled: isAuthenticated && receivingId > 0, retry: false }
   );
 
   if (isLoading) {
@@ -361,17 +364,20 @@ export function ClientPortalReceivingDetail() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ClientPortalMovements() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
 
   const [movementType, setMovementType] = useState<string>("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
 
-  const { data, isLoading } = trpc.clientPortal.movements.useQuery({
-    movementType: movementType === "all" ? undefined : movementType as any,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { data, isLoading } = trpc.clientPortal.movements.useQuery(
+    {
+      movementType: movementType === "all" ? undefined : movementType as any,
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    { enabled: isAuthenticated, retry: false }
+  );
 
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 

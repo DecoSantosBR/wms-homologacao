@@ -20,6 +20,7 @@ import { ClientPortalImportOrdersDialog } from "@/components/ClientPortalImportO
 import { useBusinessError } from "@/hooks/useBusinessError";
 import { ClientPortalLayout } from "@/components/ClientPortalLayout";
 import { ProductCombobox } from "@/components/ProductCombobox";
+import { useClientPortalAuth } from "@/hooks/useClientPortalAuth";
 
 interface ProductItem {
   productId: number;
@@ -32,6 +33,8 @@ interface ProductItem {
 export default function ClientPortalNewOrder() {
   const [, setLocation] = useLocation();
   const navigate = (path: string) => setLocation(path);
+  
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
   
   const [activeTab, setActiveTab] = useState("individual");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -52,7 +55,10 @@ export default function ClientPortalNewOrder() {
   const utils = trpc.useUtils();
   
   // Queries - busca produtos cadastrados para o cliente (mesma lógica de /picking)
-  const { data: products } = trpc.clientPortal.products.useQuery();
+  const { data: products } = trpc.clientPortal.products.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false }
+  );
   
   console.log('[ClientPortalNewOrder] Produtos carregados:', products?.length || 0);
   

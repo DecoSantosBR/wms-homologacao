@@ -50,7 +50,7 @@ function isExpiringSoon(expiryDate: Date | string | null): boolean {
 }
 
 export function ClientPortalStock() {
-  useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
 
   const [search, setSearch] = useState("");
   const [batch, setBatch] = useState("");
@@ -58,14 +58,20 @@ export function ClientPortalStock() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
 
-  const { data: summary } = trpc.clientPortal.stockSummary.useQuery();
-  const { data, isLoading, refetch } = trpc.clientPortal.stockPositions.useQuery({
-    search: search || undefined,
-    batch: batch || undefined,
-    status: status === "all" ? undefined : (status as StockStatus),
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { data: summary } = trpc.clientPortal.stockSummary.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false }
+  );
+  const { data, isLoading, refetch } = trpc.clientPortal.stockPositions.useQuery(
+    {
+      search: search || undefined,
+      batch: batch || undefined,
+      status: status === "all" ? undefined : (status as StockStatus),
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    { enabled: isAuthenticated, retry: false }
+  );
 
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
