@@ -249,15 +249,16 @@ function ConversionsTab() {
   const [search, setSearch] = useState("");
 
   // Estado do modal de replicação multi-tenant
+  // SEGURANÇA: Usa tenantNames em vez de tenantIds para não expor IDs internos
   const [replicateModal, setReplicateModal] = useState<{
     open: boolean;
-    suggestions: Array<{ tenantId: number; tenantName: string; productId: number }>;
+    suggestions: Array<{ tenantName: string; activeSKUs: number; alreadyHasFactor: boolean }>;
     sourceProductId: number;
     unitCode: string;
     factorToBase: number;
     roundingStrategy: "floor" | "ceil" | "round";
     notes?: string;
-    selectedTenantIds: number[];
+    selectedTenantNames: string[]; // Nomes em vez de IDs
   }>({
     open: false,
     suggestions: [],
@@ -265,7 +266,7 @@ function ConversionsTab() {
     unitCode: "",
     factorToBase: 0,
     roundingStrategy: "round",
-    selectedTenantIds: [],
+    selectedTenantNames: [],
   });
 
   const [form, setForm] = useState({
@@ -331,7 +332,10 @@ function ConversionsTab() {
           factorToBase: savedFactor,
           roundingStrategy: savedRounding,
           notes: savedNotes || undefined,
-          selectedTenantIds: data.crossTenantSuggestions.map((s) => s.tenantId),
+          // Pré-selecionar apenas os que ainda não têm o fator cadastrado
+          selectedTenantNames: data.crossTenantSuggestions
+            .filter((s) => !s.alreadyHasFactor)
+            .map((s) => s.tenantName),
         });
       } else {
         toast.success("Fator de conversão salvo.");
@@ -607,24 +611,36 @@ function ConversionsTab() {
               <div className="space-y-2">
                 {replicateModal.suggestions.map((s) => (
                   <label
-                    key={s.tenantId}
-                    className="flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer hover:bg-accent transition-colors"
+                    key={s.tenantName}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer hover:bg-accent transition-colors ${
+                      s.alreadyHasFactor ? "opacity-60" : ""
+                    }`}
                   >
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded"
-                      checked={replicateModal.selectedTenantIds.includes(s.tenantId)}
+                      disabled={s.alreadyHasFactor}
+                      checked={replicateModal.selectedTenantNames.includes(s.tenantName)}
                       onChange={(e) => {
                         setReplicateModal((m) => ({
                           ...m,
-                          selectedTenantIds: e.target.checked
-                            ? [...m.selectedTenantIds, s.tenantId]
-                            : m.selectedTenantIds.filter((id) => id !== s.tenantId),
+                          selectedTenantNames: e.target.checked
+                            ? [...m.selectedTenantNames, s.tenantName]
+                            : m.selectedTenantNames.filter((n) => n !== s.tenantName),
                         }));
                       }}
                     />
-                    <span className="text-sm font-medium">{s.tenantName}</span>
-                    <Badge variant="outline" className="ml-auto text-xs">ID {s.tenantId}</Badge>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">{s.tenantName}</span>
+                      <p className="text-xs text-muted-foreground">
+                        Impacto previsto: {s.activeSKUs} SKU{s.activeSKUs !== 1 ? "s" : ""} ativo{s.activeSKUs !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    {s.alreadyHasFactor ? (
+                      <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">Já possui</Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-auto text-xs text-orange-600 border-orange-300">Pendente</Badge>
+                    )}
                   </label>
                 ))}
               </div>
@@ -642,7 +658,7 @@ function ConversionsTab() {
               Não, manter isolado
             </Button>
             <Button
-              disabled={replicateModal.selectedTenantIds.length === 0 || replicateMutation.isPending}
+              disabled={replicateModal.selectedTenantNames.length === 0 || replicateMutation.isPending}
               onClick={() => {
                 replicateMutation.mutate({
                   sourceProductId: replicateModal.sourceProductId,
@@ -650,12 +666,12 @@ function ConversionsTab() {
                   factorToBase: replicateModal.factorToBase,
                   roundingStrategy: replicateModal.roundingStrategy,
                   notes: replicateModal.notes,
-                  targetTenantIds: replicateModal.selectedTenantIds,
+                  targetTenantNames: replicateModal.selectedTenantNames,
                 });
               }}
             >
               <Copy className="h-4 w-4 mr-1" />
-              Sim, replicar para {replicateModal.selectedTenantIds.length} cliente(s)
+              Sim, replicar para {replicateModal.selectedTenantNames.length} cliente(s)
             </Button>
           </DialogFooter>
         </DialogContent>

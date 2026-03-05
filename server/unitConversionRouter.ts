@@ -40,13 +40,19 @@ export async function loadConversionContext(tenantId: number): Promise<{
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Carregar aliases e conversões do tenant + fallback para Tenant 1 (Global)
+  // Tenant 1 atua como repositório global; suas regras são herdadas por todos os tenants
+  // mas podem ser sobrescritas por regras específicas do tenant.
+  const tenantIds = tenantId === 1 ? [1] : [1, tenantId];
+
   const [aliases, conversions] = await Promise.all([
-    db.select().from(unitAliases).where(eq(unitAliases.tenantId, tenantId)),
-    db.select().from(productConversions).where(eq(productConversions.tenantId, tenantId)),
+    db.select().from(unitAliases).where(inArray(unitAliases.tenantId, tenantIds)),
+    db.select().from(productConversions).where(inArray(productConversions.tenantId, tenantIds)),
   ]);
 
   const aliasMap = new Map<string, string>();
-  for (const a of aliases) {
+  // Carregar aliases globais (Tenant 1) primeiro, depois sobrescrever com os do tenant específico
+  for (const a of aliases.sort((x) => (x.tenantId === 1 ? -1 : 1))) {
     aliasMap.set(a.alias.toUpperCase().trim(), a.targetCode);
   }
 
@@ -67,7 +73,9 @@ export async function loadConversionContext(tenantId: number): Promise<{
 
   const conversionMap = new Map<string, number>();
   const roundingMap = new Map<string, "floor" | "ceil" | "round">();
-  for (const c of conversions) {
+  // Carregar conversões globais (Tenant 1) primeiro, depois sobrescrever com as do tenant específico
+  // Isso garante que regras específicas do tenant sempre prevaleçam sobre as globais.
+  for (const c of conversions.sort((a, b) => (a.tenantId === 1 ? -1 : 1) - (b.tenantId === 1 ? -1 : 1))) {
     const key = `${c.productId}:${c.unitCode}`;
     conversionMap.set(key, parseFloat(String(c.factorToBase)));
     roundingMap.set(key, c.roundingStrategy);
@@ -192,9 +200,17 @@ export const unitConversionRouter = router({
 
   deleteAlias: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const userTenantId = (ctx.user as any).tenantId as number;
+      // Verificar que o alias pertence ao tenant do usuário (ou Global Admin pode deletar qualquer um)
+      const [existing] = await db.select({ tenantId: unitAliases.tenantId })
+        .from(unitAliases).where(eq(unitAliases.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Alias não encontrado." });
+      if (userTenantId !== 1 && existing.tenantId !== userTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado: este alias pertence a outro tenant." });
+      }
       await db.delete(unitAliases).where(eq(unitAliases.id, input.id));
       return { success: true };
     }),
@@ -299,9 +315,16 @@ export const unitConversionRouter = router({
       }
 
        // ----------------------------------------------------------------
-      // Buscar outros tenants que possuem o mesmo SKU (para Global Admin)
+      // Buscar outros tenants que possuem o mesmo SKU (apenas Global Admin)
+      // SEGURANÇA: Retornar apenas tenantName e impacto previsto.
+      // IDs internos (tenantId, productId) NUNCA são expostos ao frontend.
       // ----------------------------------------------------------------
-      let crossTenantSuggestions: Array<{ tenantId: number; tenantName: string; productId: number }> = [];
+      let crossTenantSuggestions: Array<{
+        tenantName: string;     // Nome do tenant (seguro para exibir)
+        activeSKUs: number;     // Qtd de SKUs ativos afetados (impacto previsto)
+        alreadyHasFactor: boolean; // Se já possui o mesmo fator cadastrado
+      }> = [];
+
       if ((ctx.user as any).tenantId === 1) {
         // Buscar SKU do produto salvo
         const [savedProduct] = await db
@@ -311,7 +334,7 @@ export const unitConversionRouter = router({
           .limit(1);
 
         if (savedProduct?.sku) {
-          // Produtos com mesmo SKU em outros tenants
+          // Produtos com mesmo SKU em outros tenants (excluindo Tenant 1)
           const otherProducts = await db
             .select({
               productId: products.id,
@@ -324,33 +347,40 @@ export const unitConversionRouter = router({
               and(
                 eq(products.sku, savedProduct.sku),
                 ne(products.tenantId, tenantId),
+                ne(products.tenantId, 1), // Excluir o próprio Tenant 1
                 eq(products.status, "active")
               )
             );
 
-          // Filtrar apenas os que ainda não têm o mesmo fator cadastrado
+          // Agrupar por tenant e calcular impacto previsto
+          const tenantMap = new Map<number, { tenantName: string; productIds: number[] }>();
           for (const op of otherProducts) {
-            const existingFactor = await db
+            const tid = op.productTenantId!;
+            if (!tenantMap.has(tid)) {
+              tenantMap.set(tid, { tenantName: op.tenantName, productIds: [] });
+            }
+            tenantMap.get(tid)!.productIds.push(op.productId);
+          }
+
+          for (const [tid, info] of Array.from(tenantMap.entries())) {
+            // Verificar se já possui o mesmo fator
+            const existingFactors = await db
               .select({ id: productConversions.id })
               .from(productConversions)
               .where(
                 and(
-                  eq(productConversions.tenantId, op.productTenantId!),
-                  eq(productConversions.productId, op.productId),
+                  eq(productConversions.tenantId, tid),
+                  inArray(productConversions.productId, info.productIds),
                   eq(productConversions.unitCode, input.unitCode.toUpperCase().trim())
                 )
-              )
-              .limit(1);
+              );
+
             crossTenantSuggestions.push({
-              tenantId: op.productTenantId!,
-              tenantName: op.tenantName,
-              productId: op.productId,
+              tenantName: info.tenantName,
+              activeSKUs: info.productIds.length,
+              alreadyHasFactor: existingFactors.length === info.productIds.length,
             });
           }
-          // Remover duplicatas por tenantId
-          crossTenantSuggestions = crossTenantSuggestions.filter(
-            (v, i, arr) => arr.findIndex((x) => x.tenantId === v.tenantId) === i
-          );
         }
       }
 
@@ -359,6 +389,8 @@ export const unitConversionRouter = router({
 
   /**
    * Replica um fator de conversão para outros tenants (apenas Global Admin)
+   * SEGURANÇA: Aceita tenantNames (não IDs) para evitar enumeração de IDs internos.
+   * O backend resolve os IDs a partir dos nomes.
    */
   replicateConversion: protectedProcedure
     .input(z.object({
@@ -367,7 +399,7 @@ export const unitConversionRouter = router({
       factorToBase: z.number().positive(),
       roundingStrategy: z.enum(["floor", "ceil", "round"]).default("round"),
       notes: z.string().optional(),
-      targetTenantIds: z.array(z.number()),
+      targetTenantNames: z.array(z.string()), // Nomes em vez de IDs (mais seguro)
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -377,6 +409,13 @@ export const unitConversionRouter = router({
       if ((ctx.user as any).tenantId !== 1) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o Global Admin pode replicar conversões." });
       }
+
+      // Resolver IDs a partir dos nomes (o frontend nunca envia IDs)
+      const targetTenantRows = await db
+        .select({ id: tenants.id, name: tenants.name })
+        .from(tenants)
+        .where(inArray(tenants.name, input.targetTenantNames));
+      const targetTenantIds = targetTenantRows.map((t) => t.id);
 
       // Buscar SKU do produto fonte
       const [sourceProduct] = await db
@@ -392,7 +431,7 @@ export const unitConversionRouter = router({
       const unitCodeNorm = input.unitCode.toUpperCase().trim();
       const replicated: number[] = [];
 
-      for (const targetTenantId of input.targetTenantIds) {
+      for (const targetTenantId of targetTenantIds) {
         // Buscar produto com mesmo SKU no tenant alvo
         const [targetProduct] = await db
           .select({ id: products.id })
@@ -465,9 +504,17 @@ export const unitConversionRouter = router({
 
   deleteConversion: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const userTenantId = (ctx.user as any).tenantId as number;
+      // Verificar que a conversão pertence ao tenant do usuário (ou Global Admin pode deletar qualquer uma)
+      const [existing] = await db.select({ tenantId: productConversions.tenantId })
+        .from(productConversions).where(eq(productConversions.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Conversão não encontrada." });
+      if (userTenantId !== 1 && existing.tenantId !== userTenantId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado: esta conversão pertence a outro tenant." });
+      }
       await db.delete(productConversions).where(eq(productConversions.id, input.id));
       return { success: true };
     }),
