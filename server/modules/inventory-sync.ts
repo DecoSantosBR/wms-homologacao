@@ -159,8 +159,22 @@ export async function recalculateInventoryBalances(): Promise<{
 }
 
 /**
+ * Parâmetros opcionais de rastreabilidade UOM para updateInventoryBalance.
+ * Quando fornecidos, garantem que a quantidade já foi processada pelo Motor de Conversão.
+ */
+export interface UOMTraceParams {
+  originalUnit?: string | null;
+  originalQty?: number | null;
+  conversionFactor?: number | null;
+  conversionSource?: "uTrib" | "uCom" | "manual" | "none";
+}
+
+/**
  * Atualiza o saldo de uma posição específica após uma movimentação
  * (Uso incremental para manter sincronizado em tempo real)
+ *
+ * @param uomTrace - Rastreabilidade de conversão de unidade (opcional).
+ *   Se não fornecido, assume que a quantidade já está na unidade base.
  */
 export async function updateInventoryBalance(
   productId: number,
@@ -169,10 +183,36 @@ export async function updateInventoryBalance(
   quantityChange: number,
   tenantId: number | null,
   expiryDate: Date | null = null,
-  serialNumber: string | null = null
+  serialNumber: string | null = null,
+  uomTrace?: UOMTraceParams
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // ✅ GUARD DE FRAÇÃO ÓRFÃ: Arredondar quantidades infinitesimais para evitar
+  // saldos negativos por erros de ponto flutuante (ex: 3.3333 - 3 = 0.3333 em vez de 0).
+  // Quantidades menores que 0.001 são consideradas zero operacional.
+  const safeQuantityChange = Math.abs(quantityChange) < 0.001
+    ? 0
+    : Math.round(quantityChange);
+
+  // Se a quantidade segura for zero, não há nada a fazer.
+  if (safeQuantityChange === 0) {
+    console.warn(
+      `[UOM INTEGRIDADE] Fração órfã descartada (quantidade original: ${quantityChange})`,
+      { productId, locationId, batch }
+    );
+    return;
+  }
+
+  // ✅ AVISO DE RASTREABILIDADE ANVISA: Logar quando quantidade decimal sem
+  // rastreabilidade de conversão é detectada (não bloqueia, apenas registra).
+  if (!Number.isInteger(quantityChange) && (!uomTrace || uomTrace.conversionSource === 'none' || !uomTrace.conversionSource)) {
+    console.warn(
+      `[UOM INTEGRIDADE] Quantidade decimal sem rastreabilidade de conversão!`,
+      { productId, locationId, batch, quantityChange, safeQuantityChange, uomTrace }
+    );
+  }
 
   // Buscar registro existente
   const conditions = [
@@ -194,7 +234,7 @@ export async function updateInventoryBalance(
 
   if (existing.length > 0) {
     // Atualizar quantidade existente
-    const newQuantity = existing[0].quantity + quantityChange;
+    const newQuantity = existing[0].quantity + safeQuantityChange;
 
     if (newQuantity <= 0) {
       // Remover registro se quantidade zerou
@@ -254,7 +294,7 @@ export async function updateInventoryBalance(
       batch,
       expiryDate,
       serialNumber,
-      quantity: quantityChange,
+      quantity: safeQuantityChange,
       tenantId,
       uniqueCode: getUniqueCode(product[0]?.sku || "", batch), // ✅ Adicionar uniqueCode
       locationZone: location[0]?.zoneCode || null, // ✅ Adicionar locationZone

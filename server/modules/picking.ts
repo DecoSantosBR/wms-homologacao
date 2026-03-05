@@ -7,7 +7,8 @@ import {
   inventoryMovements,
   products,
   contracts,
-  warehouseLocations
+  warehouseLocations,
+  productConversions
 } from "../../drizzle/schema";
 
 // ============================================================================
@@ -328,12 +329,46 @@ export async function confirmPicking(
   // Buscar ordem para pegar tenantId
   const order = await getPickingOrderById(item.pickingOrderId);
   if (!order) throw new Error("Ordem não encontrada");
-  
+
+  // ✅ CORREÇÃO DE FRAÇÕES ÓRFÃS: Aplicar rounding_strategy do produto antes de debitar estoque.
+  // Buscar a estratégia de arredondamento cadastrada em productConversions para este produto.
+  let safePicked = pickedQuantity;
+  try {
+    const conversionRow = await db.select({
+      roundingStrategy: productConversions.roundingStrategy,
+    })
+      .from(productConversions)
+      .where(and(
+        eq(productConversions.productId, item.productId),
+        eq(productConversions.tenantId, order.tenantId)
+      ))
+      .limit(1);
+
+    const strategy = conversionRow[0]?.roundingStrategy || "round";
+    switch (strategy) {
+      case "floor":  safePicked = Math.floor(pickedQuantity); break;
+      case "ceil":   safePicked = Math.ceil(pickedQuantity);  break;
+      case "round":
+      default:       safePicked = Math.round(pickedQuantity); break;
+    }
+
+    if (safePicked !== pickedQuantity) {
+      console.warn(
+        `[PICKING UOM] Fração órfã corrigida: ${pickedQuantity} → ${safePicked} (strategy: ${strategy})`,
+        { itemId, productId: item.productId }
+      );
+    }
+  } catch (err) {
+    // Fallback seguro: nunca bloquear o picking por erro de conversão
+    safePicked = Math.round(pickedQuantity);
+    console.error("[PICKING UOM] Erro ao buscar rounding_strategy, usando round:", err);
+  }
+
   // Atualizar item com dados do picking
-  const status = pickedQuantity < item.requestedQuantity ? "short_picked" : "picked";
+  const status = safePicked < item.requestedQuantity ? "short_picked" : "picked";
   
   await updatePickingOrderItem(itemId, {
-    pickedQuantity,
+    pickedQuantity: safePicked,
     batch,
     expiryDate,
     serialNumber,
@@ -348,7 +383,7 @@ export async function confirmPicking(
     batch,
     serialNumber,
     fromLocationId,
-    quantity: pickedQuantity,
+    quantity: safePicked,
     movementType: "picking",
     referenceType: "picking_order",
     referenceId: item.pickingOrderId,
@@ -362,7 +397,7 @@ export async function confirmPicking(
     item.productId,
     fromLocationId,
     batch,
-    -pickedQuantity, // Saída negativa
+    -safePicked, // Saída negativa (com rounding_strategy aplicado)
     order.tenantId,
     expiryDate || null,
     serialNumber || null

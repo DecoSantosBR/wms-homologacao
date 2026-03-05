@@ -1819,6 +1819,19 @@ export const appRouter = router({
         }
         } // Fim do if tipo === "entrada"
 
+        // ✅ BLOQUEIO DE RECEBIMENTO: Se qualquer item caiu na unitPendingQueue,
+        // travar a OR como 'pending_unit_setup' para impedir que o operador
+        // bipe itens com quantidades não convertidas no coletor.
+        if (input.tipo === "entrada" && result.erros.some(e => e.includes("sem fator de conversão"))) {
+          await db.update(receivingOrders)
+            .set({ status: "pending_unit_setup" })
+            .where(eq(receivingOrders.id, orderId));
+          result.erros.unshift(
+            `🔒 Ordem de Recebimento travada: um ou mais itens possuem unidade sem fator de conversão cadastrado. ` +
+            `Acesse Cadastros > Unidades de Medida para cadastrar os fatores e depois reimporte a NF-e.`
+          );
+        }
+
         return result;
         } catch (error: any) {
           throw new Error(`Erro ao importar NF-e: ${error.message}`);

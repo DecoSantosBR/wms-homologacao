@@ -279,7 +279,7 @@ export const receivingOrders = mysqlTable("receivingOrders", {
   receivedDate: timestamp("receivedDate"),
   receivingLocationId: int("receivingLocationId"), // Endereço REC alocado automaticamente
   addressingPlan: json("addressingPlan"), // Pré-alocação: [{productSku, batch, quantity, locationCode}]
-  status: mysqlEnum("status", ["scheduled", "in_progress", "in_quarantine", "addressing", "completed", "cancelled"]).default("scheduled").notNull(),
+  status: mysqlEnum("status", ["scheduled", "in_progress", "in_quarantine", "addressing", "completed", "cancelled", "pending_unit_setup"]).default("scheduled").notNull(),
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
