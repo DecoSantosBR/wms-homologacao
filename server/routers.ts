@@ -26,8 +26,11 @@ import { clientPortalRouter } from "./clientPortalRouter";
 import { inventoryImportRouter } from "./inventoryImportRouter";
 import { collectorPickingRouter } from "./collectorPickingRouter";
 import { labelReprintRouter } from "./labelReprintRouter";
+import { unitConversionRouter } from "./unitConversionRouter";
 import { getUniqueCode } from "./utils/uniqueCode";
 import { toMySQLDate } from "../shared/utils";
+import { loadConversionContext, resolveUnit, applyConversion } from "./unitConversionRouter";
+import { unitPendingQueue } from "../drizzle/schema";
 
 export const appRouter = router({
   system: systemRouter,
@@ -46,6 +49,7 @@ export const appRouter = router({
   collectorPicking: collectorPickingRouter,
   inventoryImport: inventoryImportRouter,
   labelReprint: labelReprintRouter,
+  unitConversion: unitConversionRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -1667,6 +1671,9 @@ export const appRouter = router({
 
         // Processar cada produto da NF-e (apenas para entrada)
         if (input.tipo === "entrada") {
+        // ✅ MOTOR DE CONVERSÃO: Bulk Load de aliases e fatores (O(1) por produto)
+        const convCtx = await loadConversionContext(input.tenantId);
+
         for (const produtoNFE of nfeData.produtos) {
           try {
             // Buscar produto existente por supplierCode, GTIN ou SKU
@@ -1735,6 +1742,47 @@ export const appRouter = router({
               
               const uniqueCode = getUniqueCode(productData.sku, produtoNFE.lote);
               
+              // ✅ MOTOR DE CONVERSÃO: Resolver unidade e calcular quantidade em UN
+              const { resolvedCode, source } = resolveUnit(
+                produtoNFE.unidadeTributavel,
+                produtoNFE.unidade,
+                convCtx.aliasMap
+              );
+
+              let finalQty = produtoNFE.quantidade;
+              let conversionFactor: number | null = null;
+              let conversionSource: "uTrib" | "uCom" | "manual" | "none" = "none";
+
+              if (resolvedCode !== "UN") {
+                const key = `${productId}:${resolvedCode}`;
+                const factor = convCtx.conversionMap.get(key);
+                const strategy = convCtx.roundingMap.get(key) ?? "round";
+
+                if (factor) {
+                  finalQty = applyConversion(produtoNFE.quantidade, factor, strategy);
+                  conversionFactor = factor;
+                  conversionSource = source;
+                } else {
+                  // Sem fator de conversão: registrar na fila de pendências
+                  await db.insert(unitPendingQueue).values({
+                    tenantId: input.tenantId,
+                    receivingOrderId: orderId,
+                    nfeKey: nfeData.chaveAcesso,
+                    nfeNumber: nfeData.numero,
+                    productCode: produtoNFE.codigo,
+                    productDescription: produtoNFE.descricao,
+                    xmlUnit: resolvedCode,
+                    reason: "no_conversion",
+                    status: "pending",
+                  });
+                  result.erros.push(
+                    `⚠️ ${produtoNFE.codigo}: unidade '${resolvedCode}' sem fator de conversão. Cadastre em Unidades de Medida.`
+                  );
+                  // Continuar com quantidade original (sem conversão)
+                  conversionSource = source;
+                }
+              }
+
               // PRÉ-VÍNCULO INTELIGENTE: Buscar etiqueta existente por uniqueCode
               const existingLabel = await db.select({ labelCode: labelAssociations.labelCode })
                 .from(labelAssociations)
@@ -1753,7 +1801,7 @@ export const appRouter = router({
                 tenantId: input.tenantId,
                 receivingOrderId: orderId,
                 productId: productId,
-                expectedQuantity: produtoNFE.quantidade,
+                expectedQuantity: finalQty, // Quantidade convertida para UN
                 receivedQuantity: 0,
                 addressedQuantity: 0,
                 batch: produtoNFE.lote || null,

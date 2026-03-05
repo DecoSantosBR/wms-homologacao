@@ -449,6 +449,11 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   referenceId: int("referenceId"),
   performedBy: int("performedBy").notNull(),
   notes: text("notes"),
+  // ✅ Rastreabilidade ANVISA: campos de conversão de unidades de medida
+  originalUnit: varchar("originalUnit", { length: 50 }),     // Unidade original do XML (ex: CX, FD, PÇ)
+  originalQty: decimal("originalQty", { precision: 18, scale: 6 }), // Quantidade original antes da conversão
+  conversionFactor: decimal("conversionFactor", { precision: 18, scale: 6 }), // Fator aplicado
+  conversionSource: mysqlEnum("conversionSource", ["uTrib", "uCom", "manual", "none"]), // Origem da conversão
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   tenantProductIdx: index("tenant_product_movement_idx").on(table.tenantId, table.productId),
@@ -1242,3 +1247,93 @@ export const clientPortalSessions = mysqlTable("clientPortalSessions", {
 
 export type ClientPortalSession = typeof clientPortalSessions.$inferSelect;
 export type InsertClientPortalSession = typeof clientPortalSessions.$inferInsert;
+
+// ============================================================================
+// MÓDULO MOTOR DE CONVERSÃO DE UNIDADES DE MEDIDA
+// ============================================================================
+
+/**
+ * Níveis de embalagem normalizados (hierarquia de unidades)
+ * UN(1) < PCT(2) < CX(3) < FD(4) < PL(5)
+ * Tabela global (sem tenant) — define os "tipos" de embalagem disponíveis.
+ */
+export const packagingLevels = mysqlTable("packagingLevels", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 20 }).notNull().unique(), // UN, PCT, CX, FD, PL
+  name: varchar("name", { length: 100 }).notNull(),         // Unidade, Pacote, Caixa, Fardo, Pallet
+  rank: int("rank").notNull(),                              // 1=UN, 2=PCT, 3=CX, 4=FD, 5=PL
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PackagingLevel = typeof packagingLevels.$inferSelect;
+export type InsertPackagingLevel = typeof packagingLevels.$inferInsert;
+
+/**
+ * Aliases de unidades de medida por tenant
+ * "De-Para": textos do XML da NF-e → código normalizado (packagingLevels.code)
+ * Ex: 'PÇ', 'PC', 'UNID', 'UND' → 'UN'
+ * Ex: 'CX', 'CXA', 'CAIXA' → 'CX'
+ * Permite que cada tenant customize seus próprios mapeamentos.
+ */
+export const unitAliases = mysqlTable("unitAliases", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  alias: varchar("alias", { length: 50 }).notNull(),        // Texto exato do XML (uCom ou uTrib)
+  targetCode: varchar("targetCode", { length: 20 }).notNull(), // Código normalizado (UN, CX, FD...)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  tenantAliasUnique: unique("unit_alias_tenant_unique").on(table.tenantId, table.alias),
+  tenantIdx: index("unit_aliases_tenant_idx").on(table.tenantId),
+}));
+export type UnitAlias = typeof unitAliases.$inferSelect;
+export type InsertUnitAlias = typeof unitAliases.$inferInsert;
+
+/**
+ * Fatores de conversão por produto e unidade (por tenant)
+ * Define quantas unidades base (UN) equivalem a 1 unidade da embalagem.
+ * Ex: 1 CX de Produto A = 12 UN → factor_to_base = 12
+ * Ex: 1 FD de Produto B = 100 UN para Cliente A, 120 UN para Cliente B
+ */
+export const productConversions = mysqlTable("productConversions", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  productId: int("productId").notNull(),
+  unitCode: varchar("unitCode", { length: 20 }).notNull(),  // Código da embalagem (UN, CX, FD...)
+  factorToBase: decimal("factorToBase", { precision: 18, scale: 6 }).notNull(), // Fator de conversão para UN
+  roundingStrategy: mysqlEnum("roundingStrategy", ["floor", "ceil", "round"]).default("round").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  tenantProductUnitUnique: unique("product_conversion_unique").on(table.tenantId, table.productId, table.unitCode),
+  tenantProductIdx: index("product_conversions_tenant_product_idx").on(table.tenantId, table.productId),
+}));
+export type ProductConversion = typeof productConversions.$inferSelect;
+export type InsertProductConversion = typeof productConversions.$inferInsert;
+
+/**
+ * Fila de pendências de cadastro de unidades
+ * NF-es bloqueadas por falta de mapeamento de unidade ou fator de conversão.
+ * O admin deve resolver o mapeamento e reprocessar a NF-e.
+ */
+export const unitPendingQueue = mysqlTable("unitPendingQueue", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  receivingOrderId: int("receivingOrderId"),               // Ordem de recebimento bloqueada
+  nfeKey: varchar("nfeKey", { length: 44 }),               // Chave da NF-e
+  nfeNumber: varchar("nfeNumber", { length: 20 }),
+  productCode: varchar("productCode", { length: 100 }).notNull(), // cProd do XML
+  productDescription: varchar("productDescription", { length: 500 }),
+  xmlUnit: varchar("xmlUnit", { length: 50 }).notNull(),   // Unidade do XML (uCom ou uTrib)
+  reason: mysqlEnum("reason", ["no_alias", "no_conversion", "new_product"]).notNull(),
+  status: mysqlEnum("status", ["pending", "resolved", "ignored"]).default("pending").notNull(),
+  resolvedBy: int("resolvedBy"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  tenantIdx: index("unit_pending_tenant_idx").on(table.tenantId),
+  statusIdx: index("unit_pending_status_idx").on(table.status),
+}));
+export type UnitPendingQueue = typeof unitPendingQueue.$inferSelect;
+export type InsertUnitPendingQueue = typeof unitPendingQueue.$inferInsert;

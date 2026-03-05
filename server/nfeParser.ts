@@ -11,7 +11,9 @@ export interface NFEProduct {
   ean: string | null; // cEAN - Código de barras
   eanTributavel: string | null; // cEANTrib - Código de barras tributável
   unidade: string; // uCom - Unidade comercial
+  unidadeTributavel: string | null; // uTrib - Unidade tributável (prioridade fiscal)
   quantidade: number; // qCom - Quantidade comercial
+  quantidadeTributavel: number | null; // qTrib - Quantidade tributável
   valorUnitario: number; // vUnCom - Valor unitário comercial
   valorTotal: number; // vProd - Valor total bruto
   ncm: string | null; // NCM - Nomenclatura Comum do Mercosul
@@ -158,13 +160,19 @@ export async function parseNFE(xmlContent: string): Promise<NFEData> {
         }
       }
       
+      // Extrair unidade e quantidade tributável (para Motor de Conversão)
+      const uTrib = extractValue(prod?.uTrib, null) || null;
+      const qTrib = prod?.qTrib ? parseFloat(extractValue(prod?.qTrib, "0")) : null;
+
       return {
         codigo,
         descricao: extractValue(prod?.xProd, ""),
         ean: extractValue(prod?.cEAN, null) || null,
         eanTributavel: extractValue(prod?.cEANTrib, null) || null,
         unidade: extractValue(prod?.uCom, "UN"),
+        unidadeTributavel: uTrib,
         quantidade: parseFloat(extractValue(prod?.qCom, "0")),
+        quantidadeTributavel: qTrib,
         valorUnitario: parseFloat(extractValue(prod?.vUnCom, "0")),
         valorTotal: parseFloat(extractValue(prod?.vProd, "0")),
         ncm: extractValue(prod?.NCM, null),

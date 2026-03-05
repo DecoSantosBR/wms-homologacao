@@ -169,6 +169,13 @@
       "when": 1772687463914,
       "tag": "0023_flat_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1772747391668,
+      "tag": "0024_neat_gorilla_man",
+      "breakpoints": true
     }
   ]
 }

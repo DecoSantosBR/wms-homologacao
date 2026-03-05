@@ -30,6 +30,7 @@ import ScannerTest from "./pages/ScannerTest";
 import PrintSettings from "./pages/PrintSettings";
 import Reports from "./pages/Reports";
 import Maintenance from "./pages/Maintenance";
+import UnitConversion from "./pages/UnitConversion";
 import { CollectorHome } from "./pages/collector/CollectorHome";
 import { CollectorReceiving } from "./pages/collector/CollectorReceiving";
 import { CollectorPicking } from "./pages/collector/CollectorPicking";
@@ -79,6 +80,7 @@ function Router() {
       <Route path={"/reports"} component={Reports} />
       <Route path={"/maintenance"} component={Maintenance} />
       <Route path={"/admin"} component={Maintenance} />
+      <Route path={"/unit-conversion"} component={UnitConversion} />
         <Route path="/collector" component={CollectorHome} />
         <Route path="/collector/receiving" component={CollectorReceiving} />
         <Route path="/collector/picking" component={CollectorPicking} />
