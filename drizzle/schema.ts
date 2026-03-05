@@ -437,6 +437,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   tenantId: int("tenantId"),
   productId: int("productId").notNull(),
   batch: varchar("batch", { length: 50 }),
+  expiryDate: date("expiryDate"), // ✅ Validade do lote (ANVISA — rastreabilidade completa)
   uniqueCode: varchar("uniqueCode", { length: 200 }), // SKU+Lote (chave única)
   labelCode: varchar("labelCode", { length: 100 }), // ✅ Código da etiqueta (rastreabilidade completa)
   serialNumber: varchar("serialNumber", { length: 100 }),

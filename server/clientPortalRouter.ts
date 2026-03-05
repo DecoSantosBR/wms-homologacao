@@ -827,6 +827,9 @@ export const clientPortalRouter = router({
           sku: products.sku,
           description: products.description,
           batch: inventoryMovements.batch,
+          expiryDate: inventoryMovements.expiryDate, // ✅ Validade do lote (ANVISA)
+          uniqueCode: inventoryMovements.uniqueCode,
+          labelCode: inventoryMovements.labelCode,
           movementType: inventoryMovements.movementType,
           quantity: inventoryMovements.quantity,
           referenceType: inventoryMovements.referenceType,
@@ -847,7 +850,11 @@ export const clientPortalRouter = router({
         .where(and(...conditions));
 
       return {
-        items: rows,
+        items: rows.map(r => ({
+          ...r,
+          // Normaliza datas para YYYY-MM-DD puro (evita problemas de fuso)
+          expiryDate: toMySQLDate(r.expiryDate as Date | null),
+        })),
         total: Number(totalRows[0]?.count ?? 0),
         page: input.page,
         pageSize: input.pageSize,
