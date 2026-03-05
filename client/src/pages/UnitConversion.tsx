@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,6 +253,27 @@ function ConversionsTab() {
     notes: "",
   });
 
+  // Autocomplete state
+  const [productQuery, setProductQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<{ id: number; sku: string; description: string | null } | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  const { data: productSuggestions = [] } = trpc.unitConversion.searchProducts.useQuery(
+    { tenantId, query: productQuery },
+    { enabled: productQuery.length >= 2 }
+  );
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const upsertMutation = trpc.unitConversion.upsertConversion.useMutation({
     onSuccess: () => {
       utils.unitConversion.listConversions.invalidate();
@@ -281,7 +302,7 @@ function ConversionsTab() {
 
   function handleSave() {
     if (!form.productId || !form.unitCode || !form.factorToBase) {
-      toast.error("Preencha todos os campos obrigatórios.");
+      toast.error("Selecione um produto e preencha todos os campos obrigatórios.");
       return;
     }
     upsertMutation.mutate({
@@ -292,6 +313,20 @@ function ConversionsTab() {
       roundingStrategy: form.roundingStrategy,
       notes: form.notes || undefined,
     });
+  }
+
+  function handleOpenDialog() {
+    setSelectedProduct(null);
+    setProductQuery("");
+    setForm({ productId: "", unitCode: "", factorToBase: "", roundingStrategy: "round", notes: "" });
+    setDialogOpen(true);
+  }
+
+  function selectProduct(p: { id: number; sku: string; description: string | null }) {
+    setSelectedProduct(p);
+    setForm((f) => ({ ...f, productId: String(p.id) }));
+    setProductQuery(`${p.sku} — ${p.description ?? ""}`);
+    setShowSuggestions(false);
   }
 
   return (
@@ -306,7 +341,7 @@ function ConversionsTab() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={handleOpenDialog}>
           <Plus className="h-4 w-4 mr-1" /> Novo Fator
         </Button>
       </div>
@@ -374,17 +409,53 @@ function ConversionsTab() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>ID do Produto *</Label>
-              <Input
-                type="number"
-                placeholder="Ex: 42"
-                value={form.productId}
-                onChange={(e) => setForm({ ...form, productId: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Consulte o ID do produto na tela de Cadastro de Produtos.
-              </p>
+            <div ref={autocompleteRef} className="relative">
+              <Label>Produto *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Buscar por SKU ou descrição..."
+                  value={productQuery}
+                  onChange={(e) => {
+                    setProductQuery(e.target.value);
+                    setSelectedProduct(null);
+                    setForm((f) => ({ ...f, productId: "" }));
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => productQuery.length >= 2 && setShowSuggestions(true)}
+                  autoComplete="off"
+                />
+              </div>
+              {selectedProduct && (
+                <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span className="font-mono">{selectedProduct.sku}</span> — {selectedProduct.description}
+                </p>
+              )}
+              {showSuggestions && productSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-52 overflow-y-auto">
+                  {productSuggestions.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                      onMouseDown={(e) => { e.preventDefault(); selectProduct(p); }}
+                    >
+                      <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded shrink-0">{p.sku}</span>
+                      <span className="truncate text-muted-foreground">{p.description}</span>
+                      {p.unitOfMeasure && (
+                        <Badge variant="outline" className="ml-auto shrink-0 text-xs">{p.unitOfMeasure}</Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showSuggestions && productQuery.length >= 2 && productSuggestions.length === 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-sm px-3 py-2 text-sm text-muted-foreground">
+                  Nenhum produto encontrado.
+                </div>
+              )}
             </div>
             <div>
               <Label>Unidade de Embalagem *</Label>

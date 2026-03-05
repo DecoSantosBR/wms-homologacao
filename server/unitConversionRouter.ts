@@ -20,7 +20,7 @@ import {
   unitPendingQueue,
   products,
 } from "../drizzle/schema";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, or, like, sql } from "drizzle-orm";
 
 // ============================================================================
 // HELPERS DO MOTOR DE CONVERSÃO
@@ -416,5 +416,44 @@ export const unitConversionRouter = router({
         hasConversion: true,
         message: `${input.xmlQty} ${resolvedCode} × ${factor} = ${convertedQty} UN (${strategy})`,
       };
+    }),
+
+  /**
+   * Busca produtos por SKU ou descrição (autocomplete)
+   */
+  searchProducts: protectedProcedure
+    .input(z.object({
+      tenantId: z.number(),
+      query: z.string().min(1).max(100),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const term = `%${input.query}%`;
+      const rows = await db
+        .select({
+          id: products.id,
+          sku: products.sku,
+          description: products.description,
+          unitOfMeasure: products.unitOfMeasure,
+          gtin: products.gtin,
+        })
+        .from(products)
+        .where(
+          and(
+            eq(products.tenantId, input.tenantId),
+            eq(products.status, "active"),
+            or(
+              like(products.sku, term),
+              like(products.description, term),
+              like(products.gtin, term)
+            )
+          )
+        )
+        .orderBy(asc(products.sku))
+        .limit(20);
+
+      return rows;
     }),
 });
