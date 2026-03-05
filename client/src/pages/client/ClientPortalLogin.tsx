@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { useLocation, Link } from "wouter";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,20 +19,21 @@ import { Package, Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 
 export function ClientPortalLogin() {
-  const [, setLocation] = useLocation();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const utils = trpc.useUtils();
 
   const loginMutation = trpc.clientPortal.login.useMutation({
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       toast.success(`Bem-vindo, ${data.user.fullName.split(" ")[0]}!`);
-      // Invalida o cache de 'me' para que o Dashboard leia a sessão recém-criada
-      // e não faça redirect de volta para /portal/login
-      await utils.clientPortal.me.invalidate();
-      setLocation("/portal");
+      // Usa window.location.href para fazer um reload completo da página.
+      // Isso garante que o browser processe o Set-Cookie da resposta de login
+      // antes de disparar a próxima requisição para clientPortal.me.
+      // setLocation() (SPA navigation) pode disparar queries antes do cookie ser processado.
+      setTimeout(() => {
+        window.location.href = "/portal";
+      }, 500);
     },
     onError: (err) => {
       setErrorMsg(err.message);

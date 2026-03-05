@@ -36,6 +36,7 @@ import * as crypto from "crypto";
 import { sendEmail, createApprovalEmailTemplate } from "./_core/emailNotification";
 import { getUniqueCode } from "./utils/uniqueCode";
 import { toMySQLDate } from "../shared/utils";
+import { getSessionCookieOptions } from "./_core/cookies";
 
 // ============================================================================
 // HELPERS DE AUTENTICAÇÃO DO PORTAL
@@ -220,13 +221,11 @@ export const clientPortalRouter = router({
         userAgent: ctx.req?.headers?.["user-agent"] ?? null,
       });
 
-      // Definir cookie HttpOnly
+      // Definir cookie HttpOnly usando o mesmo helper do sistema principal
+      // (garante sameSite:none + secure em HTTPS, compatível com o proxy do Manus)
       ctx.res.cookie(PORTAL_SESSION_COOKIE, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        ...getSessionCookieOptions(ctx.req),
         expires: expiresAt,
-        path: "/",
       });
 
       return {
