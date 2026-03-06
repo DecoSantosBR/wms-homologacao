@@ -302,7 +302,16 @@ function ConversionsTab() {
     onSuccess: (data) => {
       utils.unitConversion.listConversions.invalidate();
       setReplicateModal((m) => ({ ...m, open: false }));
-      toast.success(`Conversão replicada para ${data.replicatedCount} cliente(s) com sucesso.`);
+      // Feedback de desbloqueio automático de ORs
+      if ((data as any).unlockedCount && (data as any).unlockedCount > 0) {
+        const nums = ((data as any).unlockedOrderNumbers as string[]).join(", ");
+        toast.success(
+          `Conversão replicada para ${data.replicatedCount} cliente(s). 🔓 ${(data as any).unlockedCount} OR(s) desbloqueada(s): ${nums}.`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(`Conversão replicada para ${data.replicatedCount} cliente(s) com sucesso.`);
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -322,6 +331,15 @@ function ConversionsTab() {
       setSelectedProduct(null);
       setProductQuery("");
 
+      // Feedback de desbloqueio automático de ORs
+      const unlockedCount = (data as any).unlockedCount as number | undefined;
+      const unlockedOrderNumbers = (data as any).unlockedOrderNumbers as string[] | undefined;
+      if (unlockedCount && unlockedCount > 0) {
+        toast.success(
+          `Fator de conversão salvo. 🔓 ${unlockedCount} OR(s) desbloqueada(s): ${unlockedOrderNumbers?.join(", ")}.`,
+          { duration: 8000 }
+        );
+      }
       // Se houver sugestões de replicação, abrir modal
       if (data.crossTenantSuggestions && data.crossTenantSuggestions.length > 0) {
         setReplicateModal({
@@ -337,7 +355,7 @@ function ConversionsTab() {
             .filter((s) => !s.alreadyHasFactor)
             .map((s) => s.tenantName),
         });
-      } else {
+      } else if (!unlockedCount || unlockedCount === 0) {
         toast.success("Fator de conversão salvo.");
       }
     },

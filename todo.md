@@ -203,3 +203,11 @@
 - [x] server/modules/picking.ts: conversionSource: "manual" adicionado (confirmPicking)
 - [x] server/shippingRouter.ts: conversionSource: "manual" adicionado (baixa de estoque + estorno)
 - [x] server/movements.ts: conversionSource: "manual" adicionado (ajuste manual)
+## Desbloqueio Automático de ORs após Cadastro de Fator UOM
+- [x] Backend: função unlockBlockedReceivingOrders em unitConversionRouter.ts
+- [x] Backend: chamar unlockBlockedReceivingOrders após upsertConversion e replicateConversion
+- [x] Backend: procedure tRPC listBlockedReceivingOrders para consultar ORs bloqueadas
+- [x] Frontend: badge "Aguardando UOM" (vermelho) nas ORs com status pending_unit_setup
+- [x] Frontend: opção de filtro "Aguardando UOM" no Select de status em Receiving.tsx
+- [x] Frontend: toast com contagem de ORs desbloqueadas após salvar fator em UnitConversion.tsx
+- [x] Frontend: invalidar query de receivingOrders após salvar fator (para atualizar badges)

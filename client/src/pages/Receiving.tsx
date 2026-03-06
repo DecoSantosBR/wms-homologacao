@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { BlindCheckModal } from "@/components/BlindCheckModal";
 import { ImportPreallocationDialog } from "@/components/ImportPreallocationDialog";
 import { PageHeader } from "@/components/PageHeader";
-import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet, Printer } from "lucide-react";
+import { Package, Eye, Trash2, Search, Filter, Calendar, ClipboardCheck, FileSpreadsheet, Printer, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useBusinessError } from "@/hooks/useBusinessError";
 import { format } from "date-fns";
@@ -24,6 +24,7 @@ const STATUS_COLORS = {
   addressing: "bg-purple-600 text-white",
   completed: "bg-green-600 text-white",
   cancelled: "bg-gray-500 text-white",
+  pending_unit_setup: "bg-red-600 text-white",
 };
 
 const STATUS_LABELS = {
@@ -33,6 +34,7 @@ const STATUS_LABELS = {
   addressing: "Endereçamento",
   completed: "Concluído",
   cancelled: "Cancelado",
+  pending_unit_setup: "Aguardando UOM",
 };
 
 export default function Receiving() {
@@ -350,6 +352,7 @@ export default function Receiving() {
                     <SelectItem value="addressing">Endereçamento</SelectItem>
                     <SelectItem value="completed">Concluído</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>
+                    <SelectItem value="pending_unit_setup">Aguardando UOM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -403,8 +406,14 @@ export default function Receiving() {
                             {(order as any).clientName || "-"}
                           </div>
                           <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]}>
+                            {order.status === "pending_unit_setup" && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
                             {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS]}
                           </Badge>
+                          {order.status === "pending_unit_setup" && (
+                            <p className="text-xs text-red-600 mt-1">
+                              Cadastre o fator de conversão em Unidades de Medida para desbloquear.
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2 text-sm mb-3">
@@ -539,9 +548,17 @@ export default function Receiving() {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]}>
-                            {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS]}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]}>
+                              {order.status === "pending_unit_setup" && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
+                              {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS]}
+                            </Badge>
+                            {order.status === "pending_unit_setup" && (
+                              <span className="text-xs text-red-600">
+                                Cadastre o fator UOM para desbloquear
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

@@ -18,15 +18,131 @@ import {
   unitAliases,
   productConversions,
   unitPendingQueue,
+  receivingOrders,
   products,
   tenants,
   auditLogs,
 } from "../drizzle/schema";
-import { eq, and, desc, asc, or, like, sql, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, or, like, sql, ne, inArray, notInArray } from "drizzle-orm";
 
 // ============================================================================
 // HELPERS DO MOTOR DE CONVERSÃO
 // ============================================================================
+
+/**
+ * Desbloqueia automaticamente ORs com status 'pending_unit_setup' cujos itens
+ * pendentes na unitPendingQueue foram resolvidos pelo cadastro de um novo fator.
+ *
+ * Lógica:
+ * 1. Buscar todas as entradas 'pending' da unitPendingQueue para o tenant/produto/unidade.
+ * 2. Marcar essas entradas como 'resolved'.
+ * 3. Para cada OR afetada, verificar se ainda restam pendências 'pending'.
+ *    - Se não restam: reverter status da OR para 'in_progress'.
+ *    - Se ainda restam: manter 'pending_unit_setup' (outros produtos ainda bloqueiam).
+ * 4. Retornar contagem de ORs desbloqueadas para feedback no frontend.
+ */
+export async function unlockBlockedReceivingOrders(params: {
+  tenantId: number;
+  productId: number;
+  unitCode: string;
+  resolvedBy: number;
+}): Promise<{ unlockedCount: number; unlockedOrderNumbers: string[] }> {
+  const db = await getDb();
+  if (!db) return { unlockedCount: 0, unlockedOrderNumbers: [] };
+
+  const unitCodeNorm = params.unitCode.toUpperCase().trim();
+
+  // 1. Buscar produto para obter o código (productCode usado na unitPendingQueue)
+  const [product] = await db
+    .select({ sku: products.sku })
+    .from(products)
+    .where(eq(products.id, params.productId))
+    .limit(1);
+
+  if (!product?.sku) return { unlockedCount: 0, unlockedOrderNumbers: [] };
+
+  // 2. Buscar entradas pendentes para este tenant + unidade (pode afetar múltiplos produtos com mesmo SKU)
+  // Nota: unitPendingQueue.productCode = cProd do XML (pode ser SKU ou código interno)
+  // Buscamos por xmlUnit = unitCodeNorm E tenantId = params.tenantId
+  const pendingEntries = await db
+    .select({
+      id: unitPendingQueue.id,
+      receivingOrderId: unitPendingQueue.receivingOrderId,
+    })
+    .from(unitPendingQueue)
+    .where(
+      and(
+        eq(unitPendingQueue.tenantId, params.tenantId),
+        eq(unitPendingQueue.xmlUnit, unitCodeNorm),
+        eq(unitPendingQueue.status, "pending")
+      )
+    );
+
+  if (pendingEntries.length === 0) return { unlockedCount: 0, unlockedOrderNumbers: [] };
+
+  const pendingIds = pendingEntries.map((e) => e.id);
+  const affectedOrderIds = Array.from(new Set(
+    pendingEntries
+      .map((e) => e.receivingOrderId)
+      .filter((id): id is number => id !== null)
+  ));
+
+  // 3. Marcar entradas como 'resolved'
+  await db
+    .update(unitPendingQueue)
+    .set({
+      status: "resolved",
+      resolvedBy: params.resolvedBy,
+      resolvedAt: new Date(),
+    })
+    .where(inArray(unitPendingQueue.id, pendingIds));
+
+  if (affectedOrderIds.length === 0) return { unlockedCount: 0, unlockedOrderNumbers: [] };
+
+  // 4. Para cada OR afetada, verificar se ainda restam pendências 'pending'
+  const unlockedOrderNumbers: string[] = [];
+
+  for (const orderId of affectedOrderIds) {
+    // Verificar se ainda há pendências 'pending' para esta OR (outros produtos/unidades)
+    const remainingPending = await db
+      .select({ id: unitPendingQueue.id })
+      .from(unitPendingQueue)
+      .where(
+        and(
+          eq(unitPendingQueue.receivingOrderId, orderId),
+          eq(unitPendingQueue.status, "pending")
+        )
+      )
+      .limit(1);
+
+    if (remainingPending.length === 0) {
+      // Nenhuma pendência restante: desbloquear a OR
+      const [order] = await db
+        .select({ id: receivingOrders.id, orderNumber: receivingOrders.orderNumber, status: receivingOrders.status })
+        .from(receivingOrders)
+        .where(
+          and(
+            eq(receivingOrders.id, orderId),
+            eq(receivingOrders.status, "pending_unit_setup")
+          )
+        )
+        .limit(1);
+
+      if (order) {
+        await db
+          .update(receivingOrders)
+          .set({ status: "in_progress" })
+          .where(eq(receivingOrders.id, orderId));
+        unlockedOrderNumbers.push(order.orderNumber);
+        console.log(`[UOM] OR ${order.orderNumber} desbloqueada automaticamente após cadastro de fator para ${unitCodeNorm}`);
+      }
+    } else {
+      console.log(`[UOM] OR #${orderId} ainda possui ${remainingPending.length} pendência(s) — mantida como pending_unit_setup`);
+    }
+  }
+
+  return { unlockedCount: unlockedOrderNumbers.length, unlockedOrderNumbers };
+}
 
 /**
  * Carrega em memória todos os aliases e fatores de conversão de um tenant.
@@ -384,11 +500,19 @@ export const unitConversionRouter = router({
         }
       }
 
-      return { success: true, crossTenantSuggestions };
+      // ----------------------------------------------------------------
+      // DESBLOQUEIO AUTOMÁTICO: Verificar se há ORs bloqueadas por esta unidade
+      // ----------------------------------------------------------------
+      const unlockResult = await unlockBlockedReceivingOrders({
+        tenantId,
+        productId: input.productId,
+        unitCode: input.unitCode,
+        resolvedBy: ctx.user?.id ?? 0,
+      });
+      return { success: true, crossTenantSuggestions, ...unlockResult };
     }),
-
   /**
-   * Replica um fator de conversão para outros tenants (apenas Global Admin)
+   * Replica um fator de conversão para outros tenants (apenas Global Admin))
    * SEGURANÇA: Aceita tenantNames (não IDs) para evitar enumeração de IDs internos.
    * O backend resolve os IDs a partir dos nomes.
    */
@@ -499,9 +623,42 @@ export const unitConversionRouter = router({
         });
       }
 
-      return { success: true, replicatedCount: replicated.length, replicatedTenants: replicated };
+       // ----------------------------------------------------------------
+      // DESBLOQUEIO AUTOMÁTICO: Para cada tenant replicado, verificar ORs bloqueadas
+      // ----------------------------------------------------------------
+      let totalUnlocked = 0;
+      const allUnlockedOrderNumbers: string[] = [];
+      for (const targetTenantId of replicated) {
+        // Buscar produto com mesmo SKU no tenant alvo
+        const [targetProduct] = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(
+            and(
+              eq(products.sku, sourceProduct.sku),
+              eq(products.tenantId, targetTenantId),
+              eq(products.status, "active")
+            )
+          )
+          .limit(1);
+        if (!targetProduct) continue;
+        const unlockResult = await unlockBlockedReceivingOrders({
+          tenantId: targetTenantId,
+          productId: targetProduct.id,
+          unitCode: unitCodeNorm,
+          resolvedBy: ctx.user?.id ?? 0,
+        });
+        totalUnlocked += unlockResult.unlockedCount;
+        allUnlockedOrderNumbers.push(...unlockResult.unlockedOrderNumbers);
+      }
+      return {
+        success: true,
+        replicatedCount: replicated.length,
+        replicatedTenants: replicated,
+        unlockedCount: totalUnlocked,
+        unlockedOrderNumbers: allUnlockedOrderNumbers,
+      };
     }),
-
   deleteConversion: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
@@ -666,5 +823,66 @@ export const unitConversionRouter = router({
         .limit(20);
 
       return rows;
+    }),
+
+  // --------------------------------------------------------------------------
+  // ORs BLOQUEADAS POR PENDÊNCIA DE CONVERSÃO
+  // --------------------------------------------------------------------------
+  /**
+   * Lista Ordens de Recebimento com status 'pending_unit_setup',
+   * junto com os itens pendentes na unitPendingQueue.
+   * Usado pelo frontend para exibir badge de alerta e indicar o que falta cadastrar.
+   */
+  listBlockedReceivingOrders: protectedProcedure
+    .input(z.object({ tenantId: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const tenantId = input.tenantId ?? (ctx.user as any).tenantId ?? 1;
+
+      // Buscar ORs bloqueadas
+      const blockedOrders = await db
+        .select({
+          id: receivingOrders.id,
+          orderNumber: receivingOrders.orderNumber,
+          nfeNumber: receivingOrders.nfeNumber,
+          supplierName: receivingOrders.supplierName,
+          createdAt: receivingOrders.createdAt,
+        })
+        .from(receivingOrders)
+        .where(
+          and(
+            eq(receivingOrders.tenantId, tenantId),
+            eq(receivingOrders.status, "pending_unit_setup")
+          )
+        )
+        .orderBy(desc(receivingOrders.createdAt));
+
+      if (blockedOrders.length === 0) return [];
+
+      // Para cada OR, buscar os itens pendentes
+      const orderIds = blockedOrders.map((o) => o.id);
+      const pendingItems = await db
+        .select({
+          receivingOrderId: unitPendingQueue.receivingOrderId,
+          productCode: unitPendingQueue.productCode,
+          productDescription: unitPendingQueue.productDescription,
+          xmlUnit: unitPendingQueue.xmlUnit,
+          reason: unitPendingQueue.reason,
+          createdAt: unitPendingQueue.createdAt,
+        })
+        .from(unitPendingQueue)
+        .where(
+          and(
+            inArray(unitPendingQueue.receivingOrderId, orderIds),
+            eq(unitPendingQueue.status, "pending")
+          )
+        );
+
+      // Agrupar itens por OR
+      return blockedOrders.map((order) => ({
+        ...order,
+        pendingItems: pendingItems.filter((item) => item.receivingOrderId === order.id),
+      }));
     }),
 });
