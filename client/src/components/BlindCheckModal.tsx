@@ -51,6 +51,16 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     batch: string;
     scannedCode: string;
   }>>([]);
+
+  // Estado para diálogo de edição de quantidade
+  const [editingItem, setEditingItem] = useState<{
+    productId: number;
+    productName: string;
+    batch: string;
+    currentPackages: number;
+  } | null>(null);
+  const [editNewQuantity, setEditNewQuantity] = useState<string>("");
+  const [editReason, setEditReason] = useState<string>("");
   
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
@@ -207,6 +217,51 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
     },
   });
 
+  // Ajustar quantidade de item conferido
+  const adjustQuantityMutation = trpc.blindConference.adjustQuantity.useMutation({
+    onSuccess: (data) => {
+      toast.success("Quantidade ajustada com sucesso");
+      utils.blindConference.getSummary.invalidate({ conferenceId: conferenceId! });
+      setEditingItem(null);
+      setEditNewQuantity("");
+      setEditReason("");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao ajustar quantidade", { description: error.message });
+    },
+  });
+
+  const handleEditOpen = (item: any) => {
+    setEditingItem({
+      productId: item.productId,
+      productName: item.productName,
+      batch: item.batch || "",
+      currentPackages: item.packagesRead,
+    });
+    setEditNewQuantity(String(item.packagesRead));
+    setEditReason("");
+  };
+
+  const handleEditSave = () => {
+    if (!conferenceId || !editingItem) return;
+    const qty = parseInt(editNewQuantity, 10);
+    if (isNaN(qty) || qty < 0) {
+      toast.error("Informe uma quantidade válida");
+      return;
+    }
+    if (!editReason.trim()) {
+      toast.error("Informe o motivo do ajuste");
+      return;
+    }
+    adjustQuantityMutation.mutate({
+      conferenceId,
+      productId: editingItem.productId,
+      batch: editingItem.batch || null,
+      newQuantity: qty,
+      reason: editReason.trim(),
+    });
+  };
+
   // Obter resumo
   const { data: summary, isLoading: isLoadingSummary } = trpc.blindConference.getSummary.useQuery(
     { conferenceId: conferenceId! },
@@ -353,7 +408,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -496,7 +551,12 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                                 <div className="text-sm text-gray-600">({item.unitsRead || 0} unidades)</div>
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button variant="ghost" size="icon">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditOpen(item)}
+                                  title="Ajustar quantidade"
+                                >
                                   <Edit className="w-4 h-4" />
                                 </Button>
                               </TableCell>
@@ -664,7 +724,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
       {/* Dialog de Finalização */}
       <Dialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl w-[95vw]">
           <DialogHeader>
             <DialogTitle>Finalizar Conferência</DialogTitle>
             <p className="text-sm text-gray-600">Revise o resumo antes de finalizar</p>
@@ -746,6 +806,62 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                 )}
                 Confirmar Finalização
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Edição de Quantidade */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => { if (!open) { setEditingItem(null); setEditNewQuantity(""); setEditReason(""); } }}>
+        <DialogContent className="max-w-md w-[95vw]">
+          <DialogHeader>
+            <DialogTitle>Ajustar Quantidade</DialogTitle>
+            <p className="text-sm text-gray-600">
+              {editingItem?.productName}
+              {editingItem?.batch ? ` — Lote: ${editingItem.batch}` : ""}
+            </p>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium">Quantidade atual de volumes</Label>
+              <p className="text-2xl font-bold mt-1">{editingItem?.currentPackages ?? 0} caixas</p>
+            </div>
+            <div>
+              <Label htmlFor="edit-qty" className="text-sm font-medium">Nova quantidade de volumes</Label>
+              <Input
+                id="edit-qty"
+                type="number"
+                min="0"
+                value={editNewQuantity}
+                onChange={(e) => setEditNewQuantity(e.target.value)}
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-reason" className="text-sm font-medium">Motivo do ajuste <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-reason"
+                placeholder="Ex: Divergência na contagem, avaria..."
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => { setEditingItem(null); setEditNewQuantity(""); setEditReason(""); }}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEditSave}
+                disabled={adjustQuantityMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {adjustQuantityMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Salvar Ajuste
               </Button>
             </div>
           </div>

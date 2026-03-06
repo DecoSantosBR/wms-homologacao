@@ -237,3 +237,8 @@
 
 ## Bug: Desfazer Última — Conferência Cega
 - [x] Corrigir undoLastScan: substituir lastSuccessfulItem por pilha LIFO readStack em BlindCheckModal.tsx — undo agora remove a leitura mais recente cronologicamente e permite undos consecutivos
+
+## Bug: UI BlindCheckModal — 3 ajustes
+- [x] Aumentar largura do dialog principal da Conferência Cega (max-w-5xl w-[95vw])
+- [x] Corrigir botão Editar: implementar diálogo de ajuste de quantidade com adjustQuantity mutation e campo de motivo obrigatório
+- [x] Corrigir largura do dialog de Finalizar Conferência (max-w-4xl w-[95vw])
