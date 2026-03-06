@@ -211,3 +211,12 @@
 - [x] Frontend: opção de filtro "Aguardando UOM" no Select de status em Receiving.tsx
 - [x] Frontend: toast com contagem de ORs desbloqueadas após salvar fator em UnitConversion.tsx
 - [x] Frontend: invalidar query de receivingOrders após salvar fator (para atualizar badges)
+
+## Ação 2 — Motor de Picking UOM-Aware
+- [x] Criar função resolvePickingFactor em server/modules/picking.ts
+- [x] Bloquear reserva quando resultado da conversão gerar fração (erro com mensagem clara)
+- [x] Registrar log de auditoria com fator utilizado (factorToBase, source, unitCode, tenant)
+- [x] Atualizar clientPortalRouter.ts (2 pontos: criação manual e importação CSV) para usar resolvePickingFactor
+- [x] Atualizar routers.ts (WMS Admin) para usar resolvePickingFactor
+- [x] Documentar limitação de reservedQuantity: int no schema.ts com comentário de auditoria
+- [x] Testes Vitest: 13 testes cobrindo CA-1, CA-2, CA-3, CA-4 (todos passando)

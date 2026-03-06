@@ -29,7 +29,9 @@ import {
   receivingOrders,
   receivingOrderItems,
   inventoryMovements,
+  productConversions,
 } from "../drizzle/schema";
+import { resolvePickingFactor } from "./modules/picking";
 import { eq, and, desc, gte, lte, sql, gt, like, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as crypto from "crypto";
@@ -1132,6 +1134,7 @@ export const clientPortalRouter = router({
           item: typeof input.items[0];
           product: any;
           quantityInUnits: number;
+          convResult: Awaited<ReturnType<typeof resolvePickingFactor>>;
         }> = [];
 
         for (const item of input.items) {
@@ -1149,17 +1152,16 @@ export const clientPortalRouter = router({
             });
           }
 
-          // Converter quantidade para unidades se solicitado em caixa
-          let quantityInUnits = item.requestedQuantity;
-          if (item.requestedUM === "box") {
-            if (!product.unitsPerBox || product.unitsPerBox <= 0) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Produto ${product.sku} não possui quantidade por caixa configurada`
-              });
-            }
-            quantityInUnits = item.requestedQuantity * product.unitsPerBox;
-          }
+          // ✅ UOM-AWARE: Converter quantidade para unidade base usando productConversions (dinâmico)
+          // Substitui o campo estático products.unitsPerBox — garante rastreabilidade ANVISA
+          const convResult = await resolvePickingFactor(
+            session.tenantId,
+            item.productId,
+            item.requestedQuantity,
+            item.requestedUM,
+            product.sku
+          );
+          const quantityInUnits = convResult.quantityInUnits;
 
           // ⚠️ NOTA: Validação prévia SEM lock (apenas para feedback rápido)
           // O lock real será feito na etapa de reserva
@@ -1199,9 +1201,8 @@ export const clientPortalRouter = router({
             });
           }
 
-          stockValidations.push({ item, product, quantityInUnits });
+           stockValidations.push({ item, product, quantityInUnits, convResult });
         }
-
         // PASSO 2: Criar pedido
         const orderNumber = `PED-${Date.now()}-${nanoid(6).toUpperCase()}`;
 
@@ -1226,9 +1227,8 @@ export const clientPortalRouter = router({
 
         // PASSO 3: Reservar estoque atomicamente com SELECT FOR UPDATE
         for (const validation of stockValidations) {
-          const { item, product, quantityInUnits } = validation;
-
-          // 🔒 BUSCAR ESTOQUE COM BLOQUEIO PESSIMISTA (FEFO + Lock)
+          const { item, product, quantityInUnits, convResult } = validation;
+          // 🔒 BUSCAR ESTOQUE COM BLOQUEIO PESSIMISTA (FEFO + Lock))
           const lockedStock = await tx
             .select({
               id: inventory.id,
@@ -1291,15 +1291,15 @@ export const clientPortalRouter = router({
               requestedQuantity: toReserve,
               requestedUM: "unit",
               unit: (item.requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-              unitsPerBox: item.requestedUM === "box" ? product.unitsPerBox : undefined,
+              // ✅ UOM-AWARE: usar fator dinâmico de productConversions (não mais products.unitsPerBox)
+              unitsPerBox: convResult.source !== "unit_passthrough" ? convResult.factor : undefined,
               batch: stock.batch,
               expiryDate: stock.expiryDate,
               inventoryId: stock.id,
               status: "pending" as const,
               uniqueCode: getUniqueCode(product.sku, stock.batch),
             });
-
-            // ✅ CRIAR pickingAllocation para este lote
+            // ✅ CRIAR pickingAllocation para este lotee
             await tx.insert(pickingAllocations).values({
               pickingOrderId: orderId,
               productId: item.productId,
@@ -1562,6 +1562,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
               availableStock: any[];
               quantityInUnits: number;
               requestedUM: "box" | "unit";
+              csvConvResult: Awaited<ReturnType<typeof resolvePickingFactor>>;
             }> = [];
 
             let hasItemError = false;
@@ -1608,19 +1609,26 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 break;
               }
 
-              // Converter quantidade para unidades
-              let quantityInUnits = quantity;
-              if (requestedUM === "box") {
-                if (!product.unitsPerBox || product.unitsPerBox <= 0) {
-                  results.errors.push({
-                    pedido: orderNumber,
-                    linha: item.rowNum,
-                    erro: `Produto ${product.sku} não possui quantidade por caixa configurada`,
-                  });
-                  hasItemError = true;
-                  break;
-                }
-                quantityInUnits = quantity * product.unitsPerBox;
+              // ✅ UOM-AWARE: Converter quantidade para unidade base usando productConversions (dinâmico)
+              let quantityInUnits: number;
+              let csvConvResult: Awaited<ReturnType<typeof resolvePickingFactor>>;
+              try {
+                csvConvResult = await resolvePickingFactor(
+                  session.tenantId,
+                  product.id,
+                  quantity,
+                  requestedUM,
+                  product.sku
+                );
+                quantityInUnits = csvConvResult.quantityInUnits;
+              } catch (convErr: any) {
+                results.errors.push({
+                  pedido: orderNumber,
+                  linha: item.rowNum,
+                  erro: convErr?.message ?? `Erro de conversão UOM para produto ${product.sku}`,
+                });
+                hasItemError = true;
+                break;
               }
 
               // Buscar estoque disponível (FEFO)
@@ -1669,6 +1677,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                 availableStock,
                 quantityInUnits,
                 requestedUM,
+                csvConvResult,
               });
             }
 
@@ -1695,7 +1704,7 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
             // PASSO 3: Criar itens e reservar estoque
             // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE
             for (const validation of stockValidations) {
-              const { productId, product, availableStock, quantityInUnits, requestedUM } = validation;
+              const { productId, product, availableStock, quantityInUnits, requestedUM, csvConvResult } = validation as any;
 
               // Reservar estoque e criar um pickingOrderItem para CADA LOTE
               let remainingToReserve = quantityInUnits;
@@ -1718,15 +1727,15 @@ Motivo do cancelamento: ${input.reason}`.trim() : order[0].notes,
                   productId,
                   requestedQuantity: toReserve, // ✅ Quantidade deste lote
                   requestedUM: "unit",
-                  unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
-                  unitsPerBox: requestedUM === "box" ? product.unitsPerBox : undefined,
+                   unit: (requestedUM === "box" ? "box" : "unit") as "unit" | "box",
+                  // ✅ UOM-AWARE: usar fator dinâmico de productConversions
+                  unitsPerBox: csvConvResult?.source !== "unit_passthrough" ? csvConvResult?.factor : undefined,
                   batch: stock.batch, // ✅ Lote específico
                   expiryDate: stock.expiryDate, // ✅ Validade
                   inventoryId: stock.id, // ✅ Vínculo com inventário
                   status: "pending" as const,
                   uniqueCode: getUniqueCode(product.sku, stock.batch), // ✅ Adicionar uniqueCode
                 });
-
                 // ✅ CRIAR pickingAllocation para este lote
                 await db.insert(pickingAllocations).values({
                   pickingOrderId: orderId,

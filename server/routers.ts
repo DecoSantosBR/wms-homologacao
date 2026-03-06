@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { tenantProcedure, assertSameTenant } from "./_core/tenantGuard";
 import { TRPCError } from "@trpc/server";
 import { suggestPickingLocations, allocatePickingStock, getClientPickingRule, logPickingAudit } from "./pickingLogic";
+import { resolvePickingFactor } from "./modules/picking";
 import { getDb } from "./db";
 import { tenants, products, warehouseLocations, receivingOrders, pickingOrders, inventory, contracts, systemUsers, receivingOrderItems, pickingOrderItems, pickingWaves, pickingWaveItems, labelAssociations, pickingAllocations, productLabels, printSettings, invoices } from "../drizzle/schema";
 import { eq, and, desc, inArray, sql, or, like } from "drizzle-orm";
@@ -1949,6 +1950,8 @@ export const appRouter = router({
           item: typeof input.items[number];
           product: any;
           availableStock: any[];
+          quantityInUnits: number;
+          convResult: Awaited<ReturnType<typeof resolvePickingFactor>>;
         }> = [];
         
         const insufficientStockErrors: Array<{
@@ -1977,19 +1980,17 @@ export const appRouter = router({
             });
           }
 
-          // Converter quantidade para unidades se solicitado em caixa
-          let quantityInUnits = item.requestedQuantity;
-          if (item.requestedUnit === "box") {
-            if (!product.unitsPerBox || product.unitsPerBox <= 0) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Produto ${product.sku} não possui quantidade por caixa configurada`
-              });
-            }
-            quantityInUnits = item.requestedQuantity * product.unitsPerBox;
-          }
-
-          // Buscar estoque disponível (FIFO/FEFO)
+          // ✅ UOM-AWARE: Converter quantidade para unidade base usando productConversions (dinâmico)
+          // Substitui products.unitsPerBox estático — garante rastreabilidade ANVISA
+          const adminConvResult = await resolvePickingFactor(
+            tenantId,
+            item.productId,
+            item.requestedQuantity,
+            item.requestedUnit, // "unit" | "box" | "pallet"
+            product.sku
+          );
+          const quantityInUnits = adminConvResult.quantityInUnits;
+          // Buscar estoque disponível (FIFO/FEFO))
           // IMPORTANTE: Usar input.tenantId (cliente selecionado) ao invés de ctx.user.tenantId (usuário logado)
           // Isso permite que admin crie pedidos para qualquer cliente
           const availableStock = await db
@@ -2042,7 +2043,7 @@ export const appRouter = router({
             });
           } else {
             // Armazenar validação para uso posterior (incluindo quantidade convertida)
-            stockValidations.push({ item, product, availableStock, quantityInUnits } as any);
+            stockValidations.push({ item, product, availableStock, quantityInUnits, convResult: adminConvResult });
           }
         }
 
@@ -2093,9 +2094,8 @@ export const appRouter = router({
         // PASSO 3: Criar itens e reservar estoque
         // CORREÇÃO BUG #2: Criar pickingOrderItems SEPARADOS POR LOTE ao invés de agrupar por SKU
         for (const validation of stockValidations) {
-          const { item, product, availableStock, quantityInUnits } = validation as any;
-
-          // Reservar estoque e criar um pickingOrderItem para CADA LOTE
+          const { item, product, availableStock, quantityInUnits, convResult: wmsConvResult } = validation as any;
+          // Reservar estoque e criar um pickingOrderItem para CADA LOTEE
           let remainingToReserve = quantityInUnits;
           for (const stock of availableStock) {
             if (remainingToReserve <= 0) break;
@@ -2117,7 +2117,8 @@ export const appRouter = router({
               requestedQuantity: toReserve, // ✅ Quantidade DESTE lote específico
               requestedUM: "unit",
               unit: (item.requestedUnit === "box" ? "box" : "unit") as "box" | "unit",
-              unitsPerBox: item.requestedUnit === "box" ? product.unitsPerBox : undefined,
+              // ✅ UOM-AWARE: usar fator dinâmico de productConversions
+              unitsPerBox: wmsConvResult?.source !== "unit_passthrough" ? wmsConvResult?.factor : undefined,
               batch: stock.batch, // ✅ Lote específico
               expiryDate: stock.expiryDate, // ✅ Validade do lote
               inventoryId: stock.id, // ✅ Vínculo com inventário

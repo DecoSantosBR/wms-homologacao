@@ -1,4 +1,5 @@
 import { eq, and, desc, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { 
   pickingOrders, 
@@ -10,6 +11,151 @@ import {
   warehouseLocations,
   productConversions
 } from "../../drizzle/schema";
+
+// ============================================================================
+// UOM-AWARE: RESOLUÇÃO DE FATOR DE CONVERSÃO PARA PICKING
+// ============================================================================
+
+/**
+ * Resultado da resolução do fator de conversão para picking.
+ * Contém o fator aplicado, a fonte (dinâmica ou fallback) e o log de auditoria.
+ */
+export interface PickingConversionResult {
+  /** Fator de conversão para a unidade base (UN). Ex: 1 CX = 12 UN → factor = 12 */
+  factor: number;
+  /** Quantidade convertida para unidade base */
+  quantityInUnits: number;
+  /** Fonte do fator: 'productConversions' (dinâmico) ou 'unitsPerBox_fallback' (estático) */
+  source: "productConversions" | "unitsPerBox_fallback" | "unit_passthrough";
+  /** Código da unidade solicitada (CX, FD, UN...) */
+  unitCode: string;
+  /** Log de auditoria para rastreabilidade ANVISA */
+  auditLog: string;
+}
+
+/**
+ * Resolve o fator de conversão para picking de forma UOM-Aware.
+ *
+ * Prioridade:
+ *   1. productConversions (fator dinâmico por tenant + produto + unidade)
+ *   2. products.unitsPerBox (fallback estático, com aviso de auditoria)
+ *   3. Erro bloqueante se nenhum fator for encontrado e a unidade não for base
+ *
+ * Validação de fração:
+ *   Se requestedQuantity * factor resultar em fração (ex: 10.33 UN),
+ *   a operação é BLOQUEADA com TRPCError BAD_REQUEST.
+ *
+ * @param tenantId   - ID do tenant (cliente)
+ * @param productId  - ID do produto
+ * @param requestedQuantity - Quantidade solicitada na unidade do pedido
+ * @param requestedUM - Unidade do pedido: "unit" | "box" | "pallet" ou código livre (CX, FD...)
+ * @param productSku - SKU do produto (para mensagens de erro)
+ */
+export async function resolvePickingFactor(
+  tenantId: number,
+  productId: number,
+  requestedQuantity: number,
+  requestedUM: string,
+  productSku: string
+): Promise<PickingConversionResult> {
+  // Normalizar unidade: "unit" e "UN" são passthrough (fator = 1)
+  const normalizedUM = requestedUM.toUpperCase();
+  if (normalizedUM === "UNIT" || normalizedUM === "UN") {
+    return {
+      factor: 1,
+      quantityInUnits: requestedQuantity,
+      source: "unit_passthrough",
+      unitCode: "UN",
+      auditLog: `[PICKING UOM] produto=${productSku} | unidade=UN | fator=1 | qtd_solicitada=${requestedQuantity} | qtd_base=${requestedQuantity} | fonte=unit_passthrough`,
+    };
+  }
+
+  // Mapear alias de enum para código livre
+  const unitCodeMap: Record<string, string> = {
+    BOX: "CX",
+    PALLET: "PL",
+    PCT: "PCT",
+    FD: "FD",
+    CX: "CX",
+    PL: "PL",
+  };
+  const unitCode = unitCodeMap[normalizedUM] ?? normalizedUM;
+
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+  // 1. Tentar buscar fator dinâmico em productConversions (tenant-específico)
+  const [convRow] = await db
+    .select({
+      factorToBase: productConversions.factorToBase,
+      roundingStrategy: productConversions.roundingStrategy,
+    })
+    .from(productConversions)
+    .where(
+      and(
+        eq(productConversions.tenantId, tenantId),
+        eq(productConversions.productId, productId),
+        eq(productConversions.unitCode, unitCode)
+      )
+    )
+    .limit(1);
+
+  let factor: number;
+  let source: PickingConversionResult["source"];
+
+  if (convRow) {
+    factor = parseFloat(String(convRow.factorToBase));
+    source = "productConversions";
+  } else {
+    // 2. Fallback: buscar unitsPerBox do produto (campo estático)
+    const [prod] = await db
+      .select({ unitsPerBox: products.unitsPerBox })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+
+    if (!prod?.unitsPerBox || prod.unitsPerBox <= 0) {
+      // 3. Nenhum fator disponível → BLOQUEAR a reserva
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Erro de Conversão: Produto ${productSku} não possui fator de conversão cadastrado para a unidade "${unitCode}". Cadastre o fator em Unidades de Medida antes de criar o pedido.`,
+      });
+    }
+
+    factor = prod.unitsPerBox;
+    source = "unitsPerBox_fallback";
+    console.warn(
+      `[PICKING UOM] Fallback para products.unitsPerBox — produto ${productSku} (id=${productId}) não tem fator em productConversions para ${unitCode}. ` +
+      `Cadastre o fator para garantir rastreabilidade ANVISA.`
+    );
+  }
+
+  // Calcular quantidade em unidade base
+  const rawQuantityInUnits = requestedQuantity * factor;
+
+  // Validação de fração: resultado deve ser inteiro (medicamentos são dispensados em unidades inteiras)
+  const FRACTION_TOLERANCE = 0.001;
+  const fractionalPart = Math.abs(rawQuantityInUnits - Math.round(rawQuantityInUnits));
+  if (fractionalPart > FRACTION_TOLERANCE) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Erro de Conversão: A quantidade solicitada resulta numa fração não suportada para este SKU. ` +
+        `${requestedQuantity} ${unitCode} × ${factor} = ${rawQuantityInUnits} UN (fração: ${fractionalPart.toFixed(4)}). ` +
+        `Ajuste a quantidade ou o fator de conversão para ${productSku}.`,
+    });
+  }
+
+  const quantityInUnits = Math.round(rawQuantityInUnits);
+
+  const auditLog =
+    `[PICKING UOM] produto=${productSku} | unidade=${unitCode} | fator=${factor} | ` +
+    `qtd_solicitada=${requestedQuantity} | qtd_base=${quantityInUnits} | fonte=${source} | ` +
+    `tenant=${tenantId} | produto_id=${productId}`;
+
+  console.info(auditLog);
+
+  return { factor, quantityInUnits, source, unitCode, auditLog };
+}
 
 // ============================================================================
 // PICKING ORDERS
@@ -56,7 +202,6 @@ export async function deletePickingOrder(id: number) {
   
   // Soft delete: atualizar status ao invés de deletar fisicamente
   // Mantém rastreabilidade e conformidade com ANVISA (RDC 430/2020)
-  // Nota: itens da ordem são mantidos para auditoria
   await db.update(pickingOrders).set({ status: "cancelled" }).where(eq(pickingOrders.id, id));
 }
 
@@ -68,7 +213,6 @@ export async function getPickingOrderItems(pickingOrderId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  // Join com produtos para trazer informações completas
   const items = await db
     .select({
       item: pickingOrderItems,
@@ -106,9 +250,12 @@ export async function updatePickingOrderItem(id: number, data: Partial<typeof pi
 // ============================================================================
 
 /**
- * Aloca estoque para um item de picking seguindo regras parametrizáveis
- * FEFO (First Expire First Out) - Prioriza lotes com validade mais próxima
- * FIFO (First In First Out) - Prioriza lotes mais antigos
+ * Aloca estoque para um item de picking seguindo regras parametrizáveis.
+ * FEFO (First Expire First Out) - Prioriza lotes com validade mais próxima.
+ * FIFO (First In First Out) - Prioriza lotes mais antigos.
+ *
+ * IMPORTANTE: requestedQuantity deve estar em UNIDADE BASE (UN) antes de chamar esta função.
+ * Use resolvePickingFactor() para converter a quantidade solicitada para unidade base.
  */
 export async function allocateInventory(
   tenantId: number,
@@ -119,11 +266,9 @@ export async function allocateInventory(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Buscar estoque disponível do produto
   let availableInventory;
   
   if (allocationRule === "fefo") {
-    // FEFO: Ordenar por data de validade (mais próxima primeiro)
     availableInventory = await db
       .select()
       .from(inventory)
@@ -135,9 +280,8 @@ export async function allocateInventory(
           sql`${inventory.quantity} > 0`
         )
       )
-      .orderBy(inventory.expiryDate); // Validade mais próxima primeiro
+      .orderBy(inventory.expiryDate);
   } else {
-    // FIFO: Ordenar por data de entrada (mais antigo primeiro)
     availableInventory = await db
       .select()
       .from(inventory)
@@ -149,10 +293,9 @@ export async function allocateInventory(
           sql`${inventory.quantity} > 0`
         )
       )
-      .orderBy(inventory.createdAt); // Mais antigo primeiro
+      .orderBy(inventory.createdAt);
   }
   
-  // Alocar quantidade necessária dos lotes disponíveis
   const allocations: Array<{
     inventoryId: number;
     locationId: number;
@@ -193,61 +336,47 @@ export async function allocateInventory(
 // ============================================================================
 
 /**
- * Inicia processo de picking para um pedido
- * Retorna instruções de picking ordenadas por localização
+ * Inicia processo de picking para um pedido.
+ * Retorna instruções de picking ordenadas por localização.
  */
 export async function startPicking(pickingOrderId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Buscar ordem e tenant
   const order = await getPickingOrderById(pickingOrderId);
   if (!order) throw new Error("Ordem de picking não encontrada");
   
-  // Buscar regra de alocação do contrato do cliente
-  const contractResult = await db
+  await db
     .select()
     .from(contracts)
     .where(eq(contracts.tenantId, order.tenantId))
     .limit(1);
   
-  // Usar FEFO como padrão (regra mais comum para farmacêuticos)
   const allocationRule = "fefo";
   
-  // Buscar itens do pedido
   const items = await getPickingOrderItems(pickingOrderId);
   
-  // Filtrar apenas itens pendentes (não separados ainda)
   const pendingItems = items.filter(({ item }) => 
     item && item.status === 'pending'
   );
   
-  // Calcular progresso
   const totalItems = items.length;
   const completedItems = items.filter(({ item }) => item && item.status === 'picked').length;
   
-  // Alocar estoque para cada item pendente
   const pickingInstructions = [];
-  
   
   for (const { item, product } of pendingItems) {
     if (!item || !product) continue;
     
-    // Calcular quantidade restante (para itens parcialmente separados)
     const remainingQuantity = item.requestedQuantity - (item.pickedQuantity || 0);
-    
-
     
     const allocation = await allocateInventory(
       order.tenantId,
       item.productId,
-      remainingQuantity, // Usar quantidade restante ao invés da total
+      remainingQuantity,
       allocationRule as "fefo" | "fifo"
     );
     
-
-    
-    // Buscar código do endereço para cada alocação
     const allocationsWithLocation = await Promise.all(
       allocation.allocations.map(async (alloc) => {
         const locationResult = await db
@@ -275,7 +404,6 @@ export async function startPicking(pickingOrderId: number, userId: number) {
       shortQuantity: allocation.shortQuantity,
     });
     
-    // Salvar fromLocationId no item (usar primeira alocação)
     if (allocationsWithLocation.length > 0) {
       await db
         .update(pickingOrderItems)
@@ -285,11 +413,9 @@ export async function startPicking(pickingOrderId: number, userId: number) {
           expiryDate: allocationsWithLocation[0].expiryDate,
         })
         .where(eq(pickingOrderItems.id, item.id));
-    } else {
     }
   }
   
-  // Atualizar status da ordem para "picking" (se ainda estiver pending)
   if (order.status === 'pending') {
     await updatePickingOrder(pickingOrderId, {
       status: "picking",
@@ -308,7 +434,8 @@ export async function startPicking(pickingOrderId: number, userId: number) {
 }
 
 /**
- * Confirma picking de um item
+ * Confirma picking de um item.
+ * Aplica rounding_strategy do produto e registra log de auditoria ANVISA.
  */
 export async function confirmPicking(
   itemId: number,
@@ -322,16 +449,13 @@ export async function confirmPicking(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Buscar item
   const item = await getPickingOrderItemById(itemId);
   if (!item) throw new Error("Item não encontrado");
   
-  // Buscar ordem para pegar tenantId
   const order = await getPickingOrderById(item.pickingOrderId);
   if (!order) throw new Error("Ordem não encontrada");
 
   // ✅ CORREÇÃO DE FRAÇÕES ÓRFÃS: Aplicar rounding_strategy do produto antes de debitar estoque.
-  // Buscar a estratégia de arredondamento cadastrada em productConversions para este produto.
   let safePicked = pickedQuantity;
   try {
     const conversionRow = await db.select({
@@ -353,18 +477,17 @@ export async function confirmPicking(
     }
 
     if (safePicked !== pickedQuantity) {
+      const fractionLost = Math.abs(pickedQuantity - safePicked);
       console.warn(
-        `[PICKING UOM] Fração órfã corrigida: ${pickedQuantity} → ${safePicked} (strategy: ${strategy})`,
-        { itemId, productId: item.productId }
+        `[PICKING UOM] Fração órfã corrigida: ${pickedQuantity} → ${safePicked} (strategy: ${strategy}, fração perdida: ${fractionLost.toFixed(4)})`,
+        { itemId, productId: item.productId, fractionLost }
       );
     }
   } catch (err) {
-    // Fallback seguro: nunca bloquear o picking por erro de conversão
     safePicked = Math.round(pickedQuantity);
     console.error("[PICKING UOM] Erro ao buscar rounding_strategy, usando round:", err);
   }
 
-  // Atualizar item com dados do picking
   const status = safePicked < item.requestedQuantity ? "short_picked" : "picked";
   
   await updatePickingOrderItem(itemId, {
@@ -376,7 +499,7 @@ export async function confirmPicking(
     status,
   });
   
-  // Registrar movimentação
+  // Registrar movimentação com log de auditoria ANVISA
   await db.insert(inventoryMovements).values({
     tenantId: order.tenantId,
     productId: item.productId,
@@ -398,14 +521,12 @@ export async function confirmPicking(
     item.productId,
     fromLocationId,
     batch,
-    -safePicked, // Saída negativa (com rounding_strategy aplicado)
+    -safePicked,
     order.tenantId,
     expiryDate || null,
     serialNumber || null
   );
   
-  // CORREÇÃO CRÍTICA: Atualizar status do endereço após deduzir estoque
-  // Status de endereço é derivado do estoque (occupied → available se quantity = 0)
   const locationsModule = await import("./locations");
   await locationsModule.updateLocationStatus(fromLocationId);
   
@@ -413,13 +534,12 @@ export async function confirmPicking(
 }
 
 /**
- * Finaliza ordem de picking
+ * Finaliza ordem de picking.
  */
 export async function finishPicking(pickingOrderId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Verificar se todos os itens foram separados
   const items = await getPickingOrderItems(pickingOrderId);
   const allPicked = items.every(({ item }) => 
     item && (item.status === "picked" || item.status === "short_picked")
@@ -429,7 +549,6 @@ export async function finishPicking(pickingOrderId: number, userId: number) {
     throw new Error("Nem todos os itens foram separados");
   }
   
-  // Atualizar ordem
   await updatePickingOrder(pickingOrderId, {
     status: "picked",
     pickedBy: userId,

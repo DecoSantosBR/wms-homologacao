@@ -420,7 +420,13 @@ export const inventory = mysqlTable("inventory", {
   serialNumber: varchar("serialNumber", { length: 100 }),
   locationZone: varchar("locationZone", { length: 10 }), // Zona do endereço (EXP, REC, NCG, DEV, etc.)
   quantity: int("quantity").default(0).notNull(),
-  reservedQuantity: int("reservedQuantity").default(0).notNull(), // Quantidade reservada para separação
+  reservedQuantity: int("reservedQuantity").default(0).notNull(),
+  // ⚠️ LIMITAÇÃO CONHECIDA (Risco 7.1 — Auditoria UOM):
+  // reservedQuantity é int (sem casas decimais). Medicamentos com fatores de conversão
+  // que gerem frações (ex: 10.5 UN) terão o valor arredondado silenciosamente pelo MySQL.
+  // A validação de fração em resolvePickingFactor() (picking.ts) BLOQUEIA pedidos com
+  // resultado fracionário ANTES de chegar aqui, eliminando o risco na prática.
+  // Para suporte a quantidades fracionárias no futuro, migrar para decimal(10,4).
   status: mysqlEnum("status", ["available", "quarantine", "blocked", "damaged", "expired"]).default("available").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
