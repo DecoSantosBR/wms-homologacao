@@ -230,3 +230,10 @@
 - [x] Atualizar ClientPortalNewOrder.tsx: seletor de unidade dinâmico
 - [x] Inserir dados padrão em packagingLevels (10 níveis: UN, PCT, CX, FD, PL, KG, G, MG, L, ML)
 - [x] Fallback estático garantido quando banco ainda não tem dados
+
+## Bug: Validação de Data de Validade (expiryDate)
+- [ ] Backend: validar expiryDate como data real antes do INSERT em labelAssociations (rejeitar datas como 2030-02-30)
+- [ ] Frontend: exibir mensagem de erro clara quando data de validade for inválida
+
+## Bug: Desfazer Última — Conferência Cega
+- [x] Corrigir undoLastScan: substituir lastSuccessfulItem por pilha LIFO readStack em BlindCheckModal.tsx — undo agora remove a leitura mais recente cronologicamente e permite undos consecutivos

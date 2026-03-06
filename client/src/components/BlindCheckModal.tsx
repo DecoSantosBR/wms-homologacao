@@ -45,12 +45,12 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   const [unitsPerBox, setUnitsPerPackage] = useState<number>(1);
   const [totalUnitsReceived, setTotalUnitsReceived] = useState<number>(0);
   
-  // Estado efêmero para rastrear último item bipado (para undo)
-  const [lastSuccessfulItem, setLastSuccessfulItem] = useState<{
+  // Pilha LIFO para rastrear leituras em ordem cronológica (cada entrada = 1 bipagem)
+  const [readStack, setReadStack] = useState<Array<{
     productId: number;
     batch: string;
     scannedCode: string;
-  } | null>(null);
+  }>>([]);
   
   const labelInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
@@ -129,13 +129,13 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       } else {
         // Etiqueta já associada - incrementou automaticamente
         
-        // Salvar último item bipado para undo
+        // Empilhar leitura na pilha LIFO para undo
         if (data.association) {
-          setLastSuccessfulItem({
+          setReadStack(prev => [...prev, {
             productId: data.association.productId,
             batch: data.association.batch || "",
             scannedCode: labelCode,
-          });
+          }]);
         }
         
         toast.success("Etiqueta lida com sucesso!", {
@@ -172,6 +172,15 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
       setTotalUnitsReceived(0);
       setLabelCode("");
       
+      // Empilhar nova associação na pilha LIFO para undo
+      if (data.association) {
+        setReadStack(prev => [...prev, {
+          productId: data.association.productId,
+          batch: data.association.batch || "",
+          scannedCode: pendingLabelCode,
+        }]);
+      }
+
       // Retornar foco
       labelInputRef.current?.focus();
       
@@ -302,19 +311,23 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   };
 
   const handleUndo = () => {
-    if (!conferenceId || !lastSuccessfulItem) {
-      toast.error("Nenhum item para desfazer");
+    if (!conferenceId || readStack.length === 0) {
+      toast.error("Nenhuma leitura para desfazer");
       return;
     }
+
+    // Pegar o topo da pilha (leitura mais recente)
+    const lastRead = readStack[readStack.length - 1];
     
     undoLastReadingMutation.mutate({
       conferenceId,
-      productId: lastSuccessfulItem.productId,
-      batch: lastSuccessfulItem.batch,
+      productId: lastRead.productId,
+      batch: lastRead.batch,
     }, {
       onSuccess: () => {
-        setLastSuccessfulItem(null); // Limpa para evitar múltiplos undos
-        toast.info("Leitura estornada com sucesso");
+        // Remover o topo da pilha após undo bem-sucedido
+        setReadStack(prev => prev.slice(0, -1));
+        toast.info(`Leitura de ${lastRead.scannedCode} estornada com sucesso`);
       }
     });
   };
@@ -501,7 +514,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                 <Button
                   variant="outline"
                   onClick={handleUndo}
-                  disabled={!summary?.conferenceItems.length || undoLastReadingMutation.isPending}
+                  disabled={readStack.length === 0 || undoLastReadingMutation.isPending}
                   className="min-h-[48px] w-full sm:w-auto"
                 >
                   <Undo className="w-4 h-4 mr-2" />
