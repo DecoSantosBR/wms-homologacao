@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { usePackagingLevels } from "@/hooks/usePackagingLevels";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export default function ClientPortalNewOrder() {
   const navigate = (path: string) => setLocation(path);
   
   const { isAuthenticated } = useClientPortalAuth({ redirectIfUnauthenticated: true });
+  const { simplePickingOptions } = usePackagingLevels();
   
   const [activeTab, setActiveTab] = useState("individual");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -368,8 +370,11 @@ export default function ClientPortalNewOrder() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="box">Caixas</SelectItem>
-                          <SelectItem value="unit">Unidades</SelectItem>
+                          {simplePickingOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}s
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

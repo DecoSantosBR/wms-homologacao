@@ -220,3 +220,13 @@
 - [x] Atualizar routers.ts (WMS Admin) para usar resolvePickingFactor
 - [x] Documentar limitação de reservedQuantity: int no schema.ts com comentário de auditoria
 - [x] Testes Vitest: 13 testes cobrindo CA-1, CA-2, CA-3, CA-4 (todos passando)
+
+## Ação 3 — Seletores de Unidade Dinâmicos
+- [x] Verificar procedure getPackagingLevels no unitConversionRouter.ts
+- [x] Criar hook usePackagingLevels em client/src/hooks/usePackagingLevels.ts
+- [x] Atualizar CreateProductDialog.tsx: seletor de unidade dinâmico
+- [x] Atualizar Products.tsx: seletor de unidade dinâmico (edição inline)
+- [x] Atualizar PickingOrders.tsx: seletores de unidade dinâmicos (criação e edição)
+- [x] Atualizar ClientPortalNewOrder.tsx: seletor de unidade dinâmico
+- [x] Inserir dados padrão em packagingLevels (10 níveis: UN, PCT, CX, FD, PL, KG, G, MG, L, ML)
+- [x] Fallback estático garantido quando banco ainda não tem dados

@@ -40,7 +40,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Package, Pencil, Trash2, Search, X, FileSpreadsheet } from "lucide-react";
+import { usePackagingLevels } from "@/hooks/usePackagingLevels";
+import { Package, Pencil, Trash2, Search, X, FileSpreadsheet, Loader2 } from "lucide-react";
 import { CreateProductDialog } from "@/components/CreateProductDialog";
 import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ export default function Products() {
       : undefined
   );
   const { data: tenants } = trpc.tenants.list.useQuery();
+  const { levels, isLoading: levelsLoading } = usePackagingLevels();
   const utils = trpc.useUtils();
 
   // Derivar categorias únicas dos produtos carregados (sem filtro de categoria)
@@ -576,11 +578,18 @@ export default function Products() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="UN">Unidade (UN)</SelectItem>
-                  <SelectItem value="CX">Caixa (CX)</SelectItem>
-                  <SelectItem value="KG">Quilograma (KG)</SelectItem>
-                  <SelectItem value="L">Litro (L)</SelectItem>
-                  <SelectItem value="M">Metro (M)</SelectItem>
+                  {levelsLoading ? (
+                    <div className="flex items-center justify-center py-2 text-sm text-muted-foreground gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Carregando...
+                    </div>
+                  ) : (
+                    levels.map((level) => (
+                      <SelectItem key={level.code} value={level.code}>
+                        {level.label}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
