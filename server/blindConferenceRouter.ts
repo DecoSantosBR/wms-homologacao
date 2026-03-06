@@ -977,6 +977,14 @@ export const blindConferenceRouter = router({
       const { effectiveTenantId, isGlobalAdmin } = ctx;
       // ✅ USA orderTenantId (tenant da ordem) para buscar blindConferenceItems
       const orderTenantId = await getOrderTenantId(db, input.conferenceId);
+
+      // Buscar o receivingOrderId da sessão para fazer JOIN com receivingOrderItems
+      const session = await db.select({ receivingOrderId: blindConferenceSessions.receivingOrderId })
+        .from(blindConferenceSessions)
+        .where(eq(blindConferenceSessions.id, input.conferenceId))
+        .limit(1);
+      const receivingOrderId = session[0]?.receivingOrderId ?? null;
+
       // 1. BUSCAR ITENS DA CONFERÊNCIA
       const items = await db.select({
         productId: blindConferenceItems.productId,
@@ -986,10 +994,21 @@ export const blindConferenceRouter = router({
         expiryDate: blindConferenceItems.expiryDate,
         packagesRead: blindConferenceItems.packagesRead,
         unitsRead: blindConferenceItems.unitsRead,
-        expectedQuantity: blindConferenceItems.expectedQuantity,
+        // expectedQuantity vem de receivingOrderItems (fonte de verdade da NF)
+        expectedQuantity: receivingOrderItems.expectedQuantity,
       })
         .from(blindConferenceItems)
         .leftJoin(products, eq(blindConferenceItems.productId, products.id))
+        .leftJoin(
+          receivingOrderItems,
+          and(
+            receivingOrderId != null
+              ? eq(receivingOrderItems.receivingOrderId, receivingOrderId)
+              : sql`1=0`,
+            eq(receivingOrderItems.productId, blindConferenceItems.productId),
+            eq(receivingOrderItems.tenantId, orderTenantId)
+          )
+        )
         .where(
           and(
             eq(blindConferenceItems.conferenceId, input.conferenceId),
@@ -1010,7 +1029,7 @@ export const blindConferenceRouter = router({
           expiryDate: item.expiryDate,
           packagesRead: item.packagesRead,
           unitsRead: (item.unitsRead || 0),
-          expectedQuantity: item.expectedQuantity,
+          expectedQuantity: item.expectedQuantity ?? null,
         }))
       };
     }),
