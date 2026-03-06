@@ -408,7 +408,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:!max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -724,7 +724,7 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
 
       {/* Dialog de Finalização */}
       <Dialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
-        <DialogContent className="max-w-4xl w-[95vw]">
+        <DialogContent className="sm:!max-w-4xl w-[95vw]">
           <DialogHeader>
             <DialogTitle>Finalizar Conferência</DialogTitle>
             <p className="text-sm text-gray-600">Revise o resumo antes de finalizar</p>
