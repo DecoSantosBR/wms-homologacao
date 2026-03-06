@@ -768,20 +768,35 @@ export function BlindCheckModal({ open, onClose, receivingOrderId, items }: Blin
                             <div className="text-sm text-gray-600">Lote: {item.batch}</div>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">{item.quantityConferenced}</TableCell>
-                        <TableCell className="text-right">{item.quantityExpected}</TableCell>
                         <TableCell className="text-right">
-                          {item.divergence === 0 ? (
-                            <span className="inline-flex items-center gap-1 text-green-600">
-                              <CheckCircle2 className="w-4 h-4" />
-                              OK
-                            </span>
+                          <div className="font-medium">{item.packagesRead} cx</div>
+                          <div className="text-xs text-gray-500">{item.unitsRead ?? 0} un</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.expectedQuantity != null ? (
+                            <>
+                              <div className="font-medium">{item.expectedQuantity} cx</div>
+                            </>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-yellow-600">
-                              <AlertCircle className="w-4 h-4" />
-                              {item.divergence > 0 ? "+" : ""}{item.divergence}
-                            </span>
+                            <span className="text-gray-400">—</span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(() => {
+                            if (item.expectedQuantity == null) return <span className="text-gray-400">—</span>;
+                            const diff = item.packagesRead - item.expectedQuantity;
+                            return diff === 0 ? (
+                              <span className="inline-flex items-center gap-1 text-green-600">
+                                <CheckCircle2 className="w-4 h-4" />
+                                OK
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-yellow-600">
+                                <AlertCircle className="w-4 h-4" />
+                                {diff > 0 ? "+" : ""}{diff}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
